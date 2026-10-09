@@ -357,10 +357,19 @@ namespace OpenCAGE.Modding
                     if (found.Value == _state.Baseline[found.Key].Sha256Hex) own.Remove(found.Key);
                     else own[found.Key] = found.Value;
                 }
+                //Layout edits made under mods, which applying makes the user's own (RecordLayoutEdits)
+                byte[] foldedLayouts = null;
+                if (FoldLayoutEdits(out AnimTreeLayouts layouts, out List<(uint Set, uint Tree)> layoutEdits) && layoutEdits.Count != 0)
+                {
+                    foldedLayouts = layouts.ToBytes();
+                    if (OwnLayoutsAreBaseline(layouts, foldedLayouts)) own.Remove(ModToolkit.AnimTreeLayoutsPath);
+                    else own[ModToolkit.AnimTreeLayoutsPath] = ModToolkit.ToHex(ModToolkit.Sha256(foldedLayouts));
+                }
                 byte[] OwnBytes(string path)
                 {
                     string sha = own[path];
                     if (sha == null) return null;
+                    if (path == ModToolkit.AnimTreeLayoutsPath && foldedLayouts != null) return foldedLayouts;
                     if (_state.Own.TryGetValue(path, out string kept) && kept == sha) return _store.Retrieve(sha);
                     return File.ReadAllBytes(ModToolkit.Denormalise(_gameRoot, path));
                 }
@@ -443,6 +452,8 @@ namespace OpenCAGE.Modding
             System.Text.StringBuilder text = new System.Text.StringBuilder("file|" + CombineVersion + "|" + target + "|");
             text.Append(_state.Own.TryGetValue(target, out string own) ? "own=" + (own ?? "none") : "-").Append('|');
             text.Append(_state.Baseline.TryGetValue(target, out ModState.BaselineRecord baseline) ? baseline.Sha256Hex ?? "none" : "?").Append('|');
+            if (target == ModToolkit.AnimTreeLayoutsPath)
+                text.Append("top=").Append(string.Join(",", _state.LayoutsOnTop.OrderBy(o => o))).Append('|');
             foreach (Planned planned in contributors)
                 text.Append(planned.Mod.Id).Append('=').Append(EntryIdentity(planned)).Append(';');
             return Hash(text);
@@ -540,7 +551,7 @@ namespace OpenCAGE.Modding
             {
                 foreach (KeyValuePair<string, ModState.ComposedFile> composed in _state.Composition)
                 {
-                    if (ModToolkit.IsRegenerated(composed.Key))
+                    if (ModToolkit.IsRegenerated(composed.Key) || LayoutEditsAreOwn(composed.Key))
                         continue;
                     byte[] hash = _cache.Hash(composed.Key);
                     string sha = hash == null ? null : ModToolkit.ToHex(hash);
@@ -603,6 +614,12 @@ namespace OpenCAGE.Modding
             bytes = null;
             lock (_mutex)
             {
+                //The layouts under mods: the user's own trees as they stand, never the mods' (none of their own: nothing to ship)
+                if (normalisedPath == ModToolkit.AnimTreeLayoutsPath && FoldLayoutEdits(out AnimTreeLayouts layouts, out _))
+                {
+                    bytes = layouts.Trees.Count == 0 ? null : layouts.ToBytes();
+                    return true;
+                }
                 if (!_state.Own.TryGetValue(normalisedPath, out string sha) || !_state.Composition.ContainsKey(normalisedPath))
                     return false;
                 if (sha == null)
@@ -617,6 +634,119 @@ namespace OpenCAGE.Modding
         {
             lock (_mutex)
                 return _state.Own.Keys.Where(_state.Composition.ContainsKey).ToList();
+        }
+
+        /* The animation tree layouts change all the time and harmlessly - moving a node is an edit - so edits made while
+           mods' layouts are installed aren't work to keep as a mod or throw away: they become the user's own, tree by tree,
+           at the next apply. A tree laid out that way goes over the mods' layouts as well as under them (LayoutsOnTop): a
+           node moved on a mod's layout stays moved, with the mod on or off. Resetting it hands it back to the mods. */
+
+        /// <summary>
+        /// The user's own layouts as they stand: their own version (or the file as it was before any mod), with what was
+        /// changed on disk since the last apply wrote the file folded in, tree by tree - and the trees that changed. False
+        /// when mods haven't installed the layouts, or something can't be read as layouts (then it's an edited file like
+        /// any other).
+        /// </summary>
+        private bool FoldLayoutEdits(out AnimTreeLayouts own, out List<(uint Set, uint Tree)> touched)
+        {
+            own = null;
+            touched = new List<(uint, uint)>();
+            string path = ModToolkit.AnimTreeLayoutsPath;
+            if (!_state.Composition.TryGetValue(path, out ModState.ComposedFile composed))
+                return false;
+            try
+            {
+                (bool hasOwn, byte[] ownBytes) = OwnVersion(path);
+                if (!AnimTreeLayoutsMerge.TryRead(hasOwn ? ownBytes : BaselineBytes(path), out own))
+                    return false;
+                byte[] hash = _cache.Hash(path);
+                string sha = hash == null ? null : ModToolkit.ToHex(hash);
+                if (sha == composed.Sha256Hex)
+                    return true;
+
+                //What the apply wrote (kept for this) against what's there now: a file deleted since holds no trees
+                byte[] written = composed.Sha256Hex == null ? null : _store.Retrieve(composed.Sha256Hex);
+                if (composed.Sha256Hex != null && written == null)
+                    return false;
+                byte[] now = sha == null ? null : File.ReadAllBytes(ModToolkit.Denormalise(_gameRoot, path));
+                if (!AnimTreeLayoutsMerge.TryRead(written, out AnimTreeLayouts before) || !AnimTreeLayoutsMerge.TryRead(now, out AnimTreeLayouts after))
+                    return false;
+                foreach (AnimTreeLayouts.TreeLayout tree in after.Trees)
+                {
+                    AnimTreeLayouts.TreeLayout was = before.Find(tree.SetHash, tree.TreeHash);
+                    //Only where the nodes are drawn: a view left somewhere else is no edit to keep
+                    if (was != null && AnimTreeLayoutsMerge.SameLayout(was, tree))
+                        continue;
+                    own.Put(tree);
+                    touched.Add((tree.SetHash, tree.TreeHash));
+                }
+                foreach (AnimTreeLayouts.TreeLayout tree in before.Trees)
+                {
+                    if (after.Find(tree.SetHash, tree.TreeHash) != null)
+                        continue;
+                    own.Remove(tree.SetHash, tree.TreeHash);
+                    touched.Add((tree.SetHash, tree.TreeHash));
+                }
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /* Edits to this file since the last apply become the user's own at the next one, rather than needing a choice or a repair */
+        private bool LayoutEditsAreOwn(string path)
+        {
+            return path == ModToolkit.AnimTreeLayoutsPath && FoldLayoutEdits(out _, out _);
+        }
+
+        private static string LayoutKey(uint set, uint tree) { return set.ToString("X8") + "/" + tree.ToString("X8"); }
+
+        /* The user's own layouts are just the file as it was before any mod: no own version needed. No trees where there
+           was no file is that too; otherwise it's kept as a file (even with no trees), so it never reads as a deletion. */
+        private bool OwnLayoutsAreBaseline(AnimTreeLayouts own, byte[] bytes)
+        {
+            string baseline = _state.Baseline.TryGetValue(ModToolkit.AnimTreeLayoutsPath, out ModState.BaselineRecord record) ? record.Sha256Hex : null;
+            return baseline == null ? own.Trees.Count == 0 : ModToolkit.ToHex(ModToolkit.Sha256(bytes)) == baseline;
+        }
+
+        /* Layout edits made since the last apply, made the user's own (see FoldLayoutEdits) */
+        private void RecordLayoutEdits()
+        {
+            string path = ModToolkit.AnimTreeLayoutsPath;
+            if (!FoldLayoutEdits(out AnimTreeLayouts own, out List<(uint Set, uint Tree)> touched) || touched.Count == 0)
+                return;
+            byte[] bytes = own.ToBytes();
+            if (OwnLayoutsAreBaseline(own, bytes))
+                _state.Own.Remove(path);
+            else
+                _state.Own[path] = _store.Store(bytes);
+            foreach ((uint set, uint tree) in touched)
+                if (!_state.LayoutsOnTop.Contains(LayoutKey(set, tree)))
+                    _state.LayoutsOnTop.Add(LayoutKey(set, tree));
+            //A tree reset (or no longer the user's at all) goes back to whatever the mods have for it
+            HashSet<string> mine = new HashSet<string>(own.Trees.Select(o => LayoutKey(o.SetHash, o.TreeHash)));
+            _state.LayoutsOnTop.RemoveAll(o => !mine.Contains(o));
+        }
+
+        /* The trees the user laid out over mods' layouts, put back over them after the mods are merged in */
+        private byte[] PutLayoutsOnTop(byte[] merged, byte[] own)
+        {
+            if (_state.LayoutsOnTop.Count == 0 || !AnimTreeLayoutsMerge.TryRead(merged, out AnimTreeLayouts result) || !AnimTreeLayoutsMerge.TryRead(own, out AnimTreeLayouts mine))
+                return merged;
+            bool changed = false;
+            foreach (AnimTreeLayouts.TreeLayout tree in mine.Trees)
+            {
+                if (!_state.LayoutsOnTop.Contains(LayoutKey(tree.SetHash, tree.TreeHash)))
+                    continue;
+                AnimTreeLayouts.TreeLayout there = result.Find(tree.SetHash, tree.TreeHash);
+                if (there != null && AnimTreeLayoutsMerge.SameLayout(there, tree))
+                    continue;
+                result.Put(tree);
+                changed = true;
+            }
+            return changed ? result.ToBytes() : merged;
         }
 
         /* Changed files of installed mods kept as a mod of their own, holding them exactly as they are now - a level's
@@ -648,6 +778,9 @@ namespace OpenCAGE.Modding
             {
                 HashSet<string> keep = new HashSet<string>(_state.Baseline.Values.Select(o => o.Sha256Hex).Where(o => o != null));
                 keep.UnionWith(_state.Own.Values.Where(o => o != null));
+                //The layouts as the last apply wrote them: what edits made since are told apart by (FoldLayoutEdits)
+                if (_state.Composition.TryGetValue(ModToolkit.AnimTreeLayoutsPath, out ModState.ComposedFile layouts) && layouts.Sha256Hex != null)
+                    keep.Add(layouts.Sha256Hex);
                 string snapshots = ModToolkit.SnapshotsDir(_gameRoot);
                 if (Directory.Exists(snapshots))
                     foreach (string file in Directory.GetFiles(snapshots, "*.json"))
@@ -1116,6 +1249,7 @@ namespace OpenCAGE.Modding
 
             //The user's own work on files no mod had changed: mods are combined onto it, and removing them puts it back
             progress("Keeping copies of your own changes...");
+            RecordLayoutEdits();
             RecordOwn(OwnChangesOnDisk(affected));
             _state.Save();
 
@@ -1278,6 +1412,7 @@ namespace OpenCAGE.Modding
                     _state.Composition = saved.Composition;
                     _state.Conflicts = saved.Conflicts;
                     _state.Own = saved.Own;
+                    _state.LayoutsOnTop = saved.LayoutsOnTop;
                     _state.LevelSignatures = saved.LevelSignatures;
                 }
                 catch (Exception restoreError)
@@ -1463,18 +1598,27 @@ namespace OpenCAGE.Modding
                 //Changed before OpenCAGE kept its original: nothing to combine a mod's version with, so it's used as it is
                 if (!hasOwn && _state.Baseline.TryGetValue(target, out ModState.BaselineRecord adopted) && !adopted.IsVanilla && adopted.Sha256Hex != null && _manifest.Contains(target))
                     result.Warnings.Add("OpenCAGE has no original copy of " + MergeConflict.Place(target) + ", so '" + versions.Last().ModName + "'s version replaces your own changes to it while it's installed (they come back when it's removed).");
-                if (versions.Count == 1)
+                //The tree layouts go onto the user's own even under a single mod, so theirs for other trees stay (see AnimTreeLayoutsMerge).
+                //Their own version, when they have one, is what they hold now - the adopted original may be older.
+                bool layouts = FileMerger.Classify(target, null) == FileMerger.Kind.AnimTreeLayouts;
+                if (versions.Count == 1 && !layouts)
                     written = versions[0].Bytes; //one version: exactly as it ships, no original needed
                 else
                 {
-                    MergeOutcome outcome = FileMerger.Merge(target, BaseBytes(target), versions);
+                    byte[] original = layouts && hasOwn ? ownBytes : BaseBytes(target);
+                    MergeOutcome outcome = FileMerger.Merge(target, original, versions);
                     result.Conflicts.AddRange(outcome.Conflicts);
                     if (outcome.FellBack)
                         result.Warnings.Add(char.ToUpperInvariant(MergeConflict.Place(target)[0]) + MergeConflict.Place(target).Substring(1) + " couldn't be combined, so '" + versions.Last().ModName + "''s version was used.");
                     written = outcome.Bytes;
+                    if (layouts)
+                        written = PutLayoutsOnTop(written, original);
                 }
                 Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
                 File.WriteAllBytes(fullPath, written);
+                //Kept, so the next apply can tell the user's layout edits from what was written (FoldLayoutEdits)
+                if (layouts)
+                    _store.Store(written);
             }
             _cache.Invalidate(target);
             _state.Composition[target] = new ModState.ComposedFile()
@@ -1622,7 +1766,7 @@ namespace OpenCAGE.Modding
                 {
                     byte[] hash = _cache.Hash(composed.Key);
                     string sha = hash == null ? null : ModToolkit.ToHex(hash);
-                    if (sha != composed.Value.Sha256Hex)
+                    if (sha != composed.Value.Sha256Hex && !LayoutEditsAreOwn(composed.Key))
                         stale.Add(composed.Key);
                 }
                 _cache.Save();

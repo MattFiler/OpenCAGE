@@ -35,6 +35,10 @@
             this.toolStripSeparatorAdd = new System.Windows.Forms.ToolStripSeparator();
             this.deleteNodeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.deleteLinkToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.arrangeTreeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.addGhostToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.nextGhostToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.deleteGhostToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.nodeContextMenu.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -63,29 +67,63 @@
             // 
             this.nodeContextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.addNodeToolStripMenuItem,
+            this.arrangeTreeToolStripMenuItem,
             this.toolStripSeparatorAdd,
+            this.addGhostToolStripMenuItem,
+            this.nextGhostToolStripMenuItem,
+            this.deleteGhostToolStripMenuItem,
             this.deleteNodeToolStripMenuItem,
             this.deleteLinkToolStripMenuItem});
             this.nodeContextMenu.Name = "nodeContextMenu";
-            this.nodeContextMenu.Size = new System.Drawing.Size(160, 76);
+            this.nodeContextMenu.Size = new System.Drawing.Size(215, 186);
             this.nodeContextMenu.Opening += new System.ComponentModel.CancelEventHandler(this.NodeContextMenu_Opening);
             // 
             // addNodeToolStripMenuItem
             // 
             this.addNodeToolStripMenuItem.Name = "addNodeToolStripMenuItem";
-            this.addNodeToolStripMenuItem.Size = new System.Drawing.Size(159, 22);
+            this.addNodeToolStripMenuItem.Size = new System.Drawing.Size(214, 22);
             this.addNodeToolStripMenuItem.Text = "Add Node";
-            // 
+            //
+            // arrangeTreeToolStripMenuItem
+            //
+            this.arrangeTreeToolStripMenuItem.Name = "arrangeTreeToolStripMenuItem";
+            this.arrangeTreeToolStripMenuItem.Size = new System.Drawing.Size(214, 22);
+            this.arrangeTreeToolStripMenuItem.Text = "Arrange Tree";
+            this.arrangeTreeToolStripMenuItem.Click += new System.EventHandler(this.arrangeTreeToolStripMenuItem_Click);
+            //
             // toolStripSeparatorAdd
-            // 
+            //
             this.toolStripSeparatorAdd.Name = "toolStripSeparatorAdd";
-            this.toolStripSeparatorAdd.Size = new System.Drawing.Size(156, 6);
-            // 
+            this.toolStripSeparatorAdd.Size = new System.Drawing.Size(211, 6);
+            //
+            // addGhostToolStripMenuItem
+            //
+            this.addGhostToolStripMenuItem.Name = "addGhostToolStripMenuItem";
+            this.addGhostToolStripMenuItem.Size = new System.Drawing.Size(214, 22);
+            this.addGhostToolStripMenuItem.Text = "Add Ghost Node";
+            this.addGhostToolStripMenuItem.Click += new System.EventHandler(this.addGhostToolStripMenuItem_Click);
+            //
+            // nextGhostToolStripMenuItem
+            //
+            this.nextGhostToolStripMenuItem.Name = "nextGhostToolStripMenuItem";
+            this.nextGhostToolStripMenuItem.ShortcutKeyDisplayString = "F3";
+            this.nextGhostToolStripMenuItem.Size = new System.Drawing.Size(214, 22);
+            this.nextGhostToolStripMenuItem.Text = "Go To Next Ghost";
+            this.nextGhostToolStripMenuItem.Click += new System.EventHandler(this.nextGhostToolStripMenuItem_Click);
+            //
+            // deleteGhostToolStripMenuItem
+            //
+            this.deleteGhostToolStripMenuItem.Name = "deleteGhostToolStripMenuItem";
+            this.deleteGhostToolStripMenuItem.ShortcutKeyDisplayString = "Del";
+            this.deleteGhostToolStripMenuItem.Size = new System.Drawing.Size(214, 22);
+            this.deleteGhostToolStripMenuItem.Text = "Delete Ghost";
+            this.deleteGhostToolStripMenuItem.Click += new System.EventHandler(this.deleteGhostToolStripMenuItem_Click);
+            //
             // deleteNodeToolStripMenuItem
-            // 
+            //
             this.deleteNodeToolStripMenuItem.Name = "deleteNodeToolStripMenuItem";
-            this.deleteNodeToolStripMenuItem.ShortcutKeyDisplayString = "Del";
-            this.deleteNodeToolStripMenuItem.Size = new System.Drawing.Size(159, 22);
+            this.deleteNodeToolStripMenuItem.ShortcutKeyDisplayString = "Shift+Del";
+            this.deleteNodeToolStripMenuItem.Size = new System.Drawing.Size(214, 22);
             this.deleteNodeToolStripMenuItem.Text = "Delete Node";
             this.deleteNodeToolStripMenuItem.Click += new System.EventHandler(this.deleteNodeToolStripMenuItem_Click);
             // 
@@ -93,7 +131,7 @@
             // 
             this.deleteLinkToolStripMenuItem.Name = "deleteLinkToolStripMenuItem";
             this.deleteLinkToolStripMenuItem.ShortcutKeyDisplayString = "Del";
-            this.deleteLinkToolStripMenuItem.Size = new System.Drawing.Size(159, 22);
+            this.deleteLinkToolStripMenuItem.Size = new System.Drawing.Size(214, 22);
             this.deleteLinkToolStripMenuItem.Text = "Delete Link";
             this.deleteLinkToolStripMenuItem.Click += new System.EventHandler(this.deleteLinkToolStripMenuItem_Click);
             // 
@@ -119,5 +157,9 @@
         private System.Windows.Forms.ToolStripSeparator toolStripSeparatorAdd;
         private System.Windows.Forms.ToolStripMenuItem deleteNodeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem deleteLinkToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem arrangeTreeToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem addGhostToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem nextGhostToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem deleteGhostToolStripMenuItem;
     }
 }

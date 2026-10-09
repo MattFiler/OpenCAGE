@@ -757,6 +757,7 @@ namespace OpenCAGE.MCP
                     ?? ParameterModificationTracker.GenerateModificationTable(newLevel.Commands);
                 EntityAppliedDefaultsTable defaults = (CustomTable.ReadTable(newLevel.Commands.Filepath, CustomTableType.ENTITY_APPLIED_DEFAULTS) as EntityAppliedDefaultsTable) ?? new EntityAppliedDefaultsTable();
                 Dictionary<Level, KeyValuePair<CompositeParameterModificationTable, EntityAppliedDefaultsTable>> sourceTables = new Dictionary<Level, KeyValuePair<CompositeParameterModificationTable, EntityAppliedDefaultsTable>>();
+                CompositePreviewTable previews = new CompositePreviewTable();
                 if (!imports.IsEmpty)
                 {
                     //The importer loads each source level and ports from it behind its own progress windows, which are the UI thread's
@@ -783,7 +784,9 @@ namespace OpenCAGE.MCP
                                 sourceTables[source] = tables;
                             }
                             ParameterModificationTracker.CopyCompositeRows(copy.shortGUID, tables.Key, tables.Value, modifications, defaults);
-                        }));
+                        },
+                        //...and their source level's own previews of them, where it took any
+                        (copy, source) => CompositePreviewManager.CarryInto(previews, copy.shortGUID, source)));
                     }
                     sourceTables.Clear();
                     GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true);
@@ -801,6 +804,8 @@ namespace OpenCAGE.MCP
                 {
                     CustomTable.WriteTable(newLevel.Commands.Filepath, CustomTableType.COMPOSITE_PARAMETER_MODIFICATION, modifications);
                     CustomTable.WriteTable(newLevel.Commands.Filepath, CustomTableType.ENTITY_APPLIED_DEFAULTS, defaults);
+                    if (previews.Count != 0)
+                        CustomTable.WriteTable(newLevel.Commands.Filepath, CustomTableType.COMPOSITE_PREVIEWS, previews);
                 }
                 listed = PatchManager.UpdateLevelListInPackages(Singleton.Platform, Singleton.PathToAI);
                 newLevel = null;

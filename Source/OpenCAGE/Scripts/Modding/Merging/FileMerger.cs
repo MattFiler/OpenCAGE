@@ -16,11 +16,12 @@ namespace OpenCAGE.Modding.Merging
     /// </summary>
     public static class FileMerger
     {
-        public enum Kind { Bml, Xml, TextDb, Text, Pak2, Opaque }
+        public enum Kind { Bml, Xml, TextDb, Text, Pak2, AnimTreeLayouts, Opaque }
 
         public static Kind Classify(string target, byte[] sample)
         {
             string upper = target.ToUpperInvariant();
+            if (upper == ModToolkit.AnimTreeLayoutsPath) return Kind.AnimTreeLayouts;
             if (upper.EndsWith(".BML")) return Kind.Bml;
             if (sample != null && sample.Length >= 4 && sample[0] == 'P' && sample[1] == 'A' && sample[2] == 'K' && sample[3] == '2') return Kind.Pak2;
             if (upper.EndsWith(".XML") || upper.EndsWith(".PKG") || upper.EndsWith(".XSD")) return Kind.Xml;
@@ -44,6 +45,15 @@ namespace OpenCAGE.Modding.Merging
         /// </summary>
         public static MergeOutcome Merge(string target, byte[] vanilla, IList<Contribution> versions)
         {
+            //Ahead of the shortcuts below: there's no original, and even one mod's layouts go onto the ones already there
+            if (versions.Count != 0 && Classify(target, null) == Kind.AnimTreeLayouts)
+            {
+                MergeOutcome layouts = AnimTreeLayoutsMerge.Merge(target, vanilla, versions);
+                if (layouts != null)
+                    return layouts;
+                //Not all readable as layouts: dealt with below, like any file nothing can combine
+            }
+
             if (versions.Count == 0)
                 return new MergeOutcome() { Bytes = vanilla };
             if (versions.Count == 1)
@@ -279,6 +289,102 @@ namespace OpenCAGE.Modding.Merging
                 if (!index.ContainsKey(entry.Filename))
                     index[entry.Filename] = entry;
             return index;
+        }
+    }
+
+    /// <summary>
+    /// The Animation Tree Editor's layouts (<see cref="ModToolkit.AnimTreeLayoutsPath"/>), merged tree by tree. The game
+    /// doesn't ship the file, so there's no original to merge against: what was there before the mods (nothing, or the
+    /// user's own layouts) is the lowest-priority version instead, each mod's trees go on top in list order, and the later
+    /// mod wins a tree. That holds for a single mod too, so the user's layouts of trees it doesn't lay out stay while it's
+    /// installed. Only two mods laying out one tree differently is reported: the user's own layouts give way quietly, as
+    /// a layout should follow the version of its tree that's installed.
+    /// </summary>
+    public static class AnimTreeLayoutsMerge
+    {
+        /// <returns>The merged layouts, or null when the original or a version can't be read as layouts - the caller
+        /// then treats the file as one nothing can combine.</returns>
+        public static MergeOutcome Merge(string target, byte[] original, IList<Contribution> versions)
+        {
+            bool hasOriginal = original != null && original.Length != 0;
+            //Nothing to put it on: exactly as it ships
+            if (!hasOriginal && versions.Count == 1)
+                return new MergeOutcome() { Bytes = versions[0].Bytes };
+
+            if (!TryRead(original, out AnimTreeLayouts merged))
+                return null;
+            List<AnimTreeLayouts> read = new List<AnimTreeLayouts>();
+            foreach (Contribution version in versions)
+            {
+                if (!TryRead(version.Bytes, out AnimTreeLayouts layouts))
+                    return null;
+                read.Add(layouts);
+            }
+
+            MergeOutcome outcome = new MergeOutcome();
+            //Per tree, the last mod to lay it out and its record as written - the same layout twice isn't a clash
+            Dictionary<(uint, uint), (string Mod, byte[] Record)> claims = new Dictionary<(uint, uint), (string, byte[])>();
+            for (int i = 0; i < versions.Count; i++)
+            {
+                string mod = versions[i].ModName;
+                foreach (AnimTreeLayouts.TreeLayout tree in read[i].Trees)
+                {
+                    merged.Put(tree);
+                    if (mod == MergeConflict.OwnChanges)
+                        continue;
+                    byte[] record = RecordOf(tree);
+                    if (claims.TryGetValue((tree.SetHash, tree.TreeHash), out (string Mod, byte[] Record) earlier) && earlier.Mod != mod && !earlier.Record.AsSpan().SequenceEqual(record))
+                        outcome.Conflicts.Add(new MergeConflict() { Target = target, Where = Describe(tree), Kind = ConflictKind.Overridden, Kept = mod, Lost = earlier.Mod });
+                    claims[(tree.SetHash, tree.TreeHash)] = (mod, record);
+                }
+            }
+            outcome.Bytes = merged.ToBytes();
+            return outcome;
+        }
+
+        /// <summary>Layouts from a file's bytes: no bytes are no layouts; anything else has to read as a layouts file this build understands.</summary>
+        public static bool TryRead(byte[] bytes, out AnimTreeLayouts layouts)
+        {
+            layouts = AnimTreeLayouts.FromBytes(null);
+            if (bytes == null || bytes.Length == 0)
+                return true;
+            try
+            {
+                layouts = AnimTreeLayouts.FromBytes(bytes);
+                return layouts.Loaded;
+            }
+            catch
+            {
+                //A CathodeLib built to fail hard throws on a cut-short file instead of saying it didn't load
+                return false;
+            }
+        }
+
+        /// <summary>Whether two layouts of a tree draw it the same - where the view was left (pan and zoom) aside.</summary>
+        public static bool SameLayout(AnimTreeLayouts.TreeLayout a, AnimTreeLayouts.TreeLayout b)
+        {
+            return RecordOf(a).AsSpan().SequenceEqual(RecordOf(b));
+        }
+
+        /* One tree's layout as the file writes it, every list in the file's fixed order: equal bytes, same layout. Where
+           each mod's author left the view (pan and zoom) is not part of the layout, so it is left out. */
+        private static byte[] RecordOf(AnimTreeLayouts.TreeLayout tree)
+        {
+            AnimTreeLayouts.TreeLayout drawn = tree.Clone();
+            drawn.CanvasX = 0;
+            drawn.CanvasY = 0;
+            drawn.CanvasScale = 0;
+            AnimTreeLayouts single = AnimTreeLayouts.FromBytes(null);
+            single.Trees.Add(drawn);
+            return single.ToBytes();
+        }
+
+        /* "the layout of LOCOMOTION (ALIEN)", by the names stored with it - its hashes when it has none */
+        private static string Describe(AnimTreeLayouts.TreeLayout tree)
+        {
+            string name = string.IsNullOrEmpty(tree.Tree) ? "tree 0x" + tree.TreeHash.ToString("X8") : tree.Tree;
+            string set = string.IsNullOrEmpty(tree.Set) ? "set 0x" + tree.SetHash.ToString("X8") : tree.Set;
+            return "the layout of " + name + " (" + set + ")";
         }
     }
 }

@@ -155,11 +155,13 @@ namespace OpenCAGE
             CompositeFlowgraphTable layouts = (CompositeFlowgraphTable)CustomTable.ReadTable(newLevel.Commands.Filepath, CustomTableType.COMPOSITE_FLOWGRAPHS);
             if (layouts == null) layouts = new CompositeFlowgraphTable();
 
+            //...and their source level's own previews of them, where it took any
+            CompositePreviewTable previews = new CompositePreviewTable();
             CompositeImporter.Result imported = CompositeImporter.Import(_imports, newLevel, (composite, pages) =>
             {
                 layouts.flowgraphs.RemoveAll(o => o.CompositeGUID == composite.shortGUID);
                 layouts.flowgraphs.AddRange(pages);
-            });
+            }, onArriving: (composite, source) => CompositePreviewManager.CarryInto(previews, composite.shortGUID, source));
 
             foreach (Composite composite in newLevel.Commands.Entries)
             {
@@ -175,6 +177,8 @@ namespace OpenCAGE
                 progress.Close();
             }
             CustomTable.WriteTable(newLevel.Commands.Filepath, CustomTableType.COMPOSITE_FLOWGRAPHS, layouts);
+            if (previews.Count != 0)
+                CustomTable.WriteTable(newLevel.Commands.Filepath, CustomTableType.COMPOSITE_PREVIEWS, previews);
 
             //The game finds custom levels through the package list, so register it now rather than at the next launch
             PatchManager.UpdateLevelListInPackages(Singleton.Platform, Singleton.PathToAI);

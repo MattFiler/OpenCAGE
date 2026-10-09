@@ -160,8 +160,10 @@ namespace OpenCAGE
 
         /// <param name="extraComposites">Given each source level as it is loaded, with its pick: more of its composites to port with the pick (null: none).</param>
         /// <param name="onPorted">Each composite as it is ported: the source level, the original and the copy.</param>
+        /// <param name="onArriving">Each copy as it is ported, before <paramref name="onLayouts"/>, with its source level's own composite preview table (null when it has none).</param>
         public static Result Import(CompositeSelection selection, Level destination, Action<Composite, List<FlowgraphMeta>> onLayouts,
-            Func<Level, CompositeSelection.LevelPick, IEnumerable<Composite>> extraComposites = null, Action<Level, Composite, Composite> onPorted = null)
+            Func<Level, CompositeSelection.LevelPick, IEnumerable<Composite>> extraComposites = null, Action<Level, Composite, Composite> onPorted = null,
+            Action<Composite, CompositePreviewTable> onArriving = null)
         {
             Result result = new Result();
             if (selection == null) return result;
@@ -171,6 +173,7 @@ namespace OpenCAGE
             {
                 Level source = LoadLevel(pick.Level);
                 CompositeFlowgraphTable sourceLayouts = (CompositeFlowgraphTable)CustomTable.ReadTable(source.Commands.Filepath, CustomTableType.COMPOSITE_FLOWGRAPHS);
+                CompositePreviewTable sourcePreviews = onArriving == null ? null : CustomTable.ReadTable(source.Commands.Filepath, CustomTableType.COMPOSITE_PREVIEWS) as CompositePreviewTable;
 
                 using (ProgressUI progress = new ProgressUI())
                 {
@@ -187,6 +190,7 @@ namespace OpenCAGE
                     porter.OnCompositePorted = (original, copy) =>
                     {
                         result.Ported.Add(copy);
+                        onArriving?.Invoke(copy, sourcePreviews);
                         onLayouts?.Invoke(copy, FlowgraphLayoutManager.GetLayoutsForPort(original, sourceLayouts, FlowgraphLayoutManager.BundledLevelName(source.Commands, pick.Level), source.Commands));
                         onPorted?.Invoke(source, original, copy);
                     };

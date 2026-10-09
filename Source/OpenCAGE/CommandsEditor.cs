@@ -3661,6 +3661,24 @@ namespace OpenCAGE
             animTreeEditor = null;
         }
 
+        /// <summary>The Animation Tree Editor, opened if it is closed (an AI assistant showing a tree there), else brought forward.</summary>
+        internal AnimTreeEditor ShowAnimTreeEditor()
+        {
+            if (animTreeEditor == null || animTreeEditor.IsDisposed)
+            {
+                animTreeEditor = new AnimTreeEditor();
+                animTreeEditor.Show();
+                animTreeEditor.FormClosed += animTreeEditor_FormClosed;
+            }
+            else
+            {
+                if (animTreeEditor.WindowState == FormWindowState.Minimized)
+                    animTreeEditor.WindowState = FormWindowState.Normal;
+                animTreeEditor.Activate();
+            }
+            return animTreeEditor;
+        }
+
         LevelBackupManager _levelBackups = null;
         private void manageBackupsBtn_Click(object sender, EventArgs e)
         {

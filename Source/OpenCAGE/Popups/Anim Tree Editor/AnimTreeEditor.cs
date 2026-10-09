@@ -32,6 +32,12 @@ namespace OpenCAGE.AnimTrees
             _animationSets.Show(dockPanel, DockState.DockLeft);
         }
 
+        /// <summary>Show a tree as if it were picked from the lists. Returns its graph (null when the lists do not hold it).</summary>
+        internal AnimationTreeGraph OpenTree(CATHODE.AnimTreeDB database, CATHODE.Animations.AnimationTree tree)
+        {
+            return _animationSets?.OpenTree(database, tree);
+        }
+
         private void saveBtn_Click(object sender, EventArgs e)
         {
             if (_animationSets == null)

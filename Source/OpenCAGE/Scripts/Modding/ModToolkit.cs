@@ -121,6 +121,12 @@ namespace OpenCAGE.Modding
         public const string LevelListPath = "DATA/PACKAGES/MAIN.PKG";
 
         /// <summary>
+        /// The Animation Tree Editor's layouts (<see cref="AnimTreeLayouts"/>): OpenCAGE's own file beside the
+        /// animation PAK, which ships with that PAK and is merged tree by tree.
+        /// </summary>
+        public static readonly string AnimTreeLayoutsPath = Normalise("DATA/GLOBAL/" + AnimTreeLayouts.FileName);
+
+        /// <summary>
         /// Files a package never carries and the installer never takes from one, because they're worked out from
         /// the rest after every install: the custom level list in MAIN.PKG, and each level's behaviour tree list
         /// (from the character configs). Also COMMANDS.BIN, which OpenCAGE writes beside COMMANDS.PAK for the 2014

@@ -733,9 +733,13 @@ namespace OpenCAGE
             finally { CloseProgress(loadProgress); }
 
             LevelEditorTables tables = LevelEditorTables.Read(level.Commands.Filepath, level.Commands);
+            HashSet<ShortGuid> had = new HashSet<ShortGuid>(level.Commands.Entries.Where(o => o != null).Select(o => o.shortGUID));
             Result result = PortInto(archive, compositeIds, options, level, "Importing into " + levelName + "...", (original, copy) =>
             {
-                //Composite previews are not carried in a package: the destination keeps what it has for the ID, else the shipped picture
+                //Composite previews are not carried in a package: the destination keeps what it has for the ID, else the shipped
+                //picture - but not its own picture of a composite the package has just replaced, which showed the old content
+                if (options.OverwriteComposites && had.Contains(copy.shortGUID))
+                    tables.ReplacePreview(copy.shortGUID, null);
                 tables.ReplaceLayouts(copy.shortGUID, FlowgraphLayoutManager.GetLayoutsForPort(original, archive.Layouts, archive.Manifest.BundledLevelName(), archive.Scratch.Commands));
                 ParameterModificationTracker.CopyCompositeRows(copy.shortGUID, archive.Modifications, archive.Defaults, tables.Modifications, tables.Defaults);
             });

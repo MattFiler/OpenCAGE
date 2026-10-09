@@ -20,6 +20,10 @@ using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
 using Anim = CathodeLib.Animation;
+using STNode = ST.Library.UI.NodeEditor.STNode;
+using STNodeOption = ST.Library.UI.NodeEditor.STNodeOption;
+using STNodeEditor = ST.Library.UI.NodeEditor.STNodeEditor;
+using TreeLayout = OpenCAGE.AnimTreeLayouts.TreeLayout;
 
 namespace OpenCAGE.MCP
 {
@@ -391,12 +395,14 @@ namespace OpenCAGE.MCP
                 Name = "get_anim_tree",
                 Title = "Get animation tree",
                 Description = "One animation tree as a node graph: the tree's own settings, then each node's type, fields (with their current values) and links (field -> node), " +
-                    "and any flow nodes that nothing parents, which are not saved. The field names and links are what edit_anim_tree takes.",
+                    "and any flow nodes that nothing parents, which are not saved. The field names and links are what edit_anim_tree takes. " +
+                    "layout:true adds where the Animation Tree Editor draws each node (x, y) and any ghosts - extra copies of a node, each drawing some of its links - as edit_anim_tree_layout changes them.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("set", "The tree set (list_anim_trees).", required: true),
                     McpSchema.String("tree", "The tree's name.", required: true),
                     McpSchema.String("filter", "Only nodes whose name contains all these words."),
                     McpSchema.Boolean("fields", "Include each node's field values (default true)."),
+                    McpSchema.Boolean("layout", "Include where each node is drawn: x, y, its ghosts and the links each copy draws (default false)."),
                     McpSchema.Limit(150, "nodes", 2000),
                     McpSchema.Offset("nodes")),
                 ReadOnly = true,
@@ -435,6 +441,8 @@ namespace OpenCAGE.MCP
                     ["to_type"] = new JObject() { ["type"] = "string", ["description"] = "The linked node's type, when two nodes share its name." },
                     ["type"] = new JObject() { ["type"] = "string", ["description"] = "add_node: the node type.", ["enum"] = new JArray(Enum.GetNames(typeof(NodeType)).Where(o => o != NodeType.ANIM_Tree_Top_Level.ToString()).OrderBy(o => o)) },
                     ["name"] = new JObject() { ["type"] = "string", ["description"] = "add_node: the new node's name (default: made from its type). rename: the new name." },
+                    ["x"] = new JObject() { ["type"] = "integer", ["description"] = "add_node: where the Animation Tree Editor draws it (with y; default: beside what it links to)." },
+                    ["y"] = new JObject() { ["type"] = "integer", ["description"] = "add_node: where the Animation Tree Editor draws it (with x)." },
                 },
                 ["required"] = new JArray("op"),
             };
@@ -443,7 +451,8 @@ namespace OpenCAGE.MCP
                 Name = "edit_anim_tree",
                 Title = "Edit animation tree",
                 Description = "Edit an animation tree and write ANIMATION.PAK at once (every level; not undoable). ops run in order, all or none: set a field, rename, add_node, remove_node, " +
-                    "link or unlink a node field (flow links also parent the node, so it is saved). Refuses while the game runs unless close_game. dry_run checks without writing.",
+                    "link or unlink a node field (flow links also parent the node, so it is saved). Refuses while the game runs unless close_game. dry_run checks without writing. " +
+                    "A tree with a stored layout keeps it (renamed nodes keep their place, removed ones and their ghosts go, added ones go at x,y or beside what they link to); the Animation Tree Editor redraws the tree if it shows it.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("set", "The tree set.", required: true),
                     McpSchema.String("tree", "The tree's name.", required: true),
@@ -452,6 +461,74 @@ namespace OpenCAGE.MCP
                     McpSchema.Boolean("close_game", "Close a running game first, as the editor's own Save does.")),
                 Destructive = true,
                 Run = EditAnimTree,
+            };
+
+            JObject layoutNode = new JObject()
+            {
+                ["type"] = "object",
+                ["properties"] = new JObject()
+                {
+                    ["node"] = new JObject() { ["type"] = "string", ["description"] = "The node's name; '@tree' is the tree's own node." },
+                    ["node_type"] = new JObject() { ["type"] = "string", ["description"] = "The node's type, when two nodes share its name." },
+                    ["ghost"] = new JObject() { ["type"] = "integer", ["description"] = "Which copy (0 = the first, default)." },
+                    ["x"] = new JObject() { ["type"] = "integer", ["description"] = "Where to put it (with y)." },
+                    ["y"] = new JObject() { ["type"] = "integer" },
+                    ["dx"] = new JObject() { ["type"] = "integer", ["description"] = "Or move it by this much (with dy)." },
+                    ["dy"] = new JObject() { ["type"] = "integer" },
+                },
+                ["required"] = new JArray("node"),
+            };
+            yield return new McpTool()
+            {
+                Name = "edit_anim_tree_layout",
+                Title = "Lay out an animation tree",
+                Description = "Change how the Animation Tree Editor draws a tree, kept in DATA/GLOBAL/AnimTreeLayouts.dat beside ANIMATION.PAK and written at once (not undoable; the game never reads it, so it can run). " +
+                    "arrange: lay the whole tree out afresh - flow left to right, each value above what reads it, and a value read far from where it sits given a ghost (another copy of it) beside each distant reader. " +
+                    "reset: forget the stored layout, so the tree is laid out automatically whenever it opens. move: nodes [{node, ghost?, x, y} or {node, dx, dy}]. " +
+                    "add_ghost: another copy of 'node' (at x,y, else beside what it draws), drawing its links with the nodes named in 'links'. move_links: those links onto copy 'ghost'. " +
+                    "remove_ghost: copy 'ghost' goes, its links back on the first copy. The editor shows the change if the tree is open there. get_anim_tree with layout:true reads it back.",
+                InputSchema = McpSchema.Object(
+                    McpSchema.String("set", "The tree set.", required: true),
+                    McpSchema.String("tree", "The tree's name.", required: true),
+                    McpSchema.String("action", "What to do.", required: true, options: _treeLayoutActions),
+                    McpSchema.Array("nodes", "move: the nodes to move, e.g. {node:'Walk', x:400, y:120} or {node:'speed', ghost:1, dx:0, dy:-80}.", layoutNode),
+                    McpSchema.String("node", "add_ghost / move_links / remove_ghost: the node."),
+                    McpSchema.String("node_type", "Its type, when two nodes share its name."),
+                    McpSchema.Integer("ghost", "remove_ghost: the copy to remove (1 = the first ghost). move_links: the copy the links move to."),
+                    McpSchema.Integer("x", "add_ghost: where to draw the ghost (with y)."),
+                    McpSchema.Integer("y", "add_ghost: where to draw the ghost (with x)."),
+                    McpSchema.Strings("links", "add_ghost / move_links: the nodes at the other end of the links to draw from that copy (every link between the two moves); 'name:TYPE' when several nodes share a name."),
+                    McpSchema.Boolean("dry_run", "Work it out and report, storing nothing.")),
+                Destructive = true,
+                Run = EditAnimTreeLayout,
+            };
+
+            yield return new McpTool()
+            {
+                Name = "open_anim_tree",
+                Title = "Open animation tree",
+                Description = "Show an animation tree in the Animation Tree Editor (opening the editor if it is closed), drawn as its stored layout has it or laid out automatically. capture_anim_tree pictures a tree.",
+                InputSchema = McpSchema.Object(
+                    McpSchema.String("set", "The tree set (list_anim_trees).", required: true),
+                    McpSchema.String("tree", "The tree's name.", required: true)),
+                Idempotent = true,
+                Run = OpenAnimTree,
+            };
+
+            yield return new McpTool()
+            {
+                Name = "capture_anim_tree",
+                Title = "Picture an animation tree",
+                Description = "A picture of an animation tree as the Animation Tree Editor draws it (its stored layout, or the automatic one), whether or not the editor is open. 'node' pictures the area around one node.",
+                InputSchema = McpSchema.Object(
+                    McpSchema.String("set", "The tree set.", required: true),
+                    McpSchema.String("tree", "The tree's name.", required: true),
+                    McpSchema.String("node", "Picture the area around this node (and its ghosts) only."),
+                    McpSchema.String("node_type", "Its type, when two nodes share its name."),
+                    McpSchema.Integer("max_width", "Widest the picture may be, in pixels (default 1600, at most 4096).")),
+                ReadOnly = true,
+                Idempotent = true,
+                Run = CaptureAnimTree,
             };
             #endregion
 
@@ -3222,6 +3299,7 @@ namespace OpenCAGE.MCP
             string treeName = call.Str("tree", required: true);
             string[] words = Words(call.Str("filter"));
             bool fields = call.Bool("fields", true);
+            bool layout = call.Bool("layout");
             using (McpEditorTools.Heartbeat(call, "Reading ANIMATION.PAK"))
                 return McpEditor.UI(() =>
                 {
@@ -3242,7 +3320,22 @@ namespace OpenCAGE.MCP
                         ["links"] = treeLinks,
                         ["node_count"] = tree.Nodes.Count,
                     };
-                    McpPaging.Page(call, nodes, result, "nodes", o => NodeJson(o, shared, fields), 150, 2000);
+                    Dictionary<AnimationNode, JObject> drawn = null;
+                    if (layout)
+                    {
+                        drawn = OnTreeCanvas(database, tree, false, (canvas, live) => DrawnJson(canvas));
+                        result["layout"] = AnimTreeLayoutManager.Has(database, tree) ? "saved" : "auto";
+                        if (drawn.TryGetValue(tree, out JObject top))
+                            result["tree_node"] = top;
+                    }
+                    McpPaging.Page(call, nodes, result, "nodes", o =>
+                    {
+                        JObject row = NodeJson(o, shared, fields);
+                        if (drawn != null && drawn.TryGetValue(o, out JObject where))
+                            foreach (JProperty property in where.Properties())
+                                row[property.Name] = property.Value.DeepClone();
+                        return row;
+                    }, 150, 2000);
                     List<AnimationNode> unsaved = UnsavedNodes(tree);
                     if (unsaved.Count != 0)
                     {
@@ -3541,6 +3634,13 @@ namespace OpenCAGE.MCP
             return -1;
         }
 
+        /// <summary>Only some node types can sit in a tree's flow: written there, any other makes the whole tree set unreadable.</summary>
+        private static void RefuseNonFlow(AnimationNode target)
+        {
+            if (!AnimTreeCanvas.IsFlowType(target.Type))
+                throw new McpError("'" + target.Name + "' is a " + target.Type + ", which a tree can't hold in its flow: only animations, selectors, parametric, blend, bone mask, IK and weighted nodes can be children.");
+        }
+
         private static void LinkField(AnimationNode node, string path, AnimationNode target)
         {
             if (ReferenceEquals(node, target)) throw new McpError("A node can't link to itself.");
@@ -3554,6 +3654,7 @@ namespace OpenCAGE.MCP
                 IList list = AnimationNodeProxy.Read(field.Owner, field.Member) as IList;
                 if (list == null) throw new McpError("'" + path + "' can't be linked.");
                 if (IndexByReference(list, target) >= 0) throw new McpError("'" + target.Name + "' is already in " + node.Name + "'s " + field.Member.Name + ".");
+                RefuseNonFlow(target);
                 RefuseLoop(node, target);
                 //A weighted node holds exactly one child; the reader refuses more
                 if (node is WeightedNode weighted) { list.Clear(); weighted.Child = target; }
@@ -3565,7 +3666,13 @@ namespace OpenCAGE.MCP
             if (!type.IsInstanceOfType(target))
                 throw new McpError("'" + path + "' takes a " + type.Name + "; '" + target.Name + "' is a " + target.GetType().Name + " (" + target.Type + ").");
             bool flow = IsFlowField(field);
-            if (flow) RefuseLoop(node, target);
+            if (flow)
+            {
+                RefuseNonFlow(target);
+                RefuseLoop(node, target);
+            }
+            else if (field.Member.Name == "LeafNode")
+                RefuseNonFlow(target);
             AnimationNodeProxy.Write(field.Owner, field.Member, target);
             if (!flow) return;
             //A flow child is written under its parent, which is how the tree keeps it at all
@@ -3607,7 +3714,7 @@ namespace OpenCAGE.MCP
             }
         }
 
-        private static readonly string[] TreeOpKeys = { "op", "node", "node_type", "field", "value", "to", "to_type", "type", "name" };
+        private static readonly string[] TreeOpKeys = { "op", "node", "node_type", "field", "value", "to", "to_type", "type", "name", "x", "y" };
 
         private static string ApplyTreeOp(Action<string> addName, AnimationTree tree, JObject op)
         {
@@ -3836,6 +3943,7 @@ namespace OpenCAGE.MCP
             bool dryRun = call.Bool("dry_run");
             bool closeGame = call.Bool("close_game");
             if (ops.Count == 0) throw new McpError("'ops' is empty.");
+            List<(string name, int x, int y)> placed = PlacedNodes(ops);
 
             //Every op is tried on a copy of the tree set first: all of them apply to the real one, or none
             List<string> changes = null;
@@ -3861,8 +3969,15 @@ namespace OpenCAGE.MCP
                             + "), probably added in the Animation Tree Editor. Link or delete them there first.");
                     //The copy shares the live debug string table, so new names are registered only when the edit is made for real
                     changes = ApplyTreeOps(name => { }, copyTree, ops);
-                    try { copy.ToBytes(); }
+                    byte[] after;
+                    try { after = copy.ToBytes(); }
                     catch (Exception e) { throw new McpError("After those ops the tree could not be written (" + e.Message + "); nothing was changed."); }
+                    //Written is not enough: a set that doesn't read back is lost, every tree in it, the next time the animations load
+                    AnimTreeDB reread = null;
+                    try { reread = new AnimTreeDB(after, animations.StringsDebug, database.Filepath); }
+                    catch { }
+                    if (reread == null || !reread.Loaded || reread.Entries.Count != copy.Entries.Count)
+                        throw new McpError("After those ops the tree set would not read back, so writing it would lose it; nothing was changed.");
                     unsavedAfter = UnsavedNodes(copyTree);
                     CheckTreeClips(call, animations, TreeSetName(database), ops);
                 });
@@ -3892,12 +4007,18 @@ namespace OpenCAGE.MCP
                     Anim animations = RequireAnimations();
                     AnimTreeDB database = FindTreeSet(animations, setName);
                     AnimationTree tree = FindTree(database, treeName);
+                    //A value half-typed into the open editor's inspector goes in first; the layout is taken by node, to follow renames and removals
+                    AnimationTreeGraph.FindOpen(tree)?.CommitPendingEdits();
+                    Dictionary<AnimationNode, List<AnimTreeLayouts.NodeLayout>> heldNodes = AnimTreeLayoutManager.Hold(database, tree, out TreeLayout held);
                     try { ApplyTreeOps(name => animations.AddName(name, true), tree, ops); }
                     catch (McpError e)
                     {
-                        //The copy took every op, so this is the live tree having moved on since: say what state it is in
+                        //The copy took every op, so this is the live tree having moved on since: say what state it is in (the layout follows what did apply)
+                        FollowTreeEdit(database, tree, held, heldNodes);
                         throw new McpError("The ops checked out on a copy but failed on the tree itself (" + e.Message + "). Earlier ops may be applied in memory; nothing was written. Reopen the tree with get_anim_tree before trying again.");
                     }
+                    //The layout follows the tree in memory at once, written or not: the tree's own save writes it with the tree if this write fails
+                    FollowTreeEdit(database, tree, held, heldNodes);
 
                     //As the tree editor saves: the set's database goes back into its PAK entry, then the PAK is written
                     PAK2.File entry = animations.PAK.Entries.FirstOrDefault(o => Same(o.Filename, database.Filepath));
@@ -3916,12 +4037,465 @@ namespace OpenCAGE.MCP
                     if (_pendingPak.Count != 0)
                         call.Note("Still only in memory from an earlier failed write (edit_anim_tree doesn't write them): " + string.Join("; ", _pendingPak) + ". The next import_animation, remove_animation, edit_blend_set or edit_animation_events writes them.");
                     Singleton.OnAnimationsModified?.Invoke();
-                    if (Application.OpenForms.OfType<AnimTreeEditor>().Any())
-                        call.Note("The Animation Tree Editor is open: reopen the tree there to see this change (its own Save writes whatever it shows).");
+                    PlaceAndWriteLayouts(call, database, tree, placed);
                 });
             result["written"] = true;
             return result;
         }
+
+        /* add_node ops that say where the new node is drawn */
+        private static List<(string name, int x, int y)> PlacedNodes(JArray ops)
+        {
+            List<(string, int, int)> placed = new List<(string, int, int)>();
+            foreach (JObject op in ops.OfType<JObject>())
+            {
+                if (!Same(ItemStr(op, "op"), "add_node")) continue;
+                bool hasX = op["x"] != null && op["x"].Type != JTokenType.Null, hasY = op["y"] != null && op["y"].Type != JTokenType.Null;
+                if (hasX != hasY) throw new McpError("add_node takes x and y together.");
+                if (!hasX) continue;
+                string name = (ItemStr(op, "name") ?? "").Trim();
+                if (name.Length == 0) throw new McpError("add_node with x and y needs its 'name', to know which node they place.");
+                int x = (int)Coerce(op["x"], typeof(int), "x"), y = (int)Coerce(op["y"], typeof(int), "y");
+                CheckPlace(new System.Drawing.Point(x, y));
+                placed.Add((name, x, y));
+            }
+            return placed;
+        }
+
+        /* After edit_anim_tree changed a tree: its stored layout moved onto the nodes' new keys (renamed nodes keep their place,
+           removed ones drop out) and the open editor redrawn - as soon as the tree has changed in memory */
+        private static void FollowTreeEdit(AnimTreeDB database, AnimationTree tree, TreeLayout held, Dictionary<AnimationNode, List<AnimTreeLayouts.NodeLayout>> heldNodes)
+        {
+            //A stored layout's change redraws the open editor; a tree laid out automatically has none to tell it, so it is redrawn here
+            AnimTreeLayoutManager.Rekey(database, tree, held, heldNodes);
+            if (held == null)
+                AnimationTreeGraph.FindOpen(tree)?.ReloadFromStore();
+        }
+
+        /* Once the tree set is written: new nodes drawn where the ops said, and the set's layouts written with it (the editor's
+           unsaved layouts of other sets stay for its own save, which writes their trees) */
+        private static void PlaceAndWriteLayouts(McpCall call, AnimTreeDB database, AnimationTree tree, List<(string name, int x, int y)> placed)
+        {
+            if (placed.Count != 0)
+            {
+                OnTreeCanvas(database, tree, false, (canvas, live) =>
+                {
+                    foreach ((string name, int x, int y) in placed)
+                    {
+                        AnimationNode node = tree.Nodes.FirstOrDefault(o => o.Name == name);
+                        IReadOnlyList<STNode> copies = canvas.CopiesOf(node);
+                        if (copies.Count != 0)
+                            copies[0].SetPosition(new System.Drawing.Point(x, y));
+                    }
+                    StoreCanvas(database, tree, canvas, live);
+                    return 0;
+                });
+            }
+            uint set = AnimTreeLayouts.SetHashOf(database, RequireAnimations().StringsDebug);
+            if (!AnimTreeLayoutManager.Save((s, t) => s == set, out string error))
+                call.Note("The tree is written, but its layout in AnimTreeLayouts.dat is not (" + error + "); the Animation Tree Editor's Save writes it.");
+        }
+
+        /* The canvas becomes the tree's stored layout. An off-screen canvas's view means nothing: the view stored before is
+           kept (none: the editor fits the tree to its view when it opens it) */
+        private static void StoreCanvas(AnimTreeDB database, AnimationTree tree, AnimTreeCanvas canvas, bool live)
+        {
+            TreeLayout layout = canvas.Capture(withView: live);
+            if (!live)
+            {
+                TreeLayout before = AnimTreeLayoutManager.Get(database, tree);
+                if (before != null)
+                {
+                    layout.CanvasX = before.CanvasX;
+                    layout.CanvasY = before.CanvasY;
+                    layout.CanvasScale = before.CanvasScale;
+                }
+            }
+            AnimTreeLayoutManager.Put(layout, live ? AnimationTreeGraph.FindOpen(tree) : null);
+        }
+
+        /// <summary>
+        /// Work on a tree as it is drawn: on the Animation Tree Editor's own canvas when it shows the tree (so the user sees
+        /// the change), else on an off-screen one laid out the same way - stored layout, or automatic. UI thread.
+        /// </summary>
+        private static T OnTreeCanvas<T>(AnimTreeDB database, AnimationTree tree, bool offScreen, Func<AnimTreeCanvas, bool, T> work)
+        {
+            AnimationTreeGraph open = offScreen ? null : AnimationTreeGraph.FindOpen(tree);
+            if (open?.Canvas != null)
+                return work(open.Canvas, true);
+            using (STNodeEditor editor = new STNodeEditor()
+            {
+                Size = new System.Drawing.Size(1600, 1000),
+                AllowNodeGraphLoops = true,
+                AllowSameOwnerConnections = true,
+                BackColor = System.Drawing.Color.FromArgb(34, 34, 34),
+                Curvature = 0.3F,
+                RoundedCornerRadius = 10,
+            })
+            {
+                AnimTreeCanvas canvas = new AnimTreeCanvas(editor, database, tree, RequireAnimations().StringsDebug);
+                canvas.Populate(AnimTreeLayoutManager.Get(database, tree));
+                return work(canvas, false);
+            }
+        }
+
+        /* Where each node is drawn: x, y of its first copy, and every copy with the links it draws when it has ghosts */
+        private static Dictionary<AnimationNode, JObject> DrawnJson(AnimTreeCanvas canvas)
+        {
+            Dictionary<AnimationNode, JObject> drawn = new Dictionary<AnimationNode, JObject>(ByReference.Instance);
+            List<(STNodeOption output, STNodeOption input)> links = canvas.DrawnLinks();
+            foreach (AnimationNode node in new AnimationNode[] { canvas.Tree }.Concat(canvas.Tree.Nodes))
+            {
+                if (node == null || drawn.ContainsKey(node)) continue;
+                IReadOnlyList<STNode> copies = canvas.CopiesOf(node);
+                if (copies.Count == 0) continue;
+                JObject row = new JObject() { ["x"] = copies[0].Left, ["y"] = copies[0].Top };
+                if (copies.Count > 1)
+                {
+                    JArray each = new JArray();
+                    for (int i = 0; i < copies.Count; i++)
+                    {
+                        JArray draws = new JArray();
+                        foreach ((STNodeOption output, STNodeOption input) in links)
+                        {
+                            if (output.Owner == copies[i])
+                                draws.Add(new JObject() { ["pin"] = output.ShortGUID.ToString(), ["to"] = Label(input.Owner.AnimationNode), ["to_pin"] = input.ShortGUID.ToString(), ["to_ghost"] = canvas.CopyIndexOf(input.Owner) });
+                            else if (input.Owner == copies[i])
+                                draws.Add(new JObject() { ["pin"] = input.ShortGUID.ToString(), ["from"] = Label(output.Owner.AnimationNode), ["from_pin"] = output.ShortGUID.ToString(), ["from_ghost"] = canvas.CopyIndexOf(output.Owner) });
+                        }
+                        each.Add(new JObject() { ["ghost"] = i, ["x"] = copies[i].Left, ["y"] = copies[i].Top, ["draws"] = draws });
+                    }
+                    row["copies"] = each;
+                }
+                drawn[node] = row;
+            }
+            return drawn;
+        }
+
+        private static readonly string[] _treeLayoutActions = { "arrange", "reset", "move", "add_ghost", "move_links", "remove_ghost" };
+
+        private static object EditAnimTreeLayout(McpCall call)
+        {
+            string setName = call.Str("set", required: true);
+            string treeName = call.Str("tree", required: true);
+            string action = (call.Str("action", required: true) ?? "").Trim().ToLowerInvariant();
+            if (!_treeLayoutActions.Contains(action))
+                throw new McpError("'action' is one of " + string.Join(", ", _treeLayoutActions) + ".");
+            bool dryRun = call.Bool("dry_run");
+
+            using (McpEditorTools.Heartbeat(call, "Laying out the tree"))
+                return McpEditor.UI(() =>
+                {
+                    Anim animations = RequireAnimations();
+                    AnimTreeDB database = FindTreeSet(animations, setName);
+                    AnimationTree tree = FindTree(database, treeName);
+                    JObject result = new JObject() { ["tree"] = TreeSetName(database) + "\\" + tree.Name, ["action"] = action };
+                    bool hadLayout = AnimTreeLayoutManager.Has(database, tree);
+
+                    if (action == "reset")
+                    {
+                        if (!hadLayout)
+                        {
+                            result["unchanged"] = "the tree has no stored layout, so it is laid out automatically already";
+                            return result;
+                        }
+                        if (dryRun)
+                        {
+                            result["dry_run"] = true;
+                            return result;
+                        }
+                        AnimTreeLayoutManager.Forget(database, tree);
+                        WriteTreeLayouts(database, tree, result);
+                        return result;
+                    }
+
+                    object outcome = OnTreeCanvas(database, tree, dryRun, (canvas, live) =>
+                    {
+                        //Nothing moved on a tree laid out automatically still stores its layout: that is the change
+                        string unchanged;
+                        try { unchanged = ApplyLayoutAction(call, action, tree, canvas, result); }
+                        catch (McpError)
+                        {
+                            //The editor's canvas is put back as the tree's layout has it, so a refused call leaves nothing half done there
+                            if (live)
+                                AnimationTreeGraph.FindOpen(tree)?.ReloadFromStore();
+                            throw;
+                        }
+                        if (unchanged != null && hadLayout)
+                        {
+                            result["unchanged"] = unchanged;
+                            return result;
+                        }
+                        if (live)
+                            canvas.Editor.Invalidate();
+                        if (dryRun)
+                        {
+                            result["dry_run"] = true;
+                            return result;
+                        }
+                        StoreCanvas(database, tree, canvas, live);
+                        WriteTreeLayouts(database, tree, result);
+                        return result;
+                    });
+                    if (dryRun && AnimationTreeGraph.FindOpen(tree) != null)
+                        call.Note("dry_run worked on a copy: the Animation Tree Editor still shows the tree as it was.");
+                    return outcome;
+                });
+        }
+
+        /* This tree's layout written now; changes the user has not saved yet, to other trees, wait for their own save */
+        private static void WriteTreeLayouts(AnimTreeDB database, AnimationTree tree, JObject result)
+        {
+            AnimationStrings strings = RequireAnimations().StringsDebug;
+            uint set = AnimTreeLayouts.SetHashOf(database, strings), name = AnimTreeLayouts.TreeHashOf(tree, strings);
+            if (!AnimTreeLayoutManager.Save((s, t) => s == set && t == name, out string error))
+                throw new McpError("The layout is changed in the editor, but AnimTreeLayouts.dat could not be written (" + error + "). The Animation Tree Editor's Save writes it.");
+            result["written"] = AnimTreeLayoutManager.FilePath;
+        }
+
+        /* Does one layout action on the canvas, describing it in result. Returns why nothing changed, or null when something did. */
+        private static string ApplyLayoutAction(McpCall call, string action, AnimationTree tree, AnimTreeCanvas canvas, JObject result)
+        {
+            switch (action)
+            {
+                case "arrange":
+                    {
+                        int changed = canvas.ArrangeAll(AnimTreeCanvas.Origin);
+                        result["nodes_changed"] = changed;
+                        result["ghosts"] = new JArray(new AnimationNode[] { tree }.Concat(tree.Nodes).Distinct(ByReference.Instance)
+                            .Where(o => canvas.CopiesOf(o).Count > 1).Select(o => Label(o) + " x" + canvas.CopiesOf(o).Count));
+                        if (canvas.Editor.Created)
+                            canvas.FitView();
+                        return changed == 0 ? "the tree is laid out that way already" : null;
+                    }
+                case "move":
+                    {
+                        JArray specs = call.Array("nodes", required: true);
+                        if (specs.Count == 0) throw new McpError("'nodes' is empty.");
+                        //Every entry checked before any node moves, so a bad one changes nothing
+                        List<(AnimationNode node, STNode copy, System.Drawing.Point to)> moves = new List<(AnimationNode, STNode, System.Drawing.Point)>();
+                        for (int i = 0; i < specs.Count; i++)
+                        {
+                            JObject spec = specs[i] as JObject ?? throw new McpError("nodes[" + i + "] must be an object such as {node:'Walk', x:400, y:120}.");
+                            try
+                            {
+                                CheckKeys(spec, "A node", "node", "node_type", "ghost", "x", "y", "dx", "dy");
+                                AnimationNode node = ResolveNode(tree, ItemStr(spec, "node"), ItemStr(spec, "node_type"), "node");
+                                STNode copy = CopyOf(canvas, node, spec["ghost"] == null ? 0 : (int)Coerce(spec["ghost"], typeof(int), "ghost"));
+                                bool absolute = spec["x"] != null || spec["y"] != null, relative = spec["dx"] != null || spec["dy"] != null;
+                                if (absolute == relative) throw new McpError("Give x and y, or dx and dy.");
+                                System.Drawing.Point to = absolute
+                                    ? new System.Drawing.Point((int)Coerce(spec["x"] ?? throw new McpError("x and y go together."), typeof(int), "x"), (int)Coerce(spec["y"] ?? throw new McpError("x and y go together."), typeof(int), "y"))
+                                    : new System.Drawing.Point(copy.Left + (spec["dx"] == null ? 0 : (int)Coerce(spec["dx"], typeof(int), "dx")), copy.Top + (spec["dy"] == null ? 0 : (int)Coerce(spec["dy"], typeof(int), "dy")));
+                                CheckPlace(to);
+                                moves.Add((node, copy, to));
+                            }
+                            catch (McpError e) { throw new McpError("nodes[" + i + "]: " + e.Message + " Nothing was changed."); }
+                        }
+                        JArray moved = new JArray();
+                        foreach ((AnimationNode node, STNode copy, System.Drawing.Point to) in moves)
+                        {
+                            if (copy.Location == to) continue;
+                            copy.SetPosition(to);
+                            moved.Add(Label(node) + (canvas.CopyIndexOf(copy) == 0 ? "" : "#" + canvas.CopyIndexOf(copy)) + " -> " + to.X + "," + to.Y);
+                        }
+                        result["moved"] = moved;
+                        return moved.Count == 0 ? "every node is there already" : null;
+                    }
+                case "add_ghost":
+                case "move_links":
+                    {
+                        AnimationNode node = ResolveNode(tree, call.Str("node", required: true), call.Str("node_type"), "node");
+                        if (node is AnimationTree) throw new McpError("The tree's own node is drawn once.");
+                        List<string> others = call.StrList("links") ?? new List<string>();
+                        if (action == "move_links" && others.Count == 0) throw new McpError("'links' names the nodes whose links with " + node.Name + " move.");
+
+                        //Every name checked, and every pair shown to share a link, before anything on the canvas changes
+                        List<AnimationNode> partners = new List<AnimationNode>();
+                        foreach (string otherName in others)
+                        {
+                            AnimationNode other = ResolveLinked(tree, otherName);
+                            bool shares = canvas.DrawnLinks().Any(o => (ReferenceEquals(o.output.Owner.AnimationNode, node) && ReferenceEquals(o.input.Owner.AnimationNode, other))
+                                || (ReferenceEquals(o.input.Owner.AnimationNode, node) && ReferenceEquals(o.output.Owner.AnimationNode, other)));
+                            if (!shares)
+                                throw new McpError(Label(node) + " and " + Label(other) + " share no link. get_anim_tree lists " + node.Name + "'s links.");
+                            partners.Add(other);
+                        }
+
+                        STNode target;
+                        if (action == "add_ghost")
+                        {
+                            if (call.Has("x") != call.Has("y")) throw new McpError("x and y go together.");
+                            if (call.Has("ghost")) throw new McpError("add_ghost makes a new copy: 'ghost' is for move_links and remove_ghost.");
+                            if (call.Has("x")) CheckPlace(new System.Drawing.Point(call.Int("x"), call.Int("y")));
+                            STNode first = canvas.CopiesOf(node)[0];
+                            target = canvas.AddGhost(node, new System.Drawing.Point(first.Left - 100000, first.Top - 100000));
+                        }
+                        else
+                        {
+                            if (!call.Has("ghost")) throw new McpError("'ghost' is the copy the links move to (0 = the first).");
+                            target = CopyOf(canvas, node, call.Int("ghost"));
+                        }
+
+                        JArray movedLinks = new JArray();
+                        foreach (AnimationNode other in partners)
+                        {
+                            int count = 0;
+                            foreach ((STNodeOption output, STNodeOption input) in canvas.DrawnLinks())
+                            {
+                                bool fromNode = ReferenceEquals(output.Owner.AnimationNode, node) && ReferenceEquals(input.Owner.AnimationNode, other);
+                                bool toNode = ReferenceEquals(input.Owner.AnimationNode, node) && ReferenceEquals(output.Owner.AnimationNode, other);
+                                if (!fromNode && !toNode) continue;
+                                STNodeOption own = fromNode ? output : input, far = fromNode ? input : output;
+                                if (own.Owner == target) { count++; continue; }
+                                if (canvas.MoveLink(own, far, target)) count++;
+                            }
+                            if (count == 0)
+                                throw new McpError(Label(node) + " and " + Label(other) + " share no link. get_anim_tree lists " + node.Name + "'s links.");
+                            movedLinks.Add(Label(other) + " (" + count + ")");
+                        }
+
+                        if (action == "add_ghost")
+                        {
+                            if (call.Has("x"))
+                                target.SetPosition(new System.Drawing.Point(call.Int("x"), call.Int("y")));
+                            else if (partners.Count != 0)
+                            {
+                                //Beside the first node it draws a link with
+                                canvas.PlaceBesideLinks(new List<STNode>() { target });
+                            }
+                            else
+                            {
+                                //Drawing nothing yet: just below and right of the first copy, as the editor's Add Ghost Node puts it
+                                STNode first = canvas.CopiesOf(node)[0];
+                                target.SetPosition(new System.Drawing.Point(first.Left + 40, first.Bottom + 40));
+                            }
+                            result["ghost"] = canvas.CopyIndexOf(target);
+                            result["at"] = new JArray(target.Left, target.Top);
+                        }
+                        result["links"] = movedLinks;
+                        return null;
+                    }
+                case "remove_ghost":
+                    {
+                        AnimationNode node = ResolveNode(tree, call.Str("node", required: true), call.Str("node_type"), "node");
+                        if (!call.Has("ghost")) throw new McpError("'ghost' is the copy to remove (1 = the first ghost).");
+                        STNode copy = CopyOf(canvas, node, call.Int("ghost"));
+                        if (!canvas.RemoveCopy(copy))
+                            throw new McpError(Label(node) + " is drawn once, so it has no ghost to remove (remove_node in edit_anim_tree deletes the node).");
+                        result["removed"] = Label(node) + "#" + call.Int("ghost");
+                        result["copies_left"] = canvas.CopiesOf(node).Count;
+                        return null;
+                    }
+            }
+            throw new McpError("'action' is one of " + string.Join(", ", _treeLayoutActions) + ".");
+        }
+
+        /* Somewhere on the canvas a picture of the tree can still reach */
+        private static void CheckPlace(System.Drawing.Point at)
+        {
+            const int Furthest = 1000000;
+            if (Math.Abs((long)at.X) > Furthest || Math.Abs((long)at.Y) > Furthest)
+                throw new McpError("x and y must be within " + Furthest + " of 0.");
+        }
+
+        /* A node named in 'links': 'name', or 'name:TYPE' when several nodes of different types share the name */
+        private static AnimationNode ResolveLinked(AnimationTree tree, string text)
+        {
+            string name = (text ?? "").Trim(), type = null;
+            int colon = name.LastIndexOf(':');
+            if (colon > 0)
+            {
+                string after = name.Substring(colon + 1).Trim();
+                if (Enum.GetNames(typeof(NodeType)).Any(o => Same(o, after) || Same(o, "ANIM_" + after)))
+                {
+                    type = after;
+                    name = name.Substring(0, colon).Trim();
+                }
+            }
+            try { return ResolveNode(tree, name, type, "links"); }
+            catch (McpError e) when (type == null && e.Message.StartsWith("Several nodes"))
+            {
+                throw new McpError("Several nodes are called '" + name + "': name the one in 'links' as '" + name + ":TYPE', e.g. '" + name + ":ANIM_Parameter'.");
+            }
+        }
+
+        private static STNode CopyOf(AnimTreeCanvas canvas, AnimationNode node, int ghost)
+        {
+            IReadOnlyList<STNode> copies = canvas.CopiesOf(node);
+            if (ghost < 0 || ghost >= copies.Count)
+                throw new McpError(Label(node) + " is drawn " + (copies.Count == 1 ? "once (ghost 0 only)" : copies.Count + " times (ghost 0 to " + (copies.Count - 1) + ")") + ".");
+            return copies[ghost];
+        }
+
+        private static object OpenAnimTree(McpCall call)
+        {
+            string setName = call.Str("set", required: true);
+            string treeName = call.Str("tree", required: true);
+            return McpEditor.UI(() =>
+            {
+                Anim animations = RequireAnimations();
+                AnimTreeDB database = FindTreeSet(animations, setName);
+                AnimationTree tree = FindTree(database, treeName);
+                AnimTreeEditor editor = Singleton.Editor?.ShowAnimTreeEditor() ?? throw new McpError("The editor isn't ready.");
+                AnimationTreeGraph graph = editor.OpenTree(database, tree) ?? throw new McpError("The Animation Tree Editor could not show " + tree.Name + ".");
+                return new JObject()
+                {
+                    ["opened"] = TreeSetName(database) + "\\" + tree.Name,
+                    ["layout"] = AnimTreeLayoutManager.Has(database, tree) ? "saved" : "auto",
+                    ["nodes_drawn"] = graph.Canvas?.Editor.Nodes.Count ?? 0,
+                };
+            });
+        }
+
+        private static object CaptureAnimTree(McpCall call)
+        {
+            string setName = call.Str("set", required: true);
+            string treeName = call.Str("tree", required: true);
+            int maxWidth = Math.Min(4096, Math.Max(200, call.Int("max_width", 1600)));
+            string caption = null;
+            byte[] png;
+            using (McpEditorTools.Heartbeat(call, "Drawing the tree"))
+            {
+                png = McpEditor.UI(() =>
+                {
+                    Anim animations = RequireAnimations();
+                    AnimTreeDB database = FindTreeSet(animations, setName);
+                    AnimationTree tree = FindTree(database, treeName);
+                    AnimationNode around = call.Has("node") ? ResolveNode(tree, call.Str("node"), call.Str("node_type"), "node") : null;
+                    //The editor's own canvas only when it has room to draw on; otherwise an off-screen one draws the same layout
+                    STNodeEditor shown = AnimationTreeGraph.FindOpen(tree)?.Canvas?.Editor;
+                    bool offScreen = shown == null || !shown.Created || shown.Width < 50 || shown.Height < 50;
+                    return OnTreeCanvas(database, tree, offScreen, (canvas, live) =>
+                    {
+                        List<STNode> nodes = canvas.Editor.Nodes.ToArray().Where(o => o != null).ToList();
+                        if (nodes.Count == 0)
+                            throw new McpError(tree.Name + " has no nodes to picture.");
+                        System.Drawing.Rectangle bounds = McpPageTools.Bounds(nodes);
+                        if (around != null)
+                        {
+                            System.Drawing.Rectangle near = McpPageTools.Bounds(canvas.CopiesOf(around));
+                            near.Inflate(1400, 900);
+                            bounds = near;
+                        }
+                        bounds.Inflate(60, 60);
+                        const int MaxSide = 40000;
+                        bool cropped = bounds.Width > MaxSide || bounds.Height > MaxSide;
+                        if (cropped)
+                            bounds = new System.Drawing.Rectangle(bounds.X, bounds.Y, Math.Min(bounds.Width, MaxSide), Math.Min(bounds.Height, MaxSide));
+                        double scale = Math.Min(1.0, Math.Min(maxWidth / (double)bounds.Width, maxWidth * 2.0 / bounds.Height));
+                        byte[] data = McpPageTools.Render(canvas.Editor, bounds, scale);
+                        caption = TreeSetName(database) + "\\" + tree.Name + " (" + (AnimTreeLayoutManager.Has(database, tree) ? "stored layout" : "laid out automatically") + ")" +
+                            (around != null ? ", around " + Label(around) : "") + ": " + nodes.Count + " node(s) drawn, canvas " + bounds.X + "," + bounds.Y + " to " + bounds.Right + "," + bounds.Bottom +
+                            " at " + Math.Round(scale * 100) + "%." +
+                            (cropped ? " The tree spreads further than " + MaxSide + " units, so only its top-left part is shown: pass 'node' to picture another area." : "");
+                        return data;
+                    });
+                });
+            }
+            return new McpImage() { Data = png, MimeType = "image/png", Caption = caption };
+        }
+
         #endregion
 
         #region Behaviour trees

@@ -275,13 +275,14 @@ namespace OpenCAGE.Popups
                 if (ModServices.Installer.TryGetOwnVersion(path, out byte[] own) && own == null)
                     _deleted.Add(path);
 
-            /* A .META sidecar always ships with the file it belongs to (ModExportBuilder.AddFile),
-             * so listing it as its own tickable row would offer a choice that isn't real. Fold it
-             * into its parent - its bytes are counted there. A sidecar whose parent is unchanged
-             * has nothing to fold into and stays a row of its own. */
+            /* A sidecar (a .META, the tree layouts beside the animation PAK) always ships with the
+             * file it belongs to (ModExportBuilder.AddFile), so listing it as its own tickable row
+             * would offer a choice that isn't real. Fold it into its parent - its bytes are counted
+             * there. A sidecar whose parent is unchanged has nothing to fold into and stays a row
+             * of its own. */
             HashSet<string> changedSet = new HashSet<string>(changed);
             changed = changed
-                .Where(o => !ModExportBuilder.IsSidecar(o) || !changedSet.Contains(ModExportBuilder.SidecarParent(o)))
+                .Where(o => !ModExportBuilder.ShipsWithParent(o, changedSet))
                 .ToList();
 
             //Group: levels (each whole - a level only works with all its files) / settings (value by value) / behaviour
@@ -411,12 +412,12 @@ namespace OpenCAGE.Popups
         }
 
         /// <summary>
-        /// What this row contributes to the package: the file, plus the .META sidecar that ships
-        /// with it (which has no row of its own - see PopulateTree).
+        /// What this row contributes to the package: the file, plus the sidecars that ship
+        /// with it (which have no row of their own - see PopulateTree).
         /// </summary>
         private long FileSize(string normalisedPath)
         {
-            return SizeOnDisk(normalisedPath) + SizeOnDisk(ModExportBuilder.SidecarFor(normalisedPath));
+            return SizeOnDisk(normalisedPath) + ModExportBuilder.SidecarsFor(normalisedPath).Sum(o => SizeOnDisk(o));
         }
 
         private long SizeOnDisk(string normalisedPath)
@@ -556,10 +557,11 @@ namespace OpenCAGE.Popups
                 return;
             }
 
-            //Work someone else's mod would be baked in? Say so before it ships.
+            //Work someone else's mod would be baked in? Say so before it ships. The sidecars that go with the files count too.
             List<string> overlaps = new List<string>();
+            List<string> shipped = files.SelectMany(o => new[] { o }.Concat(ModExportBuilder.SidecarsFor(o))).Distinct().ToList();
             foreach (ModState.InstalledMod mod in ModServices.State.Mods.Where(o => o.Enabled))
-                foreach (string path in files)
+                foreach (string path in shipped)
                     if (mod.Applied.ContainsKey(path) && !ModServices.Installer.TryGetOwnVersion(path, out _))
                         overlaps.Add(path + " (from '" + mod.Name + "')");
             if (overlaps.Count != 0)

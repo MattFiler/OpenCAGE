@@ -41,8 +41,22 @@ namespace OpenCAGE
         private static readonly HashSet<ShortGuid> _dirty = new HashSet<ShortGuid>();
 
         //Composites deleted this session, by ID: one that comes back as a different object (a port overwriting it) has new
-        //content, one that comes back as itself (an undo) has the content its preview shows. Weak: nothing is kept alive here.
-        private static readonly Dictionary<ShortGuid, WeakReference<Composite>> _removed = new Dictionary<ShortGuid, WeakReference<Composite>>();
+        //content, one that comes back as itself (an undo) has the content it went with - and gets back the level's own
+        //preview of it and any recapture it was waiting for. Weak: nothing is kept alive here.
+        private sealed class Removal
+        {
+            public WeakReference<Composite> Composite;
+            public bool WasDirty;
+            public CompositePreviewTable.Preview UserEntry;
+        }
+        private static readonly Dictionary<ShortGuid, Removal> _removed = new Dictionary<ShortGuid, Removal>();
+
+        //Ported composites about to arrive whose source level had its own preview of them: it shows what is arriving
+        private static readonly Dictionary<ShortGuid, CompositePreviewTable.Preview> _carried = new Dictionary<ShortGuid, CompositePreviewTable.Preview>();
+
+        //Arrivals that only the shipped table can vouch for, while it is still unread: settled when someone needs the
+        //answer (a save, or a question about one), so adding a composite never reads the whole table on its own
+        private static readonly HashSet<ShortGuid> _unsettled = new HashSet<ShortGuid>();
 
         //Decoded once per (composite, size) - UI thread only
         private static readonly Dictionary<ShortGuid, Dictionary<int, Image>> _images = new Dictionary<ShortGuid, Dictionary<int, Image>>();
@@ -111,6 +125,8 @@ namespace OpenCAGE
             _user = new CompositePreviewTable();
             _dirty.Clear();
             _removed.Clear();
+            _carried.Clear();
+            _unsettled.Clear();
             _deferred.Clear();
             DropCapture();
             DropImagesOnUiThread();
@@ -130,8 +146,24 @@ namespace OpenCAGE
             _user = table ?? new CompositePreviewTable();
             _dirty.Clear();
             _removed.Clear();
+            _carried.Clear();
+            _unsettled.Clear();
+
+            //A composite deleted and saved away by an earlier session left its preview behind: one ported in later under
+            //that ID would be trusted to it, whatever it now holds
+            int pruned = 0;
+            if (_commands != null)
+            {
+                foreach (ShortGuid id in _user.previews.Keys.ToList())
+                {
+                    if (_commands.GetComposite(id) != null)
+                        continue;
+                    _user.previews.Remove(id);
+                    pruned++;
+                }
+            }
             DropImagesOnUiThread();
-            Debug.Log(LogSystem, "Loaded " + _user.Count + " composite previews from the level");
+            Debug.Log(LogSystem, "Loaded " + _user.Count + " composite previews from the level" + (pruned == 0 ? "" : " (dropped " + pruned + " of composites no longer in it)"));
         }
 
         /* A level loads on its own thread, and that is where its table is read. The cached previews are the
@@ -439,8 +471,20 @@ namespace OpenCAGE
         #endregion
 
         #region CHANGE TRACKING
-        public static bool IsDirty(ShortGuid id) => _dirty.Contains(id);
-        public static int DirtyCount => _dirty.Count;
+        public static bool IsDirty(ShortGuid id)
+        {
+            if (_unsettled.Contains(id))
+                Settle();
+            return _dirty.Contains(id);
+        }
+        public static int DirtyCount
+        {
+            get
+            {
+                Settle();
+                return _dirty.Count;
+            }
+        }
 
         private static void MarkDirty(Composite composite)
         {
@@ -470,25 +514,81 @@ namespace OpenCAGE
             return false;
         }
 
+        /// <summary>
+        /// A port is about to bring this composite in from a level whose own table (<paramref name="source"/>) may hold a
+        /// preview of it. That preview shows what is arriving, so it comes too rather than the composite being taken again.
+        /// Call before raising OnCompositeAdded for it; a source with no preview of it changes nothing.
+        /// </summary>
+        internal static void CarryPreview(ShortGuid id, CompositePreviewTable source)
+        {
+            if (source == null || !source.previews.TryGetValue(id, out CompositePreviewTable.Preview preview) || preview == null)
+                return;
+            _carried[id] = new CompositePreviewTable.Preview() { captured_at = preview.captured_at, png_gzip = preview.png_gzip };
+        }
+
+        /// <summary>
+        /// For a level built on disk (Create Level): a composite ported into it takes its source level's own preview, or
+        /// none (the shipped one stands) when the source had none - a later pick porting the same ID over it replaces it.
+        /// </summary>
+        internal static void CarryInto(CompositePreviewTable into, ShortGuid id, CompositePreviewTable source)
+        {
+            if (into == null)
+                return;
+            if (source != null && source.previews.TryGetValue(id, out CompositePreviewTable.Preview preview) && preview != null)
+                into.previews[id] = new CompositePreviewTable.Preview() { captured_at = preview.captured_at, png_gzip = preview.png_gzip };
+            else
+                into.previews.Remove(id);
+        }
+
         /* A composite has arrived in the level. A new one (made here) has no preview and needs one. One brought in by a
-           port or package import keeps its ID, and with it the preview the level or the shipped table already holds for
-           that ID - the same composite, so there is nothing to retake - unless it replaced a different composite of that
-           ID this session (a port overwriting it), whose preview showed the old content. An undo bringing back a deleted
-           composite gets the same object back, and keeps its preview. */
+           port keeps its ID: when its source level had its own preview of it, that comes across with it; otherwise the
+           level or the shipped table already holds one for that ID - the same composite, so there is nothing to retake -
+           unless it replaced a different composite of that ID this session (a port overwriting it), whose preview showed
+           the old content. An undo bringing back a deleted composite gets the same object back, with its preview and
+           any recapture it was waiting for. */
         private static void MarkAdded(Composite composite)
         {
             if (composite == null)
                 return;
-            if (_removed.TryGetValue(composite.shortGUID, out WeakReference<Composite> gone))
+            ShortGuid id = composite.shortGUID;
+            _removed.TryGetValue(id, out Removal gone);
+            _removed.Remove(id);
+
+            if (_carried.TryGetValue(id, out CompositePreviewTable.Preview carried))
             {
-                _removed.Remove(composite.shortGUID);
-                if (!gone.TryGetTarget(out Composite old) || !ReferenceEquals(old, composite))
+                _carried.Remove(id);
+                _user.previews[id] = carried;
+                _dirty.Remove(id);
+                _unsettled.Remove(id);
+                ChangedDuringPort(id);
+                return;
+            }
+            if (gone != null)
+            {
+                if (!gone.Composite.TryGetTarget(out Composite old) || !ReferenceEquals(old, composite))
+                {
+                    MarkDirty(composite);
+                    return;
+                }
+                if (gone.UserEntry != null)
+                {
+                    _user.previews[id] = gone.UserEntry;
+                    ChangedDuringPort(id);
+                }
+                if (gone.WasDirty)
                 {
                     MarkDirty(composite);
                     return;
                 }
             }
-            if (!KnowsPreview(composite.shortGUID))
+            if (_user.previews.ContainsKey(id))
+                return;
+            if (!_bakedLoaded)
+            {
+                _unsettled.Add(id);
+                return;
+            }
+            if (!KnowsPreview(id))
                 MarkDirty(composite);
         }
 
@@ -499,6 +599,44 @@ namespace OpenCAGE
                 return true;
             CompositePreviewTable baked = Baked;
             return baked != null && baked.previews.ContainsKey(id);
+        }
+
+        /* A composite's preview changed while a port or an undo is bringing composites in: the cached pictures and the tree
+           lists are put right at once (cheap), and the listeners - which rebuild whole lists - hear once, after it */
+        private static readonly HashSet<ShortGuid> _changedLater = new HashSet<ShortGuid>();
+        private static void ChangedDuringPort(ShortGuid id)
+        {
+            DropImages(new[] { id });
+            CompositePreviewImages.Refresh(new[] { id });
+            if (!_changedLater.Add(id) || _changedLater.Count != 1)
+                return;
+            CommandsEditor editor = Singleton.Editor;
+            if (editor == null || editor.IsDisposed || !editor.IsHandleCreated)
+            {
+                FlushChangedLater();
+                return;
+            }
+            editor.BeginInvoke(new Action(FlushChangedLater));
+        }
+
+        private static void FlushChangedLater()
+        {
+            if (_changedLater.Count == 0)
+                return;
+            List<ShortGuid> ids = _changedLater.ToList();
+            _changedLater.Clear();
+            PreviewsChanged?.Invoke(ids);
+        }
+
+        /* Arrivals left for the shipped table to vouch for are judged now, reading it if it has not been read */
+        private static void Settle()
+        {
+            if (_unsettled.Count == 0)
+                return;
+            foreach (ShortGuid id in _unsettled)
+                if (!KnowsPreview(id))
+                    _dirty.Add(id);
+            _unsettled.Clear();
         }
 
         private static void MarkDirty(Entity entity)
@@ -522,13 +660,26 @@ namespace OpenCAGE
             return _commands.Entries.FirstOrDefault(o => o != null && o.GetEntityByID(entity.shortGUID) == entity);
         }
 
+        /* Its level preview goes with it: a save while it is gone must not keep a picture for an ID nothing in the level
+           has, which a later port under that ID would be trusted to */
         private static void Forget(Composite composite)
         {
             if (composite == null)
                 return;
-            _dirty.Remove(composite.shortGUID);
-            _removed[composite.shortGUID] = new WeakReference<Composite>(composite);
-            DropImages(new[] { composite.shortGUID });
+            ShortGuid id = composite.shortGUID;
+            _user.previews.TryGetValue(id, out CompositePreviewTable.Preview userEntry);
+            _user.previews.Remove(id);
+            _unsettled.Remove(id);
+            _removed[id] = new Removal()
+            {
+                Composite = new WeakReference<Composite>(composite),
+                WasDirty = _dirty.Remove(id),
+                UserEntry = userEntry,
+            };
+            DropImages(new[] { id });
+            //The lists the trees draw from would go on showing the level's picture of it
+            if (userEntry != null)
+                CompositePreviewImages.Refresh(new[] { id });
         }
         #endregion
 
@@ -541,14 +692,16 @@ namespace OpenCAGE
         public static void BeginSave()
         {
             _saveInProgress = true;
-            if (_dirty.Count == 0)
-            {
-                Debug.Log(LogSystem, "No composite has changed since its preview was taken");
-                return;
-            }
+            //Without a viewer nothing is taken, so arrivals waiting on the shipped table wait on: no reason to read it now
             if (!Send.Connected)
             {
                 Debug.Log(LogSystem, "No viewer connected: " + _dirty.Count + " composite(s) keep their old previews until the next save");
+                return;
+            }
+            Settle();
+            if (_dirty.Count == 0)
+            {
+                Debug.Log(LogSystem, "No composite has changed since its preview was taken");
                 return;
             }
 
@@ -665,14 +818,24 @@ namespace OpenCAGE
                                 failed++;
                                 break;
                             }
-                            _user.SetPreview(id, png, now);
-                            _dirty.Remove(id);
-                            changed.Add(id);
-                            captured++;
+                            if (KeepForDeleted(id, png, now))
+                                captured++;
+                            else
+                            {
+                                _user.SetPreview(id, png, now);
+                                _dirty.Remove(id);
+                                changed.Add(id);
+                                captured++;
+                            }
                             try { File.Delete(result.file); } catch { }
                         }
                         break;
                     case CompositePreviewStatus.Empty:
+                        if (KeepForDeleted(id, new byte[0], now))
+                        {
+                            empty++;
+                            break;
+                        }
                         //Draws nothing: remembered as such, so the shipped preview (of what it used to be) is not shown for it
                         _user.previews[id] = new CompositePreviewTable.Preview() { captured_at = now, png_gzip = new byte[0] };
                         _dirty.Remove(id);
@@ -705,6 +868,29 @@ namespace OpenCAGE
             //put the composite that was on screen back - but not what was selected in it. Sent again, as a
             //settings change would be, so the selection and the stepped-into instance come back too.
             Send.SendReSyncPacket();
+        }
+
+        /* A capture of a composite deleted while the viewer worked: it goes with the deletion (an undo brings it back,
+           taken), not into the table a save writes. A composite that is gone with no undo to bring it back is dropped. */
+        private static bool KeepForDeleted(ShortGuid id, byte[] png, int now)
+        {
+            if (_removed.TryGetValue(id, out Removal removal))
+            {
+                CompositePreviewTable taken = new CompositePreviewTable();
+                if (png.Length == 0)
+                    taken.previews[id] = new CompositePreviewTable.Preview() { captured_at = now, png_gzip = new byte[0] };
+                else
+                    taken.SetPreview(id, png, now);
+                removal.UserEntry = taken.previews[id];
+                removal.WasDirty = false;
+                return true;
+            }
+            if (_commands != null && _commands.GetComposite(id) == null)
+            {
+                Debug.Log(LogSystem, "The viewer captured " + id.ToByteString() + ", which is no longer in the level; dropped");
+                return true;
+            }
+            return false;
         }
 
         /// <summary>These composites' previews are different now: cached images go, and listeners redraw.</summary>

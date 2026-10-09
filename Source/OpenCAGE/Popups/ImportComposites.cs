@@ -264,8 +264,12 @@ namespace OpenCAGE
                     Singleton.OnCompositeDeleted?.Invoke(replaced);
                 //Registers the composite the way a newly created one is (dirty flag, compatibility entry, viewer), then its own pages replace the default page that gives it
                 Singleton.OnCompositeAdded?.Invoke(composite);
+                //A later level's pick can port the same ID over this one: it must hear this one went too
+                existing[composite.shortGUID] = composite;
                 FlowgraphLayoutManager.ImportLayouts(composite, layouts);
-            });
+            },
+            //The source level's own preview of a composite shows what arrives, so it comes too rather than being retaken
+            onArriving: (composite, previews) => CompositePreviewManager.CarryPreview(composite.shortGUID, previews));
             return result;
         }
     }

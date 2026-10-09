@@ -911,6 +911,10 @@ namespace OpenCAGE.MCP
                                 replacedNames.Add(replaced.name);
                             }
                             Singleton.OnCompositeAdded?.Invoke(copy);
+                            //A package carries no previews. The composites it was made from are most likely edited copies, so they are
+                            //taken afresh at the next save; what they place keeps the preview its ID has, as a port's does
+                            if (manifest.Composites.Any(o => o.IsRoot && o.Guid == copy.shortGUID.AsUInt32))
+                                CompositePreviewManager.MarkEdited(copy);
                             FlowgraphLayoutManager.ImportLayouts(copy, layouts);
                         });
                         //Put back inside the batch, as the import window does: the rebuild it asks the viewer for is then the batch's only

@@ -400,6 +400,7 @@
     <Compile Include="Popups\Anim Tree Editor\AnimationTreeGraph.Designer.cs">
       <DependentUpon>AnimationTreeGraph.cs</DependentUpon>
     </Compile>
+    <Compile Include="Popups\Anim Tree Editor\AnimTreeCanvas.cs" />
     <Compile Include="Popups\Anim Tree Editor\AnimTreeEditor.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -1032,6 +1033,8 @@
     <Compile Include="Scripts\EnumStringListViewItems.cs" />
     <Compile Include="Scripts\FlowgraphLayoutManager.cs" />
     <Compile Include="Scripts\CompositePreviewManager.cs" />
+    <Compile Include="Scripts\AnimTreeLayoutManager.cs" />
+    <Compile Include="Scripts\AnimTreeLayouts.cs" />
     <Compile Include="Scripts\CollisionProxyImporter.cs" />
     <Compile Include="Scripts\PhysicsSystemImporter.cs" />
     <Compile Include="Scripts\CompositePreviewImages.cs" />

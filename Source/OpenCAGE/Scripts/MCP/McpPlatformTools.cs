@@ -115,6 +115,7 @@ namespace OpenCAGE.MCP
             "launch_game", "close_game", "launch_options", "editor_options", "game_directories", "release_level_cache", "retry_shader_harvest",
             "load_level", "save_level", "create_backup", "delete_backups", "delete_level", "export_model", "export_textures", "export_sound", "export_animations",
             "export_collision_mesh", "export_composite_package", "export_region_collision", "runtime_utils", "preview_cage_animation",
+            "open_anim_tree",
         };
 
         //Families whose every change to the level is an undo step: a call of theirs that left none changed nothing

@@ -400,6 +400,10 @@ namespace OpenCAGE
                     Singleton.OnCompositeDeleted?.Invoke(replaced);
                 //Registers the composite the way a newly created one is (dirty flag, compatibility entry, viewer), then its own pages replace the default page that gives it
                 Singleton.OnCompositeAdded?.Invoke(composite);
+                //A package carries no previews. The composites it was made from are most likely edited copies, so they are taken
+                //afresh at the next save; what they place keeps the preview its ID has, as a port's does
+                if (_manifest.Composites.Any(o => o.IsRoot && o.Guid == composite.shortGUID.AsUInt32))
+                    CompositePreviewManager.MarkEdited(composite);
                 FlowgraphLayoutManager.ImportLayouts(composite, layouts);
             });
             return result;

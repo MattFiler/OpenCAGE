@@ -14,27 +14,34 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using WeifenLuo.WinFormsUI.Docking;
+using static OpenCAGE.AnimTreeLayouts;
 
 namespace OpenCAGE.AnimTrees
 {
     public partial class AnimationTreeGraph : DockContent
     {
-        private Dictionary<AnimationNode, STNode> _nodeLookups =
-            new Dictionary<AnimationNode, STNode>(new ReferenceEqualityComparer());
         private AnimationNodeEditor _editor = null;
+        private AnimTreeDB _currentDb = null;
         private AnimationTree _currentTree = null;
+        private AnimTreeCanvas _canvas = null;
         private Point _contextMenuCanvasPos = Point.Empty;
 
-        private sealed class ReferenceEqualityComparer : IEqualityComparer<AnimationNode>
-        {
-            public bool Equals(AnimationNode x, AnimationNode y) => ReferenceEquals(x, y);
-            public int GetHashCode(AnimationNode obj) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(obj);
-        }
+        //The layout key this graph last stored the tree under: a renamed tree's old entry goes when it is stored again
+        private uint _storedSet, _storedTree;
+
+        //The view to show once the canvas has its size (a graph is filled before it is shown)
+        private Action _viewPending = null;
+
+        /// <summary>The tree this graph shows (null until one is opened).</summary>
+        public AnimationTree Tree => _currentTree;
+        public AnimTreeDB Database => _currentDb;
+        internal AnimTreeCanvas Canvas => _canvas;
 
         public AnimationTreeGraph()
         {
             InitializeComponent();
             Theming.ThemeManager.ApplyToForm(this);
+            EditorIcons.Bind(arrangeTreeToolStripMenuItem, EditorIcon.ArrangePage);
             CloseButton = false;
             CloseButtonVisible = false;
 
@@ -48,8 +55,28 @@ namespace OpenCAGE.AnimTrees
             stNodeEditor1.LoadAssembly(Application.ExecutablePath);
             stNodeEditor1.AllowSameOwnerConnections = true;
             stNodeEditor1.SelectedChanged += StNodeEditor1_SelectedChanged;
+            stNodeEditor1.NodesMoved += StNodeEditor1_NodesMoved;
+            stNodeEditor1.OptionConnecting += StNodeEditor1_OptionConnecting;
+            stNodeEditor1.OptionConnected += StNodeEditor1_OptionConnected;
+            AnimTreeLayoutManager.Changed += OnLayoutChanged;
+            //Closing the whole editor window disposes its graphs without closing them: the static event must let go then too
+            this.Disposed += (s, e) =>
+            {
+                AnimTreeLayoutManager.Changed -= OnLayoutChanged;
+                if (_editor != null)
+                    _editor.NodeNameChanged -= OnNodeNameChanged;
+            };
 
             BuildAddNodeMenu();
+        }
+
+        /// <summary>The graph showing this tree in the Animation Tree Editor, if it is open there.</summary>
+        internal static AnimationTreeGraph FindOpen(AnimationTree tree)
+        {
+            if (tree == null || AnimTreeEditor.DockPanel == null)
+                return null;
+            //Contents, not Documents: a graph the user floated or docked to a side is still showing the tree
+            return AnimTreeEditor.DockPanel.Contents.OfType<AnimationTreeGraph>().FirstOrDefault(o => !o.IsDisposed && ReferenceEquals(o._currentTree, tree));
         }
 
         private void StNodeEditor1_SelectedChanged(object sender, EventArgs e)
@@ -63,13 +90,23 @@ namespace OpenCAGE.AnimTrees
 
         private void AnimationTree_VisibleChanged(object sender, EventArgs e)
         {
-
+            if (Visible && _viewPending != null && IsHandleCreated)
+            {
+                Action view = _viewPending;
+                _viewPending = null;
+                BeginInvoke(view);
+            }
         }
 
         private void AnimationTree_FormClosed(object sender, FormClosedEventArgs e)
         {
             this.VisibleChanged -= AnimationTree_VisibleChanged;
             this.FormClosed -= AnimationTree_FormClosed;
+            stNodeEditor1.SelectedChanged -= StNodeEditor1_SelectedChanged;
+            stNodeEditor1.NodesMoved -= StNodeEditor1_NodesMoved;
+            stNodeEditor1.OptionConnecting -= StNodeEditor1_OptionConnecting;
+            stNodeEditor1.OptionConnected -= StNodeEditor1_OptionConnected;
+            AnimTreeLayoutManager.Changed -= OnLayoutChanged;
 
             if (_editor != null)
             {
@@ -80,28 +117,16 @@ namespace OpenCAGE.AnimTrees
 
         private void OnNodeNameChanged(AnimationNode node)
         {
-            if (node == null)
+            if (node == null || _canvas == null)
                 return;
 
-            STNode stNode = null;
-            if (!_nodeLookups.TryGetValue(node, out stNode))
-            {
-                foreach (STNode candidate in stNodeEditor1.Nodes)
-                {
-                    if (ReferenceEquals(candidate.AnimationNode, node))
-                    {
-                        stNode = candidate;
-                        break;
-                    }
-                }
-            }
-
-            if (stNode != null)
-                stNode.SetName(node.Name, node.Type.ToString());
-
+            _canvas.Retitle(node);
             if (node is AnimationTree)
                 this.Text = node.Name;
 
+            //The layout is keyed by name: stored again under the new one
+            if (AnimTreeLayoutManager.Has(_currentDb, _currentTree) || IsStoredUnder(_storedSet, _storedTree))
+                StoreLayout();
             stNodeEditor1.Invalidate();
         }
 
@@ -116,33 +141,102 @@ namespace OpenCAGE.AnimTrees
             {
                 if (TryDeleteHoveredLink())
                     return true;
-                DeleteSelectedNodes();
+                DeleteSelectedNodes((keyData & Keys.Shift) == Keys.Shift);
+                return true;
+            }
+            if (Visible && keyData == Keys.F3)
+            {
+                GoToNextGhost(stNodeEditor1.GetSelectedNode().FirstOrDefault());
                 return true;
             }
             return base.ProcessCmdKey(ref msg, keyData);
         }
 
-        public void PopulateGraph(AnimationTree animTree)
+        #region Drawing the tree
+        /// <summary>Show a tree: as its stored layout has it, else laid out automatically and fitted to the view.</summary>
+        public void PopulateGraph(AnimTreeDB database, AnimationTree animTree)
         {
+            _currentDb = database;
             _currentTree = animTree;
-            _nodeLookups.Clear();
             this.Text = animTree.Name;
+            _canvas = new AnimTreeCanvas(stNodeEditor1, database, animTree, Singleton.Global.Animations.StringsDebug);
+            _storedSet = _canvas.SetHash;
+            _storedTree = _canvas.TreeHash;
 
-            stNodeEditor1.SuspendLayout();
-            stNodeEditor1.Nodes.Clear();
-
-            STNode treeNode = CreateAnimNodeNode(animTree);
-            foreach (AnimationNode animNode in animTree.Nodes)
-                CreateAnimNodeNode(animNode);
-
-            foreach (STNode node in stNodeEditor1.Nodes)
-                SetupConnections(node);
-
-            PositionAllNodes(treeNode);
-
-            stNodeEditor1.ResumeLayout();
+            TreeLayout saved = AnimTreeLayoutManager.Get(_currentDb, _currentTree);
+            _canvas.Populate(saved);
+            ShowView(saved != null && saved.CanvasScale > 0 ? (Action)(() => _canvas.RestoreView(saved)) : _canvas.FitView);
         }
 
+        /// <summary>Draw the tree again from what is stored for it (another tool changed it or its layout), keeping the view.</summary>
+        internal void ReloadFromStore()
+        {
+            if (_canvas == null)
+                return;
+            PointF centre = stNodeEditor1.CanvasCenter;
+            float scale = stNodeEditor1.CanvasScale;
+            bool hadNodes = stNodeEditor1.Nodes.Count != 0;
+
+            _canvas.Populate(AnimTreeLayoutManager.Get(_currentDb, _currentTree));
+            _editor?.PopulateData(null, _currentTree);
+            if (hadNodes)
+                ShowView(() =>
+                {
+                    stNodeEditor1.ScaleCanvas(scale, 0, 0);
+                    stNodeEditor1.CenterCanvasOn(centre.X, centre.Y, false);
+                });
+            else
+                ShowView(_canvas.FitView);
+        }
+
+        /* Set the view now if the canvas is on screen, else once it is (after layout, as a fresh canvas starts at 1:1, top left) */
+        private void ShowView(Action view)
+        {
+            if (IsHandleCreated && Visible)
+                BeginInvoke(view);
+            else
+                _viewPending = view;
+        }
+
+        private void OnLayoutChanged(uint setHash, uint treeHash, object source)
+        {
+            if (source == this || _canvas == null || IsDisposed)
+                return;
+            if (setHash == _canvas.SetHash && treeHash == _canvas.TreeHash)
+                ReloadFromStore();
+        }
+
+        /// <summary>The canvas as it is now becomes the tree's stored layout (written with the next save).</summary>
+        private void StoreLayout()
+        {
+            if (_canvas == null)
+                return;
+            TreeLayout layout = _canvas.Capture();
+            if (layout.SetHash != _storedSet || layout.TreeHash != _storedTree)
+                AnimTreeLayoutManager.ForgetKey(_storedSet, _storedTree, this);
+            _storedSet = layout.SetHash;
+            _storedTree = layout.TreeHash;
+            AnimTreeLayoutManager.Put(layout, this);
+        }
+
+        /* A tree change keeps the stored layout in step - but a tree laid out automatically stays that way */
+        private void StoreLayoutIfKept()
+        {
+            if (AnimTreeLayoutManager.Has(_currentDb, _currentTree))
+                StoreLayout();
+        }
+
+        private static bool IsStoredUnder(uint setHash, uint treeHash) => AnimTreeLayoutManager.Get(setHash, treeHash) != null;
+
+        private void StNodeEditor1_NodesMoved(object sender, STNodesMovedEventArgs e)
+        {
+            if (_canvas == null || e?.Movements == null || !e.Movements.Any(o => o.OldLocation != o.NewLocation))
+                return;
+            StoreLayout();
+        }
+        #endregion
+
+        #region Menus
         private void BuildAddNodeMenu()
         {
             addNodeToolStripMenuItem.DropDownItems.Clear();
@@ -172,10 +266,16 @@ namespace OpenCAGE.AnimTrees
                 && hoveredNode.AnimationNode != null
                 && !(hoveredNode.AnimationNode is AnimationTree);
             bool onLink = linkIn != null && linkOut != null;
+            //The tree's own node can't be deleted or ghosted: over it, the menu is the empty canvas's
             bool onEmpty = !onNode && !onLink;
+            bool hasCopies = onNode && _canvas != null && _canvas.CopiesOf(hoveredNode.AnimationNode).Count > 1;
 
             addNodeToolStripMenuItem.Visible = onEmpty;
+            arrangeTreeToolStripMenuItem.Visible = onEmpty;
             toolStripSeparatorAdd.Visible = false;
+            addGhostToolStripMenuItem.Visible = onNode;
+            nextGhostToolStripMenuItem.Visible = hasCopies;
+            deleteGhostToolStripMenuItem.Visible = hasCopies;
             deleteNodeToolStripMenuItem.Visible = onNode;
             deleteLinkToolStripMenuItem.Visible = onLink;
 
@@ -190,16 +290,119 @@ namespace OpenCAGE.AnimTrees
             AddNodeOfType(type, _contextMenuCanvasPos);
         }
 
+        private void arrangeTreeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (_canvas == null)
+                return;
+            _canvas.ArrangeAll(AnimTreeCanvas.Origin);
+            _canvas.FitView();
+            StoreLayout();
+        }
+
+        private void addGhostToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            STNode node = stNodeEditor1.GetHoveredNode();
+            if (_canvas == null || node?.AnimationNode == null)
+                return;
+            STNode ghost = _canvas.AddGhost(node.AnimationNode, new Point(node.Left + 40, node.Bottom + 40));
+            if (ghost == null)
+                return;
+            stNodeEditor1.RemoveAllSelectedNodes();
+            stNodeEditor1.AddSelectedNode(ghost);
+            stNodeEditor1.SetActiveNode(ghost);
+            StoreLayout();
+            stNodeEditor1.Invalidate();
+        }
+
+        private void nextGhostToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            GoToNextGhost(stNodeEditor1.GetHoveredNode());
+        }
+
+        private void deleteGhostToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            STNode node = stNodeEditor1.GetHoveredNode();
+            if (_canvas != null && _canvas.RemoveCopy(node))
+            {
+                StoreLayout();
+                stNodeEditor1.Invalidate();
+            }
+        }
+
         private void deleteNodeToolStripMenuItem_Click(object sender, EventArgs e)
         {
             STNode node = stNodeEditor1.GetHoveredNode();
             if (node != null)
-                DeleteAnimNode(node);
+                DeleteAnimNode(node.AnimationNode);
         }
 
         private void deleteLinkToolStripMenuItem_Click(object sender, EventArgs e)
         {
             TryDeleteHoveredLink();
+        }
+
+        /// <summary>Select the next copy of a node (after this one, round to the first) and bring it into view.</summary>
+        private void GoToNextGhost(STNode from)
+        {
+            if (_canvas == null || from?.AnimationNode == null)
+                return;
+            IReadOnlyList<STNode> copies = _canvas.CopiesOf(from.AnimationNode);
+            if (copies.Count < 2)
+                return;
+            int at = -1;
+            for (int i = 0; i < copies.Count; i++)
+                if (copies[i] == from) at = i;
+            STNode next = copies[(at + 1) % copies.Count];
+            stNodeEditor1.RemoveAllSelectedNodes();
+            stNodeEditor1.AddSelectedNode(next);
+            stNodeEditor1.SetActiveNode(next);
+            stNodeEditor1.CenterCanvasOn(next.Left + next.Width / 2f, next.Top + next.Height / 2f, true);
+            _editor?.PopulateData(next.AnimationNode, _currentTree);
+        }
+        #endregion
+
+        #region Links
+        /* A link the user is drawing: refused before it is drawn when the tree could not hold it */
+        private void StNodeEditor1_OptionConnecting(object sender, STNodeEditorOptionEventArgs e)
+        {
+            if (_canvas == null || _canvas.Building)
+                return;
+            if (!_canvas.CanDraw(e.CurrentOption, e.TargetOption, out string refusal))
+            {
+                e.Continue = false;
+                MessageBox.Show(refusal, "Can't link these", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        /* A link the user drew: the tree now holds it (or, one it held already, it is drawn from these copies now) */
+        private void StNodeEditor1_OptionConnected(object sender, STNodeEditorOptionEventArgs e)
+        {
+            if (_canvas == null || _canvas.Building || e.Status != ConnectionStatus.Connected)
+                return;
+            STNodeOption a = e.CurrentOption, b = e.TargetOption;
+            bool treeChanged;
+            try
+            {
+                _canvas.ApplyDrawnLink(a, b, out treeChanged);
+            }
+            catch (InvalidOperationException ex)
+            {
+                STNodeOption output = a.Location == PinLocation.Right || a.Location == PinLocation.Bottom ? a : b;
+                output.DisconnectOption(output == a ? b : a);
+                stNodeEditor1.Invalidate();
+                MessageBox.Show(ex.Message, "Can't link these", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            //Moving a link between copies is a layout change; a new link changes the tree, and the layout only if it is kept
+            bool onGhost = _canvas.CopyIndexOf(a.Owner) > 0 || _canvas.CopyIndexOf(b.Owner) > 0;
+            if (!treeChanged || onGhost)
+                StoreLayout();
+            else
+                StoreLayoutIfKept();
+            STNode[] selected = stNodeEditor1.GetSelectedNode();
+            _editor?.PopulateData(selected.Length > 0 ? selected[0].AnimationNode : null, _currentTree);
+            stNodeEditor1.Invalidate();
         }
 
         private bool TryDeleteHoveredLink()
@@ -210,34 +413,9 @@ namespace OpenCAGE.AnimTrees
 
             ClearLinkInModel(output, input);
             output.DisconnectOption(input);
+            StoreLayoutIfKept();
             stNodeEditor1.Invalidate();
             return true;
-        }
-
-        private void DeleteSelectedNodes()
-        {
-            STNode[] selected = stNodeEditor1.GetSelectedNode();
-            if (selected == null || selected.Length == 0)
-                return;
-
-            foreach (STNode node in selected.ToArray())
-                DeleteAnimNode(node);
-        }
-
-        private void DeleteAnimNode(STNode node)
-        {
-            if (node?.AnimationNode == null)
-                return;
-            if (node.AnimationNode is AnimationTree)
-                return; // never delete the tree root from the graph
-
-            AnimationNode animNode = node.AnimationNode;
-            _currentTree?.RemoveNode(animNode);
-            _nodeLookups.Remove(animNode);
-            stNodeEditor1.Nodes.Remove(node);
-
-            if (_editor != null)
-                _editor.PopulateData(null, _currentTree);
         }
 
         private void ClearLinkInModel(STNodeOption output, STNodeOption input)
@@ -403,10 +581,56 @@ namespace OpenCAGE.AnimTrees
                 if (ReferenceEquals(listener.LeafNode, provider)) listener.LeafNode = null;
             }
         }
+        #endregion
+
+        #region Nodes
+        /* Del: each selected copy goes, and a node with its last copy. Shift+Del: the selected nodes and all their copies. */
+        private void DeleteSelectedNodes(bool allCopies)
+        {
+            STNode[] selected = stNodeEditor1.GetSelectedNode();
+            if (selected == null || selected.Length == 0 || _canvas == null)
+                return;
+
+            bool layoutChanged = false;
+            foreach (STNode node in selected.ToArray())
+            {
+                if (node.AnimationNode == null || node.AnimationNode is AnimationTree || node.Owner != stNodeEditor1)
+                    continue;
+                if (!allCopies && _canvas.RemoveCopy(node))
+                {
+                    layoutChanged = true;
+                    continue;
+                }
+                DeleteAnimNode(node.AnimationNode, store: false);
+            }
+            if (layoutChanged)
+                StoreLayout();
+            else
+                StoreLayoutIfKept();
+            if (_editor != null)
+                _editor.PopulateData(null, _currentTree);
+            stNodeEditor1.Invalidate();
+        }
+
+        /* The node out of the tree, and every copy of it off the canvas */
+        private void DeleteAnimNode(AnimationNode animNode, bool store = true)
+        {
+            if (animNode == null || animNode is AnimationTree || _canvas == null)
+                return; // never delete the tree root from the graph
+
+            _currentTree?.RemoveNode(animNode);
+            _canvas.RemoveAllCopies(animNode);
+            if (store)
+            {
+                StoreLayoutIfKept();
+                if (_editor != null)
+                    _editor.PopulateData(null, _currentTree);
+            }
+        }
 
         private STNode AddNodeOfType(NodeType type, Point canvasPosition)
         {
-            if (_currentTree == null)
+            if (_currentTree == null || _canvas == null)
             {
                 MessageBox.Show("Open an animation tree first.", "No tree loaded", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return null;
@@ -419,12 +643,14 @@ namespace OpenCAGE.AnimTrees
             animNode.Name = MakeUniqueNodeName(SuggestNodeName(type));
             _currentTree.AddNode(animNode);
 
-            STNode node = CreateAnimNodeNode(animNode);
-            node.SetPosition(canvasPosition);
+            STNode node = _canvas.AddNode(animNode, canvasPosition);
+            if (node == null)
+                return null;
             stNodeEditor1.RemoveAllSelectedNodes();
             stNodeEditor1.AddSelectedNode(node);
             stNodeEditor1.SetActiveNode(node);
             _editor?.PopulateData(animNode, _currentTree);
+            StoreLayoutIfKept();
             return node;
         }
 
@@ -507,816 +733,6 @@ namespace OpenCAGE.AnimTrees
                     return new AnimationNode { Type = type };
             }
         }
-
-        private STNode CreateAnimNodeNode(AnimationNode animNode)
-        {
-            //todo - when is this hit
-            if (_nodeLookups.TryGetValue(animNode, out STNode existingNode))
-                return existingNode;
-
-            STNode node = new STNode();
-            node.AnimationNode = animNode;
-            ApplyAnimNodeColour(node, animNode.Type);
-            stNodeEditor1.Nodes.Add(node);
-            _nodeLookups.Add(animNode, node);
-
-            if (!(animNode is ParameterNode) && !(animNode is PropertyNode) && !(animNode is PropertyListenerNode) && animNode.Type != NodeType.ANIM_Callback && animNode.Type != NodeType.ANIM_Event_Callback && animNode.Type != NodeType.ANIM_Tree_Top_Level) //todo where should event_callback be created from?
-                node.AddInputOption(ShortGuids.trigger);
-
-            //it seems we always have a "mirror_" counterpart for ANIM_Property_Listener which can be removed -> see HUMANOID::Persistent_Act_Aim_Blindfire_Low
-
-            switch (animNode.Type)
-            {
-                case NodeType.ANIM_Animation:
-                case NodeType.ANIM_2DParametric:
-                case NodeType.ANIM_3DParametric:
-                    //todo: 4d and regular parametric here too?
-                case NodeType.ANIM_AutoFloatParameter:
-                case NodeType.ANIM_Parameter:
-                case NodeType.ANIM_FloatInterpolator:
-                case NodeType.ANIM_Callback:
-                case NodeType.ANIM_Property:
-                case NodeType.ANIM_Event_Callback:
-                    node.AddBottomOption(ShortGuids.value);
-                    break;
-                case NodeType.ANIM_Selector:
-                case NodeType.ANIM_Enumerated_Selector:
-                case NodeType.ANIM_Ranged_Selector:
-                case NodeType.ANIM_Parametric:
-                    node.AddOutputOption(ShortGuids.State_01);
-                    node.AddOutputOption(ShortGuids.State_02);
-                    node.AddOutputOption(ShortGuids.State_03);
-                    node.AddOutputOption(ShortGuids.State_04);
-                    node.AddOutputOption(ShortGuids.State_05);
-                    node.AddOutputOption(ShortGuids.State_06);
-                    node.AddOutputOption(ShortGuids.State_07);
-                    node.AddOutputOption(ShortGuids.State_08);
-                    if (animNode.Type == NodeType.ANIM_Ranged_Selector)
-                        break;
-                    node.AddOutputOption(ShortGuids.State_09);
-                    node.AddOutputOption(ShortGuids.State_10);
-                    node.AddOutputOption(ShortGuids.State_11);
-                    node.AddOutputOption(ShortGuids.State_12);
-                    node.AddOutputOption(ShortGuids.State_13);
-                    node.AddOutputOption(ShortGuids.State_14);
-                    node.AddOutputOption(ShortGuids.State_15);
-                    node.AddOutputOption(ShortGuids.State_16);
-                    break;
-                case NodeType.ANIM_Foot_Sync_Selector:
-                    node.AddOutputOption(ShortGuids.LeftStrikeChild);
-                    node.AddOutputOption(ShortGuids.RightStrikeChild);
-                    break;
-                case NodeType.ANIM_Additive_Blend:
-                case NodeType.ANIM_Parametric_Additive_Blend:
-                    node.AddOutputOption(ShortGuids.base_node);
-                    node.AddOutputOption(ShortGuids.additive_node);
-                    break;
-                case NodeType.ANIM_Tree_Top_Level:
-                    node.AddOutputOption(ShortGuids.NODES);
-                    break;
-                case NodeType.ANIM_Weighted:
-                    node.AddOutputOption(ShortGuids.child);
-                    break;
-            }
-
-            switch (animNode.Type)
-            {
-                case NodeType.ANIM_Animation:
-                    node.AddTopOption(ShortGuids.Callback);
-                    break;
-                case NodeType.ANIM_2DParametric:
-                case NodeType.ANIM_3DParametric:
-                    node.AddTopOption(ShortGuids.ParameterBindingX);
-                    node.AddTopOption(ShortGuids.ParameterBindingY);
-                    if (animNode.Type == NodeType.ANIM_3DParametric)
-                        node.AddTopOption(ShortGuids.ParameterBindingZ);
-                    node.AddTopOption(ShortGuids.OverflowCallback);
-                    break;
-                case NodeType.ANIM_Selector:
-                case NodeType.ANIM_Enumerated_Selector:
-                case NodeType.ANIM_Ranged_Selector:
-                case NodeType.ANIM_Parametric:
-                    node.AddTopOption(ShortGuids.ParameterBinding);
-                    break;
-                case NodeType.ANIM_IK:
-                    node.AddTopOption(ShortGuids.IkEffector);
-                    break;
-                case NodeType.ANIM_Parametric_Additive_Blend:
-                    node.AddTopOption(ShortGuids.WeightControlParameter);
-                    break;
-                case NodeType.ANIM_Weighted:
-                    node.AddTopOption(ShortGuids.Parameter);
-                    break;
-                case NodeType.ANIM_FloatInterpolator:
-                    node.AddTopOption(ShortGuids.SourceParameter);
-                    break;
-                case NodeType.ANIM_Property_Listener:
-                    node.AddTopOption(ShortGuids.LeafNode);
-                    break;
-                case NodeType.ANIM_Randomised_Animation:
-                    node.AddTopOption(ShortGuids.Callback);
-                    node.AddTopOption(ShortGuids.RandomCallback); //this is auto generated - we should hide this node. it's the node name with #@RAND@# at the end
-                    break;
-            }
-
-            return node;
-        }
-
-        private static void ApplyAnimNodeColour(STNode node, NodeType type)
-        {
-            node.SetOpenCAGEColour(FlowgraphLayoutManager.GetColourForAnimEntity(type.ToString()));
-        }
-
-        private void ConnectTrigger(STNodeOption output, STNode targetNode)
-        {
-            if (output == null || targetNode == null)
-                return;
-            STNodeOption trigger = targetNode.GetInputOption(ShortGuids.trigger);
-            if (trigger == null)
-                return;
-            output.ConnectOption(trigger);
-        }
-
-        private void SetupConnections(STNode node)
-        {
-            AnimationNode animNode = node.AnimationNode;
-            switch (animNode.Type)
-            {
-                case NodeType.ANIM_Animation:
-                    {
-                        LeafNode leafNode = (LeafNode)animNode;
-                        if (leafNode.Callback != null && _nodeLookups.TryGetValue(leafNode.Callback, out STNode callbackNode))
-                            callbackNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.Callback));
-                    }
-                    break;
-                case NodeType.ANIM_Property_Listener:
-                    {
-                        PropertyListenerNode listener = (PropertyListenerNode)animNode;
-                        if (listener.LeafNode != null && _nodeLookups.TryGetValue(listener.LeafNode, out STNode leafNode))
-                            leafNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.LeafNode));
-                    }
-                    break;
-                case NodeType.ANIM_2DParametric:
-                    {
-                        Parametric2DNode parametric2D = (Parametric2DNode)animNode;
-                        if (parametric2D.ParameterBindingX != null && _nodeLookups.TryGetValue(parametric2D.ParameterBindingX, out STNode paramXNode))
-                            paramXNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.ParameterBindingX));
-                        if (parametric2D.ParameterBindingY != null && _nodeLookups.TryGetValue(parametric2D.ParameterBindingY, out STNode paramYNode))
-                            paramYNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.ParameterBindingY));
-                        if (parametric2D.OverflowCallback != null && _nodeLookups.TryGetValue(parametric2D.OverflowCallback, out STNode callbackNode))
-                            callbackNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.OverflowCallback));
-                    }
-                    break;
-                case NodeType.ANIM_3DParametric:
-                    {
-                        Parametric3DNode parametric3D = (Parametric3DNode)animNode;
-                        if (parametric3D.ParameterBindingX != null && _nodeLookups.TryGetValue(parametric3D.ParameterBindingX, out STNode paramXNode))
-                            paramXNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.ParameterBindingX));
-                        if (parametric3D.ParameterBindingY != null && _nodeLookups.TryGetValue(parametric3D.ParameterBindingY, out STNode paramYNode))
-                            paramYNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.ParameterBindingY));
-                        if (parametric3D.ParameterBindingZ != null && _nodeLookups.TryGetValue(parametric3D.ParameterBindingZ, out STNode paramZNode))
-                            paramZNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.ParameterBindingZ));
-                        if (parametric3D.OverflowCallback != null && _nodeLookups.TryGetValue(parametric3D.OverflowCallback, out STNode callbackNode))
-                            callbackNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.OverflowCallback));
-                    }
-                    break;
-                case NodeType.ANIM_Selector:
-                case NodeType.ANIM_Enumerated_Selector:
-                    {
-                        SelectorNode selector = (SelectorNode)animNode;
-                        for (int i = 0; i < selector.States.Length; i++)
-                        {
-                            if (selector.States[i]?.Node == null)
-                                continue;
-                            
-                            if (_nodeLookups.TryGetValue(selector.States[i].Node, out STNode targetNode))
-                            {
-                                ConnectTrigger(node.GetOutputOption(ShortGuids.States[i]), targetNode);
-                            }
-                        }
-                        if (selector.ParameterBinding != null && _nodeLookups.TryGetValue(selector.ParameterBinding, out STNode paramNode))
-                        {
-                            paramNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.ParameterBinding));
-                        }
-                    }
-                    break;
-                case NodeType.ANIM_Ranged_Selector:
-                    {
-                        RangedSelectorNode selector = (RangedSelectorNode)animNode;
-                        for (int i = 0; i < selector.States.Length; i++)
-                        {
-                            if (selector.States[i]?.Node == null)
-                                continue;
-                            
-                            if (_nodeLookups.TryGetValue(selector.States[i].Node, out STNode targetNode))
-                            {
-                                ConnectTrigger(node.GetOutputOption(ShortGuids.States[i]), targetNode);
-                            }
-                        }
-                        if (selector.ParameterBinding != null && _nodeLookups.TryGetValue(selector.ParameterBinding, out STNode paramNode))
-                        {
-                            paramNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.ParameterBinding));
-                        }
-                    }
-                    break;
-                case NodeType.ANIM_Parametric:
-                    {
-                        ParametricNode parametric = (ParametricNode)animNode;
-                        for (int i = 0; i < parametric.States.Length; i++)
-                        {
-                            if (parametric.States[i]?.Node == null)
-                                continue;
-                            
-                            if (_nodeLookups.TryGetValue(parametric.States[i].Node, out STNode targetNode))
-                            {
-                                ConnectTrigger(node.GetOutputOption(ShortGuids.States[i]), targetNode);
-                            }
-                        }
-                        if (parametric.ParameterBinding != null && _nodeLookups.TryGetValue(parametric.ParameterBinding, out STNode paramNode))
-                        {
-                            paramNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.ParameterBinding));
-                        }
-                    }
-                    break;
-                case NodeType.ANIM_Foot_Sync_Selector:
-                    {
-                        FootSyncSelectorNode footSync = (FootSyncSelectorNode)animNode;
-                        if (footSync.LeftStrikeChild != null && _nodeLookups.TryGetValue(footSync.LeftStrikeChild, out STNode leftNode))
-                            ConnectTrigger(node.GetOutputOption(ShortGuids.LeftStrikeChild), leftNode);
-                        if (footSync.RightStrikeChild != null && _nodeLookups.TryGetValue(footSync.RightStrikeChild, out STNode rightNode))
-                            ConnectTrigger(node.GetOutputOption(ShortGuids.RightStrikeChild), rightNode);
-                    }
-                    break;
-                case NodeType.ANIM_Additive_Blend:
-                    {
-                        AdditiveBlendNode additive = (AdditiveBlendNode)animNode;
-                        if (additive.BaseNode != null && _nodeLookups.TryGetValue(additive.BaseNode, out STNode baseNode))
-                            ConnectTrigger(node.GetOutputOption(ShortGuids.base_node), baseNode);
-                        if (additive.AdditiveNode != null && _nodeLookups.TryGetValue(additive.AdditiveNode, out STNode additiveNode))
-                            ConnectTrigger(node.GetOutputOption(ShortGuids.additive_node), additiveNode);
-                    }
-                    break;
-                case NodeType.ANIM_Parametric_Additive_Blend:
-                    {
-                        ParametricAdditiveBlendNode parametricAdditive = (ParametricAdditiveBlendNode)animNode;
-                        if (parametricAdditive.BaseNode != null && _nodeLookups.TryGetValue(parametricAdditive.BaseNode, out STNode baseNode))
-                            ConnectTrigger(node.GetOutputOption(ShortGuids.base_node), baseNode);
-                        if (parametricAdditive.AdditiveNode != null && _nodeLookups.TryGetValue(parametricAdditive.AdditiveNode, out STNode additiveNode))
-                            ConnectTrigger(node.GetOutputOption(ShortGuids.additive_node), additiveNode);
-                        if (parametricAdditive.WeightControlParameter != null && _nodeLookups.TryGetValue(parametricAdditive.WeightControlParameter, out STNode weightParamNode))
-                            weightParamNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.WeightControlParameter));
-                    }
-                    break;
-                case NodeType.ANIM_IK:
-                    {
-                        IkNode ik = (IkNode)animNode;
-                        if (ik.IkEffector != null && _nodeLookups.TryGetValue(ik.IkEffector, out STNode ikEffectorNode))
-                            ikEffectorNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.IkEffector));
-                    }
-                    break;
-                case NodeType.ANIM_FloatInterpolator:
-                    {
-                        FloatInterpolatorNode floatInterp = (FloatInterpolatorNode)animNode;
-                        if (floatInterp.SourceParameter != null && _nodeLookups.TryGetValue(floatInterp.SourceParameter, out STNode sourceParam))
-                            sourceParam.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.SourceParameter));
-                    }
-                    break;
-                case NodeType.ANIM_Randomised_Animation:
-                    {
-                        RandomisedLeafNode randomisedLeaf = (RandomisedLeafNode)animNode;
-                        if (randomisedLeaf.Callback != null && _nodeLookups.TryGetValue(randomisedLeaf.Callback, out STNode callbackNode))
-                            callbackNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.Callback));
-                        if (randomisedLeaf.RandomCallback != null && _nodeLookups.TryGetValue(randomisedLeaf.RandomCallback, out STNode randomCallbackNode))
-                            randomCallbackNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.RandomCallback));
-                    }
-                    break;
-                case NodeType.ANIM_Tree_Top_Level:
-                    foreach (AnimationNode childNode in ((AnimationTree)animNode).Children)
-                    {
-                        if (_nodeLookups.TryGetValue(childNode, out STNode childSTNode))
-                            ConnectTrigger(node.GetOutputOption(ShortGuids.NODES), childSTNode);
-                    }
-                    break;
-                case NodeType.ANIM_Weighted:
-                    {
-                        WeightedNode weighted = (WeightedNode)animNode;
-                        if (weighted.Parameter != null && _nodeLookups.TryGetValue(weighted.Parameter, out STNode paramNode))
-                            paramNode.GetBottomOption(ShortGuids.value).ConnectOption(node.GetTopOption(ShortGuids.Parameter));
-                        if (weighted.Child != null && _nodeLookups.TryGetValue(weighted.Child, out STNode weightedChild))
-                            ConnectTrigger(node.GetOutputOption(ShortGuids.child), weightedChild);
-                    }
-                    break;
-            }
-        }
-
-        #region Temp layout stuff
-
-        private const int LayoutPadding = 14;
-        private const int LayoutSiblingGap = 24;
-        private const int LayoutColumnGap = 80;
-        private const int LayoutParamGap = 24;
-        // Root column — flow tree starts here; params sit above children, not left of root
-        private const int LayoutStartX = 80;
-        // Headroom for params stacked above the first flow column
-        private const int LayoutStartY = 200;
-        // Fixed column pitch so one wide node doesn't stretch the whole graph
-        private const int LayoutColumnStep = 200;
-
-        private void PositionAllNodes(STNode treeNode)
-        {
-            var allNodes = stNodeEditor1.Nodes;
-            var positioned = new HashSet<STNode>();
-            var bounds = new Dictionary<STNode, Rectangle>();
-            var flowNodes = new HashSet<STNode>();
-
-            PositionMainTree(treeNode, positioned, bounds, flowNodes);
-            PositionSideNodes(allNodes, positioned, bounds, minX: LayoutStartX);
-            PositionAttachedConsumers(allNodes, positioned, bounds);
-            PositionUnconnectedNodes(allNodes, positioned, bounds);
-            // Never shove the main flow — only nudge params / orphans
-            ResolveOverlaps(positioned, bounds, movable: positioned.Where(n => !flowNodes.Contains(n)).ToHashSet());
-            EnsureRootIsLeftmost(treeNode, positioned, bounds);
-        }
-
-        private List<STNode> GetFlowChildren(STNode node)
-        {
-            var children = new List<STNode>();
-            var seen = new HashSet<STNode>();
-            foreach (var output in node.GetOutputOptions())
-            {
-                foreach (var connection in output.GetConnectedOption())
-                {
-                    STNode child = connection.Owner;
-                    if (child != null && child != node && seen.Add(child))
-                        children.Add(child);
-                }
-            }
-            return children;
-        }
-
-        private static int GetConnectingOutputPinCenterY(STNode parent, STNode child)
-        {
-            foreach (var output in parent.GetOutputOptions())
-            {
-                foreach (var connection in output.GetConnectedOption())
-                {
-                    if (connection.Owner == child)
-                        return output.DotTop + Math.Max(1, output.DotSize) / 2;
-                }
-            }
-            return parent.Top + parent.Height / 2;
-        }
-
-
-        private void PositionMainTree(STNode root, HashSet<STNode> positioned, Dictionary<STNode, Rectangle> bounds, HashSet<STNode> flowNodes)
-        {
-            var childrenMap = new Dictionary<STNode, List<STNode>>();
-            var visited = new HashSet<STNode> { root };
-
-            void Build(STNode node)
-            {
-                var claimed = new List<STNode>();
-                foreach (var kid in GetFlowChildren(node))
-                {
-                    if (!visited.Add(kid))
-                        continue;
-                    claimed.Add(kid);
-                    Build(kid);
-                }
-                childrenMap[node] = claimed;
-            }
-
-            Build(root);
-
-            int columnStep = LayoutColumnStep;
-
-            // Pin-aligned placement: each child prefers the Y of the parent output that feeds it,
-            // then siblings compact downward so large subtrees don't scatter above the parent.
-            int Place(STNode node, int column, int y)
-            {
-                if (positioned.Contains(node))
-                    return bounds[node].Bottom;
-
-                int x = LayoutStartX + column * columnStep;
-                PlaceNode(node, x, Math.Max(20, y), positioned, bounds);
-                flowNodes.Add(node);
-
-                var kids = childrenMap[node];
-                if (kids.Count == 0)
-                    return bounds[node].Bottom;
-
-                var ordered = kids
-                    .Select(kid => (kid, prefY: GetConnectingOutputPinCenterY(node, kid) - kid.Height / 2))
-                    .OrderBy(t => t.prefY)
-                    .ToList();
-
-                // Pack from the parent's top downward (tree reads L→R from the root, not diagonally)
-                int prevBottom = Math.Min(bounds[node].Top, ordered[0].prefY) - LayoutSiblingGap;
-                int subtreeBottom = bounds[node].Bottom;
-
-                foreach (var (kid, prefY) in ordered)
-                {
-                    int kidY = Math.Max(prefY, prevBottom + LayoutSiblingGap);
-                    // Don't start children above the parent — keeps the top-level visually on top-left
-                    if (column == 0)
-                        kidY = Math.Max(kidY, bounds[node].Top);
-                    int kidBottom = Place(kid, column + 1, kidY);
-                    prevBottom = kidBottom;
-                    subtreeBottom = Math.Max(subtreeBottom, kidBottom);
-                }
-
-                return subtreeBottom;
-            }
-
-            Place(root, 0, LayoutStartY);
-        }
-
-        /// <summary>
-        /// Place anything that feeds a top pin of an already-positioned node (params, interpolators,
-        /// properties, …). Iterate so chains like pad_x → Interpolate → blend resolve in order.
-        /// Side nodes always sit above their consumers — never to the left of the tree root.
-        /// </summary>
-        private void PositionSideNodes(STNodeCollection allNodes, HashSet<STNode> positioned, Dictionary<STNode, Rectangle> bounds, int minX)
-        {
-            // How many side nodes already stacked above each consumer (for vertical stacking)
-            var aboveCount = new Dictionary<STNode, int>();
-
-            const int maxPasses = 32;
-            for (int pass = 0; pass < maxPasses; pass++)
-            {
-                var sideTargets = new Dictionary<STNode, List<STNode>>();
-
-                foreach (STNode consumer in allNodes)
-                {
-                    if (!positioned.Contains(consumer))
-                        continue;
-
-                    foreach (var topOption in consumer.GetTopOptions())
-                    {
-                        foreach (var connection in topOption.GetConnectedOption())
-                        {
-                            STNode side = connection.Owner;
-                            if (side == null || positioned.Contains(side))
-                                continue;
-
-                            if (!sideTargets.TryGetValue(side, out List<STNode> targets))
-                            {
-                                targets = new List<STNode>();
-                                sideTargets[side] = targets;
-                            }
-                            if (!targets.Contains(consumer))
-                                targets.Add(consumer);
-                        }
-                    }
-                }
-
-                if (sideTargets.Count == 0)
-                    break;
-
-                bool placedAny = false;
-                foreach (var entry in sideTargets.OrderByDescending(e => e.Value.Count).ThenBy(e => e.Key.GetHashCode()))
-                {
-                    STNode side = entry.Key;
-                    if (positioned.Contains(side))
-                        continue;
-
-                    List<STNode> targets = entry.Value;
-                    // Prefer the densest/left cluster of consumers (median X), not a single far-right outlier
-                    STNode primary = PickPrimaryConsumer(targets, bounds);
-                    int stackIndex = aboveCount.TryGetValue(primary, out int n) ? n : 0;
-                    Point preferred = PreferredAbovePosition(side, primary, bounds, stackIndex, minX);
-                    Point free = FindFreeRectAbove(preferred.X, preferred.Y, side.Width, side.Height, bounds, minX);
-                    PlaceNode(side, free.X, free.Y, positioned, bounds);
-                    aboveCount[primary] = stackIndex + 1;
-                    placedAny = true;
-                }
-
-                if (!placedAny)
-                    break;
-            }
-        }
-
-        private static STNode PickPrimaryConsumer(List<STNode> targets, Dictionary<STNode, Rectangle> bounds)
-        {
-            if (targets.Count == 1)
-                return targets[0];
-
-            // Median by X keeps shared providers near the bulk of consumers, not a far outlier
-            var byX = targets.OrderBy(t => bounds[t].X).ThenBy(t => bounds[t].Y).ToList();
-            return byX[byX.Count / 2];
-        }
-
-        private Point PreferredAbovePosition(STNode side, STNode target, Dictionary<STNode, Rectangle> bounds, int stackIndex, int minX)
-        {
-            Rectangle tb = bounds[target];
-            // Same column as consumer, stacked above it
-            int preferredX = tb.X + Math.Max(0, (tb.Width - side.Width) / 2);
-            preferredX = Math.Max(minX, preferredX);
-
-            int preferredY = tb.Y - side.Height - LayoutParamGap;
-            preferredY -= stackIndex * (side.Height + LayoutParamGap);
-            if (preferredY < 20)
-                preferredY = 20;
-
-            return new Point(preferredX, preferredY);
-        }
-
-        /// <summary>
-        /// Place nodes that only consume a positioned provider via a top pin (e.g. Property_Listener
-        /// hanging off a leaf) — sit them just below the provider instead of dumping as orphans.
-        /// </summary>
-        private void PositionAttachedConsumers(STNodeCollection allNodes, HashSet<STNode> positioned, Dictionary<STNode, Rectangle> bounds)
-        {
-            const int maxPasses = 16;
-            for (int pass = 0; pass < maxPasses; pass++)
-            {
-                var pending = new List<(STNode consumer, STNode provider)>();
-
-                foreach (STNode node in allNodes)
-                {
-                    if (positioned.Contains(node))
-                        continue;
-
-                    STNode bestProvider = null;
-                    int bestX = int.MaxValue;
-                    foreach (var top in node.GetTopOptions())
-                    {
-                        foreach (var connection in top.GetConnectedOption())
-                        {
-                            STNode provider = connection.Owner;
-                            if (provider == null || !positioned.Contains(provider))
-                                continue;
-                            int px = bounds[provider].X;
-                            if (px < bestX)
-                            {
-                                bestX = px;
-                                bestProvider = provider;
-                            }
-                        }
-                    }
-
-                    if (bestProvider != null)
-                        pending.Add((node, bestProvider));
-                }
-
-                if (pending.Count == 0)
-                    break;
-
-                bool placedAny = false;
-                foreach (var (consumer, provider) in pending.OrderBy(p => bounds[p.provider].Y).ThenBy(p => bounds[p.provider].X))
-                {
-                    if (positioned.Contains(consumer))
-                        continue;
-
-                    Rectangle pb = bounds[provider];
-                    int preferredX = Math.Max(LayoutStartX, pb.X);
-                    int preferredY = pb.Bottom + LayoutParamGap;
-                    Point free = FindFreeRectNearProvider(preferredX, preferredY, consumer.Width, consumer.Height, bounds);
-                    PlaceNode(consumer, free.X, free.Y, positioned, bounds);
-                    placedAny = true;
-                }
-
-                if (!placedAny)
-                    break;
-            }
-        }
-
-        private void PositionUnconnectedNodes(STNodeCollection allNodes, HashSet<STNode> positioned, Dictionary<STNode, Rectangle> bounds)
-        {
-            var orphans = new List<STNode>();
-            foreach (STNode node in allNodes)
-            {
-                if (!positioned.Contains(node))
-                    orphans.Add(node);
-            }
-
-            if (orphans.Count == 0)
-                return;
-
-            int contentBottom = LayoutStartY;
-            foreach (var b in bounds.Values)
-                contentBottom = Math.Max(contentBottom, b.Bottom);
-
-            // Keep orphans under the tree, never left of the root column
-            int gridX = LayoutStartX;
-            int gridY = contentBottom + LayoutColumnGap;
-            int col = 0;
-            const int gridColumns = 4;
-            int gridStepX = LayoutColumnStep;
-
-            foreach (STNode node in orphans)
-            {
-                if (positioned.Contains(node))
-                    continue;
-
-                int px = gridX + col * gridStepX;
-                int py = gridY;
-                Point free = FindFreeRectNearProvider(px, py, node.Width, node.Height, bounds);
-                PlaceNode(node, free.X, free.Y, positioned, bounds);
-
-                col++;
-                if (col >= gridColumns)
-                {
-                    col = 0;
-                    gridY = Math.Max(gridY + node.Height + LayoutSiblingGap, free.Y + node.Height + LayoutSiblingGap);
-                }
-            }
-        }
-
-        private void PlaceNode(STNode node, int x, int y, HashSet<STNode> positioned, Dictionary<STNode, Rectangle> bounds)
-        {
-            node.SetPosition(new Point(x, y));
-            positioned.Add(node);
-            bounds[node] = new Rectangle(x, y, node.Width, node.Height);
-        }
-
-        /// <summary>
-        /// Stack above the preferred point. Only tiny horizontal nudges — never walk sideways
-        /// across the canvas (that caused the long "param chains" on aim trees).
-        /// </summary>
-        private Point FindFreeRectAbove(int preferredX, int preferredY, int width, int height, Dictionary<STNode, Rectangle> bounds, int minX)
-        {
-            preferredX = Math.Max(minX, preferredX);
-            preferredY = Math.Max(20, preferredY);
-
-            Rectangle test = new Rectangle(preferredX, preferredY, width, height);
-            if (!HasOverlap(test, bounds))
-                return new Point(preferredX, preferredY);
-
-            const int step = 16;
-            int maxUp = 400;
-            int maxNudge = Math.Max(width + LayoutParamGap, 40);
-
-            // Walk straight up first
-            for (int dy = step; dy <= maxUp; dy += step)
-            {
-                int y = Math.Max(20, preferredY - dy);
-                test = new Rectangle(preferredX, y, width, height);
-                if (!HasOverlap(test, bounds))
-                    return new Point(preferredX, y);
-            }
-
-            // Small left/right nudge at each height (stay in the consumer's column)
-            for (int dy = 0; dy <= maxUp; dy += step)
-            {
-                int y = Math.Max(20, preferredY - dy);
-                for (int dx = step; dx <= maxNudge; dx += step)
-                {
-                    foreach (int sign in new[] { 1, -1 })
-                    {
-                        int x = Math.Max(minX, preferredX + sign * dx);
-                        test = new Rectangle(x, y, width, height);
-                        if (!HasOverlap(test, bounds))
-                            return new Point(x, y);
-                    }
-                }
-            }
-
-            // Last resort: directly above at y=20
-            return new Point(preferredX, 20);
-        }
-
-        /// <summary>
-        /// Free slot near a provider — prefer below, then slight right (for attached listeners).
-        /// </summary>
-        private Point FindFreeRectNearProvider(int preferredX, int preferredY, int width, int height, Dictionary<STNode, Rectangle> bounds)
-        {
-            preferredX = Math.Max(LayoutStartX, preferredX);
-            preferredY = Math.Max(20, preferredY);
-
-            Rectangle test = new Rectangle(preferredX, preferredY, width, height);
-            if (!HasOverlap(test, bounds))
-                return new Point(preferredX, preferredY);
-
-            const int step = 16;
-            for (int ring = 1; ring <= 30; ring++)
-            {
-                int d = ring * step;
-                (int dx, int dy)[] dirs =
-                {
-                    (0, d), (0, -d), (d, 0), (d, d), (d, -d),
-                    (-d, d), (-d, 0), (-d, -d)
-                };
-                foreach (var (dx, dy) in dirs)
-                {
-                    int x = Math.Max(LayoutStartX, preferredX + dx);
-                    int y = Math.Max(20, preferredY + dy);
-                    test = new Rectangle(x, y, width, height);
-                    if (!HasOverlap(test, bounds))
-                        return new Point(x, y);
-                }
-            }
-
-            return new Point(preferredX, preferredY + height + LayoutParamGap);
-        }
-
-        private void EnsureRootIsLeftmost(STNode root, HashSet<STNode> positioned, Dictionary<STNode, Rectangle> bounds)
-        {
-            if (!bounds.TryGetValue(root, out Rectangle rootBounds))
-                return;
-
-            int minX = int.MaxValue;
-            foreach (var b in bounds.Values)
-                minX = Math.Min(minX, b.X);
-
-            int shift = rootBounds.X - minX;
-            if (shift <= 0)
-                return;
-
-            foreach (STNode node in positioned.ToList())
-            {
-                Rectangle b = bounds[node];
-                PlaceNode(node, b.X + shift, b.Y, positioned, bounds);
-            }
-        }
-
-        private void ResolveOverlaps(HashSet<STNode> positioned, Dictionary<STNode, Rectangle> bounds, HashSet<STNode> movable)
-        {
-            const int maxPasses = 50;
-            for (int pass = 0; pass < maxPasses; pass++)
-            {
-                bool moved = false;
-                var nodes = positioned.ToList();
-                for (int i = 0; i < nodes.Count; i++)
-                {
-                    for (int j = i + 1; j < nodes.Count; j++)
-                    {
-                        STNode aNode = nodes[i];
-                        STNode bNode = nodes[j];
-                        Rectangle a = Inflate(bounds[aNode], LayoutPadding);
-                        Rectangle b = Inflate(bounds[bNode], LayoutPadding);
-                        if (!a.IntersectsWith(b))
-                            continue;
-
-                        STNode moveNode;
-                        STNode stayNode;
-                        if (movable.Contains(bNode) && !movable.Contains(aNode))
-                        {
-                            moveNode = bNode;
-                            stayNode = aNode;
-                        }
-                        else if (movable.Contains(aNode) && !movable.Contains(bNode))
-                        {
-                            moveNode = aNode;
-                            stayNode = bNode;
-                        }
-                        else if (movable.Contains(aNode) && movable.Contains(bNode))
-                        {
-                            if (bounds[aNode].Y >= bounds[bNode].Y)
-                            {
-                                moveNode = aNode;
-                                stayNode = bNode;
-                            }
-                            else
-                            {
-                                moveNode = bNode;
-                                stayNode = aNode;
-                            }
-                        }
-                        else
-                        {
-                            continue;
-                        }
-
-                        Rectangle moveBounds = bounds[moveNode];
-                        Rectangle other = bounds[stayNode];
-                        int gap = LayoutPadding;
-
-                        // Prefer pushing params further above; never left of root column
-                        int newY = other.Y - moveBounds.Height - gap;
-                        if (newY >= 20)
-                        {
-                            int x = Math.Max(LayoutStartX, moveBounds.X);
-                            PlaceNode(moveNode, x, newY, positioned, bounds);
-                        }
-                        else
-                        {
-                            int newX = Math.Max(LayoutStartX, other.Right + gap);
-                            PlaceNode(moveNode, newX, Math.Max(20, moveBounds.Y), positioned, bounds);
-                        }
-                        moved = true;
-                    }
-                }
-                if (!moved)
-                    break;
-            }
-        }
-
-        private static Rectangle Inflate(Rectangle r, int padding)
-        {
-            return new Rectangle(r.X - padding, r.Y - padding, r.Width + padding * 2, r.Height + padding * 2);
-        }
-
-        private static bool HasOverlap(Rectangle testBounds, Dictionary<STNode, Rectangle> nodeBounds)
-        {
-            foreach (var placed in nodeBounds.Values)
-            {
-                if (testBounds.IntersectsWith(Inflate(placed, LayoutPadding)))
-                    return true;
-            }
-            return false;
-        }
-
         #endregion
     }
 }

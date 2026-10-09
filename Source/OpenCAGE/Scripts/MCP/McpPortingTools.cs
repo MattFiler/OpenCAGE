@@ -558,6 +558,7 @@ namespace OpenCAGE.MCP
             CompositeFlowgraphTable sourceLayouts = CustomTable.ReadTable(sourceCommands.Filepath, CustomTableType.COMPOSITE_FLOWGRAPHS) as CompositeFlowgraphTable;
             CompositeParameterModificationTable sourceModifications = CustomTable.ReadTable(sourceCommands.Filepath, CustomTableType.COMPOSITE_PARAMETER_MODIFICATION) as CompositeParameterModificationTable;
             EntityAppliedDefaultsTable sourceDefaults = CustomTable.ReadTable(sourceCommands.Filepath, CustomTableType.ENTITY_APPLIED_DEFAULTS) as EntityAppliedDefaultsTable;
+            CompositePreviewTable sourcePreviews = CustomTable.ReadTable(sourceCommands.Filepath, CustomTableType.COMPOSITE_PREVIEWS) as CompositePreviewTable;
 
             //The last point a client that gave up (loading the source level can take a while) stops it with nothing changed:
             //once it starts, a port runs to the end, since one stopped part way leaves some composites and not others
@@ -604,6 +605,8 @@ namespace OpenCAGE.MCP
                                 replacedNames.Add(replaced.name);
                                 Singleton.OnCompositeDeleted?.Invoke(replaced);
                             }
+                            //The source level's own preview of it shows what arrives, so it comes too rather than being retaken
+                            CompositePreviewManager.CarryPreview(copy.shortGUID, sourcePreviews);
                             Singleton.OnCompositeAdded?.Invoke(copy);
                             FlowgraphLayoutManager.ImportLayouts(copy, FlowgraphLayoutManager.GetLayoutsForPort(original, sourceLayouts, FlowgraphLayoutManager.BundledLevelName(sourceCommands, level), sourceCommands));
                             ParameterModificationTracker.ImportCompositeRows(copy.shortGUID, sourceModifications, sourceDefaults);

@@ -1152,7 +1152,7 @@ namespace OpenCAGE.MCP
             return new McpImage() { Data = png, MimeType = "image/png", Caption = caption };
         }
 
-        private static Rectangle Bounds(IEnumerable<STNode> nodes)
+        internal static Rectangle Bounds(IEnumerable<STNode> nodes)
         {
             Rectangle bounds = Rectangle.Empty;
             foreach (STNode node in nodes)
@@ -1165,7 +1165,7 @@ namespace OpenCAGE.MCP
         /// on screen, so it is zoomed out as far as it goes and walked across the area tile by tile; its view,
         /// grid and edge markers are put back afterwards.
         /// </summary>
-        private static byte[] Render(STNodeEditor editor, Rectangle bounds, double scale)
+        internal static byte[] Render(STNodeEditor editor, Rectangle bounds, double scale)
         {
             int width = Math.Max(1, (int)(bounds.Width * scale)), height = Math.Max(1, (int)(bounds.Height * scale));
             //The editor never draws a tile below half size: smaller pictures are drawn at half and shrunk
