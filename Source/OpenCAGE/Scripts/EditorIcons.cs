@@ -146,6 +146,15 @@ namespace OpenCAGE
         AnimMetadataListener,
         AnimCallback,
         AnimEventCallback,
+
+        //More bespoke function type icons, made after the animation tree ones (the generator's Art.MoreEntities)
+        EntityTriggerBind,
+        EntitySphere,
+        EntityBox,
+        EntityTorch,
+        EntitySpawner,
+        EntityMetrics,
+        EntityHighlight,
     }
 
     /// <summary>
@@ -197,7 +206,7 @@ namespace OpenCAGE
             Map(EditorIcon.EntityParticles, CATHODE.Scripting.FunctionType.ParticleEmitterReference, CATHODE.Scripting.FunctionType.GPU_PFXEmitterReference, CATHODE.Scripting.FunctionType.RibbonEmitterReference);
             Map(EditorIcon.EntityRadiosity, CATHODE.Scripting.FunctionType.RadiosityProxy);
             Map(EditorIcon.EntityDelay, CATHODE.Scripting.FunctionType.LogicDelay, CATHODE.Scripting.FunctionType.TriggerDelay);
-            Map(EditorIcon.EntitySequence, CATHODE.Scripting.FunctionType.TriggerSequence, CATHODE.Scripting.FunctionType.TriggerRandomSequence);
+            Map(EditorIcon.EntitySequence, CATHODE.Scripting.FunctionType.TriggerSequence, CATHODE.Scripting.FunctionType.TriggerRandomSequence, CATHODE.Scripting.FunctionType.Persistent_TriggerRandomSequence);
             Map(EditorIcon.EntityMarker, CATHODE.Scripting.FunctionType.PositionMarker);
             Map(EditorIcon.EntityPlayerTrigger, CATHODE.Scripting.FunctionType.PlayerTriggerBox, CATHODE.Scripting.FunctionType.PlayerUseTriggerBox);
             Map(EditorIcon.EntityGate, CATHODE.Scripting.FunctionType.LogicGate, CATHODE.Scripting.FunctionType.LogicGateAnd, CATHODE.Scripting.FunctionType.LogicGateOr,
@@ -206,49 +215,122 @@ namespace OpenCAGE
             Map(EditorIcon.EntityZoneExclusion, CATHODE.Scripting.FunctionType.ZoneExclusionLink);
             Map(EditorIcon.EntityMusic, CATHODE.Scripting.FunctionType.MusicTrigger, CATHODE.Scripting.FunctionType.MusicController);
             Map(EditorIcon.EntitySpeech, CATHODE.Scripting.FunctionType.Speech, CATHODE.Scripting.FunctionType.SpeechScript, CATHODE.Scripting.FunctionType.Convo,
-                CATHODE.Scripting.FunctionType.CHR_PlayNPCBark, CATHODE.Scripting.FunctionType.NPC_DynamicDialogue);
+                CATHODE.Scripting.FunctionType.CHR_PlayNPCBark, CATHODE.Scripting.FunctionType.NPC_DynamicDialogue, CATHODE.Scripting.FunctionType.NPC_DynamicDialogueGlobalRange,
+                CATHODE.Scripting.FunctionType.NPC_NotifyDynamicDialogueEvent);
             Map(EditorIcon.EntityFog, CATHODE.Scripting.FunctionType.FogSphere, CATHODE.Scripting.FunctionType.FogPlane, CATHODE.Scripting.FunctionType.FogBox);
             Map(EditorIcon.EntityBarrier, CATHODE.Scripting.FunctionType.CollisionBarrier);
             Map(EditorIcon.EntityPlayer, CATHODE.Scripting.FunctionType.VariableThePlayer);
             Map(EditorIcon.EntityReflection, CATHODE.Scripting.FunctionType.EnvironmentMap);
-            Map(EditorIcon.EntityInteract, CATHODE.Scripting.FunctionType.UiSelectionBox, CATHODE.Scripting.FunctionType.Interaction);
-            Map(EditorIcon.EntityTerminal, CATHODE.Scripting.FunctionType.TerminalFolder, CATHODE.Scripting.FunctionType.TerminalContent);
-            Map(EditorIcon.EntityMaster, CATHODE.Scripting.FunctionType.Master);
+            Map(EditorIcon.EntityInteract, CATHODE.Scripting.FunctionType.UiSelectionBox, CATHODE.Scripting.FunctionType.UiSelectionSphere, CATHODE.Scripting.FunctionType.Interaction);
+            Map(EditorIcon.EntityTerminal, CATHODE.Scripting.FunctionType.TerminalFolder, CATHODE.Scripting.FunctionType.TerminalContent, CATHODE.Scripting.FunctionType.AccessTerminal);
+            Map(EditorIcon.EntityMaster, CATHODE.Scripting.FunctionType.Master, CATHODE.Scripting.FunctionType.ExclusiveMaster, CATHODE.Scripting.FunctionType.VisibilityMaster,
+                CATHODE.Scripting.FunctionType.LightingMaster);
             Map(EditorIcon.EntityCharacter, CATHODE.Scripting.FunctionType.Character);
             Map(EditorIcon.EntityNot, CATHODE.Scripting.FunctionType.LogicNot);
             Map(EditorIcon.EntityOnce, CATHODE.Scripting.FunctionType.LogicOnce);
             Map(EditorIcon.EntitySwitch, CATHODE.Scripting.FunctionType.LogicSwitch);
             Map(EditorIcon.EntityAll, CATHODE.Scripting.FunctionType.LogicAll);
-            Map(EditorIcon.EntityCounter, CATHODE.Scripting.FunctionType.LogicCounter, CATHODE.Scripting.FunctionType.Counter);
+            Map(EditorIcon.EntityCounter, CATHODE.Scripting.FunctionType.LogicCounter, CATHODE.Scripting.FunctionType.Counter, CATHODE.Scripting.FunctionType.PlayerDeathCounter,
+                CATHODE.Scripting.FunctionType.PlayerCampaignDeaths, CATHODE.Scripting.FunctionType.PlayerCampaignDeathsInARow);
             Map(EditorIcon.EntityPressurePad, CATHODE.Scripting.FunctionType.LogicPressurePad);
+            Map(EditorIcon.EntityTriggerBind, CATHODE.Scripting.FunctionType.TriggerBindCharacter, CATHODE.Scripting.FunctionType.TriggerBindAllNPCs, CATHODE.Scripting.FunctionType.TriggerBindAllCharactersOfType,
+                CATHODE.Scripting.FunctionType.TriggerBindCharactersInSquad, CATHODE.Scripting.FunctionType.TriggerUnbindCharacter, CATHODE.Scripting.FunctionType.TriggerExtractBoundCharacter);
+            Map(EditorIcon.EntityTorch, CATHODE.Scripting.FunctionType.Torch_Control, CATHODE.Scripting.FunctionType.TogglePlayerTorch, CATHODE.Scripting.FunctionType.PlayerTorch, CATHODE.Scripting.FunctionType.TorchDynamicMovement);
+            Map(EditorIcon.EntitySpawner, CATHODE.Scripting.FunctionType.AssetSpawner);
+            Map(EditorIcon.EntityMetrics, CATHODE.Scripting.FunctionType.Benchmark);
+            Map(EditorIcon.EntityHighlight, CATHODE.Scripting.FunctionType.GenericHighlightEntity);
+            //(Sphere and Box volumes, WEAPON_ types and some families of uncategorised types go by rule: see ByRule)
 
             //Another category's icon, where it fits better than their own category's (or they have none)
-            Map(EditorIcon.CategoryLighting, CATHODE.Scripting.FunctionType.LightReference, CATHODE.Scripting.FunctionType.Torch_Control, CATHODE.Scripting.FunctionType.PlayerTorch);
+            Map(EditorIcon.CategoryLighting, CATHODE.Scripting.FunctionType.LightReference);
             Map(EditorIcon.CategoryInventory, CATHODE.Scripting.FunctionType.GCIP_WorldPickup, CATHODE.Scripting.FunctionType.CollectSevastopolLog,
-                CATHODE.Scripting.FunctionType.SetBlueprintInfo, CATHODE.Scripting.FunctionType.GetBlueprintAvailable, CATHODE.Scripting.FunctionType.GetBlueprintLevel);
-            Map(EditorIcon.CategoryPhysics, CATHODE.Scripting.FunctionType.PhysicsSystem);
+                CATHODE.Scripting.FunctionType.SetBlueprintInfo, CATHODE.Scripting.FunctionType.GetBlueprintAvailable, CATHODE.Scripting.FunctionType.GetBlueprintLevel,
+                CATHODE.Scripting.FunctionType.PlayerDiscardsItems, CATHODE.Scripting.FunctionType.PlayerDiscardsTools, CATHODE.Scripting.FunctionType.PlayerDiscardsWeapons,
+                CATHODE.Scripting.FunctionType.PlayerHasEnoughItems);
+            Map(EditorIcon.CategoryPhysics, CATHODE.Scripting.FunctionType.PhysicsSystem, CATHODE.Scripting.FunctionType.SoundPhysicsInitialiser);
             Map(EditorIcon.CategorySplines, CATHODE.Scripting.FunctionType.SplinePath, CATHODE.Scripting.FunctionType.GetClosestPointOnSpline);
-            Map(EditorIcon.CategoryCharactersNPCSpecific, CATHODE.Scripting.FunctionType.NPC_AreaBox, CATHODE.Scripting.FunctionType.NPC_SetSafePoint, CATHODE.Scripting.FunctionType.CHR_SetFacehuggerAggroRadius);
-            Map(EditorIcon.CategoryCharactersMonitors, CATHODE.Scripting.FunctionType.CHR_IsWithinRange);
-            Map(EditorIcon.CategoryCharactersLocomotion, CATHODE.Scripting.FunctionType.CHR_DeepCrouch);
-            Map(EditorIcon.CategoryCharactersCommands, CATHODE.Scripting.FunctionType.DespawnCharacter);
-            Map(EditorIcon.CategoryTriggers, CATHODE.Scripting.FunctionType.TriggerSimple, CATHODE.Scripting.FunctionType.TriggerBindAllCharactersOfType, CATHODE.Scripting.FunctionType.TriggerSelect_Direct,
-                CATHODE.Scripting.FunctionType.ProximityDetector, CATHODE.Scripting.FunctionType.Player_ExploitableArea, CATHODE.Scripting.FunctionType.Player_Sensor, CATHODE.Scripting.FunctionType.AreaHitMonitor);
+            //The CHR_ and NPC_ types no category holds: the character category each belongs with
+            Map(EditorIcon.CategoryCharactersNPCSpecific, CATHODE.Scripting.FunctionType.NPC_AreaBox, CATHODE.Scripting.FunctionType.NPC_SetSafePoint, CATHODE.Scripting.FunctionType.CHR_SetFacehuggerAggroRadius,
+                CATHODE.Scripting.FunctionType.CHR_SetTacticalPositionToTarget, CATHODE.Scripting.FunctionType.NPC_DefineBackstageAvoidanceArea, CATHODE.Scripting.FunctionType.NPC_Once,
+                CATHODE.Scripting.FunctionType.NPC_SetAlienDevelopmentStage, CATHODE.Scripting.FunctionType.NPC_SetHidingNearestLocation);
+            Map(EditorIcon.CategoryCharactersMonitors, CATHODE.Scripting.FunctionType.CHR_IsWithinRange, CATHODE.Scripting.FunctionType.NPC_Sleeping_Android_Monitor,
+                CATHODE.Scripting.FunctionType.CharacterMonitor, CATHODE.Scripting.FunctionType.CharacterTypeMonitor, CATHODE.Scripting.FunctionType.PlayerKilledAllyMonitor);
+            Map(EditorIcon.CategoryCharactersLocomotion, CATHODE.Scripting.FunctionType.CHR_DeepCrouch, CATHODE.Scripting.FunctionType.Chr_PlayerCrouch);
+            Map(EditorIcon.CategoryCharactersCommands, CATHODE.Scripting.FunctionType.DespawnCharacter, CATHODE.Scripting.FunctionType.CMD_Ragdoll);
+            Map(EditorIcon.CategoryCharactersProperties, CATHODE.Scripting.FunctionType.CHR_SetHeadVisibility);
+            Map(EditorIcon.CategoryCharactersSenses, CATHODE.Scripting.FunctionType.NPC_SetTotallyBlindInDark, CATHODE.Scripting.FunctionType.NPC_SetInvisible);
+            //Triggers no category holds (more go by name: see ByRule), and two counters the tables file under Network
+            Map(EditorIcon.CategoryTriggers, CATHODE.Scripting.FunctionType.TriggerSimple, CATHODE.Scripting.FunctionType.TriggerSelect_Direct, CATHODE.Scripting.FunctionType.ProximityTrigger,
+                CATHODE.Scripting.FunctionType.ProximityDetector, CATHODE.Scripting.FunctionType.Player_ExploitableArea, CATHODE.Scripting.FunctionType.Player_Sensor, CATHODE.Scripting.FunctionType.AreaHitMonitor,
+                CATHODE.Scripting.FunctionType.TriggerObjectsFilterCounter, CATHODE.Scripting.FunctionType.TriggerContainerObjectsFilterCounter);
             Map(EditorIcon.CategoryGameEvents, CATHODE.Scripting.FunctionType.GlobalEvent, CATHODE.Scripting.FunctionType.GlobalEventMonitor, CATHODE.Scripting.FunctionType.CheckpointRestoredNotify,
                 CATHODE.Scripting.FunctionType.LevelInfo, CATHODE.Scripting.FunctionType.SetAsActiveMissionLevel, CATHODE.Scripting.FunctionType.MissionNumber);
             Map(EditorIcon.CategoryUI, CATHODE.Scripting.FunctionType.GetFlashIntValue, CATHODE.Scripting.FunctionType.GetFlashFloatValue, CATHODE.Scripting.FunctionType.ButtonMashPrompt,
-                CATHODE.Scripting.FunctionType.AddExitObjective, CATHODE.Scripting.FunctionType.MotionTrackerPing, CATHODE.Scripting.FunctionType.RTT_MoviePlayer);
-            Map(EditorIcon.CategoryCombatWeapons, CATHODE.Scripting.FunctionType.WEAPON_GiveToPlayer, CATHODE.Scripting.FunctionType.WEAPON_MultiFilter);
+                CATHODE.Scripting.FunctionType.AddExitObjective, CATHODE.Scripting.FunctionType.MotionTrackerPing, CATHODE.Scripting.FunctionType.RTT_MoviePlayer,
+                CATHODE.Scripting.FunctionType.ToggleFunctionality, CATHODE.Scripting.FunctionType.DisplayMessage, CATHODE.Scripting.FunctionType.DisplayMessageWithCallbacks,
+                CATHODE.Scripting.FunctionType.GameOver, CATHODE.Scripting.FunctionType.GoToFrontend, CATHODE.Scripting.FunctionType.GameOverCredits, CATHODE.Scripting.FunctionType.GameplayTip,
+                CATHODE.Scripting.FunctionType.Minigames);
+            //The held item logic (the tables file it under UI) is the weapons' (every WEAPON_ type goes by rule: see ByRule)
+            Map(EditorIcon.CategoryCombatWeapons, CATHODE.Scripting.FunctionType.EQUIPPABLE_ITEM, CATHODE.Scripting.FunctionType.AIMED_ITEM, CATHODE.Scripting.FunctionType.AIMED_WEAPON,
+                CATHODE.Scripting.FunctionType.MELEE_WEAPON, CATHODE.Scripting.FunctionType.RemoveWeaponsFromPlayer, CATHODE.Scripting.FunctionType.PlayerWeaponMonitor);
             Map(EditorIcon.CategoryZoning, CATHODE.Scripting.FunctionType.ZoneLoaded, CATHODE.Scripting.FunctionType.FlushZoneCache);
             Map(EditorIcon.CategoryAnimation, CATHODE.Scripting.FunctionType.AnimationMask, CATHODE.Scripting.FunctionType.MultipleCharacterAttachmentNode,
                 CATHODE.Scripting.FunctionType.SmoothMove, CATHODE.Scripting.FunctionType.ApplyRelativeTransform);
-            Map(EditorIcon.CategoryMathsPosition, CATHODE.Scripting.FunctionType.Raycast, CATHODE.Scripting.FunctionType.GetClosestPoint, CATHODE.Scripting.FunctionType.PointTracker);
-            Map(EditorIcon.CategoryLogic, CATHODE.Scripting.FunctionType.RandomSelect, CATHODE.Scripting.FunctionType.ToggleFunctionality);
+            Map(EditorIcon.CategoryMathsPosition, CATHODE.Scripting.FunctionType.Raycast, CATHODE.Scripting.FunctionType.GetClosestPoint, CATHODE.Scripting.FunctionType.GetClosestPointFromSet,
+                CATHODE.Scripting.FunctionType.PointTracker);
+            Map(EditorIcon.CategoryLogic, CATHODE.Scripting.FunctionType.RandomSelect);
             Map(EditorIcon.CategoryPostProcess, CATHODE.Scripting.FunctionType.Refraction);
-            Map(EditorIcon.CategoryDebug, CATHODE.Scripting.FunctionType.DEBUG_SenseLevels);
-            Map(EditorIcon.CategoryPlatform, CATHODE.Scripting.FunctionType.SetRichPresence, CATHODE.Scripting.FunctionType.GameDVR, CATHODE.Scripting.FunctionType.IsPlaylistTypeMarathon,
-                CATHODE.Scripting.FunctionType.IsPlaylistTypeAll, CATHODE.Scripting.FunctionType.GetCurrentPlaylistLevelIndex);
+            Map(EditorIcon.CategoryDebug, CATHODE.Scripting.FunctionType.DEBUG_SenseLevels, CATHODE.Scripting.FunctionType.NPC_Debug_Menu_Item);
+            Map(EditorIcon.CategoryNetwork, CATHODE.Scripting.FunctionType.NetworkProxy);
+            Map(EditorIcon.CategoryPlatform, CATHODE.Scripting.FunctionType.SetRichPresence, CATHODE.Scripting.FunctionType.GameDVR, CATHODE.Scripting.FunctionType.GetCurrentPlaylistLevelIndex);
             return icons;
+        }
+
+        /* The icon a whole family of types takes, by what they are rather than one by one (null: none of these): a Sphere or
+           Box volume, or a type derived from one (FogSphere and the like have their own above), every WEAPON_ type whatever
+           its category, and types no category holds whose names say what they are - Float*, Integer*, Vector*, Is* (a
+           question), Trigger*, UI*. Read lazily, as the base classes are in the entity tables (which aren't for startup). */
+        private static EditorIcon? ByRule(CATHODE.Scripting.FunctionType function, string category)
+        {
+            if (DerivesFrom(function, CATHODE.Scripting.FunctionType.Sphere))
+                return EditorIcon.EntitySphere;
+            if (DerivesFrom(function, CATHODE.Scripting.FunctionType.Box))
+                return EditorIcon.EntityBox;
+            string name = function.ToString();
+            if (name.StartsWith("WEAPON_", StringComparison.OrdinalIgnoreCase))
+                return EditorIcon.CategoryCombatWeapons;
+            if (!string.IsNullOrEmpty(category))
+                return null;
+            if (name.StartsWith("Float", StringComparison.Ordinal)) return EditorIcon.CategoryMathsFloat;
+            if (name.StartsWith("Integer", StringComparison.Ordinal)) return EditorIcon.CategoryMathsInteger;
+            if (name.StartsWith("Vector", StringComparison.Ordinal)) return EditorIcon.CategoryMathsVector;
+            if (name.Length > 2 && name.StartsWith("Is", StringComparison.Ordinal) && char.IsUpper(name[2])) return EditorIcon.CategoryInterrogation;
+            if (name.StartsWith("Trigger", StringComparison.Ordinal)) return EditorIcon.CategoryTriggers;
+            if (name.StartsWith("UI", StringComparison.Ordinal)) return EditorIcon.CategoryUI;
+            return null;
+        }
+
+        /* Is this type the given one, or derived from it (its base classes in the entity tables)? */
+        private static bool DerivesFrom(CATHODE.Scripting.FunctionType function, CATHODE.Scripting.FunctionType ancestor)
+        {
+            CATHODE.Scripting.FunctionType at = function;
+            for (int depth = 0; depth < 32; depth++)
+            {
+                if (at == ancestor)
+                    return true;
+                CATHODE.Scripting.FunctionType? inherited = null;
+                try
+                {
+                    if (!CathodeLib.CustomTable.Vanilla.CathodeEntities.FunctionBaseClasses.TryGetValue(at, out inherited) || inherited == null)
+                        return false;
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
+                at = inherited.Value;
+            }
+            return false;
         }
 
         /// <summary>The composite trees' order (<see cref="TreeUtility"/> and the pickers): folder, composite, open folder, root, GLOBAL/PAUSEMENU, DisplayModel.</summary>
@@ -394,8 +476,9 @@ namespace OpenCAGE
         private static readonly Dictionary<string, EditorIcon?> _categoryIcons = new Dictionary<string, EditorIcon?>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
-        /// A function type's icon: its own where it has one (<see cref="TypeIcons"/>), else its category's (see
-        /// <see cref="ForCategory"/>), else the function braces. Cached: the categories are read once, from the shipped tables.
+        /// A function type's icon: its own where it has one (<see cref="TypeIcons"/>), else its family's (a sphere or box volume,
+        /// a weapon, or an uncategorised type named for what it is - see ByRule), else its category's (see <see cref="ForCategory"/>),
+        /// else the function braces. Cached: the categories and base classes are read once, from the shipped tables.
         /// </summary>
         public static EditorIcon ForFunctionType(CATHODE.Scripting.FunctionType function)
         {
@@ -405,7 +488,8 @@ namespace OpenCAGE
             {
                 if (_functionIcons.TryGetValue(function, out EditorIcon icon))
                     return icon;
-                icon = ForCategory(FlowgraphLayoutManager.TryGetCategoryForFunctionType(function)) ?? EditorIcon.Function;
+                string category = FlowgraphLayoutManager.TryGetCategoryForFunctionType(function);
+                icon = ByRule(function, category) ?? ForCategory(category) ?? EditorIcon.Function;
                 _functionIcons[function] = icon;
                 return icon;
             }
