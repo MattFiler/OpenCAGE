@@ -10,88 +10,103 @@ using static OpenCAGE.AnimTreeLayouts;
 namespace OpenCAGE
 {
     /// <summary>
-    /// The animation tree layouts people have made by hand (<see cref="AnimTreeLayouts"/>: DATA/GLOBAL/AnimTreeLayouts.dat,
-    /// beside ANIMATION.PAK) - the Animation Tree Editor's and the AI assistant tools' shared copy. A tree with none is laid
-    /// out automatically. Changes wait in memory until the trees are saved (or an assistant tool writes them at once);
-    /// the file is read again whenever something else has changed it on disk, such as the mod manager.
+    /// The animation tree layouts people have made by hand (<see cref="AnimTreeLayouts"/>: an entry of OpenCAGE's own inside
+    /// ANIMATION.PAK, so they stay with the trees they draw) - the Animation Tree Editor's and the AI assistant tools' shared
+    /// copy. A tree with none is laid out automatically. Changes wait here until ANIMATION.PAK is written: whatever writes it
+    /// puts them into the PAK's entry first (<see cref="Commit(Func{uint, uint, bool}, out string)"/>) - all of them when it
+    /// writes every tree, only those of the trees it writes otherwise. Read afresh whenever the animations are loaded again
+    /// (after the mod manager changes the PAK, say).
     /// </summary>
     /// <remarks>UI thread only.</remarks>
     public static class AnimTreeLayoutManager
     {
         private const string LogSystem = "Anim Tree Layouts";
 
+        //The layouts as the PAK in memory holds them, and which PAK and entry content they were read from
         private static AnimTreeLayouts _file;
-        private static string _loadedFrom;
-        private static long _loadedLength = -1;
-        private static DateTime _loadedWrite = DateTime.MinValue;
+        private static PAK2 _loadedPak;
+        private static byte[] _loadedContent;
 
-        //Changes not yet written: a layout to store, or null to drop the tree's layout
+        //Changes not yet in the PAK: a layout to store, or null to drop the tree's layout
         private static readonly Dictionary<(uint, uint), TreeLayout> _pending = new Dictionary<(uint, uint), TreeLayout>();
 
         /// <summary>A tree's layout changed (set hash, tree hash, and whoever changed it - an open graph reloads unless it was the one).</summary>
         public static event Action<uint, uint, object> Changed;
 
-        /// <summary>DATA/GLOBAL/AnimTreeLayouts.dat beside the animation PAK in use (null when the animations aren't loaded).</summary>
-        public static string FilePath
-        {
-            get
-            {
-                string pak = Singleton.Global?.Animations?.PAK?.Filepath;
-                if (string.IsNullOrEmpty(pak))
-                    return null;
-                try { return Path.Combine(Path.GetDirectoryName(Path.GetFullPath(pak)), AnimTreeLayouts.FileName); }
-                catch { return null; }
-            }
-        }
+        /// <summary>The animation PAK the layouts are kept in (null when the animations aren't loaded).</summary>
+        public static string PakPath => Singleton.Global?.Animations?.PAK?.Filepath;
 
+        private static PAK2 Pak => Singleton.Global?.Animations?.PAK;
         private static AnimationStrings Strings => Singleton.Global?.Animations?.StringsDebug;
 
         public static bool HasPending => _pending.Count != 0;
 
         #region Reading
-        /* The file as it is on disk now, read again if it changed since (or the game folder did) */
+        /* The layouts as the PAK in memory holds them, read again once that is another PAK (the animations loaded again) or
+           its entry was replaced */
         private static AnimTreeLayouts Current
         {
             get
             {
-                string path = FilePath;
-                FileInfo info = path == null ? null : new FileInfo(path);
-                long length = info != null && info.Exists ? info.Length : -1;
-                DateTime write = info != null && info.Exists ? info.LastWriteTimeUtc : DateTime.MinValue;
-                if (_file == null || !string.Equals(path, _loadedFrom, StringComparison.OrdinalIgnoreCase) || length != _loadedLength || write != _loadedWrite)
+                PAK2 pak = Pak;
+                PAK2.File entry = EntryOf(pak);
+                if (_file == null || !ReferenceEquals(pak, _loadedPak) || !ReferenceEquals(entry?.Content, _loadedContent))
                 {
-                    if (!string.Equals(path, _loadedFrom, StringComparison.OrdinalIgnoreCase))
+                    bool newPak = !ReferenceEquals(pak, _loadedPak);
+                    if (newPak)
                         _pending.Clear();
-                    _file = Read(path) ?? AnimTreeLayouts.FromBytes(null);
-                    _loadedFrom = path;
-                    _loadedLength = length;
-                    _loadedWrite = write;
+                    _file = Read(entry) ?? AnimTreeLayouts.FromBytes(null);
+                    _loadedPak = pak;
+                    _loadedContent = entry?.Content;
+                    if (newPak && entry == null)
+                        BringInLegacyFile(pak);
                 }
                 return _file;
             }
         }
 
-        /* The file's layouts (none when there is no file), or null when there is one this build can't read - damaged, being
-           written, or from a newer OpenCAGE - which must then be left alone, not written over */
-        private static AnimTreeLayouts Read(string path)
+        private static PAK2.File EntryOf(PAK2 pak) => pak?.Entries.FirstOrDefault(o => AnimTreeLayouts.IsEntry(o.Filename));
+
+        /* The entry's layouts (none when there is no entry), or null when there is one this build can't read - damaged, or from
+           a newer OpenCAGE - which must then be left alone, not written over */
+        private static AnimTreeLayouts Read(PAK2.File entry)
         {
-            if (path == null || !System.IO.File.Exists(path))
+            if (entry?.Content == null || entry.Content.Length == 0)
                 return AnimTreeLayouts.FromBytes(null);
             try
             {
-                byte[] bytes = System.IO.File.ReadAllBytes(path);
-                if (bytes.Length == 0)
-                    return AnimTreeLayouts.FromBytes(null);
-                AnimTreeLayouts file = AnimTreeLayouts.FromBytes(bytes, path);
+                AnimTreeLayouts file = AnimTreeLayouts.FromBytes(entry.Content, entry.Filename);
                 if (file.Loaded)
                     return file;
-                Debug.Log(LogSystem, path + " is not a layouts file this version reads; its trees are laid out automatically");
+                Debug.Log(LogSystem, "ANIMATION.PAK's " + entry.Filename + " is not layouts this version reads; its trees are laid out automatically");
             }
             catch (Exception e)
             {
-                Debug.Log(LogSystem, "Could not read " + path + ": " + e.Message);
+                Debug.Log(LogSystem, "Could not read ANIMATION.PAK's " + entry.Filename + ": " + e.Message);
             }
             return null;
+        }
+
+        /* Layouts kept the old way, in a file beside a PAK that has none inside it yet: brought in as changes, so the next
+           write of the PAK carries them (the file is left as it is) */
+        private static void BringInLegacyFile(PAK2 pak)
+        {
+            try
+            {
+                string path = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(pak.Filepath)), AnimTreeLayouts.LegacyFileName);
+                if (!System.IO.File.Exists(path))
+                    return;
+                AnimTreeLayouts legacy = AnimTreeLayouts.FromBytes(System.IO.File.ReadAllBytes(path), path);
+                if (!legacy.Loaded)
+                    return;
+                foreach (TreeLayout tree in legacy.Trees.Where(o => o != null))
+                    _pending[(tree.SetHash, tree.TreeHash)] = tree.Clone();
+                Debug.Log(LogSystem, "Brought " + legacy.Trees.Count + " tree layouts in from " + path + ": they go into ANIMATION.PAK when it is next saved");
+            }
+            catch (Exception e)
+            {
+                Debug.Log(LogSystem, "Could not bring in the old layouts file beside ANIMATION.PAK: " + e.Message);
+            }
         }
 
         /// <summary>The layout stored for a tree (pending changes included), or null when it is laid out automatically. A copy: change it and Put it back.</summary>
@@ -218,33 +233,36 @@ namespace OpenCAGE
 
         #region Writing
         /// <summary>
-        /// Write the pending changes to the file - read afresh first, so changes made on disk since stand for every tree
-        /// not changed here. True when written (or nothing to write); false with the reason otherwise, pending kept.
+        /// Put every pending change into ANIMATION.PAK's layouts entry in memory, for a write of the PAK that carries every
+        /// tree (the Animation Tree Editor's Save, or anything saving the whole animation set). Call it just before the PAK is
+        /// written. True when done (or nothing to do); false with the reason otherwise, the changes kept waiting.
         /// </summary>
-        public static bool Save(out string error) => Save(null, out error);
+        public static bool Commit(out string error) => Commit(null, out error);
 
         /// <summary>
-        /// Write only the pending changes to these trees (set hash, tree hash), leaving the rest waiting for the trees' own
-        /// save - an AI assistant's layout change must not write the user's unsaved ones, which may name nodes as the
-        /// unsaved trees do. Null writes them all.
+        /// Put only the pending changes to these trees (set hash, tree hash) into the PAK's layouts entry, leaving the rest
+        /// waiting for their trees' own save - a write of some trees (or of a layout alone) must not carry the layouts of
+        /// others' unsaved edits, which may name nodes as those edits do. Null puts them all in.
         /// </summary>
-        public static bool Save(Func<uint, uint, bool> only, out string error)
+        public static bool Commit(Func<uint, uint, bool> only, out string error)
         {
             error = null;
+            _ = Current;
             List<KeyValuePair<(uint, uint), TreeLayout>> writing = _pending.Where(o => only == null || only(o.Key.Item1, o.Key.Item2)).ToList();
             if (writing.Count == 0)
                 return true;
-            string path = FilePath;
-            if (path == null)
+            PAK2 pak = Pak;
+            if (pak == null)
             {
-                error = "the animations are not loaded, so there is nowhere to write the layouts";
+                error = "the animations are not loaded, so there is nowhere to keep the layouts";
                 return false;
             }
 
-            AnimTreeLayouts file = Read(path);
+            PAK2.File entry = EntryOf(pak);
+            AnimTreeLayouts file = Read(entry);
             if (file == null)
             {
-                error = path + " is not a layouts file this version of OpenCAGE can read (damaged, in use, or from a newer version), so it was not written over";
+                error = "ANIMATION.PAK's layouts are not ones this version of OpenCAGE can read (damaged, or from a newer version), so they were not written over";
                 return false;
             }
             foreach (KeyValuePair<(uint, uint), TreeLayout> change in writing)
@@ -255,34 +273,22 @@ namespace OpenCAGE
                     file.Put(change.Value.Clone());
             }
 
-            try
+            if (file.Trees.Count == 0)
             {
-                Modding.ModServices.CaptureBeforeWrite(path);
-                if (file.Trees.Count == 0 && System.IO.File.Exists(path))
-                {
-                    //Every layout gone: no file at all, as before any was made
-                    System.IO.File.Delete(path);
-                }
-                else if (file.Trees.Count != 0)
-                {
-                    if (!file.Save(path, true))
-                    {
-                        error = "could not write " + path;
-                        return false;
-                    }
-                }
+                //Every layout gone: no entry at all, as before any was made
+                if (entry != null)
+                    pak.Entries.Remove(entry);
             }
-            catch (Exception e)
-            {
-                error = "could not write " + path + ": " + e.Message;
-                return false;
-            }
+            else if (entry != null)
+                entry.Content = file.ToBytes();
+            else
+                pak.Entries.Add(new PAK2.File() { Filename = AnimTreeLayouts.EntryName, Content = file.ToBytes() });
 
             foreach (KeyValuePair<(uint, uint), TreeLayout> change in writing)
                 _pending.Remove(change.Key);
             _file = null;
             _ = Current;
-            Debug.Log(LogSystem, "Wrote " + _file.Trees.Count + " tree layouts to " + path);
+            Debug.Log(LogSystem, "ANIMATION.PAK holds " + _file.Trees.Count + " tree layouts now");
             return true;
         }
 

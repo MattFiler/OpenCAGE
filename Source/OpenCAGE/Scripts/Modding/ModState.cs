@@ -77,10 +77,6 @@ namespace OpenCAGE.Modding
          * null when their version is "no file". Their own work - changes made in OpenCAGE, not by a mod - is what mods
          * are combined with (mods win clashes), and what removing every mod puts back. No entry: the baseline is it. */
         [JsonProperty("own")] public Dictionary<string, string> Own = new Dictionary<string, string>();
-        /* Trees of the animation tree layouts ("SETHASH/TREEHASH", hex) the user laid out while mods' layouts were
-         * installed: their own layout of each (in Own) goes over the mods' as well as under them, so a hand edit made on
-         * a mod's layout stays. See ModInstaller.FoldLayoutEdits. */
-        [JsonProperty("layoutsOnTop")] public List<string> LayoutsOnTop = new List<string>();
         [JsonProperty("mods")] public List<InstalledMod> Mods = new List<InstalledMod>();
 
         [JsonIgnore] private string _path;
@@ -103,7 +99,6 @@ namespace OpenCAGE.Modding
             if (state.Conflicts == null) state.Conflicts = new List<RecordedConflict>();
             if (state.Own == null) state.Own = new Dictionary<string, string>();
             if (state.LevelSignatures == null) state.LevelSignatures = new Dictionary<string, string>();
-            if (state.LayoutsOnTop == null) state.LayoutsOnTop = new List<string>();
             //A version 1 state knew only each mod's own writes: those are what the next apply must put back
             foreach (InstalledMod mod in state.Mods)
                 foreach (KeyValuePair<string, string> applied in mod.Applied ?? new Dictionary<string, string>())

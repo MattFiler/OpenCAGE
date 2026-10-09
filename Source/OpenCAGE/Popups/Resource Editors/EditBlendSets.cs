@@ -596,6 +596,8 @@ namespace OpenCAGE
             statusLabel.Refresh();
             try
             {
+                //It writes every tree, unsaved edits and all: their node layouts go in with them
+                AnimTreeLayoutManager.Commit(out _);
                 if (!_animations.Save())
                 {
                     MessageBox.Show("ANIMATION.PAK could not be written.", "Save failed", MessageBoxButtons.OK, MessageBoxIcon.Error);

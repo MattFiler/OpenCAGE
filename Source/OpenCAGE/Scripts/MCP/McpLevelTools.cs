@@ -146,7 +146,7 @@ namespace OpenCAGE.MCP
                     McpSchema.String("description", "export: its description."),
                     McpSchema.Strings("levels", "export: only changed files of these levels (as list_levels names them; custom levels and a Nostromo level's _PATCH folder included)."),
                     McpSchema.Strings("files", "export: only these changed files, as game-relative paths (e.g. DATA/ENV/PRODUCTION/X/WORLD/COMMANDS.PAK)."),
-                    McpSchema.Strings("include_shared", "export with levels/files: also changed files every level shares - text (DATA/TEXT), configs, ui (UI.PAK), animation (ANIMATION.PAK and its tree layouts, AnimTreeLayouts.dat), all, or game-relative paths."),
+                    McpSchema.Strings("include_shared", "export with levels/files: also changed files every level shares - text (DATA/TEXT), configs, ui (UI.PAK), animation (ANIMATION.PAK, which holds its tree layouts too), all, or game-relative paths."),
                     McpSchema.Boolean("include_configs", "export: include changed config (.BML) values (default true)."),
                     McpSchema.Integer("limit", "list/export: at most this many entries in the report (default 100)."),
                     McpSchema.Boolean("dry_run", "Report what would happen, changing nothing.")),
@@ -1754,7 +1754,7 @@ namespace OpenCAGE.MCP
             }
             List<string> changed = scan.WithStatus(Modding.FileStatus.Modified).Concat(scan.WithStatus(Modding.FileStatus.Foreign)).ToList();
             HashSet<string> changedSet = new HashSet<string>(changed);
-            //A sidecar (.META, the tree layouts) ships with its file (ModExportBuilder.AddFile): only list it alone when its file is unchanged
+            //A sidecar (.META) ships with its file (ModExportBuilder.AddFile): only list it alone when its file is unchanged
             changed = changed.Where(o => !Modding.ModExportBuilder.ShipsWithParent(o, changedSet)).OrderBy(o => o).ToList();
 
             List<string> levels = call.StrList("levels").Select(o => McpLevels.Resolve(o, call: call, argument: "levels")).ToList();
@@ -1775,7 +1775,7 @@ namespace OpenCAGE.MCP
                 if (shared.Contains("all")) return true;
                 if (shared.Contains("text") && path.StartsWith("DATA/TEXT/", StringComparison.OrdinalIgnoreCase)) return true;
                 if (shared.Contains("ui") && (path.StartsWith("DATA/UI", StringComparison.OrdinalIgnoreCase))) return true;
-                if (shared.Contains("animation") && (path.IndexOf("ANIMATION", StringComparison.OrdinalIgnoreCase) >= 0 || string.Equals(path, Modding.ModToolkit.AnimTreeLayoutsPath, StringComparison.OrdinalIgnoreCase))) return true;
+                if (shared.Contains("animation") && path.IndexOf("ANIMATION", StringComparison.OrdinalIgnoreCase) >= 0) return true;
                 if (shared.Contains("configs") && (path.EndsWith(".XML", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".BML", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".TXT", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".BIN", StringComparison.OrdinalIgnoreCase))) return true;
                 return shared.Any(o => string.Equals(Modding.ModToolkit.Normalise(o), path, StringComparison.OrdinalIgnoreCase));
             }
@@ -1812,7 +1812,7 @@ namespace OpenCAGE.MCP
             if (missing.Count != 0)
                 call.Note("Not changed from vanilla, so not included: " + string.Join(", ", missing.Take(10)) + (missing.Count > 10 ? ", ..." : "") + ".");
             if (leftOut.Count != 0)
-                call.Note(leftOut.Count + " changed file(s) every level shares were left out by the filter (" + string.Join(", ", leftOut.Take(8)) + (leftOut.Count > 8 ? ", ..." : "") + "): a level relying on them (its subtitles in DATA/TEXT, a config, UI.PAK, ANIMATION.PAK and its tree layouts) needs them too - include_shared: ['text', 'configs', 'ui', 'animation'] or their paths.");
+                call.Note(leftOut.Count + " changed file(s) every level shares were left out by the filter (" + string.Join(", ", leftOut.Take(8)) + (leftOut.Count > 8 ? ", ..." : "") + "): a level relying on them (its subtitles in DATA/TEXT, a config, UI.PAK, ANIMATION.PAK with its tree layouts) needs them too - include_shared: ['text', 'configs', 'ui', 'animation'] or their paths.");
             //What the editor holds but the disk does not: an export packs the files as they are
             McpEditor.UI(() =>
             {

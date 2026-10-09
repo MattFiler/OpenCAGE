@@ -10,9 +10,11 @@ using System.Text;
 namespace OpenCAGE
 {
     /// <summary>
-    /// DATA/GLOBAL/AnimTreeLayouts.dat - OpenCAGE's own file, beside ANIMATION.PAK: how the Animation Tree Editor draws
-    /// each tree someone has laid out by hand - where every node sits, the extra copies ("ghosts") a node is drawn as, and
-    /// which copy draws which link. The game never reads it. A tree with no entry is laid out automatically.
+    /// How the Animation Tree Editor draws each tree someone has laid out by hand - where every node sits, the extra copies
+    /// ("ghosts") a node is drawn as, and which copy draws which link. OpenCAGE's own entry inside ANIMATION.PAK
+    /// (<see cref="EntryName"/>), so the layouts go wherever the trees they draw go: a game file check that puts the trees
+    /// back takes their layouts with them, and a mod's animation PAK brings its own. The game never asks for it. A tree
+    /// with no entry is laid out automatically.
     /// </summary>
     /// <remarks>
     /// Nothing in a tree set has a stable id, so everything is keyed by hashes that survive a save and reload: a tree by
@@ -21,7 +23,17 @@ namespace OpenCAGE
     /// </remarks>
     public class AnimTreeLayouts : CathodeFile
     {
-        public const string FileName = "AnimTreeLayouts.dat";
+        /// <summary>
+        /// The layouts' entry in the animation PAK: a folder of OpenCAGE's own, which the game's files never sit in and no
+        /// reader of the PAK's own files picks up.
+        /// </summary>
+        public const string EntryName = @"DATA\OPENCAGE\ANIMTREELAYOUTS.DAT";
+
+        /// <summary>Where the layouts were kept before they went into the PAK: a file beside it, read once to bring them in.</summary>
+        public const string LegacyFileName = "AnimTreeLayouts.dat";
+
+        /// <summary>Is this the layouts' entry of an animation PAK (named either way round with its slashes)?</summary>
+        public static bool IsEntry(string entryName) => string.Equals((entryName ?? "").Replace('/', '\\'), EntryName, StringComparison.OrdinalIgnoreCase);
 
         public List<TreeLayout> Trees = new List<TreeLayout>();
         public static new Implementation Implementation = Implementation.CREATE | Implementation.LOAD | Implementation.SAVE;

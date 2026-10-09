@@ -16,12 +16,11 @@ namespace OpenCAGE.Modding.Merging
     /// </summary>
     public static class FileMerger
     {
-        public enum Kind { Bml, Xml, TextDb, Text, Pak2, AnimTreeLayouts, Opaque }
+        public enum Kind { Bml, Xml, TextDb, Text, Pak2, Opaque }
 
         public static Kind Classify(string target, byte[] sample)
         {
             string upper = target.ToUpperInvariant();
-            if (upper == ModToolkit.AnimTreeLayoutsPath) return Kind.AnimTreeLayouts;
             if (upper.EndsWith(".BML")) return Kind.Bml;
             if (sample != null && sample.Length >= 4 && sample[0] == 'P' && sample[1] == 'A' && sample[2] == 'K' && sample[3] == '2') return Kind.Pak2;
             if (upper.EndsWith(".XML") || upper.EndsWith(".PKG") || upper.EndsWith(".XSD")) return Kind.Xml;
@@ -45,15 +44,6 @@ namespace OpenCAGE.Modding.Merging
         /// </summary>
         public static MergeOutcome Merge(string target, byte[] vanilla, IList<Contribution> versions)
         {
-            //Ahead of the shortcuts below: there's no original, and even one mod's layouts go onto the ones already there
-            if (versions.Count != 0 && Classify(target, null) == Kind.AnimTreeLayouts)
-            {
-                MergeOutcome layouts = AnimTreeLayoutsMerge.Merge(target, vanilla, versions);
-                if (layouts != null)
-                    return layouts;
-                //Not all readable as layouts: dealt with below, like any file nothing can combine
-            }
-
             if (versions.Count == 0)
                 return new MergeOutcome() { Bytes = vanilla };
             if (versions.Count == 1)
@@ -194,7 +184,8 @@ namespace OpenCAGE.Modding.Merging
     /// <summary>
     /// PAK2 archives (UI.PAK, CHR_INFO.PAK, ANIMATION.PAK...): merged entry by entry. Two mods changing different
     /// entries both survive; two changing the same entry merge that entry by its own kind when it's a config,
-    /// otherwise the later mod's entry is used.
+    /// otherwise the later mod's entry is used. An animation PAK's tree layouts (OpenCAGE's own entry) are merged tree by
+    /// tree, and a version without them has simply laid nothing out - it doesn't take away the ones there.
     /// </summary>
     public static class Pak2Merge
     {
@@ -230,7 +221,7 @@ namespace OpenCAGE.Modding.Merging
                     list.Add(new Contribution() { ModName = mod, Bytes = entry.Content });
                 }
                 foreach (PAK2.File original in baseArchive.Entries)
-                    if (!entries.ContainsKey(original.Filename))
+                    if (!entries.ContainsKey(original.Filename) && !AnimTreeLayouts.IsEntry(original.Filename))
                         removals.Add((mod, original.Filename));
             }
 
@@ -238,9 +229,14 @@ namespace OpenCAGE.Modding.Merging
             {
                 baseEntries.TryGetValue(entry.Key, out PAK2.File original);
                 string entryTarget = target + " › " + entry.Key;
-                MergeOutcome entryOutcome = original == null
-                    ? FileMerger.WholeFile(entryTarget, entry.Value, entry.Value.Count > 1 ? "added by more than one mod" : null)
-                    : FileMerger.Merge(entryTarget, original.Content, entry.Value);
+                MergeOutcome entryOutcome;
+                if (AnimTreeLayouts.IsEntry(entry.Key))
+                    entryOutcome = AnimTreeLayoutsMerge.Merge(entryTarget, original?.Content, entry.Value)
+                        ?? FileMerger.WholeFile(entryTarget, entry.Value, "not every version is layouts this version of OpenCAGE reads");
+                else if (original == null)
+                    entryOutcome = FileMerger.WholeFile(entryTarget, entry.Value, entry.Value.Count > 1 ? "added by more than one mod" : null);
+                else
+                    entryOutcome = FileMerger.Merge(entryTarget, original.Content, entry.Value);
                 outcome.Conflicts.AddRange(entryOutcome.Conflicts);
                 PAK2.File existing = merged.FirstOrDefault(o => string.Equals(o.Filename, entry.Key, StringComparison.OrdinalIgnoreCase));
                 if (existing != null) existing.Content = entryOutcome.Bytes;
@@ -293,12 +289,12 @@ namespace OpenCAGE.Modding.Merging
     }
 
     /// <summary>
-    /// The Animation Tree Editor's layouts (<see cref="ModToolkit.AnimTreeLayoutsPath"/>), merged tree by tree. The game
-    /// doesn't ship the file, so there's no original to merge against: what was there before the mods (nothing, or the
-    /// user's own layouts) is the lowest-priority version instead, each mod's trees go on top in list order, and the later
-    /// mod wins a tree. That holds for a single mod too, so the user's layouts of trees it doesn't lay out stay while it's
-    /// installed. Only two mods laying out one tree differently is reported: the user's own layouts give way quietly, as
-    /// a layout should follow the version of its tree that's installed.
+    /// The Animation Tree Editor's layouts (an animation PAK's <see cref="AnimTreeLayouts.EntryName"/> entry), merged tree by
+    /// tree. The game's PAK has no such entry, so there's usually no original to merge against: what was there before the
+    /// mods (nothing, or the user's own layouts) is the lowest-priority version instead, each mod's trees go on top in list
+    /// order, and the later mod wins a tree - so the user's layouts of trees a mod doesn't lay out stay while it's installed.
+    /// Only two mods laying out one tree differently is reported: the user's own layouts give way quietly, as a layout
+    /// should follow the version of its tree that's installed.
     /// </summary>
     public static class AnimTreeLayoutsMerge
     {

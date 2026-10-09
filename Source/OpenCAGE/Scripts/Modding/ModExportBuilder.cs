@@ -57,13 +57,9 @@ namespace OpenCAGE.Modding
         /// </summary>
         private const string SidecarSuffix = ".META";
 
-        /* The animation PAK on each platform family: either one carries the tree layouts with it (ModToolkit.AnimTreeLayoutsPath).
-           One layouts file is named for neither PAK, so it has both as its parents. */
-        private static readonly string[] AnimationPaks = { "DATA/GLOBAL/ANIMATION.PAK", "DATA/GLOBAL/ANIMATION_SWITCH.PAK" };
-
         /// <summary>
-        /// Include a file, together with its sidecars: its .META if it has one, and the tree layouts for the
-        /// animation PAK. Vanilla files are skipped silently - they carry nothing.
+        /// Include a file, together with its sidecar: its .META if it has one (an animation PAK carries its tree layouts
+        /// inside it). Vanilla files are skipped silently - they carry nothing.
         /// </summary>
         /// <remarks>
         /// The sidecar is the other half of the file it sits beside, not an optional extra, so it
@@ -79,32 +75,27 @@ namespace OpenCAGE.Modding
                 Include(sidecar);
         }
 
-        /// <summary>The sidecars that ship with a file (whether or not they're on disk): its .META, and the tree layouts for the animation PAK.</summary>
+        /// <summary>The sidecars that ship with a file (whether or not they're on disk): its .META.</summary>
         public static IEnumerable<string> SidecarsFor(string normalisedPath)
         {
             if (normalisedPath == null)
                 yield break;
             if (!normalisedPath.EndsWith(SidecarSuffix, StringComparison.OrdinalIgnoreCase))
                 yield return normalisedPath + SidecarSuffix;
-            if (AnimationPaks.Contains(normalisedPath, StringComparer.OrdinalIgnoreCase))
-                yield return ModToolkit.AnimTreeLayoutsPath;
         }
 
         public static bool IsSidecar(string normalisedPath)
         {
-            return normalisedPath != null && (normalisedPath.EndsWith(SidecarSuffix, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(normalisedPath, ModToolkit.AnimTreeLayoutsPath, StringComparison.OrdinalIgnoreCase));
+            return normalisedPath != null && normalisedPath.EndsWith(SidecarSuffix, StringComparison.OrdinalIgnoreCase);
         }
 
-        /// <summary>The files a sidecar ships with - any one of them carries it - or none if this isn't a sidecar.</summary>
+        /// <summary>The file a sidecar ships with, or none if this isn't a sidecar.</summary>
         public static IEnumerable<string> SidecarParents(string normalisedPath)
         {
             if (normalisedPath == null)
                 return new string[0];
             if (normalisedPath.EndsWith(SidecarSuffix, StringComparison.OrdinalIgnoreCase))
                 return new[] { normalisedPath.Substring(0, normalisedPath.Length - SidecarSuffix.Length) };
-            if (string.Equals(normalisedPath, ModToolkit.AnimTreeLayoutsPath, StringComparison.OrdinalIgnoreCase))
-                return AnimationPaks;
             return new string[0];
         }
 
@@ -245,9 +236,7 @@ namespace OpenCAGE.Modding
             if (others.Any(o => o.StartsWith("DATA/TEXT/"))) parts.Add("changes in-game text");
             if (others.Any(o => o.StartsWith("DATA/SOUND/"))) parts.Add("changes sounds");
             if (others.Any(o => o == "DATA/UI.PAK")) parts.Add("changes the user interface");
-            //The tree layouts are only how the editor draws the trees: alone, they don't change any animation
-            if (others.Any(o => o.StartsWith("DATA/GLOBAL/") && o != ModToolkit.AnimTreeLayoutsPath)) parts.Add("changes animations");
-            else if (others.Contains(ModToolkit.AnimTreeLayoutsPath)) parts.Add("changes animation tree layouts");
+            if (others.Any(o => o.StartsWith("DATA/GLOBAL/"))) parts.Add("changes animations");
             int rest = others.Count(o => !o.StartsWith("DATA/BINARY_BEHAVIOR/") && !o.StartsWith("DATA/TEXT/") && !o.StartsWith("DATA/SOUND/") && o != "DATA/UI.PAK" && !o.StartsWith("DATA/GLOBAL/"));
             if (rest != 0) parts.Add("changes " + rest + " other game file" + (rest == 1 ? "" : "s"));
             if (parts.Count == 0) return "";

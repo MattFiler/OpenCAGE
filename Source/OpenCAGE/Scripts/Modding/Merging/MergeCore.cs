@@ -58,7 +58,9 @@ namespace OpenCAGE.Modding.Merging
             if (t == "DATA/GLOBALCONSTANTS.BML") return "the game-wide settings";
             if (t.StartsWith("DATA/TEXT/")) return "the game's text (" + file + ")";
             if (t == "DATA/UI.PAK") return "the user interface";
-            if (t == ModToolkit.AnimTreeLayoutsPath) return "the animation tree layouts";
+            //An animation PAK's entry of OpenCAGE's own: "<the PAK> › DATA\OPENCAGE\ANIMTREELAYOUTS.DAT"
+            int inside = target.IndexOf(" › ", StringComparison.Ordinal);
+            if (inside > 0 && AnimTreeLayouts.IsEntry(target.Substring(inside + 3))) return "the animation tree layouts";
             int production = t.IndexOf("/ENV/PRODUCTION/");
             if (production >= 0)
             {

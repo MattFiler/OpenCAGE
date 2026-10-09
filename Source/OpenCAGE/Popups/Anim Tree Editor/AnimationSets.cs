@@ -143,6 +143,9 @@ namespace OpenCAGE.AnimTrees
                 }
             }
 
+            //Where the trees' nodes are drawn goes into ANIMATION.PAK with them
+            bool layoutsIn = AnimTreeLayoutManager.Commit(out string layoutError);
+
             OpenCAGE.Modding.ModServices.CaptureBeforeWrite(Singleton.Global.Animations.PAK.Filepath);
             if (!Singleton.Global.Animations.PAK.Save())
             {
@@ -154,8 +157,7 @@ namespace OpenCAGE.AnimTrees
                 return false;
             }
 
-            //Where the trees' nodes are drawn goes beside them, in AnimTreeLayouts.dat
-            if (!AnimTreeLayoutManager.Save(out string layoutError))
+            if (!layoutsIn)
             {
                 MessageBox.Show(
                     "The animation trees were saved, but their node layouts were not: " + layoutError + ".",

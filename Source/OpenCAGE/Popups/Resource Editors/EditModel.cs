@@ -423,6 +423,8 @@ namespace OpenCAGE
             try
             {
                 Modding.ModServices.CaptureBeforeWrite(Singleton.Animations.PAK.Filepath);
+                //It writes every tree, unsaved edits and all: their node layouts go in with them
+                AnimTreeLayoutManager.Commit(out _);
                 if (Singleton.Animations.Save()) return true;
                 problem = "The file could not be written to.";
                 return false;

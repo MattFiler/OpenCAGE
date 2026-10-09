@@ -828,6 +828,8 @@ namespace OpenCAGE
             try
             {
                 Modding.ModServices.CaptureBeforeWrite(_animations.PAK.Filepath);
+                //It writes every tree, unsaved edits and all: their node layouts go in with them
+                AnimTreeLayoutManager.Commit(out _);
                 if (!_animations.Save())
                 {
                     statusLabel.Text = "ANIMATION.PAK could not be written.";
