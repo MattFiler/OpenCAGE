@@ -401,6 +401,7 @@
       <DependentUpon>AnimationTreeGraph.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\Anim Tree Editor\AnimTreeCanvas.cs" />
+    <Compile Include="Popups\Anim Tree Editor\AnimTreeClipboard.cs" />
     <Compile Include="Popups\Anim Tree Editor\AnimTreeEditor.cs">
       <SubType>Form</SubType>
     </Compile>

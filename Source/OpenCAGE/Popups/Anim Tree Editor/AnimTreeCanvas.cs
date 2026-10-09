@@ -211,6 +211,7 @@ namespace OpenCAGE.AnimTrees
             node.SizeToTitle = true;
             node.AnimationNode = animNode;
             node.SetOpenCAGEColour(FlowgraphLayoutManager.GetColourForAnimEntity(animNode.Type.ToString()));
+            node.IconId = (int)EditorIcons.ForAnimNodeType(animNode.Type); //what it shows zoomed out
             Editor.Nodes.Add(node);
 
             NodePins pins = PinsOf(animNode);
@@ -935,6 +936,28 @@ namespace OpenCAGE.AnimTrees
                 return null;
             STNode drawn = MakeNode(node);
             drawn.SetPosition(at);
+            return drawn;
+        }
+
+        /// <summary>
+        /// Nodes newly in the tree together (a paste of copies), each drawn once where given, with every link the tree holds
+        /// between two of them. Returns their canvas nodes, in the order given.
+        /// </summary>
+        public List<STNode> AddNodes(IList<(AnimationNode node, Point at)> nodes)
+        {
+            List<STNode> drawn = new List<STNode>();
+            HashSet<AnimationNode> added = new HashSet<AnimationNode>(ByReference.Instance);
+            foreach ((AnimationNode node, Point at) in nodes)
+            {
+                STNode made = AddNode(node, at);
+                if (made == null)
+                    continue;
+                drawn.Add(made);
+                added.Add(node);
+            }
+            foreach (ModelLink link in LinksOf(Tree))
+                if (added.Contains(link.From) && added.Contains(link.To))
+                    Connect(OutputPin(_copies[link.From][0], link.FromPin), InputPin(_copies[link.To][0], link.ToPin));
             return drawn;
         }
 

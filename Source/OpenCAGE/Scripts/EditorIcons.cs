@@ -1,4 +1,5 @@
 using OpenCAGE.Theming;
+using ST.Library.UI.NodeEditor;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -120,6 +121,31 @@ namespace OpenCAGE
         EntityAll,
         EntityCounter,
         EntityPressurePad,
+
+        //The Animation Tree Editor's node types, in the generator's order (Art.AnimNodes): its add-node menu, and its nodes
+        //when zoomed out (see EditorIcons.ForAnimNodeType)
+        AnimTree,
+        AnimClip,
+        AnimRandomClip,
+        AnimSelector,
+        AnimRangedSelector,
+        AnimFootSync,
+        AnimBlend1D,
+        AnimBlend2D,
+        AnimBlend3D,
+        AnimBilinear,
+        AnimAdditive,
+        AnimBoneMask,
+        AnimIK,
+        AnimSpherical,
+        AnimWeighted,
+        AnimParameter,
+        AnimInterpolator,
+        AnimProperty,
+        AnimPropertyListener,
+        AnimMetadataListener,
+        AnimCallback,
+        AnimEventCallback,
     }
 
     /// <summary>
@@ -397,6 +423,68 @@ namespace OpenCAGE
         {
             int index = EntityIndex(ForFunctionType(function));
             return index < 0 ? EntityIndex(EditorIcon.Function) : index;
+        }
+
+        /// <summary>An animation tree node type's icon: beside it in the Animation Tree Editor's add-node menu, and on its nodes zoomed out.</summary>
+        public static EditorIcon ForAnimNodeType(CATHODE.Animations.NodeType type)
+        {
+            switch (type)
+            {
+                case CATHODE.Animations.NodeType.ANIM_Tree_Top_Level: return EditorIcon.AnimTree;
+                case CATHODE.Animations.NodeType.ANIM_Animation: return EditorIcon.AnimClip;
+                case CATHODE.Animations.NodeType.ANIM_Randomised_Animation: return EditorIcon.AnimRandomClip;
+                case CATHODE.Animations.NodeType.ANIM_Selector:
+                case CATHODE.Animations.NodeType.ANIM_Enumerated_Selector: return EditorIcon.AnimSelector;
+                case CATHODE.Animations.NodeType.ANIM_Ranged_Selector: return EditorIcon.AnimRangedSelector;
+                case CATHODE.Animations.NodeType.ANIM_Foot_Sync_Selector: return EditorIcon.AnimFootSync;
+                case CATHODE.Animations.NodeType.ANIM_Parametric: return EditorIcon.AnimBlend1D;
+                case CATHODE.Animations.NodeType.ANIM_2DParametric: return EditorIcon.AnimBlend2D;
+                case CATHODE.Animations.NodeType.ANIM_3DParametric:
+                case CATHODE.Animations.NodeType.ANIM_4DParametric: return EditorIcon.AnimBlend3D;
+                case CATHODE.Animations.NodeType.ANIM_Bilinear_High_Fidelity:
+                case CATHODE.Animations.NodeType.ANIM_Bilinear_Low_Fidelity: return EditorIcon.AnimBilinear;
+                case CATHODE.Animations.NodeType.ANIM_Additive_Blend:
+                case CATHODE.Animations.NodeType.ANIM_Parametric_Additive_Blend: return EditorIcon.AnimAdditive;
+                case CATHODE.Animations.NodeType.ANIM_Bone_Mask: return EditorIcon.AnimBoneMask;
+                case CATHODE.Animations.NodeType.ANIM_IK: return EditorIcon.AnimIK;
+                case CATHODE.Animations.NodeType.ANIM_Spherical: return EditorIcon.AnimSpherical;
+                case CATHODE.Animations.NodeType.ANIM_Weighted: return EditorIcon.AnimWeighted;
+                case CATHODE.Animations.NodeType.ANIM_Parameter:
+                case CATHODE.Animations.NodeType.ANIM_AutoFloatParameter: return EditorIcon.AnimParameter;
+                case CATHODE.Animations.NodeType.ANIM_FloatInterpolator: return EditorIcon.AnimInterpolator;
+                case CATHODE.Animations.NodeType.ANIM_Property: return EditorIcon.AnimProperty;
+                case CATHODE.Animations.NodeType.ANIM_Property_Listener: return EditorIcon.AnimPropertyListener;
+                case CATHODE.Animations.NodeType.ANIM_Metadata_Event_Listener: return EditorIcon.AnimMetadataListener;
+                case CATHODE.Animations.NodeType.ANIM_Callback: return EditorIcon.AnimCallback;
+                case CATHODE.Animations.NodeType.ANIM_Event_Callback: return EditorIcon.AnimEventCallback;
+            }
+            return EditorIcon.Function;
+        }
+
+        /// <summary>Below this zoom (title text is 8 pt: at half size it can't be read), node graphs draw each node as its icon.</summary>
+        public const float NodeIconZoom = 0.55f;
+
+        //The sizes a zoomed-out node's icon is made at (the largest that fits is used), so a zoom doesn't make one per pixel
+        private static readonly int[] _nodeIconSizes = { 8, 10, 12, 14, 16, 20, 24, 28, 32, 40, 48, 56, 64, 80, 96, 112, 128 };
+
+        /// <summary>
+        /// A zoomed-out node's icon (its <see cref="STNode.IconId"/>), for a node editor's NodeIconProvider. On a node of a
+        /// colour of its own, in one colour that stands out from it - deeper on a light node, paler on a dark one. On a node in
+        /// the plain base colour (most have none of their own), in the icon's own colours, as the light theme's lists show
+        /// it: a page of those is then told apart by colour as well as shape. Null for a node with no icon (drawn in full).
+        /// </summary>
+        public static Image ForZoomedOutNode(STNode node, int pixels)
+        {
+            if (node == null || node.IconId < 0)
+                return null;
+            int size = _nodeIconSizes[0];
+            foreach (int candidate in _nodeIconSizes)
+                if (candidate <= pixels)
+                    size = candidate;
+            Color plain = FlowgraphLayoutManager.BaseFunctionTypeColour;
+            if (node.TitleColor.R == plain.R && node.TitleColor.G == plain.G && node.TitleColor.B == plain.B)
+                return GetKept((EditorIcon)node.IconId, size, false);
+            return GetSilhouette((EditorIcon)node.IconId, size, InkFor(node.TitleColor));
         }
 
         /// <summary>

@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(AnimationTreeGraph));
             this.stNodeEditor1 = new ST.Library.UI.NodeEditor.STNodeEditor();
             this.nodeContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.addNodeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -39,6 +40,10 @@
             this.addGhostToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.nextGhostToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.deleteGhostToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.pasteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.pasteReferenceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.copyNodesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparatorCopy = new System.Windows.Forms.ToolStripSeparator();
             this.nodeContextMenu.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -69,17 +74,22 @@
             this.addNodeToolStripMenuItem,
             this.arrangeTreeToolStripMenuItem,
             this.toolStripSeparatorAdd,
+            this.pasteToolStripMenuItem,
+            this.pasteReferenceToolStripMenuItem,
+            this.copyNodesToolStripMenuItem,
+            this.toolStripSeparatorCopy,
             this.addGhostToolStripMenuItem,
             this.nextGhostToolStripMenuItem,
             this.deleteGhostToolStripMenuItem,
             this.deleteNodeToolStripMenuItem,
             this.deleteLinkToolStripMenuItem});
             this.nodeContextMenu.Name = "nodeContextMenu";
-            this.nodeContextMenu.Size = new System.Drawing.Size(215, 186);
+            this.nodeContextMenu.Size = new System.Drawing.Size(215, 252);
             this.nodeContextMenu.Opening += new System.ComponentModel.CancelEventHandler(this.NodeContextMenu_Opening);
-            // 
+            //
             // addNodeToolStripMenuItem
-            // 
+            //
+            this.addNodeToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("addNodeToolStripMenuItem.Image")));
             this.addNodeToolStripMenuItem.Name = "addNodeToolStripMenuItem";
             this.addNodeToolStripMenuItem.Size = new System.Drawing.Size(214, 22);
             this.addNodeToolStripMenuItem.Text = "Add Node";
@@ -96,8 +106,42 @@
             this.toolStripSeparatorAdd.Name = "toolStripSeparatorAdd";
             this.toolStripSeparatorAdd.Size = new System.Drawing.Size(211, 6);
             //
+            // pasteToolStripMenuItem
+            //
+            this.pasteToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("pasteToolStripMenuItem.Image")));
+            this.pasteToolStripMenuItem.Name = "pasteToolStripMenuItem";
+            this.pasteToolStripMenuItem.ShortcutKeyDisplayString = "Ctrl+V";
+            this.pasteToolStripMenuItem.Size = new System.Drawing.Size(214, 22);
+            this.pasteToolStripMenuItem.Text = "Paste";
+            this.pasteToolStripMenuItem.ToolTipText = "Pastes new nodes copied from the copied ones (named to be unique in this tree), with the links that ran between them.";
+            this.pasteToolStripMenuItem.Click += new System.EventHandler(this.pasteToolStripMenuItem_Click);
+            //
+            // pasteReferenceToolStripMenuItem
+            //
+            this.pasteReferenceToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("pasteReferenceToolStripMenuItem.Image")));
+            this.pasteReferenceToolStripMenuItem.Name = "pasteReferenceToolStripMenuItem";
+            this.pasteReferenceToolStripMenuItem.Size = new System.Drawing.Size(214, 22);
+            this.pasteReferenceToolStripMenuItem.Text = "Paste Reference";
+            this.pasteReferenceToolStripMenuItem.ToolTipText = "Pastes ghosts of the copied nodes themselves rather than new nodes: more places to draw them and their links from. Only in the tree they were copied from.";
+            this.pasteReferenceToolStripMenuItem.Click += new System.EventHandler(this.pasteReferenceToolStripMenuItem_Click);
+            //
+            // copyNodesToolStripMenuItem
+            //
+            this.copyNodesToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("copyNodesToolStripMenuItem.Image")));
+            this.copyNodesToolStripMenuItem.Name = "copyNodesToolStripMenuItem";
+            this.copyNodesToolStripMenuItem.ShortcutKeyDisplayString = "Ctrl+C";
+            this.copyNodesToolStripMenuItem.Size = new System.Drawing.Size(214, 22);
+            this.copyNodesToolStripMenuItem.Text = "Copy";
+            this.copyNodesToolStripMenuItem.Click += new System.EventHandler(this.copyNodesToolStripMenuItem_Click);
+            //
+            // toolStripSeparatorCopy
+            //
+            this.toolStripSeparatorCopy.Name = "toolStripSeparatorCopy";
+            this.toolStripSeparatorCopy.Size = new System.Drawing.Size(211, 6);
+            //
             // addGhostToolStripMenuItem
             //
+            this.addGhostToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("addGhostToolStripMenuItem.Image")));
             this.addGhostToolStripMenuItem.Name = "addGhostToolStripMenuItem";
             this.addGhostToolStripMenuItem.Size = new System.Drawing.Size(214, 22);
             this.addGhostToolStripMenuItem.Text = "Add Ghost Node";
@@ -105,6 +149,7 @@
             //
             // nextGhostToolStripMenuItem
             //
+            this.nextGhostToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("nextGhostToolStripMenuItem.Image")));
             this.nextGhostToolStripMenuItem.Name = "nextGhostToolStripMenuItem";
             this.nextGhostToolStripMenuItem.ShortcutKeyDisplayString = "F3";
             this.nextGhostToolStripMenuItem.Size = new System.Drawing.Size(214, 22);
@@ -113,6 +158,7 @@
             //
             // deleteGhostToolStripMenuItem
             //
+            this.deleteGhostToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("deleteGhostToolStripMenuItem.Image")));
             this.deleteGhostToolStripMenuItem.Name = "deleteGhostToolStripMenuItem";
             this.deleteGhostToolStripMenuItem.ShortcutKeyDisplayString = "Del";
             this.deleteGhostToolStripMenuItem.Size = new System.Drawing.Size(214, 22);
@@ -121,6 +167,7 @@
             //
             // deleteNodeToolStripMenuItem
             //
+            this.deleteNodeToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("deleteNodeToolStripMenuItem.Image")));
             this.deleteNodeToolStripMenuItem.Name = "deleteNodeToolStripMenuItem";
             this.deleteNodeToolStripMenuItem.ShortcutKeyDisplayString = "Shift+Del";
             this.deleteNodeToolStripMenuItem.Size = new System.Drawing.Size(214, 22);
@@ -129,6 +176,7 @@
             // 
             // deleteLinkToolStripMenuItem
             // 
+            this.deleteLinkToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("deleteLinkToolStripMenuItem.Image")));
             this.deleteLinkToolStripMenuItem.Name = "deleteLinkToolStripMenuItem";
             this.deleteLinkToolStripMenuItem.ShortcutKeyDisplayString = "Del";
             this.deleteLinkToolStripMenuItem.Size = new System.Drawing.Size(214, 22);
@@ -161,5 +209,9 @@
         private System.Windows.Forms.ToolStripMenuItem addGhostToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem nextGhostToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem deleteGhostToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem pasteToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem pasteReferenceToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem copyNodesToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparatorCopy;
     }
 }

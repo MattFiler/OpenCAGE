@@ -75,6 +75,24 @@ namespace OpenCAGE.AnimTrees
             foreach (AnimationTreeGraph graph in _graphs)
                 graph.CommitPendingEdits();
 
+            //A foot sync selector in the flow strikes two animations, and one missing either stops its whole set loading (the
+            //check below would refuse the save): say which, so it can be linked, rather than only that the set would not load
+            foreach (var (database, pakEntry) in _animTreeDbs)
+            {
+                foreach (AnimationTree tree in database.Entries)
+                {
+                    FootSyncSelectorNode footSync = FlowNodes(tree).OfType<FootSyncSelectorNode>().FirstOrDefault(o => o.LeftStrikeChild == null || o.RightStrikeChild == null);
+                    if (footSync == null)
+                        continue;
+                    MessageBox.Show(
+                        "The foot sync selector '" + footSync.Name + "' in tree '" + tree.Name + "' (set '" + database.Set + "') needs an animation linked to both its LeftStrikeChild and RightStrikeChild pins, so nothing was saved.",
+                        "Save failed",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                    return false;
+                }
+            }
+
             //Every name in the PAK is stored as a hash: names made or changed here must be in the debug string table, or
             //they read back as numbers (and a tree whose own name is missing stops its whole set loading)
             CathodeLib.Animation animations = Singleton.Global.Animations;
@@ -148,6 +166,22 @@ namespace OpenCAGE.AnimTrees
             }
 
             return true;
+        }
+
+        /* Every node in a tree's flow - what is written, from the tree's children down - each once */
+        private static IEnumerable<AnimationNode> FlowNodes(AnimationTree tree)
+        {
+            HashSet<AnimationNode> seen = new HashSet<AnimationNode>(AnimTreeCanvas.ByReference.Instance);
+            Stack<AnimationNode> todo = new Stack<AnimationNode>(tree.Children);
+            while (todo.Count != 0)
+            {
+                AnimationNode node = todo.Pop();
+                if (node == null || !seen.Add(node))
+                    continue;
+                yield return node;
+                foreach (AnimationNode child in node.Children)
+                    todo.Push(child);
+            }
         }
 
         /* A name the debug string table does not hold yet goes in (a number standing for a hash the table never knew stays as it is) */

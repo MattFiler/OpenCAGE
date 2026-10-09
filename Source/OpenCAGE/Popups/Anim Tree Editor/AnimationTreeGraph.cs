@@ -25,6 +25,7 @@ namespace OpenCAGE.AnimTrees
         private AnimationTree _currentTree = null;
         private AnimTreeCanvas _canvas = null;
         private Point _contextMenuCanvasPos = Point.Empty;
+        private STNode _contextMenuNode = null;
 
         //The layout key this graph last stored the tree under: a renamed tree's old entry goes when it is stored again
         private uint _storedSet, _storedTree;
@@ -58,6 +59,9 @@ namespace OpenCAGE.AnimTrees
             stNodeEditor1.NodesMoved += StNodeEditor1_NodesMoved;
             stNodeEditor1.OptionConnecting += StNodeEditor1_OptionConnecting;
             stNodeEditor1.OptionConnected += StNodeEditor1_OptionConnected;
+            //Zoomed out past where a node's text can be read, each node is its colour with its type's icon on it, as on script pages
+            stNodeEditor1.NodeIconZoom = EditorIcons.NodeIconZoom;
+            stNodeEditor1.NodeIconProvider = EditorIcons.ForZoomedOutNode;
             AnimTreeLayoutManager.Changed += OnLayoutChanged;
             //Closing the whole editor window disposes its graphs without closing them: the static event must let go then too
             this.Disposed += (s, e) =>
@@ -106,6 +110,7 @@ namespace OpenCAGE.AnimTrees
             stNodeEditor1.NodesMoved -= StNodeEditor1_NodesMoved;
             stNodeEditor1.OptionConnecting -= StNodeEditor1_OptionConnecting;
             stNodeEditor1.OptionConnected -= StNodeEditor1_OptionConnected;
+            stNodeEditor1.NodeIconProvider = null;
             AnimTreeLayoutManager.Changed -= OnLayoutChanged;
 
             if (_editor != null)
@@ -147,6 +152,19 @@ namespace OpenCAGE.AnimTrees
             if (Visible && keyData == Keys.F3)
             {
                 GoToNextGhost(stNodeEditor1.GetSelectedNode().FirstOrDefault());
+                return true;
+            }
+            if (Visible && keyData == (Keys.Control | Keys.C))
+            {
+                //The selection wins for the shortcut (the cursor could be anywhere): the node under the cursor only when nothing
+                //that can be copied is selected (the tree's own node can't be)
+                bool copyable = stNodeEditor1.GetSelectedNode().Any(o => o.AnimationNode != null && !(o.AnimationNode is AnimationTree));
+                CopyNodes(copyable ? null : stNodeEditor1.GetHoveredNode());
+                return true;
+            }
+            if (Visible && keyData == (Keys.Control | Keys.V))
+            {
+                PasteCopies(stNodeEditor1.MousePositionInCanvas);
                 return true;
             }
             return base.ProcessCmdKey(ref msg, keyData);
@@ -248,6 +266,7 @@ namespace OpenCAGE.AnimTrees
                 {
                     Tag = type
                 };
+                EditorIcons.Bind(item, EditorIcons.ForAnimNodeType(type));
                 item.Click += AddNodeMenuItem_Click;
                 addNodeToolStripMenuItem.DropDownItems.Add(item);
             }
@@ -266,13 +285,20 @@ namespace OpenCAGE.AnimTrees
                 && hoveredNode.AnimationNode != null
                 && !(hoveredNode.AnimationNode is AnimationTree);
             bool onLink = linkIn != null && linkOut != null;
-            //The tree's own node can't be deleted or ghosted: over it, the menu is the empty canvas's
+            //The tree's own node can't be deleted, ghosted or copied: over it, the menu is the empty canvas's
             bool onEmpty = !onNode && !onLink;
             bool hasCopies = onNode && _canvas != null && _canvas.CopiesOf(hoveredNode.AnimationNode).Count > 1;
+            _contextMenuNode = onNode ? hoveredNode : null;
 
             addNodeToolStripMenuItem.Visible = onEmpty;
             arrangeTreeToolStripMenuItem.Visible = onEmpty;
-            toolStripSeparatorAdd.Visible = false;
+            toolStripSeparatorAdd.Visible = onEmpty;
+            pasteToolStripMenuItem.Visible = onEmpty;
+            pasteToolStripMenuItem.Enabled = _currentTree != null && AnimTreeClipboard.HasContent;
+            pasteReferenceToolStripMenuItem.Visible = onEmpty;
+            pasteReferenceToolStripMenuItem.Enabled = AnimTreeClipboard.CanPasteReferencesInto(_currentTree);
+            copyNodesToolStripMenuItem.Visible = onNode;
+            toolStripSeparatorCopy.Visible = onNode;
             addGhostToolStripMenuItem.Visible = onNode;
             nextGhostToolStripMenuItem.Visible = hasCopies;
             deleteGhostToolStripMenuItem.Visible = hasCopies;
@@ -339,6 +365,21 @@ namespace OpenCAGE.AnimTrees
         private void deleteLinkToolStripMenuItem_Click(object sender, EventArgs e)
         {
             TryDeleteHoveredLink();
+        }
+
+        private void copyNodesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            CopyNodes(_contextMenuNode);
+        }
+
+        private void pasteToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            PasteCopies(_contextMenuCanvasPos);
+        }
+
+        private void pasteReferenceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            PasteReferences(_contextMenuCanvasPos);
         }
 
         /// <summary>Select the next copy of a node (after this one, round to the first) and bring it into view.</summary>
@@ -628,6 +669,81 @@ namespace OpenCAGE.AnimTrees
             }
         }
 
+        /* Copy the selected nodes - or, given a node outside the selection (one right-clicked), just that one, as the
+           scripting flowgraph does. The tree's own node is never copied. */
+        private void CopyNodes(STNode contextNode = null)
+        {
+            if (_currentTree == null)
+                return;
+            List<STNode> nodes = stNodeEditor1.GetSelectedNode().ToList();
+            if (contextNode != null && !nodes.Contains(contextNode))
+                nodes = new List<STNode>() { contextNode };
+            AnimTreeClipboard.Copy(_currentTree, nodes);
+        }
+
+        /* Paste new nodes: a copy of each node copied (once, however many of its ghosts were), named to be unique in this
+           tree, laid out as the copied ones were from where it is pasted, with the links that ran between them */
+        private void PasteCopies(PointF canvasPosition)
+        {
+            if (_currentTree == null || _canvas == null)
+                return;
+            List<AnimTreeClipboard.Entry> entries = AnimTreeClipboard.LiveNodes();
+            if (entries.Count == 0)
+                return;
+
+            //An animation's context and converge parameters are settings, not links (nothing draws them, so nothing could draw
+            //them again): kept - the same node in the tree copied from, else the node of that name and type in this one
+            AnimationTree into = _currentTree;
+            bool sameTree = ReferenceEquals(AnimTreeClipboard.SourceTree, into);
+            Func<AnimationNode, AnimationNode> setting = o => sameTree
+                ? into.Nodes.FirstOrDefault(n => ReferenceEquals(n, o))
+                : into.Nodes.FirstOrDefault(n => n != null && n.Name == o.Name && n.Type == o.Type);
+
+            Dictionary<AnimationNode, AnimationNode> copies = AnimNodeCopier.Copy(entries.Select(o => o.Node), setting);
+            List<(AnimationNode node, Point at)> placed = new List<(AnimationNode, Point)>();
+            foreach (AnimTreeClipboard.Entry entry in entries)
+            {
+                AnimationNode copy = copies[entry.Node];
+                copy.Name = MakeUniqueNodeName(entry.Node.Name);
+                if (!ReferenceEquals(_currentTree.AddNode(copy), copy))
+                    continue; //the tree kept a node it had under that name instead: never draw one it doesn't hold
+                placed.Add((copy, new Point((int)canvasPosition.X + entry.Offset.X, (int)canvasPosition.Y + entry.Offset.Y)));
+            }
+            SelectPasted(_canvas.AddNodes(placed));
+            StoreLayoutIfKept();
+        }
+
+        /* Paste ghosts of the copied nodes themselves (the tree they were copied from only), laid out as the copies were */
+        private void PasteReferences(PointF canvasPosition)
+        {
+            if (_canvas == null || !AnimTreeClipboard.CanPasteReferencesInto(_currentTree))
+                return;
+            List<STNode> ghosts = new List<STNode>();
+            foreach (AnimTreeClipboard.Entry entry in AnimTreeClipboard.Live())
+            {
+                STNode ghost = _canvas.AddGhost(entry.Node, new Point((int)canvasPosition.X + entry.Offset.X, (int)canvasPosition.Y + entry.Offset.Y));
+                if (ghost != null)
+                    ghosts.Add(ghost);
+            }
+            if (ghosts.Count == 0)
+                return;
+            SelectPasted(ghosts);
+            StoreLayout();
+        }
+
+        /* What was just pasted becomes the selection (the node editor shows it when it is one node) */
+        private void SelectPasted(List<STNode> pasted)
+        {
+            if (pasted == null || pasted.Count == 0)
+                return;
+            stNodeEditor1.RemoveAllSelectedNodes();
+            foreach (STNode node in pasted)
+                stNodeEditor1.AddSelectedNode(node);
+            stNodeEditor1.SetActiveNode(pasted[0]);
+            _editor?.PopulateData(pasted.Count == 1 ? pasted[0].AnimationNode : null, _currentTree);
+            stNodeEditor1.Invalidate();
+        }
+
         private STNode AddNodeOfType(NodeType type, Point canvasPosition)
         {
             if (_currentTree == null || _canvas == null)
@@ -641,7 +757,8 @@ namespace OpenCAGE.AnimTrees
                 return null;
 
             animNode.Name = MakeUniqueNodeName(SuggestNodeName(type));
-            _currentTree.AddNode(animNode);
+            if (!ReferenceEquals(_currentTree.AddNode(animNode), animNode))
+                return null;
 
             STNode node = _canvas.AddNode(animNode, canvasPosition);
             if (node == null)
@@ -667,9 +784,12 @@ namespace OpenCAGE.AnimTrees
             if (_currentTree == null)
                 return baseName;
 
+            //Against every node's name, whatever its type: the tree's name lookup holds one node per name, and some trees
+            //repeat names across types
+            bool Taken(string candidate) => _currentTree.TryGetNode(candidate, out _) || _currentTree.Nodes.Any(o => o != null && o.Name == candidate);
             string name = baseName;
             int i = 1;
-            while (_currentTree.TryGetNode(name, out _))
+            while (Taken(name))
             {
                 name = baseName + "_" + i;
                 i++;

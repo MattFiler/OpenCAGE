@@ -96,32 +96,9 @@ namespace OpenCAGE
             //The hovered link, and a link being drawn: green, so it can't be mistaken for a data link (blue)
             stNodeEditor1.HighLineColor = Color.FromArgb(60, 210, 90);
             //Zoomed out past where a node's text can be read, each node is its colour with its icon on it
-            stNodeEditor1.NodeIconZoom = NodeIconZoom;
-            stNodeEditor1.NodeIconProvider = NodeIcon;
-        }
-
-        //Below this zoom (title text is 8 pt: at half size it can't be read), nodes are drawn as their icons
-        private const float NodeIconZoom = 0.55f;
-
-        //The sizes a zoomed-out node's icon is made at (the largest that fits is used), so a zoom doesn't make one per pixel
-        private static readonly int[] _nodeIconSizes = { 8, 10, 12, 14, 16, 20, 24, 28, 32, 40, 48, 56, 64, 80, 96, 112, 128 };
-
-        /* A zoomed-out node's icon (its IconId, set with its colour in RegenerateNodeStyle). On a node of a colour of its own,
-           in one colour that stands out from it - deeper on a light node, paler on a dark one. On a node in the plain base
-           colour (most categories have none of their own), in the icon's own colours, as the light theme's lists show it:
-           a page of those is then told apart by colour as well as shape. */
-        private System.Drawing.Image NodeIcon(STNode node, int pixels)
-        {
-            if (node == null || node.IconId < 0)
-                return null;
-            int size = _nodeIconSizes[0];
-            foreach (int candidate in _nodeIconSizes)
-                if (candidate <= pixels)
-                    size = candidate;
-            Color plain = FlowgraphLayoutManager.BaseFunctionTypeColour;
-            if (node.TitleColor.R == plain.R && node.TitleColor.G == plain.G && node.TitleColor.B == plain.B)
-                return EditorIcons.GetKept((EditorIcon)node.IconId, size, false);
-            return EditorIcons.GetSilhouette((EditorIcon)node.IconId, size, EditorIcons.InkFor(node.TitleColor));
+            //(the IconId set with its colour in RegenerateNodeStyle)
+            stNodeEditor1.NodeIconZoom = EditorIcons.NodeIconZoom;
+            stNodeEditor1.NodeIconProvider = EditorIcons.ForZoomedOutNode;
         }
 
         /* What a node shows zoomed out: the icon its entity has in the entity lists - its category's for a function, its
