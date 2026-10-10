@@ -420,8 +420,10 @@ namespace OpenCAGE.Modding
         #endregion
 
         #region SIGNATURES
-        /* Bumped whenever how files or levels are combined changes, so what an older OpenCAGE made is made again */
+        /* Bumped whenever how files or levels are combined changes, so what an older OpenCAGE made is made again (files: 2,
+           animation tree layouts follow the version of each tree that's installed) */
         private const int CombineVersion = 1;
+        private const int FileCombineVersion = 2;
 
         /* A mod's version of one file, as an identity: the exact bytes it produces, or its deletion */
         private static string EntryIdentity(Planned planned)
@@ -440,7 +442,9 @@ namespace OpenCAGE.Modding
         /* What a file outside the levels is made from: its original, the user's own version, and each mod's, in order */
         private string FileSignature(string target, List<Planned> contributors)
         {
-            System.Text.StringBuilder text = new System.Text.StringBuilder("file|" + CombineVersion + "|" + target + "|");
+            //A file one mod changes alone goes in exactly as it ships, whatever version combines files: it stays as it was made
+            bool combined = _state.Own.ContainsKey(target) || contributors.Count > 1;
+            System.Text.StringBuilder text = new System.Text.StringBuilder("file|" + (combined ? FileCombineVersion : CombineVersion) + "|" + target + "|");
             text.Append(_state.Own.TryGetValue(target, out string own) ? "own=" + (own ?? "none") : "-").Append('|');
             text.Append(_state.Baseline.TryGetValue(target, out ModState.BaselineRecord baseline) ? baseline.Sha256Hex ?? "none" : "?").Append('|');
             foreach (Planned planned in contributors)
@@ -624,7 +628,8 @@ namespace OpenCAGE.Modding
         private ModState.InstalledMod KeepEditsAsMod(List<string> edited)
         {
             DateTime now = DateTime.Now;
-            ModExportBuilder builder = new ModExportBuilder(_gameRoot, _manifest, _cache, this);
+            //What's on disk now, not the user's own version kept from before the mods went in: the edits are only on disk
+            ModExportBuilder builder = new ModExportBuilder(_gameRoot, _manifest, _cache, this) { AsOnDisk = true };
             builder.Info.Id = "my-changes-" + now.ToString("yyyyMMdd-HHmmss");
             builder.Info.Name = "My changes (" + now.ToString("d MMM yyyy, HH:mm") + ")";
             builder.Info.Author = "You";
@@ -1181,8 +1186,15 @@ namespace OpenCAGE.Modding
                 foreach (string level in _state.LevelSignatures.Keys.ToList())
                     if (!keptLevels.Contains(level))
                         _state.LevelSignatures.Remove(level);
-                //What was left alone keeps its clashes, to report again
-                List<ModState.RecordedConflict> carried = _state.Conflicts.Where(o => keptFiles.Contains(o.Target) || keptLevels.Contains(o.Target)).ToList();
+                //What was left alone keeps its clashes, to report again - a clash inside a PAK ("<file> › <entry>") or in one of
+                //a level's files belongs to that file or level
+                bool LeftAlone(string target)
+                {
+                    int inside = (target ?? "").IndexOf(" › ", StringComparison.Ordinal);
+                    string file = inside > 0 ? target.Substring(0, inside) : target ?? "";
+                    return keptFiles.Contains(file) || keptLevels.Contains(file) || keptLevels.Contains(LevelUnitOf(file) ?? "");
+                }
+                List<ModState.RecordedConflict> carried = _state.Conflicts.Where(o => LeftAlone(o.Target)).ToList();
                 _state.Conflicts.Clear();
                 foreach (ModState.RecordedConflict conflict in carried)
                     result.Conflicts.Add(new MergeConflict() { Target = conflict.Target, Where = conflict.Where, Kind = conflict.Kind, Kept = conflict.Kept, Lost = conflict.Lost, Detail = conflict.Detail });

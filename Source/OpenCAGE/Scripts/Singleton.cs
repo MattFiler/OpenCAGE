@@ -187,6 +187,7 @@ namespace OpenCAGE
 
             //Create global & load animation data
             Global = new Global(PathToAI + "\\DATA\\ENV\\GLOBAL\\");
+            AnimationPakWrite.Stamp(Global.Animations?.PAK?.Filepath);
 
             //Load all male/female skeletons
             List<PAK2.File> skeletonDefs = Global.Animations.PAK.Entries.FindAll(o => o.Filename.Length > 17 && o.Filename.Substring(0, 17) == "DATA\\SKELETONDEFS");

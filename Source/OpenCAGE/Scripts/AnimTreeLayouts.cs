@@ -29,9 +29,6 @@ namespace OpenCAGE
         /// </summary>
         public const string EntryName = @"DATA\OPENCAGE\ANIMTREELAYOUTS.DAT";
 
-        /// <summary>Where the layouts were kept before they went into the PAK: a file beside it, read once to bring them in.</summary>
-        public const string LegacyFileName = "AnimTreeLayouts.dat";
-
         /// <summary>Is this the layouts' entry of an animation PAK (named either way round with its slashes)?</summary>
         public static bool IsEntry(string entryName) => string.Equals((entryName ?? "").Replace('/', '\\'), EntryName, StringComparison.OrdinalIgnoreCase);
 

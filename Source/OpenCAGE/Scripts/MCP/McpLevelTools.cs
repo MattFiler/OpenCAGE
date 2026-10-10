@@ -1688,6 +1688,8 @@ namespace OpenCAGE.MCP
                         if (result.Warnings.Count != 0) done["warnings"] = new JArray(result.Warnings.Take(limit));
                         if (result.KeptAsMod != null) done["kept_as_mod"] = result.KeptAsMod;
                         call.Note("An open level that a mod changed shows the old content until it is reloaded (load_level).");
+                        if (AnimationPakWrite.ChangedOnDisk(Singleton.Animations?.PAK?.Filepath) != null)
+                            call.Note("ANIMATION.PAK changed: OpenCAGE still holds it as it was loaded, so the animation tools refuse to write it until OpenCAGE is restarted.");
                         return done;
                     }
 
@@ -1798,7 +1800,8 @@ namespace OpenCAGE.MCP
                 {
                     if (!configs) continue;
                     byte[] vanilla = Modding.VanillaConfigs.GetBest(path);
-                    List<Modding.BmlPatchOp> ops = vanilla == null ? null : Modding.ConfigDiff.Diff(Modding.ModServices.GameRoot, path, vanilla);
+                    //Under installed mods, the user's own version (as the exporter window does), not the mods' values baked in
+                    List<Modding.BmlPatchOp> ops = vanilla == null ? null : Modding.ConfigDiff.Diff(Modding.ModServices.GameRoot, path, vanilla, installer);
                     if (ops != null && ops.Count != 0)
                     {
                         chosenConfigs.Add(new KeyValuePair<string, KeyValuePair<List<Modding.BmlPatchOp>, byte[]>>(path, new KeyValuePair<List<Modding.BmlPatchOp>, byte[]>(ops, vanilla)));

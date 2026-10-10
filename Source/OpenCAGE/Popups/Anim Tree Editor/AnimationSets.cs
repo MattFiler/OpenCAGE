@@ -75,79 +75,34 @@ namespace OpenCAGE.AnimTrees
             foreach (AnimationTreeGraph graph in _graphs)
                 graph.CommitPendingEdits();
 
-            //A foot sync selector in the flow strikes two animations, and one missing either stops its whole set loading (the
-            //check below would refuse the save): say which, so it can be linked, rather than only that the set would not load
-            foreach (var (database, pakEntry) in _animTreeDbs)
-            {
-                foreach (AnimationTree tree in database.Entries)
-                {
-                    FootSyncSelectorNode footSync = FlowNodes(tree).OfType<FootSyncSelectorNode>().FirstOrDefault(o => o.LeftStrikeChild == null || o.RightStrikeChild == null);
-                    if (footSync == null)
-                        continue;
-                    MessageBox.Show(
-                        "The foot sync selector '" + footSync.Name + "' in tree '" + tree.Name + "' (set '" + database.Set + "') needs an animation linked to both its LeftStrikeChild and RightStrikeChild pins, so nothing was saved.",
-                        "Save failed",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error);
-                    return false;
-                }
-            }
-
-            //Every name in the PAK is stored as a hash: names made or changed here must be in the debug string table, or
-            //they read back as numbers (and a tree whose own name is missing stops its whole set loading)
+            //The file still the one loaded, and every set checked to load again with every name it uses registered - all of
+            //it before any goes into the PAK, so a refused save leaves nothing half-written for another write to take out
             CathodeLib.Animation animations = Singleton.Global.Animations;
-            bool namesAdded = false;
-            foreach (var (database, pakEntry) in _animTreeDbs)
-                foreach (AnimationTree tree in database.Entries)
-                    foreach (AnimationNode node in new AnimationNode[] { tree }.Concat(tree.Nodes))
-                        namesAdded |= RegisterName(animations, node?.Name) | (node is AnimationTree named && RegisterName(animations, named.Set));
-            if (namesAdded && animations.StringsDebug != null)
+            string error = AnimationPakWrite.ChangedOnDisk(animations.PAK.Filepath);
+            List<(AnimTreeDB Database, PAK2.File Entry, byte[] Content)> sets = error == null ? AnimationPakWrite.PrepareTrees(animations, out error) : null;
+            if (error != null)
+            {
+                MessageBox.Show(error, "Save failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+            //The debug string table every time: names made here (by this save, or one refused before it) read back as names
+            if (animations.StringsDebug != null)
             {
                 PAK2.File strings = animations.PAK.Entries.FirstOrDefault(o => string.Equals(o.Filename, animations.StringsDebug.Filepath, StringComparison.OrdinalIgnoreCase));
                 if (strings != null)
                     strings.Content = animations.StringsDebug.ToBytes();
             }
-
-            foreach (var (database, pakEntry) in _animTreeDbs)
-            {
-                string tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".bin");
-                try
-                {
-                    if (!database.Save(tempPath, false))
-                    {
-                        MessageBox.Show(
-                            "Failed to serialise animation set '" + database.Set + "'.",
-                            "Save failed",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Error);
-                        return false;
-                    }
-                    byte[] content = File.ReadAllBytes(tempPath);
-                    //A set that would not read back would be gone, every tree in it, the next time the animations load
-                    AnimTreeDB check = new AnimTreeDB(content, animations.StringsDebug, database.Filepath);
-                    if (!check.Loaded || check.Entries.Count != database.Entries.Count)
-                    {
-                        MessageBox.Show(
-                            "Animation set '" + database.Set + "' would not load again as it is now, so nothing was saved. Put back the last links or nodes you changed in it and try again.",
-                            "Save failed",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Error);
-                        return false;
-                    }
-                    pakEntry.Content = content;
-                }
-                finally
-                {
-                    if (File.Exists(tempPath))
-                        File.Delete(tempPath);
-                }
-            }
+            foreach (var (database, pakEntry, content) in sets)
+                pakEntry.Content = content;
 
             //Where the trees' nodes are drawn goes into ANIMATION.PAK with them
             bool layoutsIn = AnimTreeLayoutManager.Commit(out string layoutError);
 
-            OpenCAGE.Modding.ModServices.CaptureBeforeWrite(Singleton.Global.Animations.PAK.Filepath);
-            if (!Singleton.Global.Animations.PAK.Save())
+            OpenCAGE.Modding.ModServices.CaptureBeforeWrite(animations.PAK.Filepath);
+            bool saved;
+            try { saved = animations.PAK.Save(); }
+            finally { AnimationPakWrite.Written(animations); }
+            if (!saved)
             {
                 MessageBox.Show(
                     "Failed to write ANIMATION.PAK.",
@@ -167,35 +122,6 @@ namespace OpenCAGE.AnimTrees
                 return false;
             }
 
-            return true;
-        }
-
-        /* Every node in a tree's flow - what is written, from the tree's children down - each once */
-        private static IEnumerable<AnimationNode> FlowNodes(AnimationTree tree)
-        {
-            HashSet<AnimationNode> seen = new HashSet<AnimationNode>(AnimTreeCanvas.ByReference.Instance);
-            Stack<AnimationNode> todo = new Stack<AnimationNode>(tree.Children);
-            while (todo.Count != 0)
-            {
-                AnimationNode node = todo.Pop();
-                if (node == null || !seen.Add(node))
-                    continue;
-                yield return node;
-                foreach (AnimationNode child in node.Children)
-                    todo.Push(child);
-            }
-        }
-
-        /* A name the debug string table does not hold yet goes in (a number standing for a hash the table never knew stays as it is) */
-        private static bool RegisterName(CathodeLib.Animation animations, string name)
-        {
-            AnimationStrings strings = animations?.StringsDebug;
-            if (strings == null || string.IsNullOrEmpty(name))
-                return false;
-            uint id = strings.GetID(name);
-            if (strings.Entries.ContainsKey(id) || id != CathodeLib.Utilities.AnimationHashedString(name))
-                return false;
-            animations.AddName(name, true);
             return true;
         }
 

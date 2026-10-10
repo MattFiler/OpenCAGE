@@ -108,9 +108,16 @@ namespace OpenCAGE.Modding
             return IsSidecar(normalisedPath) && SidecarParents(normalisedPath).Any(changed.Contains);
         }
 
+        /// <summary>
+        /// Package files exactly as they are on disk, even where the user's own version of one is kept apart from the
+        /// mods combined into it - for keeping what was changed in installed mods' files since they went in.
+        /// </summary>
+        public bool AsOnDisk;
+
         private readonly List<string> _deleted = new List<string>();
         /* Files whose content isn't what's on disk: the user's own version of a file combined with installed mods there */
         private readonly Dictionary<string, byte[]> _content = new Dictionary<string, byte[]>();
+        private readonly HashSet<string> _ownVersions = new HashSet<string>();
 
         private void Include(string normalisedPath)
         {
@@ -118,8 +125,9 @@ namespace OpenCAGE.Modding
             if (ModToolkit.IsRegenerated(normalisedPath) || ModToolkit.IsExcluded(normalisedPath))
                 return;
             //Under installed mods, the user's work is their own version, not the combined file
-            if (_installer != null && _installer.TryGetOwnVersion(normalisedPath, out byte[] own))
+            if (!AsOnDisk && _installer != null && _installer.TryGetOwnVersion(normalisedPath, out byte[] own))
             {
+                _ownVersions.Add(normalisedPath);
                 if (own == null)
                 {
                     if (_manifest.Contains(normalisedPath) && !_deleted.Contains(normalisedPath))
@@ -163,6 +171,9 @@ namespace OpenCAGE.Modding
                 return;
             _configs[ModToolkit.Normalise(normalisedPath)] = ops;
             _configVanilla[ModToolkit.Normalise(normalisedPath)] = vanillaBytes;
+            //Diffed from the user's own version when the file is under mods (ConfigDiff.Diff): said like any other file if it's stale
+            if (!AsOnDisk && _installer != null && _installer.TryGetOwnVersion(ModToolkit.Normalise(normalisedPath), out _))
+                _ownVersions.Add(ModToolkit.Normalise(normalisedPath));
         }
 
         /// <summary>A picture to show for the mod in the Mod Manager (PNG bytes), or null.</summary>
@@ -175,6 +186,12 @@ namespace OpenCAGE.Modding
             writer.SetPreview(Preview);
             if (string.IsNullOrWhiteSpace(Info.Summary))
                 Info.Summary = Summarise();
+
+            //The user's own version of a file under mods is what it was when the mods last went in: changes since are only on disk,
+            //mixed in with the mods' own
+            if (_ownVersions.Count != 0)
+                foreach (string path in _installer.EditedSinceApplied().Where(_ownVersions.Contains).OrderBy(o => o))
+                    result.Warnings.Add(path + " has changed since your mods were last applied. Those changes can't be told apart from the mods' changes to it, so they aren't in the package: it holds your own version from before the mods went in.");
 
             foreach (string path in _files.OrderBy(o => o))
             {

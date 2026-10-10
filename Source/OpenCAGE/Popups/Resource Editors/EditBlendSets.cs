@@ -596,10 +596,20 @@ namespace OpenCAGE
             statusLabel.Refresh();
             try
             {
-                //It writes every tree, unsaved edits and all: their node layouts go in with them
-                AnimTreeLayoutManager.Commit(out _);
-                if (!_animations.Save())
+                //It writes every tree, unsaved edits and all: they must load again, and their node layouts go in with them
+                string refused = AnimationPakWrite.BeforeWholeSave(_animations);
+                if (refused != null)
                 {
+                    statusLabel.Text = _animations.ClipIndex.BlendSets.Count + " blend set(s)   —   unsaved changes";
+                    MessageBox.Show(refused, "Save failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                bool saved;
+                try { saved = _animations.Save(); }
+                finally { AnimationPakWrite.Written(_animations); }
+                if (!saved)
+                {
+                    statusLabel.Text = _animations.ClipIndex.BlendSets.Count + " blend set(s)   —   unsaved changes";
                     MessageBox.Show("ANIMATION.PAK could not be written.", "Save failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
@@ -609,6 +619,7 @@ namespace OpenCAGE
             }
             catch (Exception ex)
             {
+                statusLabel.Text = _animations.ClipIndex.BlendSets.Count + " blend set(s)   —   unsaved changes";
                 MessageBox.Show(ex.ToString(), "Save failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally { Cursor.Current = Cursors.Default; }
@@ -623,7 +634,13 @@ namespace OpenCAGE
                 "Unsaved changes", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
 
             if (answer == DialogResult.Cancel) { e.Cancel = true; return; }
-            if (answer == DialogResult.Yes) SaveBtn_Click(sender, EventArgs.Empty);
+            if (answer == DialogResult.Yes)
+            {
+                SaveBtn_Click(sender, EventArgs.Empty);
+                //Not saved after all (it said why): stay open, rather than leaving the changes unsaved in memory
+                if (_dirty)
+                    e.Cancel = true;
+            }
         }
         #endregion
 

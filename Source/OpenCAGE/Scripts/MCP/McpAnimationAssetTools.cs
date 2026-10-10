@@ -483,7 +483,8 @@ namespace OpenCAGE.MCP
                 Name = "edit_anim_tree_layout",
                 Title = "Lay out an animation tree",
                 Description = "Change how the Animation Tree Editor draws a tree, kept inside ANIMATION.PAK with the trees (so a game file check or a mod's PAK takes the layouts with the trees) and written at once with it " +
-                    "(not undoable; the game never reads the layouts - while it runs and holds the PAK open, the change waits for the PAK's next write unless close_game). " +
+                    "(not undoable; the game never reads the layouts - while it runs and holds the PAK open, the change waits for the PAK's next write unless close_game, " +
+                    "and while the tree's set has changes not saved yet it waits to be written with them). " +
                     "arrange: lay the whole tree out afresh - flow left to right, each value above what reads it, and a value read far from where it sits given a ghost (another copy of it) beside each distant reader. " +
                     "reset: forget the stored layout, so the tree is laid out automatically whenever it opens. move: nodes [{node, ghost?, x, y} or {node, dx, dy}]. " +
                     "add_ghost: another copy of 'node' (at x,y, else beside what it draws), drawing its links with the nodes named in 'links'. move_links: those links onto copy 'ghost'. " +
@@ -742,13 +743,20 @@ namespace OpenCAGE.MCP
         {
             if (Application.OpenForms.OfType<AnimTreeEditor>().Any())
                 call.Note("The Animation Tree Editor is open: this write also saved any tree edits it held unsaved (ANIMATION.PAK is written whole).");
-            Modding.ModServices.CaptureBeforeWrite(animations.PAK.Filepath);
-            //Every tree goes out, unsaved edits and all: so do their node layouts (kept in ANIMATION.PAK with them)
-            AnimTreeLayoutManager.Commit(out _);
+            //Every tree goes out, unsaved edits and all: they must load again, and their node layouts go in with them
+            string refused = AnimationPakWrite.BeforeWholeSave(animations);
+            if (refused != null)
+            {
+                //A broken tree can be put right and the next write takes this out; a PAK changed on disk can't be written until a restart
+                if (AnimationPakWrite.ChangedOnDisk(animations.PAK.Filepath) == null)
+                    _pendingPak.Add(inMemory);
+                throw new McpError("ANIMATION.PAK was not written: " + refused + " " + inMemory + " kept in memory only.");
+            }
             bool saved;
             string why = null;
             try { saved = animations.Save(); }
             catch (Exception e) { saved = false; why = e.Message; }
+            finally { AnimationPakWrite.Written(animations); }
             if (!saved)
             {
                 _pendingPak.Add(inMemory);
@@ -760,6 +768,15 @@ namespace OpenCAGE.MCP
                 call.Note("This write also saved changes an earlier failed write had left in memory: " + string.Join("; ", _pendingPak) + ".");
                 _pendingPak.Clear();
             }
+        }
+
+        /// <summary>Refuse before anything changes in memory when ANIMATION.PAK has changed on disk since it was loaded: it couldn't be written back.</summary>
+        private static void RefuseIfAnimationPakChanged()
+        {
+            //Not a step on the UI thread of its own: only the file on disk is looked at
+            string changed = AnimationPakWrite.ChangedOnDisk(Singleton.Animations?.PAK?.Filepath);
+            if (changed != null)
+                throw new McpError(McpErrorCodes.Refused, changed + " Nothing was changed.");
         }
 
         /// <summary>Refuse, or close the game when asked, before a global file is written: the game holds them open.</summary>
@@ -1732,6 +1749,7 @@ namespace OpenCAGE.MCP
             if (ready.Count == 0)
                 throw new McpError("None of the file's clips could be read: " + string.Join(" ", unreadable.Select(o => "clip " + o.Index + ": " + (o.Reading.Problem ?? "").Replace("\r\n", " "))));
             CloseOrRefuse(call, "ANIMATION.PAK can't be written while it holds it open");
+            RefuseIfAnimationPakChanged();
 
             List<string> failed = new List<string>();
             using (McpEditorTools.Heartbeat(call, "Writing ANIMATION.PAK"))
@@ -1896,6 +1914,7 @@ namespace OpenCAGE.MCP
             }
 
             CloseOrRefuse(call, "ANIMATION.PAK can't be written while it holds it open");
+            RefuseIfAnimationPakChanged();
             using (McpEditorTools.Heartbeat(call, "Writing ANIMATION.PAK"))
                 McpEditor.UI(() =>
                 {
@@ -2052,6 +2071,7 @@ namespace OpenCAGE.MCP
                 return result;
             }
             CloseOrRefuse(call, "ANIMATION.PAK can't be written while it holds it open");
+            RefuseIfAnimationPakChanged();
             McpEditor.UI(() =>
             {
                 if (!animations.EditMetadata(clip, edit, out string problem))
@@ -2875,7 +2895,10 @@ namespace OpenCAGE.MCP
             if (clipEdits.Count + pointEdits.Count + adds.Count + removes.Count == 0)
                 throw new McpError("Give clips, points, add_users or remove_users to change.");
             if (!dryRun)
+            {
                 CloseOrRefuse(call, "ANIMATION.PAK can't be written while it holds it open");
+                RefuseIfAnimationPakChanged();
+            }
 
             using (McpEditorTools.Heartbeat(call, dryRun ? "Checking the blend set" : "Writing ANIMATION.PAK"))
                 return McpEditor.UI(() =>
@@ -4011,6 +4034,10 @@ namespace OpenCAGE.MCP
                     Anim animations = RequireAnimations();
                     AnimTreeDB database = FindTreeSet(animations, setName);
                     AnimationTree tree = FindTree(database, treeName);
+                    //Nothing done to a PAK that can't be written back: one changed on disk since it was loaded would be put back as it was
+                    string changedOnDisk = AnimationPakWrite.ChangedOnDisk(animations.PAK.Filepath);
+                    if (changedOnDisk != null)
+                        throw new McpError(McpErrorCodes.Refused, changedOnDisk + " Nothing was changed.");
                     //A value half-typed into the open editor's inspector goes in first; the layout is taken by node, to follow renames and removals
                     AnimationTreeGraph.FindOpen(tree)?.CommitPendingEdits();
                     Dictionary<AnimationNode, List<AnimTreeLayouts.NodeLayout>> heldNodes = AnimTreeLayoutManager.Hold(database, tree, out TreeLayout held);
@@ -4037,7 +4064,10 @@ namespace OpenCAGE.MCP
                     //The set's node layouts go into the PAK with it
                     PlaceAndCommitLayouts(call, database, tree, placed);
                     Modding.ModServices.CaptureBeforeWrite(animations.PAK.Filepath);
-                    if (!animations.PAK.Save())
+                    bool saved;
+                    try { saved = animations.PAK.Save(); }
+                    finally { AnimationPakWrite.Written(animations); }
+                    if (!saved)
                         throw new McpError("ANIMATION.PAK could not be written (is the game running, or the file read-only?). The edit is in memory only: the next edit_anim_tree or ANIMATION.PAK write takes it out.");
                     //This writes the tree set and string table only: a change an earlier failed write left in memory is not in it
                     if (_pendingPak.Count != 0)
@@ -4253,10 +4283,25 @@ namespace OpenCAGE.MCP
 
         /* This tree's layout into ANIMATION.PAK (kept there with the trees) and the PAK written now - unless the game holds it
            open, when it goes out with the PAK's next write. Changes the user has not saved yet, to other trees, wait for their
-           own save. */
+           own save; so does the layout of a tree with changes not saved yet, as it draws the tree as it is now, not as written. */
         private static void WriteTreeLayouts(McpCall call, AnimTreeDB database, AnimationTree tree, JObject result)
         {
             Anim animations = RequireAnimations();
+            string changedOnDisk = AnimationPakWrite.ChangedOnDisk(animations.PAK.Filepath);
+            if (changedOnDisk != null)
+            {
+                result["written"] = false;
+                call.Note("The layout is changed in the editor but not written: " + changedOnDisk);
+                return;
+            }
+            PAK2.File entry = animations.PAK.Entries.FirstOrDefault(o => Same(o.Filename, database.Filepath));
+            byte[] asWritten = entry?.Content;
+            if (asWritten == null || !asWritten.AsSpan().SequenceEqual(database.ToBytes()))
+            {
+                result["written"] = false;
+                call.Note("The tree set has changes not saved yet, so the layout waits to go into ANIMATION.PAK with them (the Animation Tree Editor's Save, or edit_anim_tree): it draws the trees as they are now, not as they are written.");
+                return;
+            }
             uint set = AnimTreeLayouts.SetHashOf(database, animations.StringsDebug), name = AnimTreeLayouts.TreeHashOf(tree, animations.StringsDebug);
             if (!AnimTreeLayoutManager.Commit((s, t) => s == set && t == name, out string error))
                 throw new McpError("The layout is changed in the editor, but could not go into ANIMATION.PAK (" + error + "). The Animation Tree Editor's Save writes it.");
@@ -4267,7 +4312,10 @@ namespace OpenCAGE.MCP
                 return;
             }
             Modding.ModServices.CaptureBeforeWrite(animations.PAK.Filepath);
-            if (!animations.PAK.Save())
+            bool saved;
+            try { saved = animations.PAK.Save(); }
+            finally { AnimationPakWrite.Written(animations); }
+            if (!saved)
                 throw new McpError("The layout is changed in the editor, but ANIMATION.PAK could not be written (is the file read-only?). It goes out with the PAK's next write.");
             if (_pendingPak.Count != 0)
                 call.Note("Still only in memory from an earlier failed write (this writes the layout only): " + string.Join("; ", _pendingPak) + ". The next import_animation, remove_animation, edit_blend_set or edit_animation_events writes them.");

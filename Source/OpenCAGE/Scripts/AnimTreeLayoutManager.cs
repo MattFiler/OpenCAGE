@@ -3,7 +3,6 @@ using CATHODE.Animations;
 using CathodeLib;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using static OpenCAGE.AnimTreeLayouts;
 
@@ -14,8 +13,9 @@ namespace OpenCAGE
     /// ANIMATION.PAK, so they stay with the trees they draw) - the Animation Tree Editor's and the AI assistant tools' shared
     /// copy. A tree with none is laid out automatically. Changes wait here until ANIMATION.PAK is written: whatever writes it
     /// puts them into the PAK's entry first (<see cref="Commit(Func{uint, uint, bool}, out string)"/>) - all of them when it
-    /// writes every tree, only those of the trees it writes otherwise. Read afresh whenever the animations are loaded again
-    /// (after the mod manager changes the PAK, say).
+    /// writes every tree, only those of the trees it writes otherwise. Read from the PAK in memory; one changed on disk since
+    /// (by the Mod Manager, say) is never written over from memory (<see cref="AnimationPakWrite"/>), so the layouts and
+    /// trees there stay as they were put together.
     /// </summary>
     /// <remarks>UI thread only.</remarks>
     public static class AnimTreeLayoutManager
@@ -52,14 +52,11 @@ namespace OpenCAGE
                 PAK2.File entry = EntryOf(pak);
                 if (_file == null || !ReferenceEquals(pak, _loadedPak) || !ReferenceEquals(entry?.Content, _loadedContent))
                 {
-                    bool newPak = !ReferenceEquals(pak, _loadedPak);
-                    if (newPak)
+                    if (!ReferenceEquals(pak, _loadedPak))
                         _pending.Clear();
                     _file = Read(entry) ?? AnimTreeLayouts.FromBytes(null);
                     _loadedPak = pak;
                     _loadedContent = entry?.Content;
-                    if (newPak && entry == null)
-                        BringInLegacyFile(pak);
                 }
                 return _file;
             }
@@ -85,28 +82,6 @@ namespace OpenCAGE
                 Debug.Log(LogSystem, "Could not read ANIMATION.PAK's " + entry.Filename + ": " + e.Message);
             }
             return null;
-        }
-
-        /* Layouts kept the old way, in a file beside a PAK that has none inside it yet: brought in as changes, so the next
-           write of the PAK carries them (the file is left as it is) */
-        private static void BringInLegacyFile(PAK2 pak)
-        {
-            try
-            {
-                string path = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(pak.Filepath)), AnimTreeLayouts.LegacyFileName);
-                if (!System.IO.File.Exists(path))
-                    return;
-                AnimTreeLayouts legacy = AnimTreeLayouts.FromBytes(System.IO.File.ReadAllBytes(path), path);
-                if (!legacy.Loaded)
-                    return;
-                foreach (TreeLayout tree in legacy.Trees.Where(o => o != null))
-                    _pending[(tree.SetHash, tree.TreeHash)] = tree.Clone();
-                Debug.Log(LogSystem, "Brought " + legacy.Trees.Count + " tree layouts in from " + path + ": they go into ANIMATION.PAK when it is next saved");
-            }
-            catch (Exception e)
-            {
-                Debug.Log(LogSystem, "Could not bring in the old layouts file beside ANIMATION.PAK: " + e.Message);
-            }
         }
 
         /// <summary>The layout stored for a tree (pending changes included), or null when it is laid out automatically. A copy: change it and Put it back.</summary>

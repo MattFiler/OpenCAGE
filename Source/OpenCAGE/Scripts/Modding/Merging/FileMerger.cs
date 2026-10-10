@@ -1,5 +1,6 @@
 #if ENABLE_MOD_PACKAGES
 using CATHODE;
+using CATHODE.Animations;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -184,8 +185,8 @@ namespace OpenCAGE.Modding.Merging
     /// <summary>
     /// PAK2 archives (UI.PAK, CHR_INFO.PAK, ANIMATION.PAK...): merged entry by entry. Two mods changing different
     /// entries both survive; two changing the same entry merge that entry by its own kind when it's a config,
-    /// otherwise the later mod's entry is used. An animation PAK's tree layouts (OpenCAGE's own entry) are merged tree by
-    /// tree, and a version without them has simply laid nothing out - it doesn't take away the ones there.
+    /// otherwise the later mod's entry is used. An animation PAK's tree layouts (OpenCAGE's own entry) are worked out last,
+    /// from the trees that end up installed (<see cref="AnimTreeLayoutsMerge"/>).
     /// </summary>
     public static class Pak2Merge
     {
@@ -213,6 +214,9 @@ namespace OpenCAGE.Modding.Merging
                 Dictionary<string, PAK2.File> entries = Index(archive);
                 foreach (PAK2.File entry in archive.Entries)
                 {
+                    //The tree layouts go last, once it's known which version of each tree is installed
+                    if (AnimTreeLayouts.IsEntry(entry.Filename))
+                        continue;
                     baseEntries.TryGetValue(entry.Filename, out PAK2.File original);
                     if (original != null && original.Content.AsSpan().SequenceEqual(entry.Content))
                         continue;
@@ -230,13 +234,13 @@ namespace OpenCAGE.Modding.Merging
                 baseEntries.TryGetValue(entry.Key, out PAK2.File original);
                 string entryTarget = target + " › " + entry.Key;
                 MergeOutcome entryOutcome;
-                if (AnimTreeLayouts.IsEntry(entry.Key))
-                    entryOutcome = AnimTreeLayoutsMerge.Merge(entryTarget, original?.Content, entry.Value)
-                        ?? FileMerger.WholeFile(entryTarget, entry.Value, "not every version is layouts this version of OpenCAGE reads");
-                else if (original == null)
-                    entryOutcome = FileMerger.WholeFile(entryTarget, entry.Value, entry.Value.Count > 1 ? "added by more than one mod" : null);
+                if (original == null)
+                    entryOutcome = entry.Value.All(o => o.Bytes.AsSpan().SequenceEqual(entry.Value[0].Bytes))
+                        ? new MergeOutcome() { Bytes = entry.Value[0].Bytes } //added the same by every one: nothing to choose between
+                        : FileMerger.WholeFile(entryTarget, entry.Value, "added by more than one mod");
                 else
-                    entryOutcome = FileMerger.Merge(entryTarget, original.Content, entry.Value);
+                    entryOutcome = (AnimationStringsMerge.IsTable(entry.Key) ? AnimationStringsMerge.Merge(entryTarget, original.Content, entry.Value) : null)
+                        ?? FileMerger.Merge(entryTarget, original.Content, entry.Value);
                 outcome.Conflicts.AddRange(entryOutcome.Conflicts);
                 PAK2.File existing = merged.FirstOrDefault(o => string.Equals(o.Filename, entry.Key, StringComparison.OrdinalIgnoreCase));
                 if (existing != null) existing.Content = entryOutcome.Bytes;
@@ -260,6 +264,8 @@ namespace OpenCAGE.Modding.Merging
                 }
                 merged.RemoveAll(o => string.Equals(o.Filename, name, StringComparison.OrdinalIgnoreCase));
             }
+
+            AnimTreeLayoutsMerge.Into(target, baseArchive, archives, merged, outcome);
 
             PAK2 result = new PAK2(vanilla);
             result.Entries.Clear();
@@ -289,53 +295,110 @@ namespace OpenCAGE.Modding.Merging
     }
 
     /// <summary>
-    /// The Animation Tree Editor's layouts (an animation PAK's <see cref="AnimTreeLayouts.EntryName"/> entry), merged tree by
-    /// tree. The game's PAK has no such entry, so there's usually no original to merge against: what was there before the
-    /// mods (nothing, or the user's own layouts) is the lowest-priority version instead, each mod's trees go on top in list
-    /// order, and the later mod wins a tree - so the user's layouts of trees a mod doesn't lay out stay while it's installed.
-    /// Only two mods laying out one tree differently is reported: the user's own layouts give way quietly, as a layout
-    /// should follow the version of its tree that's installed.
+    /// An animation PAK's string tables (ANIM_STRING_DB.BIN, and ANIM_STRING_DB_DEBUG.BIN that the tree sets name themselves
+    /// from): everything in the PAK stores names as their hashes, and a mod adding trees, nodes or clips adds their names.
+    /// Every mod's names are kept - a name a mod's file needs that isn't in the table makes it read back as a number, and a
+    /// tree set missing one of its trees' names doesn't load at all. A hash two mods name differently goes to the later.
+    /// </summary>
+    public static class AnimationStringsMerge
+    {
+        public static bool IsTable(string entryName)
+        {
+            string name = entryName ?? "";
+            return name.EndsWith("ANIM_STRING_DB.BIN", StringComparison.OrdinalIgnoreCase) || name.EndsWith("ANIM_STRING_DB_DEBUG.BIN", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <returns>The tables combined, or null when one can't be read (the caller then takes one whole).</returns>
+        public static MergeOutcome Merge(string target, byte[] original, IList<Contribution> versions)
+        {
+            if (versions.Count == 1 || versions.All(o => o.Bytes.AsSpan().SequenceEqual(versions[0].Bytes)))
+                return new MergeOutcome() { Bytes = versions[0].Bytes };
+            try
+            {
+                //Onto the original as it reads, so its own order is kept and only what the mods add is new
+                AnimationStrings merged = new AnimationStrings(original);
+                if (!merged.Loaded)
+                    return null;
+                MergeOutcome outcome = new MergeOutcome();
+                Dictionary<uint, string> claims = new Dictionary<uint, string>();
+                foreach (Contribution version in versions)
+                {
+                    AnimationStrings strings = new AnimationStrings(version.Bytes);
+                    if (!strings.Loaded)
+                        return null;
+                    foreach (KeyValuePair<uint, string> entry in strings.Entries)
+                    {
+                        if (merged.Entries.TryGetValue(entry.Key, out string had) && had == entry.Value)
+                            continue;
+                        if (had != null && claims.TryGetValue(entry.Key, out string earlier) && earlier != version.ModName)
+                            outcome.Conflicts.Add(new MergeConflict() { Target = target, Where = "the name with hash " + entry.Key, Kind = ConflictKind.Overridden, Kept = version.ModName, Lost = earlier, Detail = "'" + entry.Value + "' instead of '" + had + "'" });
+                        merged.Entries[entry.Key] = entry.Value;
+                        claims[entry.Key] = version.ModName;
+                    }
+                }
+                outcome.Bytes = merged.ToBytes();
+                return outcome;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The Animation Tree Editor's layouts (an animation PAK's <see cref="AnimTreeLayouts.EntryName"/> entry), worked out once
+    /// every other entry of the PAK is merged. A layout draws one version of its tree, so each tree's layout comes from the
+    /// latest version - the PAK as it was before the mods, then the user's own, then each mod in list order - whose own copy
+    /// of that tree is the one installed. A layout of a tree another mod's version replaced (or took away) goes, so it can't
+    /// be drawn over a tree it wasn't made for; the user's layouts of trees no mod changes stay while mods are installed.
+    /// Two mods laying out the same installed tree differently is reported (the later wins); the user's own give way quietly.
+    /// Layouts this build can't read are left out, as it couldn't draw them anyway.
     /// </summary>
     public static class AnimTreeLayoutsMerge
     {
-        /// <returns>The merged layouts, or null when the original or a version can't be read as layouts - the caller
-        /// then treats the file as one nothing can combine.</returns>
-        public static MergeOutcome Merge(string target, byte[] original, IList<Contribution> versions)
+        /// <summary>
+        /// Put the merged layouts into <paramref name="merged"/> (the merged PAK's entries, every other one final), or take
+        /// them out when no tree has one. <paramref name="versions"/> are the full PAKs in list order.
+        /// </summary>
+        public static void Into(string target, PAK2 original, IList<(string Mod, PAK2 Archive)> versions, List<PAK2.File> merged, MergeOutcome outcome)
         {
-            bool hasOriginal = original != null && original.Length != 0;
-            //Nothing to put it on: exactly as it ships
-            if (!hasOriginal && versions.Count == 1)
-                return new MergeOutcome() { Bytes = versions[0].Bytes };
+            string entryTarget = target + " › " + AnimTreeLayouts.EntryName;
+            List<(string Mod, PAK2 Archive)> sources = new List<(string, PAK2)>() { (null, original) };
+            sources.AddRange(versions);
 
-            if (!TryRead(original, out AnimTreeLayouts merged))
-                return null;
-            List<AnimTreeLayouts> read = new List<AnimTreeLayouts>();
-            foreach (Contribution version in versions)
-            {
-                if (!TryRead(version.Bytes, out AnimTreeLayouts layouts))
-                    return null;
-                read.Add(layouts);
-            }
-
-            MergeOutcome outcome = new MergeOutcome();
+            TreeVersions installed = new TreeVersions(merged);
+            AnimTreeLayouts result = AnimTreeLayouts.FromBytes(null);
             //Per tree, the last mod to lay it out and its record as written - the same layout twice isn't a clash
             Dictionary<(uint, uint), (string Mod, byte[] Record)> claims = new Dictionary<(uint, uint), (string, byte[])>();
-            for (int i = 0; i < versions.Count; i++)
+            foreach ((string mod, PAK2 archive) in sources)
             {
-                string mod = versions[i].ModName;
-                foreach (AnimTreeLayouts.TreeLayout tree in read[i].Trees)
+                PAK2.File entry = archive.Entries.FirstOrDefault(o => AnimTreeLayouts.IsEntry(o.Filename));
+                if (entry == null || !TryRead(entry.Content, out AnimTreeLayouts layouts))
+                    continue;
+                TreeVersions drawnOn = new TreeVersions(archive.Entries);
+                foreach (AnimTreeLayouts.TreeLayout tree in layouts.Trees)
                 {
-                    merged.Put(tree);
-                    if (mod == MergeConflict.OwnChanges)
+                    if (tree == null || !installed.Same(drawnOn, tree.SetHash, tree.TreeHash))
+                        continue;
+                    result.Put(tree);
+                    if (mod == null || mod == MergeConflict.OwnChanges)
                         continue;
                     byte[] record = RecordOf(tree);
                     if (claims.TryGetValue((tree.SetHash, tree.TreeHash), out (string Mod, byte[] Record) earlier) && earlier.Mod != mod && !earlier.Record.AsSpan().SequenceEqual(record))
-                        outcome.Conflicts.Add(new MergeConflict() { Target = target, Where = Describe(tree), Kind = ConflictKind.Overridden, Kept = mod, Lost = earlier.Mod });
+                        outcome.Conflicts.Add(new MergeConflict() { Target = entryTarget, Where = Describe(tree), Kind = ConflictKind.Overridden, Kept = mod, Lost = earlier.Mod });
                     claims[(tree.SetHash, tree.TreeHash)] = (mod, record);
                 }
             }
-            outcome.Bytes = merged.ToBytes();
-            return outcome;
+
+            //One entry, where the original had it (or at the end), and none at all when no tree has a layout
+            int at = merged.FindIndex(o => AnimTreeLayouts.IsEntry(o.Filename));
+            merged.RemoveAll(o => AnimTreeLayouts.IsEntry(o.Filename));
+            if (result.Trees.Count == 0)
+                return;
+            PAK2.File layoutsEntry = new PAK2.File() { Filename = AnimTreeLayouts.EntryName, Content = result.ToBytes() };
+            if (at >= 0) merged.Insert(at, layoutsEntry);
+            else merged.Add(layoutsEntry);
         }
 
         /// <summary>Layouts from a file's bytes: no bytes are no layouts; anything else has to read as a layouts file this build understands.</summary>
@@ -356,10 +419,111 @@ namespace OpenCAGE.Modding.Merging
             }
         }
 
-        /// <summary>Whether two layouts of a tree draw it the same - where the view was left (pan and zoom) aside.</summary>
-        public static bool SameLayout(AnimTreeLayouts.TreeLayout a, AnimTreeLayouts.TreeLayout b)
+        /// <summary>
+        /// The tree sets in one version of an animation PAK, to tell whether a tree is the same in two versions. The same set
+        /// file holds the same trees; otherwise each tree is compared alone, as its set file writes it - a set holds many trees
+        /// (HUMANOID most of the game's), and a mod changing one of them leaves the rest as they were.
+        /// </summary>
+        private class TreeVersions
         {
-            return RecordOf(a).AsSpan().SequenceEqual(RecordOf(b));
+            private readonly IEnumerable<PAK2.File> _entries;
+            private Dictionary<uint, PAK2.File> _sets;
+            private AnimationStrings _strings;
+            private bool _stringsRead;
+            private readonly Dictionary<uint, Dictionary<uint, byte[]>> _records = new Dictionary<uint, Dictionary<uint, byte[]>>();
+
+            public TreeVersions(IEnumerable<PAK2.File> entries) { _entries = entries; }
+
+            /// <summary>Is the tree in <paramref name="other"/> this one? Not when either has no such set or tree, or it can't be read.</summary>
+            public bool Same(TreeVersions other, uint setHash, uint treeHash)
+            {
+                PAK2.File mine = Set(setHash), theirs = other.Set(setHash);
+                if (mine?.Content == null || theirs?.Content == null)
+                    return false;
+                if (ReferenceEquals(mine.Content, theirs.Content) || mine.Content.AsSpan().SequenceEqual(theirs.Content))
+                    return true;
+                byte[] a = null, b = null;
+                return (Records(setHash)?.TryGetValue(treeHash, out a) ?? false) && (other.Records(setHash)?.TryGetValue(treeHash, out b) ?? false) && a.AsSpan().SequenceEqual(b);
+            }
+
+            /* The set's file, named by the set's hash as AnimTreeLayouts.SetHashOf reads it: DATA\ANIM_SYS\<hash>_ANIM_TREE_DB.BIN */
+            private PAK2.File Set(uint setHash)
+            {
+                if (_sets == null)
+                {
+                    _sets = new Dictionary<uint, PAK2.File>();
+                    foreach (PAK2.File entry in _entries)
+                    {
+                        //By hand rather than with Path: an entry's name is whatever its PAK says, path characters or not
+                        string name = (entry.Filename ?? "").Replace('/', '\\');
+                        if (!name.EndsWith("_ANIM_TREE_DB.BIN", StringComparison.OrdinalIgnoreCase))
+                            continue;
+                        string file = name.Substring(name.LastIndexOf('\\') + 1);
+                        int underscore = file.IndexOf('_');
+                        if (underscore > 0 && uint.TryParse(file.Substring(0, underscore), out uint hash) && !_sets.ContainsKey(hash))
+                            _sets[hash] = entry;
+                    }
+                }
+                return _sets.TryGetValue(setHash, out PAK2.File set) ? set : null;
+            }
+
+            /* Each tree of a set as the set file writes it on its own, by its name's hash as layouts key it (null when the set can't be read) */
+            private Dictionary<uint, byte[]> Records(uint setHash)
+            {
+                if (_records.TryGetValue(setHash, out Dictionary<uint, byte[]> records))
+                    return records;
+                records = null;
+                AnimationStrings strings = Strings();
+                PAK2.File set = Set(setHash);
+                if (strings != null && set != null)
+                {
+                    try
+                    {
+                        AnimTreeDB database = new AnimTreeDB(set.Content, strings, set.Filename);
+                        if (database.Loaded)
+                        {
+                            records = new Dictionary<uint, byte[]>();
+                            foreach (AnimationTree tree in database.Entries.ToList())
+                            {
+                                uint treeHash = AnimTreeLayouts.TreeHashOf(tree, strings);
+                                if (records.ContainsKey(treeHash))
+                                    continue;
+                                try
+                                {
+                                    database.Entries = new List<AnimationTree>() { tree };
+                                    records[treeHash] = database.ToBytes();
+                                }
+                                catch { } //a tree that can't be written alone matches nothing
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        records = null;
+                    }
+                }
+                _records[setHash] = records;
+                return records;
+            }
+
+            /* The debug string table the tree sets name themselves from */
+            private AnimationStrings Strings()
+            {
+                if (_stringsRead)
+                    return _strings;
+                _stringsRead = true;
+                PAK2.File entry = _entries.FirstOrDefault(o => (o.Filename ?? "").EndsWith("ANIM_STRING_DB_DEBUG.BIN", StringComparison.OrdinalIgnoreCase));
+                try
+                {
+                    AnimationStrings strings = entry?.Content == null ? null : new AnimationStrings(entry.Content, entry.Filename);
+                    _strings = strings != null && strings.Loaded ? strings : null;
+                }
+                catch
+                {
+                    _strings = null;
+                }
+                return _strings;
+            }
         }
 
         /* One tree's layout as the file writes it, every list in the file's fixed order: equal bytes, same layout. Where

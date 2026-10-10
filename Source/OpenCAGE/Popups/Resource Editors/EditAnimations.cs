@@ -786,6 +786,14 @@ namespace OpenCAGE
         {
             if (_set == null || _animations == null) return;
 
+            //Saved straight after, so not even started when it can't be: the PAK changed on disk since it was loaded
+            string changedOnDisk = AnimationPakWrite.ChangedOnDisk(_animations.PAK.Filepath);
+            if (changedOnDisk != null)
+            {
+                MessageBox.Show(changedOnDisk, "Can't import", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             string file;
             using (OpenFileDialog dialog = new OpenFileDialog())
             {
@@ -827,10 +835,18 @@ namespace OpenCAGE
             statusStrip.Refresh();
             try
             {
-                Modding.ModServices.CaptureBeforeWrite(_animations.PAK.Filepath);
-                //It writes every tree, unsaved edits and all: their node layouts go in with them
-                AnimTreeLayoutManager.Commit(out _);
-                if (!_animations.Save())
+                //It writes every tree, unsaved edits and all: they must load again, and their node layouts go in with them
+                string refused = AnimationPakWrite.BeforeWholeSave(_animations);
+                if (refused != null)
+                {
+                    statusLabel.Text = "ANIMATION.PAK was not written.";
+                    MessageBox.Show(refused, "Save failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return false;
+                }
+                bool saved;
+                try { saved = _animations.Save(); }
+                finally { AnimationPakWrite.Written(_animations); }
+                if (!saved)
                 {
                     statusLabel.Text = "ANIMATION.PAK could not be written.";
                     MessageBox.Show("ANIMATION.PAK could not be written.", "Save failed", MessageBoxButtons.OK, MessageBoxIcon.Error);

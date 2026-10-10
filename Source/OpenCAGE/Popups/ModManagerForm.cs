@@ -186,7 +186,8 @@ namespace OpenCAGE.Popups
                 try
                 {
                     installer.RecoverCrashJournal();
-                    MessageBox.Show("OpenCAGE was closed part-way through applying mods last time. Your game files have been put back the way they were before that started.",
+                    MessageBox.Show("OpenCAGE was closed part-way through applying mods last time. Your game files have been put back the way they were before that started."
+                        + (AnimationPakWrite.ChangedOnDisk(Singleton.Animations?.PAK?.Filepath) != null ? "\n\nANIMATION.PAK was one of them: restart OpenCAGE before working on animations, animation trees or blend sets, which still show it as it was." : ""),
                         "Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
@@ -721,6 +722,9 @@ namespace OpenCAGE.Popups
                 MessageBox.Show(error.Message, "Couldn't apply", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return null;
             }
+            //OpenCAGE holds the animations in memory as they were loaded, and won't write them back over the changed file
+            if (result != null && result.Success && AnimationPakWrite.ChangedOnDisk(Singleton.Animations?.PAK?.Filepath) != null)
+                result.Warnings.Add("ANIMATION.PAK has changed: restart OpenCAGE before working on animations, animation trees or blend sets, which still show it as it was (and won't save over the new one).");
             return result;
         }
 

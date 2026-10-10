@@ -1034,6 +1034,7 @@
     <Compile Include="Scripts\EnumStringListViewItems.cs" />
     <Compile Include="Scripts\FlowgraphLayoutManager.cs" />
     <Compile Include="Scripts\CompositePreviewManager.cs" />
+    <Compile Include="Scripts\AnimationPakWrite.cs" />
     <Compile Include="Scripts\AnimTreeLayoutManager.cs" />
     <Compile Include="Scripts\AnimTreeLayouts.cs" />
     <Compile Include="Scripts\CollisionProxyImporter.cs" />

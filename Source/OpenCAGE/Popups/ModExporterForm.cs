@@ -275,7 +275,7 @@ namespace OpenCAGE.Popups
                 if (ModServices.Installer.TryGetOwnVersion(path, out byte[] own) && own == null)
                     _deleted.Add(path);
 
-            /* A sidecar (a .META, the tree layouts beside the animation PAK) always ships with the
+            /* A sidecar (a .META) always ships with the
              * file it belongs to (ModExportBuilder.AddFile), so listing it as its own tickable row
              * would offer a choice that isn't real. Fold it into its parent - its bytes are counted
              * there. A sidecar whose parent is unchanged has nothing to fold into and stays a row
