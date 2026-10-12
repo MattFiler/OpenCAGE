@@ -286,6 +286,16 @@ namespace OpenCAGE
             string rtUtilASI = Singleton.PathToAI + "\\OpenCAGE.RuntimeUtils.asi";
             string rtUtilDLL = Singleton.PathToAI + "\\d3d11.dll";
             bool liveLink = false;
+
+            if (File.Exists(Singleton.PathToAI + "\\OpenCAGE_Utils.asi"))
+            {
+                try
+                {
+                    File.Delete(Singleton.PathToAI + "\\OpenCAGE_Utils.asi");
+                }
+                catch { }
+            }
+
             if (RuntimeUtilsNeeded())
             {
                 try
@@ -323,7 +333,7 @@ namespace OpenCAGE
         {
             try
             {
-                if (!File.Exists(Singleton.PathToAI + "OpenCAGE.RuntimeUtils.asi"))
+                if (!File.Exists(Singleton.PathToAI + "\\OpenCAGE.RuntimeUtils.asi"))
                     return false;
                 string ini = Path.Combine(Singleton.PathToAI, "OpenCAGE.RuntimeUtils.ini");
                 if (!File.Exists(ini))
