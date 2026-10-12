@@ -26,7 +26,7 @@ namespace Packager
 
             CopyProjectToBuild("Source/Dependencies/BehaviourTreeEditor/Build/", "legendplugin");
             CopyProjectToBuild("Source/Dependencies/CinematicTools/Build/", "cinematictools");
-            CopyProjectToBuild("Source/Dependencies/RuntimeUtils/build/", "runtimeutils");
+            CopyProjectToBuild("Build/runtimeutils", "runtimeutils");
             CopyProjectToBuild("Source/Dependencies/LevelViewer/Build/", "levelviewer"); //requires manual local build in godot
 
             CopyBuildOutput("Build/");
@@ -64,6 +64,8 @@ namespace Packager
              * let through the ones it didn't name. */
             Dictionary<string, int> exclusions = new Dictionary<string, int>();
             exclusions[".pdb"] = 0;
+            exclusions["OpenCAGE.RuntimeUtils.exp"] = 0;
+            exclusions["OpenCAGE.RuntimeUtils.lib"] = 0;
             if (File.Exists(folderPath + exclusionsFile))
             {
                 string[] exclusionsFileContent = File.ReadAllLines(folderPath + exclusionsFile);
