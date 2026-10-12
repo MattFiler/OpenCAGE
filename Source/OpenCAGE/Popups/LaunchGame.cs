@@ -283,14 +283,14 @@ namespace OpenCAGE
            what went wrong, or null. */
         internal static string ApplyRuntimeUtils()
         {
-            string rtUtilASI = Singleton.PathToAI + "OpenCAGE_Utils.asi";
-            string rtUtilDLL = Singleton.PathToAI + "d3d11.dll";
+            string rtUtilASI = Singleton.PathToAI + "\\OpenCAGE.RuntimeUtils.asi";
+            string rtUtilDLL = Singleton.PathToAI + "\\d3d11.dll";
             bool liveLink = false;
             if (RuntimeUtilsNeeded())
             {
                 try
                 {
-                    CopyIfChanged(Beside(RuntimeUtilsFolder + "/OpenCAGE_Utils.asi"), rtUtilASI);
+                    CopyIfChanged(Beside(RuntimeUtilsFolder + "/OpenCAGE.RuntimeUtils.asi"), rtUtilASI);
                     CopyIfChanged(Beside(RuntimeUtilsFolder + "/winmm.dll"), rtUtilDLL);
                     WriteScriptingHelpersConfig(Singleton.PathToAI);
                 }
@@ -323,9 +323,9 @@ namespace OpenCAGE
         {
             try
             {
-                if (!File.Exists(Singleton.PathToAI + "OpenCAGE_Utils.asi"))
+                if (!File.Exists(Singleton.PathToAI + "OpenCAGE.RuntimeUtils.asi"))
                     return false;
-                string ini = Path.Combine(Singleton.PathToAI, "OpenCAGE_Utils.ini");
+                string ini = Path.Combine(Singleton.PathToAI, "OpenCAGE.RuntimeUtils.ini");
                 if (!File.Exists(ini))
                     return true;
                 foreach (string line in File.ReadAllLines(ini))
@@ -520,7 +520,7 @@ namespace OpenCAGE
                 //The live link server (127.0.0.1 only) runs only when Enable Live Link is ticked
                 "LiveLink=" + (SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink) ? "1" : "0"),
             };
-            File.WriteAllLines(Path.Combine(pathToAI, "OpenCAGE_Utils.ini"), lines);
+            File.WriteAllLines(Path.Combine(pathToAI, "OpenCAGE.RuntimeUtils.ini"), lines);
         }
 
         /* Enable/disable in-game HUD */

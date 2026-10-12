@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{b14a60c8-7143-4e90-8e03-50bb2ef60739}</ProjectGuid>
+    <RootNamespace>AlienIsolationDevTools</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>OpenCAGE.RuntimeUtils</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(ProjectDir)\..\..\Build\runtimeutils</OutDir>
+    <TargetExt>.asi</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(SolutionDir)OpenCAGE.RuntimeUtils/libs/imgui/;$(SolutionDir)OpenCAGE.RuntimeUtils/libs/detours/src/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy /y "$(ProjectDir)winmm.dll" "$(ProjectDir)..\..\Build\runtimeutils\winmm.dll"</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Config.cpp" />
+    <ClCompile Include="DEBUG_MARKER.cpp" />
+    <ClCompile Include="DEBUG_TEXT.cpp" />
+    <ClCompile Include="DevTools.cpp" />
+    <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="GameFlow.cpp" />
+    <ClCompile Include="GAME_LEVEL_MANAGER.cpp" />
+    <ClCompile Include="LIVE_ANIMATION.cpp" />
+    <ClCompile Include="LIVE_CAMERA.cpp" />
+    <ClCompile Include="LIVE_LINK.cpp">
+      <!-- Faults inside game calls are caught (Guarded): /EHa runs the destructors that release what was held -->
+      <ExceptionHandling>Async</ExceptionHandling>
+    </ClCompile>
+    <ClCompile Include="LIVE_LINK_SERVER.cpp" />
+    <ClCompile Include="LIVE_TRACE.cpp" />
+    <ClCompile Include="libs\detours\src\creatwth.cpp" />
+    <ClCompile Include="libs\detours\src\detours.cpp" />
+    <ClCompile Include="libs\detours\src\disasm.cpp" />
+    <ClCompile Include="libs\detours\src\disolarm.cpp" />
+    <ClCompile Include="libs\detours\src\disolx86.cpp" />
+    <ClCompile Include="libs\detours\src\image.cpp" />
+    <ClCompile Include="libs\detours\src\modules.cpp" />
+    <ClCompile Include="libs\imgui\backends\imgui_impl_dx11.cpp" />
+    <ClCompile Include="libs\imgui\backends\imgui_impl_win32.cpp" />
+    <ClCompile Include="libs\imgui\imgui.cpp" />
+    <ClCompile Include="libs\imgui\imgui_demo.cpp" />
+    <ClCompile Include="libs\imgui\imgui_draw.cpp" />
+    <ClCompile Include="libs\imgui\imgui_tables.cpp" />
+    <ClCompile Include="libs\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="Menu.cpp" />
+    <ClCompile Include="SCREENSHOT.cpp" />
+    <ClCompile Include="ZONE_LOADER.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Config.h" />
+    <ClInclude Include="DEBUG_MARKER.h" />
+    <ClInclude Include="DEBUG_TEXT.h" />
+    <ClInclude Include="DevTools.h" />
+    <ClInclude Include="GameFlow.h" />
+    <ClInclude Include="GAME_LEVEL_MANAGER.h" />
+    <ClInclude Include="LIVE_ANIMATION.h" />
+    <ClInclude Include="LIVE_CAMERA.h" />
+    <ClInclude Include="LIVE_LINK.h" />
+    <ClInclude Include="LIVE_LINK_SERVER.h" />
+    <ClInclude Include="LIVE_TRACE.h" />
+    <ClInclude Include="libs\detours\src\detours.h" />
+    <ClInclude Include="libs\detours\src\detver.h" />
+    <ClInclude Include="libs\imgui\backends\imgui_impl_dx11.h" />
+    <ClInclude Include="libs\imgui\backends\imgui_impl_win32.h" />
+    <ClInclude Include="libs\imgui\imconfig.h" />
+    <ClInclude Include="libs\imgui\imgui.h" />
+    <ClInclude Include="libs\imgui\imgui_internal.h" />
+    <ClInclude Include="libs\imgui\imstb_rectpack.h" />
+    <ClInclude Include="libs\imgui\imstb_textedit.h" />
+    <ClInclude Include="libs\imgui\imstb_truetype.h" />
+    <ClInclude Include="Menu.h" />
+    <ClInclude Include="SCREENSHOT.h" />
+    <ClInclude Include="ZONE_LOADER.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="cpp.hint" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

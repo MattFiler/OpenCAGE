@@ -1024,7 +1024,7 @@ namespace OpenCAGE.MCP
             if (LiveLinkTrace.Dropped > 0)
                 result["dropped"] = LiveLinkTrace.Dropped;
             if (LiveLinkTrace.Unsupported)
-                result["unsupported"] = "The game's OpenCAGE_Utils.asi is from before activity tracing: relaunch the game from OpenCAGE (launch_game) to update it.";
+                result["unsupported"] = "The game's OpenCAGE.RuntimeUtils.asi is from before activity tracing: relaunch the game from OpenCAGE (launch_game) to update it.";
             if (!string.IsNullOrEmpty(LiveLinkTrace.LastStatus))
                 result["status"] = LiveLinkTrace.LastStatus;
 

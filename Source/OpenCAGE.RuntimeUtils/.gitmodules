@@ -1,0 +1,6 @@
+[submodule "libs/imgui"]
+	path = libs/imgui
+	url = https://github.com/ocornut/imgui
+[submodule "libs/detours"]
+	path = libs/detours
+	url = https://github.com/microsoft/Detours

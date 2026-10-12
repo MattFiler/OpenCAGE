@@ -1,0 +1,207 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Source Files\libs">
+      <UniqueIdentifier>{aefe1225-55f6-484c-b192-bb3a54c5aed3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\libs\detours">
+      <UniqueIdentifier>{0494e4bd-8e86-409c-8a99-b9bedcb95375}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\libs\imgui">
+      <UniqueIdentifier>{395abe27-88a2-432f-b14a-40b086f1267f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\libs">
+      <UniqueIdentifier>{81f59066-ccd2-4d38-9d75-7b8c7515cd8c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\libs\imgui">
+      <UniqueIdentifier>{8938b32a-d8a2-4213-8d08-39428fe36a25}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\libs\detours">
+      <UniqueIdentifier>{92c2dc3d-92af-4de8-a5b3-381e6c798c83}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Game">
+      <UniqueIdentifier>{fd9d11b8-4b66-480b-a97c-de210af3ab91}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Game">
+      <UniqueIdentifier>{64619a84-11b0-45e3-aca7-71088dd637d4}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="dllmain.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\imgui\imgui_widgets.cpp">
+      <Filter>Source Files\libs\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\imgui\imgui.cpp">
+      <Filter>Source Files\libs\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\imgui\imgui_demo.cpp">
+      <Filter>Source Files\libs\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\imgui\imgui_draw.cpp">
+      <Filter>Source Files\libs\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\imgui\imgui_tables.cpp">
+      <Filter>Source Files\libs\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\detours\src\disolx86.cpp">
+      <Filter>Source Files\libs\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\detours\src\image.cpp">
+      <Filter>Source Files\libs\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\detours\src\modules.cpp">
+      <Filter>Source Files\libs\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\detours\src\creatwth.cpp">
+      <Filter>Source Files\libs\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\detours\src\detours.cpp">
+      <Filter>Source Files\libs\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\detours\src\disasm.cpp">
+      <Filter>Source Files\libs\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\detours\src\disolarm.cpp">
+      <Filter>Source Files\libs\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\imgui\backends\imgui_impl_win32.cpp">
+      <Filter>Source Files\libs\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\imgui\backends\imgui_impl_dx11.cpp">
+      <Filter>Source Files\libs\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="GAME_LEVEL_MANAGER.cpp">
+      <Filter>Source Files\Game</Filter>
+    </ClCompile>
+    <ClCompile Include="GameFlow.cpp">
+      <Filter>Source Files\Game</Filter>
+    </ClCompile>
+    <ClCompile Include="DevTools.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Menu.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LIVE_LINK.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LIVE_LINK_SERVER.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LIVE_CAMERA.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LIVE_ANIMATION.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LIVE_TRACE.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SCREENSHOT.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Config.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DEBUG_MARKER.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DEBUG_TEXT.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ZONE_LOADER.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="libs\imgui\imconfig.h">
+      <Filter>Header Files\libs\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="libs\imgui\imgui.h">
+      <Filter>Header Files\libs\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="libs\imgui\imgui_internal.h">
+      <Filter>Header Files\libs\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="libs\imgui\imstb_rectpack.h">
+      <Filter>Header Files\libs\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="libs\imgui\imstb_textedit.h">
+      <Filter>Header Files\libs\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="libs\imgui\imstb_truetype.h">
+      <Filter>Header Files\libs\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="libs\detours\src\detours.h">
+      <Filter>Header Files\libs\detours</Filter>
+    </ClInclude>
+    <ClInclude Include="libs\detours\src\detver.h">
+      <Filter>Header Files\libs\detours</Filter>
+    </ClInclude>
+    <ClInclude Include="libs\imgui\backends\imgui_impl_win32.h">
+      <Filter>Header Files\libs\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="libs\imgui\backends\imgui_impl_dx11.h">
+      <Filter>Header Files\libs\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="GAME_LEVEL_MANAGER.h">
+      <Filter>Header Files\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="GameFlow.h">
+      <Filter>Header Files\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="DevTools.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Menu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LIVE_LINK.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LIVE_LINK_SERVER.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LIVE_CAMERA.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LIVE_ANIMATION.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LIVE_TRACE.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SCREENSHOT.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DEBUG_MARKER.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DEBUG_TEXT.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ZONE_LOADER.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="cpp.hint" />
+  </ItemGroup>
+</Project>

@@ -5,9 +5,6 @@
 [submodule "Source/Dependencies/CinematicTools"]
 	path = Source/Dependencies/CinematicTools
 	url = https://github.com/OpenCAGE/CinematicTools
-[submodule "Source/Dependencies/RuntimeUtils"]
-	path = Source/Dependencies/RuntimeUtils
-	url = https://github.com/OpenCAGE/RuntimeUtils
 [submodule "Source/Dependencies/LevelViewer"]
 	path = Source/Dependencies/LevelViewer
 	url = https://github.com/OpenCAGE/LevelViewer
@@ -22,3 +19,9 @@
 [submodule "Source/DockPanelSuite"]
 	path = Source/DockPanelSuite
 	url = https://github.com/MattFiler/dockpanelsuite
+[submodule "Source/OpenCAGE.RuntimeUtils/libs/imgui"]
+	path = Source/OpenCAGE.RuntimeUtils/libs/imgui
+	url = https://github.com/ocornut/imgui
+[submodule "Source/OpenCAGE.RuntimeUtils/libs/detours"]
+	path = Source/OpenCAGE.RuntimeUtils/libs/detours
+	url = https://github.com/microsoft/Detours

@@ -437,7 +437,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
                 if (LiveLink.IsUnknownRequest(reply))
                 {
                     _unsupported = true;
-                    Report("Live Link: the game's OpenCAGE_Utils.asi is too old to show script activity - launch the game from OpenCAGE again to update it");
+                    Report("Live Link: the game's OpenCAGE.RuntimeUtils.asi is too old to show script activity - launch the game from OpenCAGE again to update it");
                     return true;
                 }
                 if (!reply.Ok && reply.Answered && reply.Message == "Malformed request" && wanted.Watches.Count > LiveLink.OldMaxTraceWatches && _watchLimit > LiveLink.OldMaxTraceWatches)
@@ -445,7 +445,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
                     //Runtime utils from before the larger limit take at most 32 at once: watch that many (those reached through
                     //aliases in every instance of their composite first, as ever), until a newer game connects
                     _watchLimit = LiveLink.OldMaxTraceWatches;
-                    Debug.Log("Live Link", "The game's OpenCAGE_Utils.asi takes at most " + LiveLink.OldMaxTraceWatches + " composite instances to show script activity in at once (" + wanted.Watches.Count + " were asked for) - launch the game from OpenCAGE again to update it");
+                    Debug.Log("Live Link", "The game's OpenCAGE.RuntimeUtils.asi takes at most " + LiveLink.OldMaxTraceWatches + " composite instances to show script activity in at once (" + wanted.Watches.Count + " were asked for) - launch the game from OpenCAGE again to update it");
                     RequestRefresh();
                     return true;
                 }
@@ -464,9 +464,9 @@ namespace OpenCAGE.RuntimeUtilsConnection
                     string leftOut = "";
                     if (wanted.LeftOut > 0)
                         leftOut = " (" + wanted.LeftOut + " instance(s) reached through aliases are left out - at most " + wanted.Watches.Count + " at once"
-                            + (_watchLimit < LiveLink.MaxTraceWatches ? " with this game's OpenCAGE_Utils.asi: launch the game from OpenCAGE again to update it" : "") + ")";
+                            + (_watchLimit < LiveLink.MaxTraceWatches ? " with this game's OpenCAGE.RuntimeUtils.asi: launch the game from OpenCAGE again to update it" : "") + ")";
                     else if (_watchLimit < LiveLink.MaxTraceWatches)
-                        leftOut = " (this game's OpenCAGE_Utils.asi watches at most " + _watchLimit + " instances at once: launch the game from OpenCAGE again to update it)";
+                        leftOut = " (this game's OpenCAGE.RuntimeUtils.asi watches at most " + _watchLimit + " instances at once: launch the game from OpenCAGE again to update it)";
                     Report("Live Link: showing script activity" + leftOut);
                 }
                 else
@@ -499,7 +499,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
             if (batch.Unsupported)
             {
                 _unsupported = true;
-                Report("Live Link: the game's OpenCAGE_Utils.asi is too old to show script activity - launch the game from OpenCAGE again to update it");
+                Report("Live Link: the game's OpenCAGE.RuntimeUtils.asi is too old to show script activity - launch the game from OpenCAGE again to update it");
                 return true;
             }
             if (!batch.Reply.Ok)
