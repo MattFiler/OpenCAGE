@@ -1154,7 +1154,7 @@ namespace OpenCAGE
             _compositeBrowser.OnLevelDataReady();
             _compositeBrowser.LoadInitialComposite();
             _compositeDisplay.Show(dockPanel, DockState.Document);
-            _entityList.FocusPanel();
+            _compositeBrowser.FocusPanel();
 
             BeginInvoke(new Action(() =>
             {
@@ -1166,6 +1166,7 @@ namespace OpenCAGE
 
                 _compositeBrowser.UpdateDockState();
                 _compositeBrowser.EnsureCompositeTreePopulated();
+                _compositeBrowser.FocusPanel();
             }));
         }
 
@@ -3108,11 +3109,15 @@ namespace OpenCAGE
                     }
 
                     if (loadedComposite != null)
+                    {
                         ReopenAfterRebuild(loadedComposite, navigation, selected);
+                        _entityList.FocusPanel();
+                    }
                     else if (levelDataLoaded)
+                    {
                         _compositeBrowser.LoadInitialComposite();
-
-                    _entityList.FocusPanel();
+                        _compositeBrowser.FocusPanel();
+                    }
 
                     if (preserveLevelViewer)
                     {
@@ -3231,11 +3236,15 @@ namespace OpenCAGE
             }
 
             if (loadedComposite != null)
+            {
                 ReopenAfterRebuild(loadedComposite, navigation, selected);
+                _entityList.FocusPanel();
+            }
             else if (levelDataLoaded)
+            {
                 _compositeBrowser.LoadInitialComposite();
-
-            _entityList.FocusPanel();
+                _compositeBrowser.FocusPanel();
+            }
 
             if (preserveLevelViewer)
             {

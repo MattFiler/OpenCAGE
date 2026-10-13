@@ -410,6 +410,19 @@ namespace OpenCAGE.DockPanels
             ReloadList();
         }
 
+        public void FocusPanel()
+        {
+            if (IsDisposed || Singleton.Editor?.DockPanel == null)
+                return;
+
+            if (Pane != null && DockState != DockState.Hidden && DockState != DockState.Float)
+                Activate();
+            else
+                Show(Singleton.Editor.DockPanel, DockState.DockLeft);
+
+            treeView1?.Focus();
+        }
+
         private void ClearCompositeTreeSearch()
         {
             _currentSearch = "";
