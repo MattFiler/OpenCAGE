@@ -1,4 +1,4 @@
-using AlienPAK;
+﻿using AlienPAK;
 using Assimp;
 using CATHODE;
 using CathodeLib;
@@ -63,6 +63,7 @@ namespace OpenCAGE
             _wholeModelsOnly = wholeModelsOnly;
             _modelFilter = modelFilter;
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/model-editor/");
 
             splitContainer2.FixedPanel = FixedPanel.Panel2;
             splitContainer2.IsSplitterFixed = true;

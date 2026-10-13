@@ -1,4 +1,4 @@
-using AlienPAK;
+﻿using AlienPAK;
 using CATHODE;
 using CATHODE.ShaderTypes;
 using CathodeLib;
@@ -45,6 +45,7 @@ namespace OpenCAGE
         public EditMaterial(Materials.Material material = null, bool showSelectBtn = true) : base(EditorOrPicker(showSelectBtn))
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/material-editor/");
 
             this.Text = "Material Editor";
 

@@ -1,4 +1,4 @@
-namespace OpenCAGE
+﻿namespace OpenCAGE
 {
     partial class ImportCompositeArchive
     {
@@ -270,7 +270,7 @@ namespace OpenCAGE
             this.Controls.Add(this.descriptionLabel);
             this.Controls.Add(this.infoButton);
             this.Controls.Add(this.nameLabel);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "ImportCompositeArchive";

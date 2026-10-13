@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -26,6 +26,7 @@ namespace OpenCAGE
         {
             _commands = editor;
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/scripting-intro/");
 
             _folder = folderPath;
             this.Text = _folder == "" ? "Create New Composite" : "Create New Composite In Folder '" + _folder + "'";

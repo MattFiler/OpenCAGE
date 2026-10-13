@@ -30,6 +30,7 @@ namespace OpenCAGE.ConfigEditors
                 : new LocalisationHandler(textFolderPath, databaseName);
 
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/localisation-editor/");
 
             _languageTextBoxes = new[]
             {

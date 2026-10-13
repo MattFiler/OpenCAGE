@@ -17,6 +17,7 @@ namespace OpenCAGE
         public EditPAK2() : base()
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/ui-editor/");
         }
 
         public void LoadPAK2(string pak, string title)

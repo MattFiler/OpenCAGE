@@ -33,6 +33,7 @@ namespace OpenCAGE
         private ListViewColumnSorter _sorter = new ListViewColumnSorter();
         private ListViewItem[] _filteredItems;
         private SoundPreviewPanel _soundPreview = null;
+        private EnumStringType _currentType;
 
         //Browsing (the Sound Editor on the View menu) rather than picking a value for a parameter
         private readonly bool _browse;
@@ -58,6 +59,23 @@ namespace OpenCAGE
         {
             InitializeComponent();
             StayAboveEditor = !_browse; //a picker for a parameter field - it shouldn't be able to fall behind the editor
+
+            this.HelpButtonClicked += (sender, e) =>
+            {
+                e.Cancel = true;
+                if (_currentType == EnumStringType.SOUND_EVENT)
+                {
+                    try
+                    {
+                        Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
+                        System.Diagnostics.Process.Start("https://opencage.co.uk/docs/sound-events/");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Failed to open documentation: " + ex.Message);
+                    }
+                }
+            };
 
             Singleton.OnEnumStringUIShown?.Invoke(this);
             Singleton.OnEnumStringUIShown += OnAnotherEnumStringWindowShown;
@@ -129,6 +147,15 @@ namespace OpenCAGE
             // Materials use EditMaterial via the parameter grid's enum-string editor — not this list UI
             if (type == EnumStringType.MATERIAL)
                 return;
+
+            _currentType = type;
+            bool isSound = type == EnumStringType.SOUND_EVENT;
+            this.HelpButton = isSound;
+            if (isSound)
+            {
+                this.MaximizeBox = false;
+                this.MinimizeBox = false;
+            }
 
             Tuple<ListViewItem[], bool> items = EnumStringListViewItems.GetItems(type);
             if (items == null)

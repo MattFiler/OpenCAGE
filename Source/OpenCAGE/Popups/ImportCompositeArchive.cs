@@ -1,4 +1,4 @@
-using CATHODE;
+﻿using CATHODE;
 using CATHODE.Scripting;
 using CathodeLib;
 using OpenCAGE.Popups.Base;
@@ -48,6 +48,7 @@ namespace OpenCAGE
             _contentAtOpen = Content;
 
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/composite-porting/");
 
             nameLabel.Font = new Font(Font, FontStyle.Bold);
             //The theme paints every control's text colour, including on handle creation; the warning keeps its own

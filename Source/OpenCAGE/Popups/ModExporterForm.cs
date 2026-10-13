@@ -95,6 +95,7 @@ namespace OpenCAGE.Popups
 
             BuildLayout();
             Theming.ThemeManager.ApplyToForm(this);
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/making-mods/");
 
             Shown += (s, e) => PopulateTree();
         }

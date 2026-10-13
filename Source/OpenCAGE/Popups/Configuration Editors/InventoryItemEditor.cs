@@ -22,6 +22,7 @@ namespace OpenCAGE.ConfigEditors
         public InventoryItemEditor() : base()
         {
             InitializeComponent();
+            BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/inventory-items/");
             ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
             _gblItem = new BML(Singleton.PathToAI + @"\DATA\GBL_ITEM.BML");
@@ -368,12 +369,6 @@ namespace OpenCAGE.ConfigEditors
                 if (obj.Name == "ammo" && obj.GetAttribute("target_weapon") == oldName)
                     obj.SetAttribute("target_weapon", newName);
             }
-        }
-
-        private void helpBtn_Click(object sender, EventArgs e)
-        {
-            Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
-            Process.Start("https://opencage.co.uk/docs/configs/inventory-items");
         }
 
         private void addItemBtn_Click(object sender, EventArgs e)

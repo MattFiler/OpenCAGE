@@ -1,4 +1,4 @@
-using CATHODE;
+﻿using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
@@ -29,6 +29,7 @@ namespace OpenCAGE
         public CreateLevel() : base()
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/create-level/");
 
             //The launcher patches "Production/NAME" into a fixed byte run in the game executable, so a
             //level the game can be launched into has a hard name length

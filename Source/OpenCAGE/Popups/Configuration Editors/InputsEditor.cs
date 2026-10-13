@@ -1,4 +1,4 @@
-using OpenCAGE.Popups.Base;
+﻿using OpenCAGE.Popups.Base;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -42,6 +42,7 @@ namespace OpenCAGE.ConfigEditors
         public InputsEditor() : base()
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/inputs/");
 
             string path = Singleton.PathToAI + ConfigFile;
             try

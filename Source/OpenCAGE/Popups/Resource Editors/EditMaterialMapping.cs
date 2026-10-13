@@ -1,4 +1,4 @@
-using CATHODE;
+﻿using CATHODE;
 using CATHODE.Scripting;
 using CathodeLib;
 using OpenCAGE.Popups.Base;
@@ -23,6 +23,7 @@ namespace OpenCAGE
         public EditMaterialMapping(MaterialMappings.MaterialMapping currentMapping = null, bool showSelectBtn = true) : base(EditorOrPicker(showSelectBtn))
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/material-mapping-editor/");
             _currentMapping = currentMapping;
 
             selectButton.Visible = showSelectBtn;

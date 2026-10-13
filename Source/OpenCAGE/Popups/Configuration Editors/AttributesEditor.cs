@@ -1,4 +1,4 @@
-using CATHODE;
+﻿using CATHODE;
 using OpenCAGE.Popups.Base;
 using System;
 using System.Collections.Generic;
@@ -23,6 +23,7 @@ namespace OpenCAGE.ConfigEditors
         public AttributesEditor() : base()
         {
             InitializeComponent();
+            BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/attributes/");
             ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
             LoadBehaviourTrees();
@@ -374,12 +375,6 @@ namespace OpenCAGE.ConfigEditors
             _selectedCharacter[0].Save();
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
-        }
-
-        private void helpBtn_Click(object sender, EventArgs e)
-        {
-            Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
-            Process.Start("https://opencage.co.uk/docs/configs/attributes");
         }
     }
 }

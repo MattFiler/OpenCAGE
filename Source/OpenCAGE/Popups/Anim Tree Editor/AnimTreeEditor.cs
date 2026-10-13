@@ -20,6 +20,7 @@ namespace OpenCAGE.AnimTrees
         public AnimTreeEditor()
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/animation-tree-editor/");
 
             Theming.ThemeManager.ApplyToForm(this);
             Theming.ThemeManager.ApplyToDockPanel(dockPanel);

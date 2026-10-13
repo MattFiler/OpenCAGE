@@ -17,6 +17,7 @@ namespace OpenCAGE.ConfigEditors
         public HairAndSkinShadingEditor() : base()
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/hair-and-skin-shading/");
             ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
             string[] skin = File.ReadAllLines(Singleton.PathToAI + "/DATA/SKIN_SHADING_SETTINGS.TXT");

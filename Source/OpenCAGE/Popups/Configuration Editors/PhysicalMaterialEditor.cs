@@ -14,6 +14,7 @@ namespace OpenCAGE.ConfigEditors
         public PhysicalMaterialEditor() : base()
         {
             InitializeComponent();
+            BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/physical-materials/");
             ConfigEditorUtils.ShowAutoSaveTipOnce();
 
             _materialTypes = new BML(Singleton.PathToAI + "\\DATA\\MATERIAL_DATA\\MATERIALS.BML");
@@ -95,12 +96,6 @@ namespace OpenCAGE.ConfigEditors
             }
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
-        }
-
-        private void helpBtn_Click(object sender, EventArgs e)
-        {
-            Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
-            Process.Start("https://opencage.co.uk/docs/configs/physical-materials");
         }
     }
 }

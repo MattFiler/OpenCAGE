@@ -18,6 +18,7 @@ namespace OpenCAGE.ConfigEditors
         public GraphicsEditor() : base()
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/graphics-settings/");
 
             _path = Singleton.PathToAI + @"\DATA\ENGINE_SETTINGS.XML";
 

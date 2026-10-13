@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -32,6 +32,7 @@ namespace OpenCAGE
         {
             _entityDisplay = entityDisplay;
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/scripting-intro/");
             StayAboveEditor = true; //small dialog - keep it above the editor window
 
             RefreshEntityLists(entityDisplay.Composite);
@@ -51,6 +52,7 @@ namespace OpenCAGE
         {
             _entityDisplay = entityDisplay;
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/scripting-intro/");
             StayAboveEditor = true; //small dialog - keep it above the editor window
 
             RefreshEntityLists(entityDisplay.Composite);

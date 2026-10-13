@@ -1,4 +1,4 @@
-using AlienPAK;
+﻿using AlienPAK;
 using CATHODE;
 using CATHODE.Enums;
 using OpenCAGE.Popups.Base;
@@ -27,6 +27,7 @@ namespace OpenCAGE.ConfigEditors
         public CharacterAssetEditor() : base(WindowClosesOn.COMMANDS_RELOAD)
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/character-editor/");
 
             _assetData = new CustomCharacterAssetData(Singleton.PathToAI + "/DATA/CHR_INFO/CUSTOMCHARACTERASSETDATA.BIN");
 

@@ -20,6 +20,7 @@ namespace OpenCAGE.ConfigEditors
         public LoadMovieEditor() : base()
         {
             InitializeComponent();
+            BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/loadscreen-movies/");
 
             _gblItem = new BML(Singleton.PathToAI + @"\DATA\GBL_ITEM.BML");
 
@@ -132,12 +133,6 @@ namespace OpenCAGE.ConfigEditors
 
             movieList.Items.Remove(item);
             movieList.Items.Insert(index, item);
-        }
-
-        private void helpBtn_Click(object sender, EventArgs e)
-        {
-            Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
-            Process.Start("https://opencage.co.uk/docs/configs/loadscreen-movies");
         }
     }
 }

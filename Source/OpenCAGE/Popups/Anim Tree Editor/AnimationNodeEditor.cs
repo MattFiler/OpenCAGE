@@ -1,4 +1,4 @@
-using CATHODE;
+﻿using CATHODE;
 using CATHODE.Animations;
 using CathodeLib;
 using System;
@@ -35,6 +35,7 @@ namespace OpenCAGE.AnimTrees
         public AnimationNodeEditor()
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/animation-tree-nodes/");
             Theming.ThemeManager.ApplyToForm(this);
             CloseButton = false;
             CloseButtonVisible = false;

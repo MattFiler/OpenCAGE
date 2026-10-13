@@ -30,6 +30,7 @@ namespace OpenCAGE.ConfigEditors
 
             this.FormClosing += AlienConfigEditor_FormClosing;
             CloseOnConfigReset();
+            EnableDocumentation("https://opencage.co.uk/docs/configs/alien-configs/");
         }
 
         private void AlienConfigEditor_Load(object sender, EventArgs e)
@@ -128,12 +129,6 @@ namespace OpenCAGE.ConfigEditors
             _selectedConfig[0].Save();
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
-        }
-
-        private void helpBtn_Click(object sender, EventArgs e)
-        {
-            Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
-            Process.Start("https://opencage.co.uk/docs/configs/alien-configs");
         }
     }
 }

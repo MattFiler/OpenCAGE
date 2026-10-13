@@ -69,7 +69,7 @@
             this.Controls.Add(this.button1);
             this.Controls.Add(this.numericUpDown1);
             this.Controls.Add(this.label1);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.Name = "SetPinDelay";
             this.ShowIcon = false;

@@ -18,6 +18,7 @@ namespace OpenCAGE.ConfigEditors
         public PermanentSoundbankEditor() : base()
         {
             InitializeComponent();
+            BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/perma-soundbanks/");
             ConfigEditorUtils.ShowAutoSaveTipOnce();
 
             string[] soundbanks = File.ReadAllLines(Singleton.PathToAI + @"\DATA\LIST_OF_PERMANENT_SOUND_BANKS.TXT");
@@ -71,12 +72,6 @@ namespace OpenCAGE.ConfigEditors
             }
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
-        }
-
-        private void helpBtn_Click(object sender, EventArgs e)
-        {
-            Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
-            Process.Start("https://opencage.co.uk/docs/configs/perma-soundbanks");
         }
     }
 }

@@ -28,6 +28,7 @@ namespace OpenCAGE
             _entityDisplay = entityDisplay;
 
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/scripting-intro/");
 
             param_name.BeginUpdate();
             param_name.Items.Clear();

@@ -1,4 +1,4 @@
-using OpenCAGE.ConfigEditors;
+﻿using OpenCAGE.ConfigEditors;
 using OpenCAGE.Popups.Base;
 using System;
 using System.Collections.Generic;
@@ -45,6 +45,7 @@ namespace OpenCAGE.Popups.Configuration_Editors
         public VoiceMappingEditor() : base()
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/voice-mappings/");
 
             string path = Singleton.PathToAI + ConfigFile;
             try

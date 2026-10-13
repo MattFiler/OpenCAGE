@@ -261,7 +261,7 @@
             this.Controls.Add(this.animKeyframeData);
             this.Controls.Add(this.graphEventData);
             this.Controls.Add(this.SaveEntity);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.SizableToolWindow;
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.Sizable;
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = true;
             this.MinimizeBox = true;

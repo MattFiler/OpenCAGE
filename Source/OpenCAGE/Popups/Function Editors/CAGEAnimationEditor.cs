@@ -1,4 +1,4 @@
-using CATHODE.Scripting;
+﻿using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CATHODE.Enums;
 using CathodeLib.ObjectExtensions;
@@ -93,6 +93,7 @@ namespace OpenCAGE
             foreach (CAGEAnimation.FloatTrack track in animEntity.floatTracks)
                 CageAnimationCurves.NormaliseKeyframes(track);
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/cage-animation-editor/");
 
             SetupSnapControls();
             SetupTrackTree();

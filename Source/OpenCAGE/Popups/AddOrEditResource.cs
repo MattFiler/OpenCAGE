@@ -1,4 +1,4 @@
-using CATHODE;
+﻿using CATHODE;
 using CATHODE.Scripting;
 using System;
 using System.Collections.Generic;
@@ -37,6 +37,7 @@ namespace OpenCAGE
             guid_parent = entDisplay.Entity.shortGUID;
 
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/scripting-intro/");
 
             this.Text += " - " + Content.EditorUtils.GenerateEntityName(entDisplay.Entity, entDisplay.Composite);
             resourceType.SelectedIndex = 0;
@@ -52,6 +53,7 @@ namespace OpenCAGE
             guid_parent = parameter.shortGUID;
 
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/scripting-intro/");
 
             this.Text += " - " + windowTitle;
             resourceType.SelectedIndex = 0;

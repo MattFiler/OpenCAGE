@@ -1,4 +1,4 @@
-using CATHODE;
+﻿using CATHODE;
 using OpenCAGE.Popups.Base;
 using System;
 using System.Collections.Generic;
@@ -20,6 +20,7 @@ namespace OpenCAGE.ConfigEditors
         public SenseEditor() : base()
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/senses/");
             ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
             BML attributeTypes = new BML(Singleton.PathToAI + "\\DATA\\CHR_INFO\\ATTRIBUTES\\ATTRIBUTES.BML");

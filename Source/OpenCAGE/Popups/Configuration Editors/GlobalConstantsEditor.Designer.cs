@@ -49,7 +49,6 @@
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
             this.groupBox4 = new System.Windows.Forms.GroupBox();
-            this.helpBtn = new System.Windows.Forms.Button();
             this.glowColour = new System.Windows.Forms.PictureBox();
             this.label1 = new System.Windows.Forms.Label();
             this.setGlowColour = new System.Windows.Forms.Button();
@@ -310,20 +309,7 @@
             this.groupBox4.Size = new System.Drawing.Size(213, 248);
             this.groupBox4.TabIndex = 370;
             this.groupBox4.TabStop = false;
-            this.groupBox4.Text = "UI_Icon";
-            // 
-            // helpBtn
-            // 
-            this.helpBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.helpBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.helpBtn.Image = ((System.Drawing.Image)(resources.GetObject("helpBtn.Image")));
-            this.helpBtn.Location = new System.Drawing.Point(440, 0);
-            this.helpBtn.Name = "helpBtn";
-            this.helpBtn.Size = new System.Drawing.Size(20, 20);
-            this.helpBtn.TabIndex = 371;
-            this.helpBtn.UseVisualStyleBackColor = true;
-            this.helpBtn.Click += new System.EventHandler(this.helpBtn_Click);
-            // 
+            this.groupBox4.Text = "UI_Icon";            // 
             // glowColour
             // 
             this.glowColour.Location = new System.Drawing.Point(13, 79);
@@ -409,7 +395,6 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(460, 349);
-            this.Controls.Add(this.helpBtn);
             this.Controls.Add(this.groupBox4);
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.groupBox2);
@@ -465,7 +450,6 @@
         private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.GroupBox groupBox3;
         private System.Windows.Forms.GroupBox groupBox4;
-        private System.Windows.Forms.Button helpBtn;
         private System.Windows.Forms.Button setGlowColour;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.PictureBox glowColour;

@@ -1,4 +1,4 @@
-using AlienPAK;
+﻿using AlienPAK;
 using CathodeLib;
 using OpenCAGE.Backups;
 using OpenCAGE.Popups;
@@ -27,6 +27,7 @@ namespace OpenCAGE
         public LevelBackupManager()
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/backup-manager/");
             Theming.ThemeManager.ApplyToForm(this);
 
             if (!Directory.Exists(Singleton.PathToAI + "/DATA/MODTOOLS/BACKUPS"))

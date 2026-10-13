@@ -23,6 +23,7 @@ namespace OpenCAGE.ConfigEditors
         public GlobalConstantsEditor()
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/global-constants/");
             Theming.ThemeManager.ApplyToForm(this);
             ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
@@ -116,12 +117,6 @@ namespace OpenCAGE.ConfigEditors
             _globalConstants.Save();
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
-        }
-
-        private void helpBtn_Click(object sender, EventArgs e)
-        {
-            Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
-            Process.Start("https://opencage.co.uk/docs/configs/global-constants");
         }
     }
 }

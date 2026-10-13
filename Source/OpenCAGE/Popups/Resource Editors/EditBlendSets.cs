@@ -1,4 +1,4 @@
-using CATHODE;
+﻿using CATHODE;
 using CathodeLib;
 using OpenCAGE.Popups.Base;
 using System;
@@ -54,6 +54,7 @@ namespace OpenCAGE
             _startOn = startingSet;
 
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/blend-set-editor/");
             Icon = SharedFormIcon.Icon;
 
             if (_picking)

@@ -1,4 +1,4 @@
-using CATHODE;
+﻿using CATHODE;
 using CATHODE.Scripting;
 using OpenCAGE.Popups.Base;
 using System;
@@ -15,6 +15,7 @@ namespace OpenCAGE.Popups
         public GalaxyEditor() : base(WindowClosesOn.COMMANDS_RELOAD)
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/galaxy-editor/");
             SetupGridColumns();
 
             gridEntries.CellEndEdit += GridEntries_CellEndEdit;

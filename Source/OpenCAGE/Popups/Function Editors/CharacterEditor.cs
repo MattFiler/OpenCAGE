@@ -1,4 +1,4 @@
-using CATHODE;
+﻿using CATHODE;
 using CATHODE.Enums;
 using CATHODE.Scripting;
 using CathodeLib;
@@ -25,6 +25,7 @@ namespace OpenCAGE
         {
             _entityDisplay = editor;
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/character-editor/");
 
             //Accessory sets are edited in place from a lot of handlers, so instead of marking the level as
             //modified in each one, compare against this snapshot when the window closes

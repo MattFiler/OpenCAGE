@@ -98,7 +98,7 @@
             this.ClientSize = new System.Drawing.Size(936, 643);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.resource_panel);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "AddOrEditResource";

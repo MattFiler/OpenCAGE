@@ -1,4 +1,4 @@
-using CATHODE;
+﻿using CATHODE;
 using CATHODE.Enums;
 using OpenCAGE.Popups.Base;
 using System;
@@ -22,6 +22,7 @@ namespace OpenCAGE.ConfigEditors
         public AmmoEditor() : base()
         {
             InitializeComponent();
+            BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/ammo/");
             ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
             Damage_1.BeginUpdate();
@@ -271,12 +272,6 @@ namespace OpenCAGE.ConfigEditors
         private static string FormatRangeDistance(decimal value)
         {
             return value.ToString("0.###", CultureInfo.InvariantCulture);
-        }
-
-        private void helpBtn_Click(object sender, EventArgs e)
-        {
-            Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
-            Process.Start("https://opencage.co.uk/docs/configs/ammo");
         }
     }
 }

@@ -1,4 +1,4 @@
-using CATHODE.Scripting;
+﻿using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using OpenCAGE.DockPanels;
 using OpenCAGE.Popups.Base;
@@ -26,6 +26,7 @@ namespace OpenCAGE
         public AddEntity_Function(Composite composite, bool flowgraphMode) : base (WindowClosesOn.NEW_COMPOSITE_SELECTION | WindowClosesOn.COMMANDS_RELOAD)
         {
             InitializeComponent();
+            BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/cathode-entities/#entities");
             StayAboveEditor = true; //small dialog - keep it above the editor window
             _composite = composite;
 
@@ -124,12 +125,6 @@ namespace OpenCAGE
         {
             if (e.KeyCode == Keys.Enter)
                 createEntity.PerformClick();
-        }
-
-        private void helpBtn_Click(object sender, EventArgs e)
-        {
-            Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
-            Process.Start("https://opencage.co.uk/docs/cathode-entities/#entities");
         }
 
         //The name last suggested, so a name typed over it is left alone

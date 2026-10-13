@@ -74,6 +74,7 @@ namespace OpenCAGE.Popups
             Controls.Add(_headline);
             Controls.Add(buttons);
             Theming.ThemeManager.ApplyToForm(this);
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/installing-mods/");
 
             ShowStep();
         }

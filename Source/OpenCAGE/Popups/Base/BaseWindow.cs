@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Diagnostics;
 
 namespace OpenCAGE.Popups.Base
 {
@@ -247,6 +248,40 @@ namespace OpenCAGE.Popups.Base
         private void OnCAGEAnimationEditorOpened()
         {
             this.Close();
+        }
+
+        /// <summary>
+        /// Enables the '?' Help button in the title bar that opens the specified documentation URL when clicked.
+        /// </summary>
+        public void EnableDocumentation(string docsUrl)
+        {
+            EnableDocumentation(this, docsUrl);
+        }
+
+        /// <summary>
+        /// Enables the '?' Help button in the title bar of a form that opens the specified documentation URL when clicked.
+        /// </summary>
+        public static void EnableDocumentation(Form form, string docsUrl)
+        {
+            if (form == null || string.IsNullOrEmpty(docsUrl))
+                return;
+
+            form.MaximizeBox = false;
+            form.MinimizeBox = false;
+            form.HelpButton = true;
+            form.HelpButtonClicked += (sender, e) =>
+            {
+                e.Cancel = true;
+                try
+                {
+                    Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
+                    Process.Start(docsUrl);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Failed to open documentation: " + ex.Message);
+                }
+            };
         }
     }
 

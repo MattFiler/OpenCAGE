@@ -1,4 +1,4 @@
-using Assimp;
+﻿using Assimp;
 using CATHODE;
 using CathodeLib;
 using OpenCAGE;
@@ -32,6 +32,7 @@ namespace AlienPAK
             _model = model;
 
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/model-editor/");
             OpenCAGE.Theming.ThemeManager.ApplyToForm(this);
             Icon = SharedFormIcon.Icon;
 

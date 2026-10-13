@@ -1,4 +1,4 @@
-namespace AlienPAK
+﻿namespace AlienPAK
 {
     partial class ModelEditor
     {
@@ -47,7 +47,7 @@ namespace AlienPAK
             this.ClientSize = new System.Drawing.Size(1111, 681);
             this.Controls.Add(this.elementHost1);
             this.Controls.Add(this.FileTree);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
             this.Name = "ModelEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

@@ -1,4 +1,4 @@
-using CATHODE;
+﻿using CATHODE;
 using CATHODE.Scripting;
 using CathodeLib;
 using OpenCAGE.Popups.Base;
@@ -38,6 +38,7 @@ namespace OpenCAGE
             _excludedLevel = excludeLevel;
 
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/composite-porting/");
             _tree = new CompositeTree(compositeTree);
             _tree.SelectionChanged += OnTreeSelectionChanged;
             _tree.AttachSearch(filterBox, searchButton);

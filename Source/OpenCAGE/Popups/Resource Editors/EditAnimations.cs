@@ -1,4 +1,4 @@
-using AlienPAK;
+﻿using AlienPAK;
 using CATHODE;
 using CathodeLib;
 using OpenCAGE.Popups.Base;
@@ -65,6 +65,7 @@ namespace OpenCAGE
             _startingSet = startingSet;
             _startingAnimation = startingAnimation;
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/animation-editor/");
             Icon = SharedFormIcon.Icon;
 
             if (_picking != PickMode.None)

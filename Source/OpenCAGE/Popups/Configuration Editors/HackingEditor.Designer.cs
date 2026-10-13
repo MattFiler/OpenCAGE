@@ -57,7 +57,6 @@
             this.label13 = new System.Windows.Forms.Label();
             this.label8 = new System.Windows.Forms.Label();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.helpBtn = new System.Windows.Forms.Button();
             this.groupBox2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.timer_countdown_seconds)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.number_of_alarms)).BeginInit();
@@ -367,26 +366,12 @@
             this.groupBox1.Size = new System.Drawing.Size(421, 156);
             this.groupBox1.TabIndex = 334;
             this.groupBox1.TabStop = false;
-            this.groupBox1.Text = "Max Difficulties";
-            // 
-            // helpBtn
-            // 
-            this.helpBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.helpBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.helpBtn.Image = ((System.Drawing.Image)(resources.GetObject("helpBtn.Image")));
-            this.helpBtn.Location = new System.Drawing.Point(422, 0);
-            this.helpBtn.Name = "helpBtn";
-            this.helpBtn.Size = new System.Drawing.Size(20, 20);
-            this.helpBtn.TabIndex = 372;
-            this.helpBtn.UseVisualStyleBackColor = true;
-            this.helpBtn.Click += new System.EventHandler(this.helpBtn_Click);
-            // 
+            this.groupBox1.Text = "Max Difficulties";            // 
             // HackingEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(442, 421);
-            this.Controls.Add(this.helpBtn);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.groupBox2);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
@@ -440,6 +425,5 @@
         private System.Windows.Forms.NumericUpDown outer_selection_angle_in_deg;
         private System.Windows.Forms.NumericUpDown inner_selection_angle_in_deg;
         private System.Windows.Forms.GroupBox groupBox1;
-        private System.Windows.Forms.Button helpBtn;
     }
 }

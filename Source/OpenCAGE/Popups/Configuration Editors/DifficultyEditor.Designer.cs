@@ -1,4 +1,4 @@
-namespace OpenCAGE.ConfigEditors
+﻿namespace OpenCAGE.ConfigEditors
 {
     partial class DifficultyEditor
     {
@@ -136,7 +136,6 @@ namespace OpenCAGE.ConfigEditors
             this.label20 = new System.Windows.Forms.Label();
             this.tabPage3 = new System.Windows.Forms.TabPage();
             this.viewconeDifficultySet1 = new Popups.Configuration_Editors.User_Controls.ViewconeDifficultySet();
-            this.helpBtn = new System.Windows.Forms.Button();
             this.groupBox2.SuspendLayout();
             this.groupBox11.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.Vent_Attract_Time_Min)).BeginInit();
@@ -1625,26 +1624,12 @@ namespace OpenCAGE.ConfigEditors
             this.viewconeDifficultySet1.Location = new System.Drawing.Point(138, 164);
             this.viewconeDifficultySet1.Name = "viewconeDifficultySet1";
             this.viewconeDifficultySet1.Size = new System.Drawing.Size(434, 89);
-            this.viewconeDifficultySet1.TabIndex = 418;
-            // 
-            // helpBtn
-            // 
-            this.helpBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.helpBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.helpBtn.Image = ((System.Drawing.Image)(resources.GetObject("helpBtn.Image")));
-            this.helpBtn.Location = new System.Drawing.Point(726, 0);
-            this.helpBtn.Name = "helpBtn";
-            this.helpBtn.Size = new System.Drawing.Size(20, 20);
-            this.helpBtn.TabIndex = 429;
-            this.helpBtn.UseVisualStyleBackColor = true;
-            this.helpBtn.Click += new System.EventHandler(this.helpBtn_Click);
-            // 
+            this.viewconeDifficultySet1.TabIndex = 418;            // 
             // DifficultyEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(746, 501);
-            this.Controls.Add(this.helpBtn);
             this.Controls.Add(this.tabControl1);
             this.Controls.Add(this.label85);
             this.Controls.Add(this.classSelection);
@@ -1841,6 +1826,5 @@ namespace OpenCAGE.ConfigEditors
         private System.Windows.Forms.NumericUpDown shooting_in_cover_duration_modifier;
         private System.Windows.Forms.NumericUpDown suspicious_item_loop_scalar;
         private System.Windows.Forms.NumericUpDown damage_received_scalar;
-        private System.Windows.Forms.Button helpBtn;
     }
 }

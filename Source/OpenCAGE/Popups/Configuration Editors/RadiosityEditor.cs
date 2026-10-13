@@ -13,6 +13,7 @@ namespace OpenCAGE.ConfigEditors
         public RadiosityEditor() : base()
         {
             InitializeComponent();
+            BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/radiosity/");
             ConfigEditorUtils.ExpandNumericRanges(this.Controls);
         }
 
@@ -53,12 +54,6 @@ namespace OpenCAGE.ConfigEditors
                 "gDeferredEmissiveSurfaceExponent=0.563500");
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
-        }
-
-        private void helpBtn_Click(object sender, EventArgs e)
-        {
-            Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
-            Process.Start("https://opencage.co.uk/docs/configs/radiosity");
         }
     }
 }

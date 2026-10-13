@@ -20,6 +20,7 @@ namespace OpenCAGE.Popups
         public GameDirectoryManager()
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/multiple-game-installs/");
             Theming.ThemeManager.ApplyToForm(this);
 
             List<string> directories = RegisteredDirectories();

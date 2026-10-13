@@ -25,6 +25,7 @@ namespace OpenCAGE.ConfigEditors
         public DifficultyEditor() : base()
         {
             InitializeComponent();
+            BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/difficulty-settings/");
             ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
             BML viewconeTypes = new BML(Singleton.PathToAI + "\\DATA\\VIEW_CONE_SETS\\VIEWCONESETS.BML");
@@ -283,12 +284,6 @@ namespace OpenCAGE.ConfigEditors
             _selectedDifficulty[0].Save();
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
-        }
-
-        private void helpBtn_Click(object sender, EventArgs e)
-        {
-            Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
-            Process.Start("https://opencage.co.uk/docs/configs/difficulty-settings");
         }
     }
 }

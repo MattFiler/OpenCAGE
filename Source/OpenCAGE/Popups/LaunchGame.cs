@@ -1,4 +1,4 @@
-using CATHODE;
+﻿using CATHODE;
 using CathodeLib;
 using OpenCAGE;
 using System;
@@ -54,6 +54,7 @@ namespace OpenCAGE
         public LaunchGame()
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/launch-game/");
             Theming.ThemeManager.ApplyToForm(this);
 
             //Close this install's game down before we do anything (another install's AI.exe holds none of these files)

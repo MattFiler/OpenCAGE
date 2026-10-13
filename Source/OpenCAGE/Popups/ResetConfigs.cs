@@ -22,6 +22,7 @@ namespace OpenCAGE.Popups
         public ResetConfigs()
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/");
             Theming.ThemeManager.ApplyToForm(this);
 
             _backupFiles = ConfigReset.LoadBackups();

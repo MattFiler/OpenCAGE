@@ -1,4 +1,4 @@
-namespace OpenCAGE
+﻿namespace OpenCAGE
 {
     partial class CreateLevel
     {
@@ -123,7 +123,7 @@ namespace OpenCAGE
             this.Controls.Add(this.label1);
             this.Controls.Add(this.levelName);
             this.Controls.Add(this.createLevel);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
             this.Name = "CreateLevel";

@@ -48,11 +48,12 @@ namespace OpenCAGE.Popups
             Icon = SharedFormIcon.Icon;
             Size = new Size(1040, 660);
             MinimumSize = new Size(820, 500);
-            StartPosition = FormStartPosition.CenterParent;
+            StartPosition = FormStartPosition.CenterScreen;
             AllowDrop = true;
 
             BuildLayout();
             Theming.ThemeManager.ApplyToForm(this);
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/installing-mods/");
 
             DragEnter += OnDragEnter;
             DragDrop += OnDragDrop;

@@ -1,4 +1,4 @@
-using CathodeLib;
+﻿using CathodeLib;
 using OpenCAGE.Popups.Base;
 using System;
 using System.Collections.Generic;
@@ -48,6 +48,7 @@ namespace OpenCAGE.ConfigEditors
         public LevelTextDBEditor() : base()
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/level-text-dbs/");
 
             _configPath = Singleton.PathToAI + "/DATA/LEVEL_TEXT_DATABASES.XML";
             try

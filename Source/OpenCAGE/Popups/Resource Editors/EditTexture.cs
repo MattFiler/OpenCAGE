@@ -1,4 +1,4 @@
-using AlienPAK;
+﻿using AlienPAK;
 using CATHODE;
 using CathodeLib.ObjectExtensions;
 using OpenCAGE.Popups.Base;
@@ -34,6 +34,7 @@ namespace OpenCAGE
         public EditTexture(Textures.TEX4 currentMapping = null, bool showSelectBtn = true, int initialTextureSourceIndex = 0, bool environmentMapsOnly = false) : base(EditorOrPicker(showSelectBtn))
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/texture-editor/");
             PopulateTextureFlagCheckboxes();
             BuildMipBars();
 

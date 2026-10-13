@@ -363,9 +363,11 @@ namespace OpenCAGE
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.levelList);
             this.Controls.Add(this.OpenGame);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+            this.HelpButton = true;
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
+            this.MinimizeBox = false;
             this.Name = "LaunchGame";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Launch Game";
