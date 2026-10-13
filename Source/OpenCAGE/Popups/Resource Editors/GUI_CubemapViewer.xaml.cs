@@ -10,12 +10,12 @@ namespace OpenCAGE.Popups.UserControls
 {
     public partial class GUI_CubemapViewer : UserControl
     {
-        private readonly Model3DGroup _cubeGroup = new Model3DGroup();
+        private readonly Model3DGroup _sphereGroup = new Model3DGroup();
 
         public GUI_CubemapViewer()
         {
             InitializeComponent();
-            cubeVisual.Content = _cubeGroup;
+            cubeVisual.Content = _sphereGroup;
             viewport.ModelUpDirection = new Vector3D(0, 1, 0);
             viewport.Camera.UpDirection = new Vector3D(0, 1, 0);
             viewport.Camera.Position = new Point3D(2.8, 1.6, 2.8);
@@ -23,11 +23,11 @@ namespace OpenCAGE.Popups.UserControls
         }
 
         /// <summary>
-        /// Show a cubemap as a textured cube. Faces are +X,-X,+Y,-Y,+Z,-Z. Caller retains ownership of bitmaps.
+        /// Show a cubemap as a textured sphere. Faces are +X,-X,+Y,-Y,+Z,-Z. Caller retains ownership of bitmaps.
         /// </summary>
         public void ShowCubemap(Bitmap[] faces)
         {
-            _cubeGroup.Children.Clear();
+            _sphereGroup.Children.Clear();
             if (faces == null || faces.Length < 6)
             {
                 hintText.Text = "Unable to decode cubemap faces";
@@ -48,20 +48,11 @@ namespace OpenCAGE.Popups.UserControls
                 sources[i] = src;
             }
 
-            const double s = 1.0;
-            // DDS order: +X, -X, +Y, -Y, +Z, -Z — outward-facing quads
-            _cubeGroup.Children.Add(MakeFace(
-                new Point3D(s, -s, -s), new Point3D(s, -s, s), new Point3D(s, s, s), new Point3D(s, s, -s), sources[0])); // +X
-            _cubeGroup.Children.Add(MakeFace(
-                new Point3D(-s, -s, s), new Point3D(-s, -s, -s), new Point3D(-s, s, -s), new Point3D(-s, s, s), sources[1])); // -X
-            _cubeGroup.Children.Add(MakeFace(
-                new Point3D(-s, s, -s), new Point3D(s, s, -s), new Point3D(s, s, s), new Point3D(-s, s, s), sources[2])); // +Y
-            _cubeGroup.Children.Add(MakeFace(
-                new Point3D(-s, -s, s), new Point3D(s, -s, s), new Point3D(s, -s, -s), new Point3D(-s, -s, -s), sources[3])); // -Y
-            _cubeGroup.Children.Add(MakeFace(
-                new Point3D(s, -s, s), new Point3D(-s, -s, s), new Point3D(-s, s, s), new Point3D(s, s, s), sources[4])); // +Z
-            _cubeGroup.Children.Add(MakeFace(
-                new Point3D(-s, -s, -s), new Point3D(s, -s, -s), new Point3D(s, s, -s), new Point3D(-s, s, -s), sources[5])); // -Z
+            // DDS order: +X, -X, +Y, -Y, +Z, -Z mapped onto a continuous sphere
+            for (int face = 0; face < 6; face++)
+            {
+                _sphereGroup.Children.Add(MakeSphereFace(face, sources[face]));
+            }
 
             hintText.Text = "Drag to rotate · scroll to zoom";
             viewport.ZoomExtents();
@@ -69,24 +60,50 @@ namespace OpenCAGE.Popups.UserControls
 
         public void Clear()
         {
-            _cubeGroup.Children.Clear();
+            _sphereGroup.Children.Clear();
             hintText.Text = "Drag to rotate · scroll to zoom";
         }
 
-        private static GeometryModel3D MakeFace(Point3D p0, Point3D p1, Point3D p2, Point3D p3, ImageSource image)
+        private static GeometryModel3D MakeSphereFace(int faceIndex, ImageSource image, int divisions = 32, double radius = 1.0)
         {
-            var mesh = new MeshGeometry3D
+            var mesh = new MeshGeometry3D();
+            int vertsPerSide = divisions + 1;
+
+            for (int j = 0; j <= divisions; j++)
             {
-                Positions = new Point3DCollection { p0, p1, p2, p3 },
-                TriangleIndices = new Int32Collection { 0, 1, 2, 0, 2, 3 },
-                TextureCoordinates = new PointCollection
+                double v = (double)j / divisions;
+                for (int i = 0; i <= divisions; i++)
                 {
-                    new MediaPoint(0, 1),
-                    new MediaPoint(1, 1),
-                    new MediaPoint(1, 0),
-                    new MediaPoint(0, 0),
+                    double u = (double)i / divisions;
+                    Vector3D dir = GetCubemapDirection(faceIndex, u, v);
+                    dir.Normalize();
+                    mesh.Positions.Add(new Point3D(dir.X * radius, dir.Y * radius, dir.Z * radius));
+                    mesh.TextureCoordinates.Add(new MediaPoint(u, v));
                 }
-            };
+            }
+
+            for (int j = 0; j < divisions; j++)
+            {
+                for (int i = 0; i < divisions; i++)
+                {
+                    int tl = j * vertsPerSide + i;
+                    int tr = tl + 1;
+                    int bl = (j + 1) * vertsPerSide + i;
+                    int br = bl + 1;
+
+                    // Outward-facing triangles
+                    mesh.TriangleIndices.Add(tl);
+                    mesh.TriangleIndices.Add(bl);
+                    mesh.TriangleIndices.Add(tr);
+
+                    mesh.TriangleIndices.Add(tr);
+                    mesh.TriangleIndices.Add(bl);
+                    mesh.TriangleIndices.Add(br);
+                }
+            }
+
+            if (mesh.CanFreeze)
+                mesh.Freeze();
 
             var brush = new ImageBrush(image)
             {
@@ -105,10 +122,36 @@ namespace OpenCAGE.Popups.UserControls
             if (material.CanFreeze)
                 material.Freeze();
 
-            return new GeometryModel3D(mesh, material)
+            var model = new GeometryModel3D(mesh, material)
             {
                 BackMaterial = material
             };
+            if (model.CanFreeze)
+                model.Freeze();
+
+            return model;
+        }
+
+        private static Vector3D GetCubemapDirection(int faceIndex, double u, double v)
+        {
+            // Standard DirectX cubemap face vector lookup (+X, -X, +Y, -Y, +Z, -Z)
+            switch (faceIndex)
+            {
+                case 0: // +X
+                    return new Vector3D(1.0, 1.0 - 2.0 * v, 1.0 - 2.0 * u);
+                case 1: // -X
+                    return new Vector3D(-1.0, 1.0 - 2.0 * v, 2.0 * u - 1.0);
+                case 2: // +Y (Top)
+                    return new Vector3D(2.0 * u - 1.0, 1.0, 2.0 * v - 1.0);
+                case 3: // -Y (Bottom)
+                    return new Vector3D(2.0 * u - 1.0, -1.0, 1.0 - 2.0 * v);
+                case 4: // +Z (Front)
+                    return new Vector3D(2.0 * u - 1.0, 1.0 - 2.0 * v, 1.0);
+                case 5: // -Z (Back)
+                    return new Vector3D(1.0 - 2.0 * u, 1.0 - 2.0 * v, -1.0);
+                default:
+                    return new Vector3D(0, 0, 1);
+            }
         }
     }
 }
