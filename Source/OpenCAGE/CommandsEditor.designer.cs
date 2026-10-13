@@ -151,7 +151,6 @@ namespace OpenCAGE
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.versionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.DEBUG_ReloadLevel = new System.Windows.Forms.ToolStripButton();
             this.manageBackupsBtn = new System.Windows.Forms.ToolStripButton();
             this.launchGameBtn = new System.Windows.Forms.ToolStripButton();
             this.liveLinkBtn = new System.Windows.Forms.ToolStripButton();
@@ -180,7 +179,6 @@ namespace OpenCAGE
             this.toolStripButton2,
             this.helpBtn,
             this.toolStripButton4,
-            this.DEBUG_ReloadLevel,
             this.manageBackupsBtn,
             this.launchGameBtn,
             this.liveLinkBtn});
@@ -1194,16 +1192,6 @@ namespace OpenCAGE
             this.versionToolStripMenuItem.Size = new System.Drawing.Size(157, 22);
             this.versionToolStripMenuItem.Text = "Version ";
             // 
-            // DEBUG_ReloadLevel
-            // 
-            this.DEBUG_ReloadLevel.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
-            this.DEBUG_ReloadLevel.Image = ((System.Drawing.Image)(resources.GetObject("DEBUG_ReloadLevel.Image")));
-            this.DEBUG_ReloadLevel.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.DEBUG_ReloadLevel.Name = "DEBUG_ReloadLevel";
-            this.DEBUG_ReloadLevel.Size = new System.Drawing.Size(120, 22);
-            this.DEBUG_ReloadLevel.Text = "DEBUG: Reload Level";
-            this.DEBUG_ReloadLevel.Click += new System.EventHandler(this.DEBUG_ReloadLevel_Click);
-            // 
             // manageBackupsBtn
             // 
             this.manageBackupsBtn.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
@@ -1334,7 +1322,6 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripStatusLabel statusText;
         private System.Windows.Forms.ToolTip toolTip1;
         private System.Windows.Forms.ToolStripButton helpBtn;
-        private System.Windows.Forms.ToolStripButton DEBUG_ReloadLevel;
         private System.Windows.Forms.ToolStripDropDownButton toolStripButton3;
         private System.Windows.Forms.ToolStripMenuItem modelsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem materialsToolStripMenuItem;

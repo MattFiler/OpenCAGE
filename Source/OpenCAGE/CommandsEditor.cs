@@ -148,9 +148,6 @@ namespace OpenCAGE
             _defaultHeight = Height;
 
 #if !DEBUG
-            //Dev options
-            DEBUG_ReloadLevel.Visible = false;
-            
             //WIP forms
             scriptReadableVariablesToolStripMenuItem.Visible = false;
 #endif
@@ -3278,16 +3275,6 @@ namespace OpenCAGE
             Process.Start("https://opencage.co.uk/docs/");
         }
 
-        private void DEBUG_ReloadLevel_Click(object sender, EventArgs e)
-        {
-            if (!RuntimeUtilsConnection.Send.Connected)
-            {
-                MessageBox.Show("Cannot reload level - not connected to RuntimeUtils", "Not connected", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            RuntimeUtilsConnection.Send.SendData(new RuntimeUtilsConnection.Packet() { load_level = "Production/HAB_Airport" });
-        }
 
         private void openGameOnSaveToolStripMenuItem_Click(object sender, EventArgs e)
         {
