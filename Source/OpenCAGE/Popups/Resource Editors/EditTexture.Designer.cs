@@ -585,6 +585,7 @@ namespace OpenCAGE
             // 
             // selectTextureBtn
             // 
+            this.selectTextureBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.selectTextureBtn.Enabled = false;
             this.selectTextureBtn.Location = new System.Drawing.Point(854, 604);
             this.selectTextureBtn.Name = "selectTextureBtn";

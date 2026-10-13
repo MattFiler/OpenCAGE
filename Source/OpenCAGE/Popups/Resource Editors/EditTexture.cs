@@ -54,6 +54,7 @@ namespace OpenCAGE
                 _treeHelper.SelectNode(currentMapping.Name);
 
             selectTextureBtn.Visible = showSelectBtn;
+            selectTextureBtn.BringToFront();
             FileTree.ImageList = EditorIcons.FileTree;
             UpdateTextureToolsState();
         }
