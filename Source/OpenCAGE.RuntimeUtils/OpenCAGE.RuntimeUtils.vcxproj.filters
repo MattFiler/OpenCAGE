@@ -111,6 +111,9 @@
     <ClCompile Include="LIVE_TRACE.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MOUSE_UNLOCK.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="SCREENSHOT.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -183,6 +186,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="LIVE_TRACE.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MOUSE_UNLOCK.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="SCREENSHOT.h">

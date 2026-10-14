@@ -33,6 +33,7 @@ namespace OpenCAGE
             EnsureBool(Settings.LaunchGameWhenSaved, false);
             EnsureBool(Settings.LaunchToLevel, false);
             EnsureBool(Settings.ScriptingHelpersHotReload, false);
+            EnsureBool(Settings.ScriptingHelpersUnlockMouse, false);
             EnsureBool(Settings.ScriptingHelpersDebugText, false);
             EnsureBool(Settings.ScriptingHelpersDebugTextStacking, false);
             EnsureBool(Settings.ScriptingHelpersDebugEnvironmentMarker, false);

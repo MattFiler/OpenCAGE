@@ -5,6 +5,7 @@ A fork of [RyanJGray's DevTools](https://github.com/RyanJGray/AlienIsolation.Dev
 ## Features
 
 - **Hot reload** - press a key (INSERT by default) to restart the current level.
+- **Unlock Mouse** - the game leaves the mouse cursor free, so OpenCAGE can be used beside it (flying its viewport while the game camera follows over Live Link, say). Clicking the game window and pressing a key (F4 by default) gives the game the mouse to look around with; pressing it again frees the cursor. While the cursor is free and a level is played, the game is told to let the cursor go when it would pin it to the middle of its window, the cursor is shown over the window, the mouse's movement, buttons and wheel are kept from the game while its window has the focus (so the camera doesn't turn as the cursor crosses it), and the game's own moves of the cursor (it puts the cursor back when a menu opens) are skipped. Menus are left alone: the game frees the cursor for them itself. The overlay notes each press of the key, and the first time a level is played with the cursor free.
 - **Debug text** - makes the `DebugText` and `DebugTextStacking` script entities work. Retail builds of the game disable these entities and strip the code that draws them, so the ASI re-enables them in memory and draws their text itself: `text` followed by any linked or non-default inputs in brackets, positioned by `alignment`, styled by `size` and `colour`, hidden after `duration` seconds (or kept until `stop` when the duration is -1, live-updating its inputs). Stacking text is a block on the middle left, newest at the bottom, five entries deep. Everything clears on level change. `DebugPositionMarker` draws XYZ axes at its `world_pos` while started, and `DebugEnvironmentMarker` draws its `text` there in its `colour` and `size`.
 
 - **Zone loading** - the game only streams in the zones around the player and whatever the camera's view ray lands on, so a free camera (e.g. Cinematic Tools) can fly into areas that never load. With `LoadAllZones` on, every zone of the level is registered as viewed each frame and streams in. The ASI also exports `OpenCAGE_SetForceZoneLoading(bool)` so other injected tools can switch this on while their camera is active; Cinematic Tools does so. Live Link's camera sync switches it on too while OpenCAGE drives the camera. Each of these only turns its own request on and off, and every zone streams in while any of them wants it (so Cinematic Tools turning its camera off leaves `LoadAllZones` on).
@@ -13,13 +14,15 @@ A fork of [RyanJGray's DevTools](https://github.com/RyanJGray/AlienIsolation.Dev
 
 ## Configuration
 
-Settings are read from `OpenCAGE_Utils.ini` next to `AI.exe`. The file is optional; every key falls back to its default.
+Settings are read from `OpenCAGE.RuntimeUtils.ini` next to `AI.exe`. The file is optional; every key falls back to its default.
 
 ```ini
 [RuntimeUtils]
 HotReload=1          ; 1/0 - reload the current level on a key press
 HotReloadKey=INSERT  ; a key name (INSERT, DELETE, HOME, END, PAGEUP, PAGEDOWN, F1..F12, A..Z, 0..9)
                      ; or a Windows virtual-key code, decimal or hex (e.g. 0x2D)
+UnlockMouse=0               ; 1/0 - the game leaves the cursor free until the key below is pressed in its window
+UnlockMouseKey=F4           ; the key that hands the mouse to the game and frees it again (named as HotReloadKey)
 DebugText=1                 ; 1/0 - DebugText entities draw their text on screen
 DebugTextStacking=1         ; 1/0 - DebugTextStacking entities draw their text on screen
 DebugEnvironmentMarker=1    ; 1/0 - DebugEnvironmentMarker entities draw their text at a world position
@@ -30,7 +33,7 @@ LiveLinkPort=8765           ; the local port OpenCAGE connects to
 LiveLinkCamera=1            ; 1/0 - let OpenCAGE's viewport camera drive the game camera when it asks (camera sync)
 ```
 
-`OpenCAGE_Utils.log` is written next to `AI.exe` each run: what Live Link did, and every `DebugText` / `DebugTextStacking` that started, with its text.
+`OpenCAGE.RuntimeUtils.log` is written next to `AI.exe` each run: what Live Link did, and every `DebugText` / `DebugTextStacking` that started, with its text.
 
 ## Live Link
 
@@ -60,6 +63,6 @@ Messages are binary, little-endian: `u32 'OCLL'`, `u16` version (1), `u16` comma
 
 ## Building
 
-Build `OpenCAGE_Utils.vcxproj` as Release|Win32. When building from the command line pass the project directory as the solution directory, e.g. `msbuild OpenCAGE_Utils.vcxproj /p:Configuration=Release /p:Platform=Win32 /p:SolutionDir=<path to this folder>\`. The output is `build/OpenCAGE_Utils.asi`, loaded by the bundled `winmm.dll` ASI loader (which OpenCAGE copies into the game folder as `d3d11.dll`).
+Build `OpenCAGE.RuntimeUtils.vcxproj` as Release|Win32. When building from the command line pass the folder above this one (`Source`) as the solution directory, e.g. `msbuild OpenCAGE.RuntimeUtils.vcxproj /p:Configuration=Release /p:Platform=Win32 /p:SolutionDir=<path to Source>\`. The output is `Build/runtimeutils/OpenCAGE.RuntimeUtils.asi` at the top of the repository, loaded by the bundled `winmm.dll` ASI loader (which OpenCAGE copies into the game folder as `d3d11.dll`).
 
 The game offsets used by the hooks are for the Steam retail build of `AI.exe`.

@@ -8,7 +8,9 @@
 	  HotReload=1                 ; 1/0 - reload the current level on a key press
 	  HotReloadKey=INSERT         ; a key name (INSERT, DELETE, HOME, END, PAGEUP, PAGEDOWN, F1..F12, A..Z, 0..9)
 	                              ; or a Windows virtual-key code, decimal or hex (e.g. 0x2D)
-	  DebugText=1                 ; 1/0 - DebugText script entities draw their text on screen
+	  UnlockMouse=0               ; 1/0 - the game leaves the cursor free until the key below is pressed in its window
+	  UnlockMouseKey=F4           ; the key that hands the mouse to the game and frees it again (named as HotReloadKey)
+	  DebugText=1                ; 1/0 - DebugText script entities draw their text on screen
 	  DebugTextStacking=1         ; 1/0 - DebugTextStacking script entities draw their text on screen
 	  DebugEnvironmentMarker=1    ; 1/0 - DebugEnvironmentMarker script entities draw their text at a world position
 	  DebugPositionMarker=1       ; 1/0 - DebugPositionMarker script entities draw axes at a world position
@@ -23,6 +25,8 @@ namespace Config
 	{
 		bool hotReload = true;
 		int hotReloadKey = 0x2D; // the Insert key
+		bool unlockMouse = false;
+		int unlockMouseKey = 0x73; // the F4 key
 		bool debugText = true;
 		bool debugTextStacking = true;
 		bool debugEnvironmentMarker = true;

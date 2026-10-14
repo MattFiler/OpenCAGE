@@ -13,6 +13,7 @@
 #include "LIVE_LINK_SERVER.h"
 #include "LIVE_CAMERA.h"
 #include "LIVE_TRACE.h"
+#include "MOUSE_UNLOCK.h"
 
 // External includes.
 #include <detours.h>
@@ -152,8 +153,8 @@ static void AttachHooks(bool attach)
         else DEVTOOLS_DETOURS_DETACH(original, detoured);
     };
 
-    // Rendering hooks: needed for the hot reload key (window procedure) and the debug text overlay.
-    if ((config.hotReload || Config::AnyDebug() || config.liveLink) && d3d11CreateDeviceAndSwapChain)
+    // Rendering hooks: needed for the hot reload and unlock mouse keys (window procedure) and the overlay.
+    if ((config.hotReload || config.unlockMouse || Config::AnyDebug() || config.liveLink) && d3d11CreateDeviceAndSwapChain)
     {
         hook(d3d11CreateDeviceAndSwapChain, hD3D11CreateDeviceAndSwapChain);
         if (!attach && d3d11Present)
@@ -182,6 +183,13 @@ static void AttachHooks(bool attach)
     // watches while it asks. They only pass through (after checking a flag) otherwise.
     if (config.liveLink)
         LIVE_TRACE::AttachHooks(attach);
+
+    // Unlock Mouse: the game's grab of the cursor, and its moving of it, while the cursor is free.
+    if (config.unlockMouse)
+    {
+        hook(MOUSE_UNLOCK::grab_cursor, MOUSE_UNLOCK::h_grab_cursor);
+        hook(MOUSE_UNLOCK::set_cursor_pos, MOUSE_UNLOCK::h_set_cursor_pos);
+    }
 
     // A hook on the start of gameplay (it only passes through).
     hook(GameFlow::start_gameplay, GameFlow::h_start_gameplay);
@@ -248,7 +256,7 @@ BOOL APIENTRY DllMain( HMODULE /*hModule*/,
         DetourUpdateThread(GetCurrentThread());
 
     	// Overlay hooks / initialisation code, adapted from Alias Isolation.
-        if (config.hotReload || Config::AnyDebug() || config.liveLink)
+        if (config.hotReload || config.unlockMouse || Config::AnyDebug() || config.liveLink)
         {
             const HMODULE hModule = GetModuleHandle(L"d3d11");
 

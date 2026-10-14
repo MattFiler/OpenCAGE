@@ -26,13 +26,15 @@ namespace OpenCAGE
         bool _applyingExternalSettings;
         bool _scriptingHelpersAvailable;
 
-        //Key names the runtime utils ASI understands (see RuntimeUtils/Config.cpp)
-        internal static readonly string[] HotReloadKeys = new string[]
+        //Key names the runtime utils ASI understands (see OpenCAGE.RuntimeUtils/Config.cpp), offered for its hot reload and
+        //unlock mouse keys
+        internal static readonly string[] HelperKeys = new string[]
         {
             "INSERT", "DELETE", "HOME", "END", "PAGEUP", "PAGEDOWN",
             "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
         };
         internal const string DefaultHotReloadKey = "INSERT";
+        internal const string DefaultUnlockMouseKey = "F4";
 
         //Shipped beside OpenCAGE.exe: resolved against its folder (Beside), since file dialogs move the current directory
         internal const string CinematicToolsDll = "cinematictools/CT_AlienIsolation.dll";
@@ -67,13 +69,16 @@ namespace OpenCAGE
 
             enableCinematicTools.Checked = SettingsManager.GetBool(Settings.CinematicTools);
             enableHotReload.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersHotReload);
+            enableUnlockMouse.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersUnlockMouse);
             enableDebugText.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugText);
             enableDebugTextStacking.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugTextStacking);
             enableDebugEnvironmentMarker.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugEnvironmentMarker);
             enableDebugPositionMarker.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugPositionMarker);
             enableLiveLink.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink);
-            hotReloadKey.Items.AddRange(HotReloadKeys);
-            hotReloadKey.SelectedIndex = HotReloadKeyIndex(SettingsManager.GetString(Settings.ScriptingHelpersHotReloadKey, DefaultHotReloadKey));
+            hotReloadKey.Items.AddRange(HelperKeys);
+            hotReloadKey.SelectedIndex = Array.IndexOf(HelperKeys, HotReloadKey());
+            unlockMouseKey.Items.AddRange(HelperKeys);
+            unlockMouseKey.SelectedIndex = Array.IndexOf(HelperKeys, UnlockMouseKey());
             disableUI.Checked = SettingsManager.GetBool(Settings.HudDisabled);
             skipFrontend.Checked = SettingsManager.GetBool(Settings.SkipFrontend);
             enableUIPerf.Checked = SettingsManager.GetBool(Settings.UiEnabledUiPerf);
@@ -88,12 +93,14 @@ namespace OpenCAGE
             enableCinematicTools.Enabled = CinematicToolsAvailable();
             _scriptingHelpersAvailable = ScriptingHelpersAvailable();
             enableHotReload.Enabled = _scriptingHelpersAvailable;
+            enableUnlockMouse.Enabled = _scriptingHelpersAvailable;
             enableDebugText.Enabled = _scriptingHelpersAvailable;
             enableDebugTextStacking.Enabled = _scriptingHelpersAvailable;
             enableDebugEnvironmentMarker.Enabled = _scriptingHelpersAvailable;
             enableDebugPositionMarker.Enabled = _scriptingHelpersAvailable;
             enableLiveLink.Enabled = _scriptingHelpersAvailable;
             hotReloadKey.Enabled = _scriptingHelpersAvailable && enableHotReload.Checked;
+            unlockMouseKey.Enabled = _scriptingHelpersAvailable && enableUnlockMouse.Checked;
 
             //The picker never offers FRONTEND: leaving this unchecked is how the game starts at its menu
             loadToLevel.Checked = SettingsManager.GetBool(Settings.LaunchToLevel);
@@ -139,7 +146,13 @@ namespace OpenCAGE
                             enableHotReload.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersHotReload);
                             break;
                         case Settings.ScriptingHelpersHotReloadKey:
-                            hotReloadKey.SelectedIndex = HotReloadKeyIndex(SettingsManager.GetString(Settings.ScriptingHelpersHotReloadKey, DefaultHotReloadKey));
+                            hotReloadKey.SelectedIndex = Array.IndexOf(HelperKeys, HotReloadKey());
+                            break;
+                        case Settings.ScriptingHelpersUnlockMouse:
+                            enableUnlockMouse.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersUnlockMouse);
+                            break;
+                        case Settings.ScriptingHelpersUnlockMouseKey:
+                            unlockMouseKey.SelectedIndex = Array.IndexOf(HelperKeys, UnlockMouseKey());
                             break;
                         case Settings.ScriptingHelpersDebugText:
                             enableDebugText.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugText);
@@ -448,7 +461,22 @@ namespace OpenCAGE
         private void hotReloadKey_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (_applyingExternalSettings || hotReloadKey.SelectedIndex < 0) return;
-            SettingsManager.SetString(Settings.ScriptingHelpersHotReloadKey, HotReloadKeys[hotReloadKey.SelectedIndex]);
+            SettingsManager.SetString(Settings.ScriptingHelpersHotReloadKey, HelperKeys[hotReloadKey.SelectedIndex]);
+        }
+
+        /* Enable/disable the unlock mouse scripting helper: the game leaves the cursor free until its key is pressed */
+        private void enableUnlockMouse_CheckedChanged(object sender, EventArgs e)
+        {
+            unlockMouseKey.Enabled = _scriptingHelpersAvailable && enableUnlockMouse.Checked;
+            if (_applyingExternalSettings) return;
+            SettingsManager.SetBool(Settings.ScriptingHelpersUnlockMouse, enableUnlockMouse.Checked);
+        }
+
+        /* Choose the unlock mouse key */
+        private void unlockMouseKey_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_applyingExternalSettings || unlockMouseKey.SelectedIndex < 0) return;
+            SettingsManager.SetString(Settings.ScriptingHelpersUnlockMouseKey, HelperKeys[unlockMouseKey.SelectedIndex]);
         }
 
         /* Enable/disable the debug entity scripting helpers */
@@ -487,17 +515,20 @@ namespace OpenCAGE
                 SettingsManager.GetBool(Settings.CinematicTools)
                 || SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink) //the live link is served by the ASI
                 || SettingsManager.GetBool(Settings.ScriptingHelpersHotReload)
+                || SettingsManager.GetBool(Settings.ScriptingHelpersUnlockMouse)
                 || SettingsManager.GetBool(Settings.ScriptingHelpersDebugText)
                 || SettingsManager.GetBool(Settings.ScriptingHelpersDebugTextStacking)
                 || SettingsManager.GetBool(Settings.ScriptingHelpersDebugEnvironmentMarker)
                 || SettingsManager.GetBool(Settings.ScriptingHelpersDebugPositionMarker));
         }
 
-        /* Index of a key name in the hot reload key list, falling back to the default */
-        internal static int HotReloadKeyIndex(string key)
+        /* The hot reload and unlock mouse keys as set, or their defaults when the setting names none of the keys offered */
+        internal static string HotReloadKey() => HelperKey(Settings.ScriptingHelpersHotReloadKey, DefaultHotReloadKey);
+        internal static string UnlockMouseKey() => HelperKey(Settings.ScriptingHelpersUnlockMouseKey, DefaultUnlockMouseKey);
+        private static string HelperKey(string setting, string fallback)
         {
-            int index = Array.IndexOf(HotReloadKeys, key);
-            return index >= 0 ? index : Array.IndexOf(HotReloadKeys, DefaultHotReloadKey);
+            string key = SettingsManager.GetString(setting, fallback);
+            return Array.IndexOf(HelperKeys, key) >= 0 ? key : fallback;
         }
 
         /* Copy a file into the game folder unless an identical copy is already there, so the shipped
@@ -523,7 +554,10 @@ namespace OpenCAGE
             {
                 "[RuntimeUtils]",
                 "HotReload=" + (SettingsManager.GetBool(Settings.ScriptingHelpersHotReload) ? "1" : "0"),
-                "HotReloadKey=" + HotReloadKeys[HotReloadKeyIndex(SettingsManager.GetString(Settings.ScriptingHelpersHotReloadKey, DefaultHotReloadKey))],
+                "HotReloadKey=" + HotReloadKey(),
+                //The game leaves the cursor free until this key is pressed in its window
+                "UnlockMouse=" + (SettingsManager.GetBool(Settings.ScriptingHelpersUnlockMouse) ? "1" : "0"),
+                "UnlockMouseKey=" + UnlockMouseKey(),
                 "DebugText=" + (SettingsManager.GetBool(Settings.ScriptingHelpersDebugText) ? "1" : "0"),
                 "DebugTextStacking=" + (SettingsManager.GetBool(Settings.ScriptingHelpersDebugTextStacking) ? "1" : "0"),
                 "DebugEnvironmentMarker=" + (SettingsManager.GetBool(Settings.ScriptingHelpersDebugEnvironmentMarker) ? "1" : "0"),

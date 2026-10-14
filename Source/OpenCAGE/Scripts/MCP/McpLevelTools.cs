@@ -215,9 +215,23 @@ namespace OpenCAGE.MCP
 
         private const string KindHelper = "helper", KindPatch = "patch", KindUiMod = "ui_mod";
 
+        //The scripting helpers that have a key, and the option for their key (listed beside them)
+        private sealed class KeyOption
+        {
+            public string Arg, Helper, Key, What;
+            public Func<string> Current;
+        }
+
+        private static readonly KeyOption[] KeyOptionList =
+        {
+            new KeyOption() { Arg = "hot_reload_key", Helper = "hot_reload", Key = Settings.ScriptingHelpersHotReloadKey, What = "hot reload", Current = global::OpenCAGE.LaunchGame.HotReloadKey },
+            new KeyOption() { Arg = "unlock_mouse_key", Helper = "unlock_mouse", Key = Settings.ScriptingHelpersUnlockMouseKey, What = "unlock mouse", Current = global::OpenCAGE.LaunchGame.UnlockMouseKey },
+        };
+
         private static readonly LaunchOption[] LaunchOptionList =
         {
             new LaunchOption() { Arg = "hot_reload", Key = Settings.ScriptingHelpersHotReload, Kind = KindHelper, Description = "Scripting helper: reload the current level in game with a key press." },
+            new LaunchOption() { Arg = "unlock_mouse", Key = Settings.ScriptingHelpersUnlockMouse, Kind = KindHelper, Description = "Scripting helper (Unlock Mouse): the game leaves the mouse cursor free, so OpenCAGE can be used beside it (e.g. with Live Link's camera sync). Clicking the game window and pressing unlock_mouse_key gives the game the mouse to look around with; pressing it again frees the cursor." },
             new LaunchOption() { Arg = "debug_text", Key = Settings.ScriptingHelpersDebugText, Kind = KindHelper, Description = "Scripting helper: DebugText entities draw their text in game." },
             new LaunchOption() { Arg = "debug_text_stacking", Key = Settings.ScriptingHelpersDebugTextStacking, Kind = KindHelper, Description = "Scripting helper: DebugTextStacking entities draw their text in game." },
             new LaunchOption() { Arg = "debug_environment_marker", Key = Settings.ScriptingHelpersDebugEnvironmentMarker, Kind = KindHelper, Description = "Scripting helper: DebugEnvironmentMarker entities draw their text in the world." },
@@ -241,8 +255,8 @@ namespace OpenCAGE.MCP
             foreach (LaunchOption option in LaunchOptionList)
             {
                 yield return McpSchema.Boolean(option.Arg, option.Description);
-                if (option.Arg == "hot_reload")
-                    yield return McpSchema.String("hot_reload_key", "Scripting helper: the hot reload key.", options: global::OpenCAGE.LaunchGame.HotReloadKeys);
+                foreach (KeyOption key in KeyOptionList.Where(o => o.Helper == option.Arg))
+                    yield return McpSchema.String(key.Arg, "Scripting helper: the " + key.What + " key.", options: global::OpenCAGE.LaunchGame.HelperKeys);
             }
             yield return McpSchema.Boolean("reapply", "UI mods given: write their movie into UI.PAK even over one edited with edit_ui_pak. Without it a UI mod is written when its setting changes or UI.PAK holds the other stock movie (as after verifying the game files), and an edited movie is left alone.");
             yield return McpSchema.Boolean("close_game", "If the game is running, close it first so AI.exe / UI.PAK can be written (default false: refuse while it runs).");
@@ -295,8 +309,8 @@ namespace OpenCAGE.MCP
             foreach (LaunchOption option in LaunchOptionList)
             {
                 state[option.Arg] = SettingsManager.GetBool(option.Key, option.Default);
-                if (option.Arg == "hot_reload")
-                    state["hot_reload_key"] = global::OpenCAGE.LaunchGame.HotReloadKeys[global::OpenCAGE.LaunchGame.HotReloadKeyIndex(SettingsManager.GetString(Settings.ScriptingHelpersHotReloadKey, global::OpenCAGE.LaunchGame.DefaultHotReloadKey))];
+                foreach (KeyOption key in KeyOptionList.Where(o => o.Helper == option.Arg))
+                    state[key.Arg] = key.Current();
             }
             return state;
         }
@@ -312,19 +326,20 @@ namespace OpenCAGE.MCP
             foreach (LaunchOption option in LaunchOptionList)
                 if (call.Has(option.Arg))
                     asked.Add(new KeyValuePair<LaunchOption, bool>(option, call.Bool(option.Arg)));
-            string hotReloadKey = null;
-            if (call.Has("hot_reload_key"))
+            List<KeyValuePair<KeyOption, string>> keys = new List<KeyValuePair<KeyOption, string>>();
+            foreach (KeyOption key in KeyOptionList.Where(o => call.Has(o.Arg)))
             {
-                string wanted = call.Str("hot_reload_key").Trim();
-                hotReloadKey = global::OpenCAGE.LaunchGame.HotReloadKeys.FirstOrDefault(o => string.Equals(o, wanted, StringComparison.OrdinalIgnoreCase))
-                    ?? throw new McpError("'" + wanted + "' is not a hot reload key. It takes: " + string.Join(", ", global::OpenCAGE.LaunchGame.HotReloadKeys) + ".");
+                string wanted = call.Str(key.Arg).Trim();
+                string named = global::OpenCAGE.LaunchGame.HelperKeys.FirstOrDefault(o => string.Equals(o, wanted, StringComparison.OrdinalIgnoreCase))
+                    ?? throw new McpError("'" + wanted + "' is not a " + key.What + " key. It takes: " + string.Join(", ", global::OpenCAGE.LaunchGame.HelperKeys) + ".");
+                keys.Add(new KeyValuePair<KeyOption, string>(key, named));
             }
 
             JObject result = new JObject();
             string uiPak = Path.Combine(Singleton.PathToAI, "DATA", "UI.PAK");
             //What UI.PAK holds for each UI mod (a verify of the game files puts the stock movies back whatever the settings say)
             Dictionary<string, string> movies = new Dictionary<string, string>();
-            if (File.Exists(uiPak) && (asked.Any(o => o.Key.Kind == KindUiMod) || (asked.Count == 0 && hotReloadKey == null)))
+            if (File.Exists(uiPak) && (asked.Any(o => o.Key.Kind == KindUiMod) || (asked.Count == 0 && keys.Count == 0)))
             {
                 try
                 {
@@ -334,7 +349,7 @@ namespace OpenCAGE.MCP
                 }
                 catch (Exception) { }
             }
-            if (asked.Count == 0 && hotReloadKey == null)
+            if (asked.Count == 0 && keys.Count == 0)
             {
                 result["options"] = before;
                 if (movies.Count != 0)
@@ -377,7 +392,7 @@ namespace OpenCAGE.MCP
                 }
             }
             List<KeyValuePair<LaunchOption, bool>> helpers = asked.Where(o => o.Key.Kind == KindHelper && SettingsManager.GetBool(o.Key.Key) != o.Value).ToList();
-            bool keyChanges = hotReloadKey != null && hotReloadKey != (string)before["hot_reload_key"];
+            List<KeyValuePair<KeyOption, string>> keyChanges = keys.Where(o => o.Value != (string)before[o.Key.Arg]).ToList();
 
             if (patches.Count != 0 && platform != PatchManager.Platform.STEAM && platform != PatchManager.Platform.EPIC_GAMES_STORE && platform != PatchManager.Platform.GOG)
                 throw new McpError("AI.exe patches exist only for the Steam, Epic and GOG builds (this install is " + platform + "). Nothing was changed.");
@@ -385,12 +400,12 @@ namespace OpenCAGE.MCP
                 throw new McpError("DATA/UI.PAK is missing from this install, so the UI mods cannot be applied. Nothing was changed.");
             if (asked.Any(o => (o.Key.Arg == "cinematic_tools" && o.Value && !global::OpenCAGE.LaunchGame.CinematicToolsAvailable())))
                 call.Note("Cinematic Tools only work with the Steam build and a complete OpenCAGE install: the setting is kept, but launch_game will not start them here.");
-            if ((helpers.Any(o => o.Key.Arg != "cinematic_tools" && o.Value) || keyChanges) && !global::OpenCAGE.LaunchGame.ScriptingHelpersAvailable())
+            if ((helpers.Any(o => o.Key.Arg != "cinematic_tools" && o.Value) || keyChanges.Count != 0) && !global::OpenCAGE.LaunchGame.ScriptingHelpersAvailable())
                 call.Note("The scripting helpers only work with the Steam build (and OpenCAGE's runtimeutils folder): the settings are kept, but launch_game will not install them here.");
 
             JArray changes = new JArray();
             foreach (var change in helpers) changes.Add(new JObject() { ["option"] = change.Key.Arg, ["to"] = change.Value, ["writes"] = "OpenCAGE settings (applied at launch_game)" });
-            if (keyChanges) changes.Add(new JObject() { ["option"] = "hot_reload_key", ["to"] = hotReloadKey, ["writes"] = "OpenCAGE settings (applied at launch_game)" });
+            foreach (var change in keyChanges) changes.Add(new JObject() { ["option"] = change.Key.Arg, ["to"] = change.Value, ["writes"] = "OpenCAGE settings (applied at launch_game)" });
             foreach (var change in patches) changes.Add(new JObject() { ["option"] = change.Key.Arg, ["to"] = change.Value, ["writes"] = "AI.exe" });
             foreach (var change in uiMods) changes.Add(new JObject() { ["option"] = change.Key.Arg, ["to"] = change.Value, ["writes"] = "DATA/UI.PAK" });
 
@@ -431,8 +446,8 @@ namespace OpenCAGE.MCP
             List<string> failures = new List<string>();
             foreach (var change in helpers)
                 SettingsManager.SetBool(change.Key.Key, change.Value);
-            if (keyChanges)
-                SettingsManager.SetString(Settings.ScriptingHelpersHotReloadKey, hotReloadKey);
+            foreach (var change in keyChanges)
+                SettingsManager.SetString(change.Key.Key, change.Value);
             foreach (var change in patches)
             {
                 //As the Launch Game window: the setting is kept even if the write fails (a later launch or save re-applies it)
@@ -470,7 +485,7 @@ namespace OpenCAGE.MCP
             result["options"] = LaunchOptionState();
             if (failures.Count != 0)
                 result["failed"] = new JArray(failures);
-            if (helpers.Count != 0 || keyChanges)
+            if (helpers.Count != 0 || keyChanges.Count != 0)
                 call.Note("Scripting helper and Cinematic Tools settings take effect at the next launch_game.");
             return result;
         }

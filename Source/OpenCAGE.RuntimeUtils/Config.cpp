@@ -65,6 +65,7 @@ namespace
 
 		auto flag = [&](const char* name, bool fallback) { return GetPrivateProfileIntA(section, name, fallback ? 1 : 0, ini.c_str()) != 0; };
 		settings.hotReload = flag("HotReload", settings.hotReload);
+		settings.unlockMouse = flag("UnlockMouse", settings.unlockMouse);
 		settings.debugText = flag("DebugText", settings.debugText);
 		settings.debugTextStacking = flag("DebugTextStacking", settings.debugTextStacking);
 		settings.debugEnvironmentMarker = flag("DebugEnvironmentMarker", settings.debugEnvironmentMarker);
@@ -79,6 +80,8 @@ namespace
 		char key[64] = {};
 		GetPrivateProfileStringA(section, "HotReloadKey", "", key, sizeof(key), ini.c_str());
 		settings.hotReloadKey = ParseKey(key, settings.hotReloadKey);
+		GetPrivateProfileStringA(section, "UnlockMouseKey", "", key, sizeof(key), ini.c_str());
+		settings.unlockMouseKey = ParseKey(key, settings.unlockMouseKey);
 
 		return settings;
 	}

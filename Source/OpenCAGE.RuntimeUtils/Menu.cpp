@@ -7,6 +7,7 @@
 #include "Config.h"
 #include "LIVE_LINK_SERVER.h"
 #include "LIVE_CAMERA.h"
+#include "MOUSE_UNLOCK.h"
 
 // Engine-specific code classes.
 
@@ -53,15 +54,22 @@ LRESULT CALLBACK Menu::WndProcHandler(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
     io.MousePos.x = cursorPos.x;
     io.MousePos.y = cursorPos.y;
 
+    const Config::Settings& config = Config::Get();
     if (uMsg == WM_KEYUP) {
         if (wParam == VK_DELETE) {
             // the Delete key once toggled the settings window; it is off for now
         }
         // Hot reload: restart the current level.
-        const Config::Settings& config = Config::Get();
         if (config.hotReload && wParam == static_cast<WPARAM>(config.hotReloadKey) && GAME_LEVEL_MANAGER::m_instance != nullptr) {
             LoadLevel(GAME_LEVEL_MANAGER::get_current_level(GAME_LEVEL_MANAGER::m_instance));
         }
+    }
+
+    // Unlock Mouse: its key, the cursor shown over the window while it's free, and the mouse kept from the game then.
+    if (config.unlockMouse) {
+        LRESULT result = 0;
+        if (MOUSE_UNLOCK::OnWindowMessage(hWnd, uMsg, wParam, lParam, result))
+            return result;
     }
 
     if (g_showMenu && ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam)) {
@@ -152,6 +160,10 @@ void Menu::DrawMenu() {
         DEBUG_TEXT::DrawOverlay();
         DEBUG_MARKER::DrawOverlay();
     }
+
+    // Unlock Mouse: a note when its key is pressed.
+    if (Config::Get().unlockMouse)
+        MOUSE_UNLOCK::DrawOverlay();
 
     // Live link: a quiet note in the top right while OpenCAGE is connected, with what it last did for a few seconds.
     if (Config::Get().liveLink && LIVE_LINK_SERVER::Connected())

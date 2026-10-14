@@ -108,6 +108,8 @@ namespace OpenCAGE
         public const string RenderConstantAmbient = "RenderConstantAmbient";
         public const string ScriptingHelpersHotReload = "ScriptingHelpers_HotReload";
         public const string ScriptingHelpersHotReloadKey = "ScriptingHelpers_HotReloadKey";
+        public const string ScriptingHelpersUnlockMouse = "ScriptingHelpers_UnlockMouse";
+        public const string ScriptingHelpersUnlockMouseKey = "ScriptingHelpers_UnlockMouseKey";
         public const string ScriptingHelpersDebugText = "ScriptingHelpers_DebugText";
         public const string ScriptingHelpersDebugTextStacking = "ScriptingHelpers_DebugTextStacking";
         public const string ScriptingHelpersDebugEnvironmentMarker = "ScriptingHelpers_DebugEnvironmentMarker";

@@ -42,6 +42,8 @@ namespace OpenCAGE
             this.loadToLevel = new System.Windows.Forms.CheckBox();
             this.renderConstantAmbient = new System.Windows.Forms.CheckBox();
             this.hotReloadKey = new System.Windows.Forms.ComboBox();
+            this.enableUnlockMouse = new System.Windows.Forms.CheckBox();
+            this.unlockMouseKey = new System.Windows.Forms.ComboBox();
             this.enableDebugText = new System.Windows.Forms.CheckBox();
             this.enableDebugTextStacking = new System.Windows.Forms.CheckBox();
             this.enableDebugEnvironmentMarker = new System.Windows.Forms.CheckBox();
@@ -63,7 +65,7 @@ namespace OpenCAGE
             this.OpenGame.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.OpenGame.Location = new System.Drawing.Point(12, 351);
             this.OpenGame.Name = "OpenGame";
-            this.OpenGame.Size = new System.Drawing.Size(364, 44);
+            this.OpenGame.Size = new System.Drawing.Size(434, 44);
             this.OpenGame.TabIndex = 22;
             this.OpenGame.Text = "Start Alien: Isolation";
             this.OpenGame.UseVisualStyleBackColor = true;
@@ -85,7 +87,7 @@ namespace OpenCAGE
             // enableCinematicTools
             // 
             this.enableCinematicTools.AutoSize = true;
-            this.enableCinematicTools.Location = new System.Drawing.Point(198, 68);
+            this.enableCinematicTools.Location = new System.Drawing.Point(226, 68);
             this.enableCinematicTools.Name = "enableCinematicTools";
             this.enableCinematicTools.Size = new System.Drawing.Size(137, 17);
             this.enableCinematicTools.TabIndex = 27;
@@ -97,7 +99,7 @@ namespace OpenCAGE
             // enableUIPerf
             // 
             this.enableUIPerf.AutoSize = true;
-            this.enableUIPerf.Location = new System.Drawing.Point(198, 22);
+            this.enableUIPerf.Location = new System.Drawing.Point(226, 22);
             this.enableUIPerf.Name = "enableUIPerf";
             this.enableUIPerf.Size = new System.Drawing.Size(152, 17);
             this.enableUIPerf.TabIndex = 28;
@@ -109,7 +111,7 @@ namespace OpenCAGE
             // enableMemReplayLogs
             // 
             this.enableMemReplayLogs.AutoSize = true;
-            this.enableMemReplayLogs.Location = new System.Drawing.Point(198, 45);
+            this.enableMemReplayLogs.Location = new System.Drawing.Point(226, 45);
             this.enableMemReplayLogs.Name = "enableMemReplayLogs";
             this.enableMemReplayLogs.Size = new System.Drawing.Size(140, 17);
             this.enableMemReplayLogs.TabIndex = 29;
@@ -121,7 +123,7 @@ namespace OpenCAGE
             // disableUI
             // 
             this.disableUI.AutoSize = true;
-            this.disableUI.Location = new System.Drawing.Point(198, 91);
+            this.disableUI.Location = new System.Drawing.Point(226, 91);
             this.disableUI.Name = "disableUI";
             this.disableUI.Size = new System.Drawing.Size(54, 17);
             this.disableUI.TabIndex = 31;
@@ -172,7 +174,7 @@ namespace OpenCAGE
             // renderConstantAmbient
             // 
             this.renderConstantAmbient.AutoSize = true;
-            this.renderConstantAmbient.Location = new System.Drawing.Point(198, 114);
+            this.renderConstantAmbient.Location = new System.Drawing.Point(226, 114);
             this.renderConstantAmbient.Name = "renderConstantAmbient";
             this.renderConstantAmbient.Size = new System.Drawing.Size(147, 17);
             this.renderConstantAmbient.TabIndex = 34;
@@ -192,6 +194,33 @@ namespace OpenCAGE
             this.hotReloadKey.TabIndex = 36;
             this.toolTip1.SetToolTip(this.hotReloadKey, "The key that reloads the current level.");
             this.hotReloadKey.SelectedIndexChanged += new System.EventHandler(this.hotReloadKey_SelectedIndexChanged);
+            // 
+            // enableUnlockMouse
+            // 
+            this.enableUnlockMouse.AutoSize = true;
+            this.enableUnlockMouse.Enabled = false;
+            this.enableUnlockMouse.Location = new System.Drawing.Point(226, 20);
+            this.enableUnlockMouse.Name = "enableUnlockMouse";
+            this.enableUnlockMouse.Size = new System.Drawing.Size(95, 17);
+            this.enableUnlockMouse.TabIndex = 42;
+            this.enableUnlockMouse.Text = "Unlock Mouse";
+            this.toolTip1.SetToolTip(this.enableUnlockMouse, "The game leaves your mouse cursor free, so you can work in OpenCAGE beside it (handy with Live Link\'s came" +
+        "ra sync). To look around in-game, click the game window and press the chosen key; press it again to free the" +
+        " cursor.");
+            this.enableUnlockMouse.UseVisualStyleBackColor = true;
+            this.enableUnlockMouse.CheckedChanged += new System.EventHandler(this.enableUnlockMouse_CheckedChanged);
+            // 
+            // unlockMouseKey
+            // 
+            this.unlockMouseKey.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.unlockMouseKey.Enabled = false;
+            this.unlockMouseKey.FormattingEnabled = true;
+            this.unlockMouseKey.Location = new System.Drawing.Point(324, 17);
+            this.unlockMouseKey.Name = "unlockMouseKey";
+            this.unlockMouseKey.Size = new System.Drawing.Size(85, 21);
+            this.unlockMouseKey.TabIndex = 43;
+            this.toolTip1.SetToolTip(this.unlockMouseKey, "The key that gives the game the mouse to look around with, and frees the cursor again.");
+            this.unlockMouseKey.SelectedIndexChanged += new System.EventHandler(this.unlockMouseKey_SelectedIndexChanged);
             // 
             // enableDebugText
             // 
@@ -223,7 +252,7 @@ namespace OpenCAGE
             // 
             this.enableDebugEnvironmentMarker.AutoSize = true;
             this.enableDebugEnvironmentMarker.Enabled = false;
-            this.enableDebugEnvironmentMarker.Location = new System.Drawing.Point(174, 67);
+            this.enableDebugEnvironmentMarker.Location = new System.Drawing.Point(226, 67);
             this.enableDebugEnvironmentMarker.Name = "enableDebugEnvironmentMarker";
             this.enableDebugEnvironmentMarker.Size = new System.Drawing.Size(186, 17);
             this.enableDebugEnvironmentMarker.TabIndex = 39;
@@ -237,7 +266,7 @@ namespace OpenCAGE
             // 
             this.enableDebugPositionMarker.AutoSize = true;
             this.enableDebugPositionMarker.Enabled = false;
-            this.enableDebugPositionMarker.Location = new System.Drawing.Point(174, 44);
+            this.enableDebugPositionMarker.Location = new System.Drawing.Point(226, 44);
             this.enableDebugPositionMarker.Name = "enableDebugPositionMarker";
             this.enableDebugPositionMarker.Size = new System.Drawing.Size(164, 17);
             this.enableDebugPositionMarker.TabIndex = 40;
@@ -313,7 +342,7 @@ namespace OpenCAGE
             this.levelList.FormattingEnabled = true;
             this.levelList.Location = new System.Drawing.Point(12, 30);
             this.levelList.Name = "levelList";
-            this.levelList.Size = new System.Drawing.Size(364, 21);
+            this.levelList.Size = new System.Drawing.Size(434, 21);
             this.levelList.TabIndex = 30;
             this.levelList.SelectedIndexChanged += new System.EventHandler(this.levelList_SelectedIndexChanged);
             // 
@@ -332,7 +361,7 @@ namespace OpenCAGE
             this.groupBox1.Controls.Add(this.enableCinematicTools);
             this.groupBox1.Location = new System.Drawing.Point(12, 61);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(364, 163);
+            this.groupBox1.Size = new System.Drawing.Size(434, 163);
             this.groupBox1.TabIndex = 31;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Launch Options";
@@ -341,6 +370,8 @@ namespace OpenCAGE
             // 
             this.groupBox2.Controls.Add(this.enableHotReload);
             this.groupBox2.Controls.Add(this.hotReloadKey);
+            this.groupBox2.Controls.Add(this.enableUnlockMouse);
+            this.groupBox2.Controls.Add(this.unlockMouseKey);
             this.groupBox2.Controls.Add(this.enableDebugText);
             this.groupBox2.Controls.Add(this.enableDebugTextStacking);
             this.groupBox2.Controls.Add(this.enableDebugEnvironmentMarker);
@@ -348,7 +379,7 @@ namespace OpenCAGE
             this.groupBox2.Controls.Add(this.enableLiveLink);
             this.groupBox2.Location = new System.Drawing.Point(12, 230);
             this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(364, 115);
+            this.groupBox2.Size = new System.Drawing.Size(434, 115);
             this.groupBox2.TabIndex = 35;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Scripting Helpers";
@@ -357,7 +388,7 @@ namespace OpenCAGE
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(392, 405);
+            this.ClientSize = new System.Drawing.Size(462, 405);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.loadToLevel);
             this.Controls.Add(this.groupBox1);
@@ -396,6 +427,8 @@ namespace OpenCAGE
         private System.Windows.Forms.CheckBox enableHotReload;
         private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.ComboBox hotReloadKey;
+        private System.Windows.Forms.CheckBox enableUnlockMouse;
+        private System.Windows.Forms.ComboBox unlockMouseKey;
         private System.Windows.Forms.CheckBox enableDebugText;
         private System.Windows.Forms.CheckBox enableDebugTextStacking;
         private System.Windows.Forms.CheckBox enableDebugEnvironmentMarker;
