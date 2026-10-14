@@ -764,21 +764,40 @@ namespace AlienPAK
         /* A planned material does not exist yet, so there is no CATHODE material to shade the preview
          * with - and falling through to the fallback paints it the magenta that means "no material",
          * which reads as the generation having failed. Show the base colour the plan is going to use
-         * instead, straight off disk. */
+         * instead, straight off disk - or, for a model material with no base colour texture at all
+         * (glTF's flat-coloured materials, say), its colour, which the generated material carries as
+         * its tint. */
         private bool TryPreviewPlannedMaterial(GeometryModel3D geometry, ModelIO.PlannedSubmesh submesh)
         {
             int index = SourceMaterialIndexFor(submesh);
             if (index < 0 || !_generatedPlans.TryGetValue(index, out MaterialGenerator.Plan plan)) return false;
 
+            DiffuseMaterial shown;
             MaterialGenerator.PlannedTexture diffuse = plan.UsableTextures.FirstOrDefault(o => o.Role.Sampler == "DIFFUSE_MAP");
-            if (diffuse == null) return false;
+            if (diffuse != null)
+            {
+                ImageSource image = PreviewImage(diffuse);
+                if (image == null) return false;
+                shown = new DiffuseMaterial(new ImageBrush(image) { ViewportUnits = BrushMappingMode.Absolute });
+            }
+            else
+                shown = new DiffuseMaterial(new SolidColorBrush(BaseColour(_scene.Materials[index])));
 
-            ImageSource image = PreviewImage(diffuse);
-            if (image == null) return false;
-
-            geometry.Material = new DiffuseMaterial(new ImageBrush(image) { ViewportUnits = BrushMappingMode.Absolute });
-            geometry.BackMaterial = geometry.Material;
+            geometry.Material = shown;
+            geometry.BackMaterial = shown;
             return true;
+        }
+
+        /* A model material's flat base colour, white when it has none. Model files hold it linear (glTF
+         * does, and assimp passes it on as it is), as the game multiplies its tint in. */
+        private static System.Windows.Media.Color BaseColour(Assimp.Material source)
+        {
+            if (source == null || !source.HasColorDiffuse) return System.Windows.Media.Colors.White;
+            Color4D colour = source.ColorDiffuse;
+            return System.Windows.Media.Color.FromScRgb(1.0f,
+                Math.Max(0.0f, Math.Min(1.0f, colour.R)),
+                Math.Max(0.0f, Math.Min(1.0f, colour.G)),
+                Math.Max(0.0f, Math.Min(1.0f, colour.B)));
         }
 
         /* Cached per texture: a base colour map can be 12 MB of PNG and the preview is rebuilt on
