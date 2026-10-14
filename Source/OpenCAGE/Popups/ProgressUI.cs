@@ -182,31 +182,81 @@ namespace OpenCAGE
             _countedDone = done;
 
             Text = _countedTitle + ": " + done.ToString("N0") + " of " + _countedTotal.ToString("N0");
-
-            /* Windows animates the bar up to a new value rather than drawing it there, and moved on this
-               often it falls well behind the count in the title. A move back is drawn straight away, so
-               it goes one past and back. */
-            int value = (int)((long)done * progressBar1.Maximum / _countedTotal);
-            if (value < progressBar1.Maximum)
-                progressBar1.Value = value + 1;
-            progressBar1.Value = value;
-            progressBar1.Refresh();
-
-            try
-            {
-                Form editor = Singleton.Editor;
-                if (editor != null && !editor.IsDisposed && !editor.Disposing && editor.IsHandleCreated)
-                    TaskbarManager.Instance.SetProgressValue(done, _countedTotal, editor.Handle);
-            }
-            catch (ObjectDisposedException) { }
+            DrawValue((int)((long)done * progressBar1.Maximum / _countedTotal));
+            SetEditorTaskbarValue(done, _countedTotal);
         }
 
-        private void PresentOnTop()
+        private string _stagedTitle;
+        private int _stagedValue = -1;
+
+        /// <summary>
+        /// A bar for a job done on the UI thread (writing ANIMATION.PAK, say), which <see cref="SetProgress"/> moves along.
+        /// Shown over <paramref name="near"/>, the window doing the job (the editor when null), and painted straight away:
+        /// the UI thread is busy with the job until it's done, so nothing else paints it.
+        /// </summary>
+        public void ShowStaged(string titlebar, Form near = null)
+        {
+            _stagedTitle = titlebar;
+            _stagedValue = -1;
+            Text = titlebar;
+
+            progressBar1.Style = ProgressBarStyle.Continuous;
+            progressBar1.Value = 0;
+
+            PresentOnTop(near);
+            SetProgress(0);
+            Refresh();
+        }
+
+        /// <summary>How far through the job it is (0 to 1), and what it's doing now (null keeps what it said). UI thread only.</summary>
+        public void SetProgress(double fraction, string titlebar = null)
         {
             if (IsDisposed || Disposing)
                 return;
 
-            Form editor = Singleton.Editor;
+            if (titlebar != null && titlebar != _stagedTitle)
+            {
+                _stagedTitle = titlebar;
+                Text = titlebar;
+            }
+            int value = (int)Math.Round(Math.Max(0.0, Math.Min(1.0, fraction)) * progressBar1.Maximum);
+            if (value == _stagedValue)
+                return;
+            _stagedValue = value;
+            DrawValue(value);
+            SetEditorTaskbarValue(value, progressBar1.Maximum);
+        }
+
+        /* Windows animates the bar up to a new value rather than drawing it there, and moved often it falls well behind
+           (and with the UI thread busy, it doesn't animate at all). A move back is drawn straight away, so it goes one past
+           and back. */
+        private void DrawValue(int value)
+        {
+            if (value < progressBar1.Maximum)
+                progressBar1.Value = value + 1;
+            progressBar1.Value = value;
+            progressBar1.Refresh();
+        }
+
+        private void SetEditorTaskbarValue(int done, int total)
+        {
+            try
+            {
+                Form editor = Singleton.Editor;
+                if (editor != null && !editor.IsDisposed && !editor.Disposing && editor.IsHandleCreated)
+                    TaskbarManager.Instance.SetProgressValue(done, total, editor.Handle);
+            }
+            catch (ObjectDisposedException) { }
+        }
+
+        private void PresentOnTop(Form near = null)
+        {
+            if (IsDisposed || Disposing)
+                return;
+
+            //Over the window holding the one doing the job (a docked window's bounds are in its holder's terms)
+            Form holder = near?.TopLevelControl as Form;
+            Form editor = holder != null && !holder.IsDisposed && holder.Visible ? holder : Singleton.Editor;
             if (editor != null && !editor.IsDisposed)
             {
                 StartPosition = FormStartPosition.Manual;

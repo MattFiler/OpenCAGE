@@ -184,7 +184,7 @@ namespace OpenCAGE
         /// edits and all): the file still the one loaded, the trees ready (<see cref="PrepareTrees"/>), the original kept
         /// for the Mod Manager, and the tree layouts put in with the trees. Null when it can go ahead, else why not.
         /// </summary>
-        public static string BeforeWholeSave(CathodeLib.Animation animations)
+        public static string BeforeWholeSave(CathodeLib.Animation animations, WriteProgress progress = null)
         {
             string path = animations?.PAK?.Filepath;
             string error = Stale(animations);
@@ -193,6 +193,7 @@ namespace OpenCAGE
             PrepareTrees(animations, out error);
             if (error != null)
                 return error;
+            progress?.KeepingOriginal(0.02);
             Modding.ModServices.CaptureBeforeWrite(path);
             AnimTreeLayoutManager.Commit(out _);
             return null;
@@ -253,18 +254,108 @@ namespace OpenCAGE
 
         /// <summary>
         /// Write every animation in memory to ANIMATION.PAK as it is (<see cref="BeforeWholeSave"/>, then the PAK): what holds
-        /// unsaved changes then holds none. Null when written, else why not.
+        /// unsaved changes then holds none. Null when written, else why not. A progress window shows over <paramref name="near"/>
+        /// (the window saving; the editor when null) while it runs.
         /// </summary>
-        public static string SaveWhole(CathodeLib.Animation animations)
+        public static string SaveWhole(CathodeLib.Animation animations, Form near = null)
         {
-            string refused = BeforeWholeSave(animations);
-            if (refused != null)
-                return refused;
-            bool saved = false;
-            try { saved = animations.Save(); }
-            catch (Exception e) { return "ANIMATION.PAK could not be written: " + e.Message; }
-            finally { Written(animations, saved, true); }
-            return saved ? null : "ANIMATION.PAK could not be written.";
+            using (WriteProgress progress = new WriteProgress(animations, "Saving the animations", near))
+            {
+                progress.Step("Checking the animations...", 0.0);
+                string refused = BeforeWholeSave(animations, progress);
+                if (refused != null)
+                    return refused;
+                progress.Writing(0.05, true);
+                bool saved = false;
+                try { saved = animations.Save(); }
+                catch (Exception e) { return "ANIMATION.PAK could not be written: " + e.Message; }
+                finally { Written(animations, saved, true); }
+                return saved ? null : "ANIMATION.PAK could not be written.";
+            }
+        }
+
+        /// <summary>
+        /// A progress window over a write of ANIMATION.PAK - hundreds of MB, so seconds on a slow drive. The writer names its
+        /// steps (<see cref="Step"/>, then <see cref="Writing"/>), and the write itself moves the bar: the animations going
+        /// into the PAK (a write of everything), then the PAK going to disk. Writes run on the UI thread, which paints nothing
+        /// else meanwhile, so the window paints itself as it moves. Nothing is shown off the UI thread, or inside another
+        /// write's. Dispose when the write is done or refused - before any message about it, which the window would cover.
+        /// </summary>
+        public sealed class WriteProgress : IDisposable
+        {
+            //Of a write of everything, about this much of the time goes on putting the animations into the PAK (the rest on the disk)
+            private const double SerialiseShare = 0.6;
+
+            private readonly CathodeLib.Animation _animations;
+            private readonly ProgressUI _window;
+            private readonly Action<long, long> _onWritten;
+            private readonly Action<int, int> _onSerialised;
+            private double _from, _split;
+
+            public WriteProgress(CathodeLib.Animation animations, string title, Form near = null)
+            {
+                Form editor = Singleton.Editor;
+                if (animations?.PAK == null || animations.PAK.OnSaveProgress != null || editor == null || editor.IsDisposed || editor.InvokeRequired)
+                    return;
+                _animations = animations;
+                _onWritten = (done, total) => Show(_split + (1.0 - _split) * done / Math.Max(1, total));
+                _onSerialised = (done, total) => Show(_from + (_split - _from) * done / Math.Max(1, total));
+                animations.PAK.OnSaveProgress = _onWritten;
+                animations.OnSaveProgress = _onSerialised;
+                _window = new ProgressUI();
+                _window.ShowStaged(title + "...", near);
+            }
+
+            /// <summary>What the write is doing now, with the bar at <paramref name="at"/> (0 to 1) until the next step.</summary>
+            public void Step(string what, double at)
+            {
+                _from = _split = at;
+                Show(at, what);
+            }
+
+            /// <summary>
+            /// Before the Mod Manager keeps the PAK's original (<see cref="Modding.ModServices.CaptureBeforeWrite"/>), which it
+            /// does once, reading and storing all of it - seconds of the first write. Says so then, with the bar at <paramref name="at"/>.
+            /// </summary>
+            public void KeepingOriginal(double at)
+            {
+                if (_window != null && Modding.ModServices.MayCaptureBeforeWrite(_animations.PAK.Filepath))
+                    Step("Keeping a copy of the original ANIMATION.PAK for the Mod Manager (only the first time)...", at);
+            }
+
+            /// <summary>
+            /// The write itself, filling the bar from <paramref name="from"/>: <paramref name="whole"/> when it is a write of
+            /// everything (the animations' own save), otherwise of the PAK as its entries are.
+            /// </summary>
+            public void Writing(double from, bool whole)
+            {
+                _from = from;
+                _split = whole ? from + (1.0 - from) * SerialiseShare : from;
+                Show(from, "Writing ANIMATION.PAK...");
+            }
+
+            //A window gone wrong mustn't stop the write it is showing
+            private void Show(double fraction, string what = null)
+            {
+                try { _window?.SetProgress(fraction, what); }
+                catch { }
+            }
+
+            public void Dispose()
+            {
+                if (_window == null)
+                    return;
+                if (_animations.PAK.OnSaveProgress == _onWritten)
+                    _animations.PAK.OnSaveProgress = null;
+                if (_animations.OnSaveProgress == _onSerialised)
+                    _animations.OnSaveProgress = null;
+                try
+                {
+                    _window.Close();
+                    _window.Dispose();
+                }
+                catch { }
+            }
         }
 
         /* Every node in a tree's flow - what is written, from the tree's children down - each once */

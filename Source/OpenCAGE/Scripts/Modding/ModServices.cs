@@ -125,6 +125,33 @@ namespace OpenCAGE.Modding
         }
 
         /// <summary>
+        /// Whether <see cref="CaptureBeforeWrite"/> may have this file's original still to keep - read, checked and stored whole,
+        /// which for a big file takes a while (once: before the first write of a file as the game shipped it). False when it's
+        /// kept already, and without ENABLE_MOD_PACKAGES.
+        /// </summary>
+        public static bool MayCaptureBeforeWrite(string fullPath)
+        {
+#if ENABLE_MOD_PACKAGES
+            try
+            {
+                EnsureBuilt();
+                if (_installer == null || !ManifestAvailable)
+                    return false;
+                string normalised = ModToolkit.NormaliseFull(_gameRoot, fullPath);
+                if (normalised == null || ModToolkit.IsExcluded(normalised))
+                    return false;
+                return !_installer.HasVanillaBaseline(normalised);
+            }
+            catch
+            {
+                return false;
+            }
+#else
+            return false;
+#endif
+        }
+
+        /// <summary>
         /// Call before saving a level: captures pristine copies of every still-vanilla file in the
         /// level's folder. The first call for a level does real hashing work; later ones are free.
         /// Does nothing without ENABLE_MOD_PACKAGES.

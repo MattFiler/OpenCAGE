@@ -762,9 +762,13 @@ namespace OpenCAGE.MCP
             List<string> earlier = _pendingPak.ToList();
             bool saved = false;
             string why = null;
-            try { saved = animations.Save(); }
-            catch (Exception e) { saved = false; why = e.Message; }
-            finally { AnimationPakWrite.Written(animations, saved, true); }
+            using (AnimationPakWrite.WriteProgress progress = new AnimationPakWrite.WriteProgress(animations, "Saving the animations"))
+            {
+                progress.Writing(0.0, true);
+                try { saved = animations.Save(); }
+                catch (Exception e) { saved = false; why = e.Message; }
+                finally { AnimationPakWrite.Written(animations, saved, true); }
+            }
             if (!saved)
             {
                 _pendingPak.Add(inMemory);
@@ -4082,8 +4086,12 @@ namespace OpenCAGE.MCP
                     PlaceAndCommitLayouts(call, database, tree, placed);
                     Modding.ModServices.CaptureBeforeWrite(animations.PAK.Filepath);
                     bool saved = false;
-                    try { saved = animations.PAK.Save(); }
-                    finally { AnimationPakWrite.Written(animations, saved, false); }
+                    using (AnimationPakWrite.WriteProgress progress = new AnimationPakWrite.WriteProgress(animations, "Saving the animation trees"))
+                    {
+                        progress.Writing(0.0, false);
+                        try { saved = animations.PAK.Save(); }
+                        finally { AnimationPakWrite.Written(animations, saved, false); }
+                    }
                     if (!saved)
                         throw new McpError("ANIMATION.PAK could not be written (is the game running, or the file read-only?). The edit is in memory only: the next edit_anim_tree or ANIMATION.PAK write takes it out.");
                     //This writes the tree set and string table only: a change an earlier failed write left in memory is not in it
@@ -4330,8 +4338,12 @@ namespace OpenCAGE.MCP
             }
             Modding.ModServices.CaptureBeforeWrite(animations.PAK.Filepath);
             bool saved = false;
-            try { saved = animations.PAK.Save(); }
-            finally { AnimationPakWrite.Written(animations, saved, false); }
+            using (AnimationPakWrite.WriteProgress progress = new AnimationPakWrite.WriteProgress(animations, "Saving the animation tree layouts"))
+            {
+                progress.Writing(0.0, false);
+                try { saved = animations.PAK.Save(); }
+                finally { AnimationPakWrite.Written(animations, saved, false); }
+            }
             if (!saved)
                 throw new McpError("The layout is changed in the editor, but ANIMATION.PAK could not be written (is the file read-only?). It goes out with the PAK's next write.");
             if (_pendingPak.Count != 0)

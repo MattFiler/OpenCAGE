@@ -902,6 +902,13 @@ namespace OpenCAGE.Modding
             catch { }
         }
 
+        /// <summary>Whether this file's original is kept already, so <see cref="CaptureVanillaBaseline"/> has nothing to do.</summary>
+        public bool HasVanillaBaseline(string normalisedPath)
+        {
+            lock (_mutex)
+                return _state.Baseline.TryGetValue(normalisedPath, out ModState.BaselineRecord existing) && existing.IsVanilla;
+        }
+
         /* The bytes just stored as a file's original are the ones it shipped with, as the index of hashes said. That index
            goes by each file's size and time, so a file changed without either changing (a tool putting its time back) reads as
            it was: what's read to be stored is the last word, and the index is put right when they differ. */

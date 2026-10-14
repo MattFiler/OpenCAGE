@@ -75,33 +75,44 @@ namespace OpenCAGE.AnimTrees
             foreach (AnimationTreeGraph graph in _graphs)
                 graph.CommitPendingEdits();
 
-            //The file still the one loaded, and every set checked to load again with every name it uses registered - all of
-            //it before any goes into the PAK, so a refused save leaves nothing half-written for another write to take out
             CathodeLib.Animation animations = Singleton.Global.Animations;
-            string error = AnimationPakWrite.Stale(animations);
-            List<(AnimTreeDB Database, PAK2.File Entry, byte[] Content)> sets = error == null ? AnimationPakWrite.PrepareTrees(animations, out error) : null;
+            string error, layoutError = null;
+            bool saved = false, layoutsIn = false;
+            //Shown while it writes, and closed before anything is said about it (it would cover the message)
+            using (AnimationPakWrite.WriteProgress progress = new AnimationPakWrite.WriteProgress(animations, "Saving the animation trees", FindForm()))
+            {
+                //The file still the one loaded, and every set checked to load again with every name it uses registered - all of
+                //it before any goes into the PAK, so a refused save leaves nothing half-written for another write to take out
+                progress.Step("Checking the animation trees...", 0.0);
+                error = AnimationPakWrite.Stale(animations);
+                List<(AnimTreeDB Database, PAK2.File Entry, byte[] Content)> sets = error == null ? AnimationPakWrite.PrepareTrees(animations, out error) : null;
+                if (error == null)
+                {
+                    //The debug string table every time: names made here (by this save, or one refused before it) read back as names
+                    if (animations.StringsDebug != null)
+                    {
+                        PAK2.File strings = animations.PAK.Entries.FirstOrDefault(o => string.Equals(o.Filename, animations.StringsDebug.Filepath, StringComparison.OrdinalIgnoreCase));
+                        if (strings != null)
+                            strings.Content = animations.StringsDebug.ToBytes();
+                    }
+                    foreach (var (database, pakEntry, content) in sets)
+                        pakEntry.Content = content;
+
+                    //Where the trees' nodes are drawn goes into ANIMATION.PAK with them
+                    layoutsIn = AnimTreeLayoutManager.Commit(out layoutError);
+
+                    progress.KeepingOriginal(0.02);
+                    OpenCAGE.Modding.ModServices.CaptureBeforeWrite(animations.PAK.Filepath);
+                    progress.Writing(0.05, false);
+                    try { saved = animations.PAK.Save(); }
+                    finally { AnimationPakWrite.Written(animations, saved, false); }
+                }
+            }
             if (error != null)
             {
                 MessageBox.Show(error, "Save failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
-            //The debug string table every time: names made here (by this save, or one refused before it) read back as names
-            if (animations.StringsDebug != null)
-            {
-                PAK2.File strings = animations.PAK.Entries.FirstOrDefault(o => string.Equals(o.Filename, animations.StringsDebug.Filepath, StringComparison.OrdinalIgnoreCase));
-                if (strings != null)
-                    strings.Content = animations.StringsDebug.ToBytes();
-            }
-            foreach (var (database, pakEntry, content) in sets)
-                pakEntry.Content = content;
-
-            //Where the trees' nodes are drawn goes into ANIMATION.PAK with them
-            bool layoutsIn = AnimTreeLayoutManager.Commit(out string layoutError);
-
-            OpenCAGE.Modding.ModServices.CaptureBeforeWrite(animations.PAK.Filepath);
-            bool saved = false;
-            try { saved = animations.PAK.Save(); }
-            finally { AnimationPakWrite.Written(animations, saved, false); }
             if (!saved)
             {
                 MessageBox.Show(

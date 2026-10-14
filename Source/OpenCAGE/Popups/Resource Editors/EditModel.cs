@@ -424,15 +424,8 @@ namespace OpenCAGE
             try
             {
                 //It writes every tree, unsaved edits and all: they must load again, and their node layouts go in with them
-                problem = AnimationPakWrite.BeforeWholeSave(Singleton.Animations);
-                if (problem != null)
-                    return false;
-                bool saved = false;
-                try { saved = Singleton.Animations.Save(); }
-                finally { AnimationPakWrite.Written(Singleton.Animations, saved, true); }
-                if (saved) return true;
-                problem = "The file could not be written to.";
-                return false;
+                problem = AnimationPakWrite.SaveWhole(Singleton.Animations, FindForm());
+                return problem == null;
             }
             catch (Exception ex)
             {

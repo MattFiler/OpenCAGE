@@ -598,20 +598,11 @@ namespace OpenCAGE
             try
             {
                 //It writes every tree, unsaved edits and all: they must load again, and their node layouts go in with them
-                string refused = AnimationPakWrite.BeforeWholeSave(_animations);
+                string refused = AnimationPakWrite.SaveWhole(_animations, this);
                 if (refused != null)
                 {
                     statusLabel.Text = _animations.ClipIndex.BlendSets.Count + " blend set(s)   —   unsaved changes";
                     MessageBox.Show(refused, "Save failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-                bool saved = false;
-                try { saved = _animations.Save(); }
-                finally { AnimationPakWrite.Written(_animations, saved, true); }
-                if (!saved)
-                {
-                    statusLabel.Text = _animations.ClipIndex.BlendSets.Count + " blend set(s)   —   unsaved changes";
-                    MessageBox.Show("ANIMATION.PAK could not be written.", "Save failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
                 _dirty = false;
