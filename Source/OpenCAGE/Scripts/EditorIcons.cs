@@ -509,6 +509,40 @@ namespace OpenCAGE
             return index < 0 ? EntityIndex(EditorIcon.Function) : index;
         }
 
+        /// <summary>
+        /// The icon for what an entity does: a function entity its type's, a composite instance the composite's, a parameter
+        /// its pin type's, and a proxy or alias that of what it points at - followed through any that point at another, each
+        /// hop resolved in the composite the last one landed in (capped against cycles). Null for a proxy or alias that points
+        /// nowhere.
+        /// </summary>
+        public static EditorIcon? ForEntity(CATHODE.Scripting.Internal.Entity entity, CATHODE.Scripting.Composite composite, CATHODE.Commands commands)
+        {
+            switch (entity?.variant)
+            {
+                case CATHODE.Scripting.EntityVariant.FUNCTION:
+                    CATHODE.Scripting.FunctionEntity function = (CATHODE.Scripting.FunctionEntity)entity;
+                    return function.function.IsFunctionType ? ForFunctionType(function.function.AsFunctionType) : EditorIcon.CompositeInstance;
+                case CATHODE.Scripting.EntityVariant.VARIABLE:
+                    var pinInfo = composite == null || commands == null ? null : commands.Utils.GetPinInfo(composite, (CATHODE.Scripting.VariableEntity)entity);
+                    int pinIndex = pinInfo == null ? -1 : EditorUtils.GetImageIndexForCompositePinType((CATHODE.Scripting.CompositePinType)pinInfo.PinTypeGUID.AsUInt32);
+                    return pinIndex < 0 || pinIndex >= EntityOrder.Length ? EditorIcon.Parameter : EntityOrder[pinIndex];
+                case CATHODE.Scripting.EntityVariant.PROXY:
+                case CATHODE.Scripting.EntityVariant.ALIAS:
+                    if (commands?.Utils == null)
+                        return null;
+                    (CATHODE.Scripting.Composite holder, CATHODE.Scripting.Internal.Entity target) = commands.Utils.GetResolvedTarget(commands.Utils.ResolveAliasOrProxy(entity, composite));
+                    for (int hop = 0; hop < 8 && IsPointer(target); hop++)
+                        (holder, target) = commands.Utils.GetResolvedTarget(commands.Utils.ResolveAliasOrProxy(target, holder));
+                    return target == null || IsPointer(target) ? (EditorIcon?)null : ForEntity(target, holder, commands);
+            }
+            return null;
+        }
+
+        private static bool IsPointer(CATHODE.Scripting.Internal.Entity entity)
+        {
+            return entity?.variant == CATHODE.Scripting.EntityVariant.PROXY || entity?.variant == CATHODE.Scripting.EntityVariant.ALIAS;
+        }
+
         /// <summary>An animation tree node type's icon: beside it in the Animation Tree Editor's add-node menu, and on its nodes zoomed out.</summary>
         public static EditorIcon ForAnimNodeType(CATHODE.Animations.NodeType type)
         {

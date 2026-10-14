@@ -50,7 +50,7 @@ namespace OpenCAGE.ConfigEditors
             InitializeComponent();
             OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/level-text-dbs/");
 
-            _configPath = Singleton.PathToAI + "/DATA/LEVEL_TEXT_DATABASES.XML";
+            _configPath = ConfigPath;
             try
             {
                 _config = new XmlDocument();
@@ -75,15 +75,7 @@ namespace OpenCAGE.ConfigEditors
             ConfigEditorUtils.ShowAutoSaveTipOnce();
 
             //Every database name that exists under DATA/TEXT, in any language
-            string sharedText = Singleton.PathToAI + "/DATA/TEXT";
-            if (Directory.Exists(sharedText))
-            {
-                HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                foreach (string file in Directory.GetFiles(sharedText, "*.TXT", SearchOption.AllDirectories))
-                    if (seen.Add(Path.GetFileNameWithoutExtension(file)))
-                        _sharedDbs.Add(Path.GetFileNameWithoutExtension(file));
-                _sharedDbs.Sort(StringComparer.OrdinalIgnoreCase);
-            }
+            _sharedDbs.AddRange(SharedDbNames());
 
             _levels.Add(new LevelEntry() { Display = GlobalsDisplay, Path = null, XmlName = GlobalsEntry });
             foreach (string level in EditorUtils.GetEditableLevels())
@@ -102,6 +94,7 @@ namespace OpenCAGE.ConfigEditors
             int index = current == null ? -1 : _levels.FindIndex(o => string.Equals(o.Path, current, StringComparison.OrdinalIgnoreCase));
             levelList.SelectedIndex = index >= 0 ? index : 0;
 
+            FormClosed += (s, ev) => DisposeCopyMenu();
             CloseOnConfigReset();
         }
 
@@ -146,6 +139,14 @@ namespace OpenCAGE.ConfigEditors
                 ? ""
                 : "Named in the config but not in DATA/TEXT: " + string.Join(", ", missing) + ". Untick to drop.";
 
+            //A level with no subtitle databases from either source - what Create Level made before it wrote a block, and any
+            //level a block was never added for - shows string ids for its subtitles and barks
+            if (!_selected.IsGlobals && missing.Count == 0 &&
+                !configured.Concat(ReadLocalDbList(_selected.Path)).Any(o => StandardDbs.Contains(o, StringComparer.OrdinalIgnoreCase)))
+                missingLabel.Text = "This level names none of the standard subtitle and bark databases, so they show as string ids in game. Add Standard Set lists them.";
+            addStandardDbs.Enabled = !_selected.IsGlobals;
+            copyLevelDbs.Enabled = !_selected.IsGlobals;
+
             //Level-local databases: the level's own TEXT folder, ticked when TEXT_DB_LIST.TXT names them
             localDbList.BeginUpdate();
             localDbList.Items.Clear();
@@ -164,7 +165,7 @@ namespace OpenCAGE.ConfigEditors
                 }
                 else
                 {
-                    HashSet<string> listed = new HashSet<string>(ReadLocalDbList(_selected), StringComparer.OrdinalIgnoreCase);
+                    HashSet<string> listed = new HashSet<string>(ReadLocalDbList(_selected.Path), StringComparer.OrdinalIgnoreCase);
                     HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     List<string> found = new List<string>();
                     foreach (string file in Directory.GetFiles(textFolder, "*.TXT", SearchOption.AllDirectories))
@@ -222,9 +223,9 @@ namespace OpenCAGE.ConfigEditors
                 .FirstOrDefault(o => o.Name == "level" && string.Equals(o.GetAttribute("name"), xmlName, StringComparison.OrdinalIgnoreCase));
         }
 
-        private IEnumerable<string> ReadLocalDbList(LevelEntry level)
+        private static IEnumerable<string> ReadLocalDbList(string levelPath)
         {
-            string path = Singleton.PathToAI + "/DATA/ENV/" + level.Path + DbListFile;
+            string path = LocalDbListPath(levelPath);
             if (!File.Exists(path))
                 return new List<string>();
             try
@@ -344,6 +345,138 @@ namespace OpenCAGE.ConfigEditors
                 ConfigEditorUtils.ReplaceChildrenIndented(block, entries, "\r\n\t\t", "\r\n\t");
                 block.SetAttribute("name", blockName); //ReplaceChildrenIndented clears attributes
             }
+        }
+
+        internal static string ConfigPath => Singleton.PathToAI + "/DATA/LEVEL_TEXT_DATABASES.XML";
+
+        /// <summary>
+        /// The shared databases every playable retail level's block names: subtitles (SS), conversations (CV) and barks (G).
+        /// No language has a CV0 file, but retail names it in every block, so this does too.
+        /// </summary>
+        internal static readonly string[] StandardDbs = { "SS1", "SS2", "SS3", "CV0", "CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "G0000", "G0001", "G0002", "G0003" };
+
+        /// <summary>Every database name DATA/TEXT holds a file for, in any language, sorted.</summary>
+        internal static List<string> SharedDbNames()
+        {
+            List<string> names = new List<string>();
+            string sharedText = Singleton.PathToAI + "/DATA/TEXT";
+            if (!Directory.Exists(sharedText))
+                return names;
+            HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string file in Directory.GetFiles(sharedText, "*.TXT", SearchOption.AllDirectories))
+                if (seen.Add(Path.GetFileNameWithoutExtension(file)))
+                    names.Add(Path.GetFileNameWithoutExtension(file));
+            names.Sort(StringComparer.OrdinalIgnoreCase);
+            return names;
+        }
+
+        /// <summary>
+        /// The shared databases a level needs to show the strings of composites taken from other levels: the standard set, and
+        /// each source level's own beyond it and the globals block - its block's mission databases and, where its own
+        /// TEXT/TEXT_DB_LIST.TXT lists databases (the DLC levels), those DATA/TEXT holds too. A source's names are only taken
+        /// where DATA/TEXT has a file for them: its own TEXT folder is not copied. Mission databases come first, as retail orders them.
+        /// </summary>
+        internal static List<string> DatabasesFor(XmlDocument config, IEnumerable<string> sourceLevels) => DatabasesFor(config, sourceLevels, SharedDbNames());
+
+        private static List<string> DatabasesFor(XmlDocument config, IEnumerable<string> sourceLevels, IEnumerable<string> sharedDbs)
+        {
+            HashSet<string> shared = new HashSet<string>(sharedDbs, StringComparer.OrdinalIgnoreCase);
+            HashSet<string> taken = new HashSet<string>(StandardDbs.Concat(ReadXmlDbs(config, GlobalsEntry)), StringComparer.OrdinalIgnoreCase);
+            List<string> databases = new List<string>();
+            foreach (string level in sourceLevels)
+            {
+                string xmlName = level.Replace('\\', '/').Split('/').Last();
+                foreach (string db in ReadXmlDbs(config, xmlName).Concat(ReadLocalDbList(level)))
+                    if (shared.Contains(db) && taken.Add(db))
+                        databases.Add(db);
+            }
+            databases.AddRange(StandardDbs);
+            return databases;
+        }
+
+        /// <summary>
+        /// Give a level File -> Create Level made its block of LEVEL_TEXT_DATABASES.XML, naming what <see cref="DatabasesFor"/>
+        /// gives for the levels its composites came from. New levels are made from FRONTEND, whose block is empty, so without
+        /// one the level loads only the globals databases and its subtitles and barks show as string ids. An open editor is
+        /// closed first: it holds its own copy of the file and would save it over the new block (it saves as it goes, so
+        /// nothing is lost). Returns the databases named; throws if the file cannot be read or written. UI thread.
+        /// </summary>
+        internal static List<string> WriteNewLevelBlock(string levelId, IEnumerable<string> sourceLevels)
+        {
+            foreach (LevelTextDBEditor open in Application.OpenForms.OfType<LevelTextDBEditor>().ToList())
+                open.Close();
+
+            XmlDocument config = new XmlDocument() { PreserveWhitespace = true };
+            config.Load(ConfigPath);
+            if (config["level_text_databases"] == null)
+                throw new InvalidDataException("DATA/LEVEL_TEXT_DATABASES.XML has no level_text_databases list.");
+            List<string> databases = DatabasesFor(config, sourceLevels);
+            SetXmlDbs(config, levelId, databases);
+            Modding.ModServices.CaptureBeforeWrite(ConfigPath);
+            config.Save(ConfigPath);
+            return databases;
+        }
+
+        /// <summary>Add these to the selected level's block, keeping what it names already, and show the result.</summary>
+        private void AddXmlDbs(IEnumerable<string> databases, string what)
+        {
+            if (_selected == null || _selected.IsGlobals)
+                return;
+            List<string> configured = ReadXmlDbs(_selected.XmlName).ToList();
+            List<string> added = databases.Where(o => !configured.Contains(o, StringComparer.OrdinalIgnoreCase)).ToList();
+            if (added.Count == 0)
+            {
+                MessageBox.Show(this, _selected.Display + " already names every database in " + what + ".", "Nothing to add", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            SaveXml(configured.Concat(added).ToList());
+            levelList_SelectedIndexChanged(levelList, EventArgs.Empty);
+        }
+
+        private void addStandardDbs_Click(object sender, EventArgs e)
+        {
+            AddXmlDbs(StandardDbs, "the standard set");
+        }
+
+        /* Another level's databases, from a menu under the button: what a level needs to show the strings of composites
+         * imported from it, as Create Level works it out. Disposed by the next one rather than from its own Closed
+         * handler, which runs while the close is still unwinding. */
+        private ContextMenuStrip _copyMenu = null;
+
+        private void DisposeCopyMenu()
+        {
+            ContextMenuStrip menu = _copyMenu;
+            _copyMenu = null;
+            if (menu != null && !menu.IsDisposed)
+                menu.Dispose();
+        }
+
+        private void copyLevelDbs_Click(object sender, EventArgs e)
+        {
+            if (_selected == null || _selected.IsGlobals)
+                return;
+
+            DisposeCopyMenu();
+            ContextMenuStrip menu = new ContextMenuStrip();
+            ToolStripMenuItem campaign = new ToolStripMenuItem("Campaign");
+            ToolStripMenuItem dlc = new ToolStripMenuItem("DLC");
+            ToolStripMenuItem custom = new ToolStripMenuItem("Custom");
+            foreach (LevelEntry level in _levels.Where(o => !o.IsGlobals && o != _selected))
+            {
+                string[] parts = level.Path.Replace('\\', '/').Split('/');
+                ToolStripMenuItem group = parts.Length == 1 ? custom : parts.Length > 2 && string.Equals(parts[1], "DLC", StringComparison.OrdinalIgnoreCase) ? dlc : campaign;
+                List<string> databases = DatabasesFor(_config, new[] { level.Path }, _sharedDbs);
+                List<string> own = databases.Take(databases.Count - StandardDbs.Length).ToList();
+                ToolStripMenuItem item = new ToolStripMenuItem(parts.Last() + (own.Count == 0 ? "" : "   (" + string.Join(", ", own) + ")"));
+                item.ToolTipText = "Add the standard subtitle and bark databases" + (own.Count == 0 ? "" : ", and " + level.Display + "'s own in DATA/TEXT");
+                item.Click += (s, args) => AddXmlDbs(databases, level.Display + "'s set");
+                group.DropDownItems.Add(item);
+            }
+            foreach (ToolStripMenuItem group in new[] { campaign, dlc, custom })
+                if (group.DropDownItems.Count != 0)
+                    menu.Items.Add(group);
+            _copyMenu = menu;
+            menu.Show(copyLevelDbs, new System.Drawing.Point(0, copyLevelDbs.Height));
         }
 
         private void SaveLocalDbList(List<string> checkedNames)

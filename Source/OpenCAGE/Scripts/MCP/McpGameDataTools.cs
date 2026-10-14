@@ -2391,6 +2391,12 @@ namespace OpenCAGE.MCP
         }
 
         /// <summary>
+        /// The block a new level gets, as File -> Create Level writes it: the standard subtitle and bark databases, and the shared
+        /// mission databases of the levels its composites came from (<see cref="LevelTextDBEditor.DatabasesFor"/>).
+        /// </summary>
+        internal static List<string> NewLevelTextDatabases(IEnumerable<string> sourceLevels) => LevelTextDBEditor.DatabasesFor(LoadLevelTextConfig(), sourceLevels);
+
+        /// <summary>
         /// Make a level's block of LEVEL_TEXT_DATABASES.XML name exactly these databases (none: the block goes), written at
         /// once under the configuration editors' rules (an open Level Text DBs editor is closed first). Any thread.
         /// </summary>

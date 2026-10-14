@@ -106,6 +106,7 @@ namespace OpenCAGE
 
             Enabled = false;
             Cursor.Current = Cursors.WaitCursor;
+            List<string> sources = _imports.Levels.Select(o => o.Level).ToList();
             CompositeImporter.Result imported;
             try
             {
@@ -118,6 +119,19 @@ namespace OpenCAGE
                 MessageBox.Show("Failed to create the level:\n\n" + ex.Message, "Create failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
+
+            //Its subtitles, barks and the imported composites' mission strings: FRONTEND's block is empty, so without a
+            //block of its own the level would load only the globals databases and show string ids
+            string textWarning = "";
+            try
+            {
+                ConfigEditors.LevelTextDBEditor.WriteNewLevelBlock(levelId, sources);
+            }
+            catch (Exception ex)
+            {
+                textWarning = "Its text databases could not be listed in DATA/LEVEL_TEXT_DATABASES.XML (" + ex.Message + "), so its subtitles and barks will show as string ids. " +
+                    "Configuration Editors -> Core Game -> Level Text DBs sets them up: Add Standard Set.";
+            }
             Cursor.Current = Cursors.Default;
 
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true);
@@ -126,8 +140,8 @@ namespace OpenCAGE
             string summary = "Created '" + levelId + "'";
             if (imported.Ported.Count > 0)
                 summary += " with " + imported.Ported.Count + " imported composite" + (imported.Ported.Count == 1 ? "" : "s");
-            string deadProxies = imported.DeadProxies.Describe(levelId);
-            MessageBox.Show(summary + "!" + (deadProxies == "" ? "" : "\n\n" + deadProxies), "Complete", MessageBoxButtons.OK, deadProxies == "" ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+            string warnings = string.Join("\n\n", new[] { imported.DeadProxies.Describe(levelId), textWarning }.Where(o => !string.IsNullOrEmpty(o)));
+            MessageBox.Show(summary + "!" + (warnings == "" ? "" : "\n\n" + warnings), "Complete", MessageBoxButtons.OK, warnings == "" ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
 
             this.Close();
             Singleton.Editor.LoadLevel(levelId);

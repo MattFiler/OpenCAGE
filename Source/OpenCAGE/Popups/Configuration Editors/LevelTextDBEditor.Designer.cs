@@ -34,6 +34,8 @@ namespace OpenCAGE.ConfigEditors
             this.sharedGroup = new System.Windows.Forms.GroupBox();
             this.sharedDbList = new System.Windows.Forms.CheckedListBox();
             this.editSharedDb = new System.Windows.Forms.Button();
+            this.addStandardDbs = new System.Windows.Forms.Button();
+            this.copyLevelDbs = new System.Windows.Forms.Button();
             this.missingLabel = new System.Windows.Forms.Label();
             this.localGroup = new System.Windows.Forms.GroupBox();
             this.localDbList = new System.Windows.Forms.CheckedListBox();
@@ -69,6 +71,8 @@ namespace OpenCAGE.ConfigEditors
             // sharedGroup
             //
             this.sharedGroup.Controls.Add(this.sharedDbList);
+            this.sharedGroup.Controls.Add(this.addStandardDbs);
+            this.sharedGroup.Controls.Add(this.copyLevelDbs);
             this.sharedGroup.Controls.Add(this.editSharedDb);
             this.sharedGroup.Controls.Add(this.missingLabel);
             this.sharedGroup.Location = new System.Drawing.Point(270, 12);
@@ -85,18 +89,40 @@ namespace OpenCAGE.ConfigEditors
             this.sharedDbList.IntegralHeight = false;
             this.sharedDbList.Location = new System.Drawing.Point(12, 22);
             this.sharedDbList.Name = "sharedDbList";
-            this.sharedDbList.Size = new System.Drawing.Size(356, 410);
+            this.sharedDbList.Size = new System.Drawing.Size(356, 380);
             this.sharedDbList.TabIndex = 0;
             this.toolTip1.SetToolTip(this.sharedDbList, "Databases this level loads out of DATA/TEXT, written to DATA/LEVEL_TEXT_DATABASES" +
         ".XML.");
             this.sharedDbList.ItemCheck += new System.Windows.Forms.ItemCheckEventHandler(this.sharedDbList_ItemCheck);
+            //
+            // addStandardDbs
+            //
+            this.addStandardDbs.Location = new System.Drawing.Point(12, 410);
+            this.addStandardDbs.Name = "addStandardDbs";
+            this.addStandardDbs.Size = new System.Drawing.Size(150, 26);
+            this.addStandardDbs.TabIndex = 1;
+            this.addStandardDbs.Text = "Add Standard Set";
+            this.addStandardDbs.UseVisualStyleBackColor = true;
+            this.toolTip1.SetToolTip(this.addStandardDbs, "Tick the subtitle, conversation and bark databases every playable level loads: SS1-3, CV0-6 and G0000-G0003.");
+            this.addStandardDbs.Click += new System.EventHandler(this.addStandardDbs_Click);
+            //
+            // copyLevelDbs
+            //
+            this.copyLevelDbs.Location = new System.Drawing.Point(168, 410);
+            this.copyLevelDbs.Name = "copyLevelDbs";
+            this.copyLevelDbs.Size = new System.Drawing.Size(150, 26);
+            this.copyLevelDbs.TabIndex = 2;
+            this.copyLevelDbs.Text = "Copy From Level...";
+            this.copyLevelDbs.UseVisualStyleBackColor = true;
+            this.toolTip1.SetToolTip(this.copyLevelDbs, "Tick what this level needs to show another level's strings: the standard set and that level's mission databases in DATA/TEXT. Databases already ticked stay ticked.");
+            this.copyLevelDbs.Click += new System.EventHandler(this.copyLevelDbs_Click);
             //
             // editSharedDb
             //
             this.editSharedDb.Location = new System.Drawing.Point(12, 440);
             this.editSharedDb.Name = "editSharedDb";
             this.editSharedDb.Size = new System.Drawing.Size(220, 26);
-            this.editSharedDb.TabIndex = 1;
+            this.editSharedDb.TabIndex = 3;
             this.editSharedDb.Text = "Edit Selected Database Contents";
             this.editSharedDb.UseVisualStyleBackColor = true;
             this.toolTip1.SetToolTip(this.editSharedDb, "Open the localisation editor on the selected database, in every language.");
@@ -107,7 +133,7 @@ namespace OpenCAGE.ConfigEditors
             this.missingLabel.Location = new System.Drawing.Point(12, 470);
             this.missingLabel.Name = "missingLabel";
             this.missingLabel.Size = new System.Drawing.Size(356, 44);
-            this.missingLabel.TabIndex = 2;
+            this.missingLabel.TabIndex = 4;
             //
             // localGroup
             //
@@ -192,6 +218,8 @@ namespace OpenCAGE.ConfigEditors
         private System.Windows.Forms.GroupBox sharedGroup;
         private System.Windows.Forms.CheckedListBox sharedDbList;
         private System.Windows.Forms.Button editSharedDb;
+        private System.Windows.Forms.Button addStandardDbs;
+        private System.Windows.Forms.Button copyLevelDbs;
         private System.Windows.Forms.Label missingLabel;
         private System.Windows.Forms.GroupBox localGroup;
         private System.Windows.Forms.CheckedListBox localDbList;

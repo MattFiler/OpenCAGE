@@ -370,6 +370,33 @@ namespace OpenCAGE.DockPanels
                 SurfaceWithoutStealingFocus();
         }
 
+        /// <summary>The tab's icon for the entity on show. A proxy shows what it points at, so re-pointing one changes it.</summary>
+        public void RefreshEntityIcon()
+        {
+            if (_entity == null)
+                return;
+
+            switch (_entity.variant)
+            {
+                case EntityVariant.VARIABLE:
+                    EditorIcons.BindIcon(this, EditorIcon.Parameter);
+                    break;
+                case EntityVariant.FUNCTION:
+                    if (Content?.Level?.Commands == null || Content.Level.Commands.GetComposite(((FunctionEntity)_entity).function) == null)
+                        EditorIcons.BindIcon(this, ((FunctionEntity)_entity).function.IsFunctionType ? EditorIcons.ForFunctionType(((FunctionEntity)_entity).function.AsFunctionType) : EditorIcon.Function);
+                    else
+                        EditorIcons.BindIcon(this, EditorIcon.CompositeInstance);
+                    break;
+                case EntityVariant.PROXY:
+                    //Its own icon only when it points nowhere
+                    EditorIcons.BindIcon(this, EditorIcons.ForEntity(_entity, _compositeDisplay?.Composite, Content?.Level?.Commands) ?? EditorIcon.Proxy);
+                    break;
+                case EntityVariant.ALIAS:
+                    EditorIcons.BindIcon(this, EditorIcon.Alias);
+                    break;
+            }
+        }
+
         public void PopulateUI(Entity entity, bool displayLinks)
         {
             if (entity == null)
@@ -399,24 +426,7 @@ namespace OpenCAGE.DockPanels
                 ? Content.Level.Commands.GetComposite(((FunctionEntity)_entity).function)
                 : null;
 
-            switch (_entity.variant)
-            {
-                case EntityVariant.VARIABLE:
-                    EditorIcons.BindIcon(this, EditorIcon.Parameter);
-                    break;
-                case EntityVariant.FUNCTION:
-                    if (Content?.Level?.Commands == null || Content.Level.Commands.GetComposite(((FunctionEntity)_entity).function) == null)
-                        EditorIcons.BindIcon(this, ((FunctionEntity)_entity).function.IsFunctionType ? EditorIcons.ForFunctionType(((FunctionEntity)_entity).function.AsFunctionType) : EditorIcon.Function);
-                    else
-                        EditorIcons.BindIcon(this, EditorIcon.CompositeInstance);
-                    break;
-                case EntityVariant.PROXY:
-                    EditorIcons.BindIcon(this, EditorIcon.Proxy);
-                    break;
-                case EntityVariant.ALIAS:
-                    EditorIcons.BindIcon(this, EditorIcon.Alias);
-                    break;
-            }
+            RefreshEntityIcon();
 
             Subscribe();
             Reload(displayLinks);

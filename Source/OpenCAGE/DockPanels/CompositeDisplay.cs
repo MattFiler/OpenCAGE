@@ -820,6 +820,8 @@ namespace OpenCAGE.DockPanels
                 flowgraph?.RestyleProxies();
             foreach (ProxyEntity proxy in _composite.proxies)
                 _entityList?.List?.UpdateEntityInList(proxy);
+            if (_entityDisplay?.Entity is ProxyEntity)
+                _entityDisplay.RefreshEntityIcon();
         }
 
         //Saves and compiles all Flowgraph layouts for this Composite
@@ -1642,6 +1644,9 @@ namespace OpenCAGE.DockPanels
             if (newEnt == null || !Populated || Composite == null)
                 return;
 
+            //Wherever it arrived (an undo of its deletion, say), it may bring a dead proxy here back to life
+            UpdateProxyRowsThrough(newEnt.shortGUID);
+
             if (Composite.GetEntityByID(newEnt.shortGUID) == null)
                 return;
 
@@ -1669,6 +1674,9 @@ namespace OpenCAGE.DockPanels
             if (Composite.GetEntityByID(deletedEntity.shortGUID) != null)
                 return;
 
+            //Any proxy here that reached its target through it is dead now
+            UpdateProxyRowsThrough(deletedEntity.shortGUID);
+
             //A deleted proxy may have pointed at an entity shown on our flowgraphs
             if (deletedEntity.variant == EntityVariant.PROXY)
             {
@@ -1689,6 +1697,24 @@ namespace OpenCAGE.DockPanels
             }
 
             RemoveEntityFromList(deletedEntity);
+        }
+
+        /* A proxy's row shows what it points at (EditorUtils.GetIndexesForListViewItem), and an entity added or removed
+           anywhere on its path changes that - as the flowgraphs restyle their proxy nodes (Flowgraph.RestyleProxiesThrough). */
+        private void UpdateProxyRowsThrough(ShortGuid entityId)
+        {
+            if (_composite == null || _entityList?.List == null)
+                return;
+
+            foreach (ProxyEntity proxy in _composite.proxies)
+            {
+                if (proxy.proxy?.path == null || !proxy.proxy.path.Contains(entityId))
+                    continue;
+
+                _entityList.List.UpdateEntityInList(proxy);
+                if (_entityDisplay != null && _entityDisplay.Entity == proxy)
+                    _entityDisplay.RefreshEntityIcon();
+            }
         }
 
         public bool RemoveEntityFromList(Entity entity)
@@ -2856,7 +2882,10 @@ namespace OpenCAGE.DockPanels
                 _entityList?.List?.UpdateEntityInList(proxy);
             }
             if (_entityDisplay != null && _entityDisplay.Entity == proxy)
+            {
                 _entityDisplay.Reload();
+                _entityDisplay.RefreshEntityIcon();
+            }
 
             Send.EntityRetargeted(proxy, composite);
         }

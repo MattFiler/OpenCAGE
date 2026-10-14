@@ -106,24 +106,7 @@ namespace OpenCAGE
            outlined as what it is). -1 (drawn in full) for one that points at nothing: its warning should stay readable. */
         private EditorIcon? NodeIconFor(Entity entity, Composite composite)
         {
-            switch (entity?.variant)
-            {
-                case EntityVariant.FUNCTION:
-                    FunctionEntity function = (FunctionEntity)entity;
-                    return function.function.IsFunctionType ? EditorIcons.ForFunctionType(function.function.AsFunctionType) : EditorIcon.CompositeInstance;
-                case EntityVariant.VARIABLE:
-                    PinInfo pinInfo = composite == null ? null : _commands.Utils.GetPinInfo(composite, (VariableEntity)entity);
-                    int pinIndex = pinInfo == null ? -1 : EditorUtils.GetImageIndexForCompositePinType((CompositePinType)pinInfo.PinTypeGUID.AsUInt32);
-                    return pinIndex < 0 || pinIndex >= EditorIcons.EntityOrder.Length ? EditorIcon.Parameter : EditorIcons.EntityOrder[pinIndex];
-                case EntityVariant.PROXY:
-                case EntityVariant.ALIAS:
-                    (Composite holder, Entity target) = _commands.Utils.GetResolvedTarget(_commands.Utils.ResolveAliasOrProxy(entity, composite));
-                    //One can point at another: follow it, each hop resolved in the composite the last landed in (capped against cycles)
-                    for (int hop = 0; hop < 8 && (target?.variant == EntityVariant.PROXY || target?.variant == EntityVariant.ALIAS); hop++)
-                        (holder, target) = _commands.Utils.GetResolvedTarget(_commands.Utils.ResolveAliasOrProxy(target, holder));
-                    return target == null || target.variant == EntityVariant.PROXY || target.variant == EntityVariant.ALIAS ? (EditorIcon?)null : NodeIconFor(target, holder);
-            }
-            return null;
+            return EditorIcons.ForEntity(entity, composite, _commands);
         }
 
         private void Flowgraph_VisibleChanged(object sender, EventArgs e)

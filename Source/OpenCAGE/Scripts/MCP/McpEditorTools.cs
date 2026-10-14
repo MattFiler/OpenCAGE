@@ -91,7 +91,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "create_level",
                 Title = "Create level",
-                Description = "Make a new level from scratch and open it (File > Create Level): GLOBAL, the pause menu, required assets and an empty root. 'imports' ports composites from other levels in as it is made, with the DisplayModel composites their Characters use (as port_composites brings them). Written to DATA/ENV at once, and the game's level list (DATA/PACKAGES/MAIN.PKG) is updated to include it; not undoable (delete_level removes it). Refuses a name another level already uses, as its whole name or last part (a level called SCI_HUB would share PRODUCTION/SCI_HUB's text databases and backups). Refuses while the game runs unless close_game. To start from a copy of an existing level (its lighting, navmesh and sounds kept), use duplicate_level. Then place things with create_entities and save_level with build=true. dry_run checks the name and imports and lists what would be ported.",
+                Description = "Make a new level from scratch and open it (File > Create Level): GLOBAL, the pause menu, required assets and an empty root. 'imports' ports composites from other levels in as it is made, with the DisplayModel composites their Characters use (as port_composites brings them). Written to DATA/ENV at once, the game's level list (DATA/PACKAGES/MAIN.PKG) is updated to include it, and it gets a LEVEL_TEXT_DATABASES.XML block naming the subtitle and bark databases every playable level loads plus the imports' source levels' mission databases in DATA/TEXT (a DLC level's own TEXT folder is not copied); not undoable (delete_level removes it). Refuses a name another level already uses, as its whole name or last part (a level called SCI_HUB would share PRODUCTION/SCI_HUB's text databases and backups). Refuses while the game runs unless close_game. To start from a copy of an existing level (its lighting, navmesh and sounds kept), use duplicate_level. Then place things with create_entities and save_level with build=true. dry_run checks the name and imports and lists what would be ported and the text databases it would get.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("name", "Letters, digits and underscores, up to 32 characters. It becomes the level's folder name (upper case).", required: true),
                     McpSchema.Array("imports", "Composites to port in while creating it, per source level, e.g. [{\"level\": \"PRODUCTION/SCI_ANDROIDLAB\", \"composites\": [\"<path or id>\"]}].",
@@ -714,6 +714,8 @@ namespace OpenCAGE.MCP
                     if (displayModels)
                         call.Note("Display models the imported Characters wear are found when each source level loads; they are not listed here.");
                 }
+                try { plan["text_databases"] = new JArray(McpGameDataTools.NewLevelTextDatabases(imports.Levels.Select(o => o.Level))); }
+                catch (McpError e) { call.Note("Its text databases could not be worked out (" + e.Message + "): the real call creates the level without a LEVEL_TEXT_DATABASES.XML block."); }
                 if (EditorUtils.ThisInstallsGameRunning() && !closeGame)
                     call.Note("Alien: Isolation is running: the real call needs close_game: true.");
                 if (McpEditor.UI(() => Singleton.Editor.CompositeBrowser?.Content?.Level != null && DirtyTracker.IsDirty) && !call.Bool("discard_unsaved"))
@@ -834,6 +836,20 @@ namespace OpenCAGE.MCP
 
             if (!listed)
                 call.Note("The game's level list (DATA/PACKAGES/MAIN.PKG) could not be updated to include " + levelId + "; launch_game updates it before starting the game.");
+            //Its subtitles, barks and the imported composites' mission strings, as Create Level lists them: FRONTEND's block is
+            //empty, so without a block of its own the level would load only the globals databases and show string ids
+            List<string> textDatabases = null;
+            try
+            {
+                textDatabases = McpGameDataTools.NewLevelTextDatabases(imports.Levels.Select(o => o.Level));
+                McpGameDataTools.SetTextDatabaseBlock(call, levelId, textDatabases);
+            }
+            catch (Exception e) when (!(e is OperationCanceledException))
+            {
+                call.Note(levelId + " was created, but its text databases could not be listed in LEVEL_TEXT_DATABASES.XML (" + e.Message + "), so its subtitles and barks show as string ids" +
+                    (textDatabases == null ? "." : ": set_text_databases level '" + levelId + "' add_shared " + string.Join(", ", textDatabases) + " does it."));
+                textDatabases = null;
+            }
             //The level exists now whatever happens next: a refusal has to say so, or a retry would meet "already exists"
             try { OpenLevel(call, levelId); }
             catch (Exception e) when (e is McpError || e is OperationCanceledException)
@@ -845,6 +861,8 @@ namespace OpenCAGE.MCP
             McpEditor.UI(() => BuildTracker.MarkUnbuilt("a new level: it has not been through a Save & Build yet"));
             JObject state = McpEditor.UI(() => State());
             JObject created = new JObject() { ["level"] = levelId, ["folder"] = Path.GetFullPath(path), ["composites"] = ported };
+            if (textDatabases != null)
+                created["text_databases"] = new JArray(textDatabases);
             if (imported != null)
             {
                 JObject importedSummary = new JObject()

@@ -577,6 +577,8 @@ namespace OpenCAGE.Popups.UserControls
             ListViewItem cached = Content.GenerateListViewItem(entity, _composite, LevelContent.CacheMethod.IGNORE_AND_OVERWRITE_CACHE);
 
             existing.Text = cached.Text;
+            //A proxy shows what it points at, which a re-point changes
+            existing.ImageIndex = EditorUtils.GetIndexesForListViewItem(entity, _composite, Content.Level.Commands).Item1;
             while (existing.SubItems.Count > cached.SubItems.Count)
                 existing.SubItems.RemoveAt(existing.SubItems.Count - 1);
 

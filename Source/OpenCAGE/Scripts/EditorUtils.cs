@@ -748,8 +748,11 @@ namespace OpenCAGE
                     }
                     break;
                 case EntityVariant.PROXY:
+                    //What it points at, so it reads as what it does (the proxy's own icon when it points nowhere); still listed with the proxies
                     groupIndex = 3;
-                    imageIndex = 3;
+                    EditorIcon? target = EditorIcons.ForEntity(entity, composite, commands);
+                    int targetIndex = target == null ? -1 : EditorIcons.EntityIndex(target.Value);
+                    imageIndex = targetIndex < 0 ? 3 : targetIndex;
                     break;
                 case EntityVariant.ALIAS:
                     groupIndex = 4;
