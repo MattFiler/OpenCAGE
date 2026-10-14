@@ -83,7 +83,8 @@ namespace OpenCAGE.RuntimeUtilsConnection
             return mode == (int)CameraMode.ViewportToGame || mode == (int)CameraMode.GameToViewport ? (CameraMode)mode : CameraMode.Disabled;
         }
 
-        /// <summary>The Live Link Camera menu's choice (remembered across sessions), whether or not Live Link is connected.</summary>
+        /// <summary>The Live Link Camera menu's choice, whether or not Live Link is connected. Put back to Disabled whenever Live Link
+        /// connects (CommandsEditor.OnLiveLinkConnectionChanged), so a sync is only ever one chosen for this connection.</summary>
         public static CameraMode WantedMode => NormaliseMode(SettingsManager.GetInteger(Settings.LiveLinkCameraMode));
 
         /// <summary>

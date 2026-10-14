@@ -2871,6 +2871,13 @@ namespace OpenCAGE
             {
                 bool connected = RuntimeUtilsConnection.Send.Connected;
                 bool wanted = LiveLinkWanted;
+                //Every new connection starts with Live Link Camera off: the game keeps the player's camera and the viewport
+                //stays where it is, until a sync is chosen for this connection
+                if (connected && !_liveLinkWasConnected)
+                {
+                    SettingsManager.SetInteger(Settings.LiveLinkCameraMode, (int)RuntimeUtilsConnection.LiveLinkCameraSync.CameraMode.Disabled);
+                    _levelViewerPanel?.ApplyLiveLinkCameraMode(RuntimeUtilsConnection.LiveLinkCameraSync.CameraMode.Disabled);
+                }
                 //Live Link Camera needs a game to follow or be followed by: shown while connected, and started or stopped with it
                 _levelViewerPanel?.SetLiveLinkConnected(connected);
                 RuntimeUtilsConnection.LiveLinkCameraSync.Refresh();

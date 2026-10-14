@@ -98,7 +98,7 @@ namespace OpenCAGE.MCP
                     McpSchema.Integer("navmesh_state", "Draw this state's generated navmesh (0 = default state; get_viewport_state lists states); -1 turns it off."),
                     McpSchema.Integer("cover_state", "Draw this state's generated cover; -1 turns it off."),
                     McpSchema.Boolean("show_zones", "Tint the level's geometry by zone (Highlight Zones)."),
-                    McpSchema.String("live_link_camera", "The viewport's Live Link Camera menu: 'viewport_to_game' has the running game's camera follow the viewport's (the game streams in the zones around it; set_viewport_camera moves the viewport's), 'game_to_viewport' has the viewport's camera follow the game's (position, direction, field of view; the viewport cannot be moved meanwhile), 'disabled' neither. Needs Live Link connected to the game (runtime_utils), the game running this level and the viewport showing its root composite.", options: LiveLinkCameraModes),
+                    McpSchema.String("live_link_camera", "The viewport's Live Link Camera menu: 'viewport_to_game' has the running game's camera follow the viewport's (the game streams in the zones around it; set_viewport_camera moves the viewport's), 'game_to_viewport' has the viewport's camera follow the game's (position, direction, field of view; the viewport cannot be moved meanwhile), 'disabled' neither. Needs Live Link connected to the game (runtime_utils), the game running this level and the viewport showing its root composite. Goes back to 'disabled' whenever Live Link connects, so set it after connecting.", options: LiveLinkCameraModes),
                     McpSchema.Deprecated(McpSchema.Boolean("sync_game_camera", "Older name for live_link_camera: true is 'viewport_to_game', false is 'disabled'.")),
                     McpSchema.Map("render_filters", "Entity previews to show/hide: {FunctionType name: true|false}, e.g. {\"PlayerTriggerBox\": true}; key 'all' sets every one first."),
                     McpSchema.Map("scene_filters", "Scene geometry to show: {\"collision_meshes\": true|false, \"occlusion_meshes\": true|false}."),
@@ -998,7 +998,7 @@ namespace OpenCAGE.MCP
                     LiveLinkCameraSync.Refresh();
                     changed.Add("live_link_camera");
                     if (mode != LiveLinkCameraSync.CameraMode.Disabled && !global::OpenCAGE.RuntimeUtilsConnection.LiveLink.Connected)
-                        call.Note("Live Link is not connected to the game, so the cameras follow once it is (runtime_utils {action: 'connect'}, with the game running).");
+                        call.Note("Live Link is not connected to the game, and live_link_camera goes back to 'disabled' when it connects: connect first (runtime_utils {action: 'connect'}, with the game running), then set it again.");
                     else if (mode == LiveLinkCameraSync.CameraMode.GameToViewport)
                         call.Note("The viewport's camera follows the game's from now on, and cannot be moved meanwhile: get_viewport_state reports the game camera it was last put at, and live_link_camera's status whether it follows.");
                 }
