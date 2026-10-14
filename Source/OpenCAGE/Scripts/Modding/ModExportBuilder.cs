@@ -185,7 +185,12 @@ namespace OpenCAGE.Modding
             ModPackageWriter writer = new ModPackageWriter(Info);
             writer.SetPreview(Preview);
             if (string.IsNullOrWhiteSpace(Info.Summary))
+            {
+                //Files kept as they are on disk under installed mods hold the mods' changes too: not only layouts, as good as always
+                if (!AsOnDisk)
+                    ExamineAnimationPaks();
                 Info.Summary = Summarise();
+            }
 
             //The user's own version of a file under mods is what it was when the mods last went in: changes since are only on disk,
             //mixed in with the mods' own
@@ -252,13 +257,115 @@ namespace OpenCAGE.Modding
             if (others.Any(o => o.StartsWith("DATA/BINARY_BEHAVIOR/"))) parts.Add("changes AI behaviour trees");
             if (others.Any(o => o.StartsWith("DATA/TEXT/"))) parts.Add("changes in-game text");
             if (others.Any(o => o.StartsWith("DATA/SOUND/"))) parts.Add("changes sounds");
-            if (others.Any(o => o == "DATA/UI.PAK")) parts.Add("changes the user interface");
-            if (others.Any(o => o.StartsWith("DATA/GLOBAL/"))) parts.Add("changes animations");
-            int rest = others.Count(o => !o.StartsWith("DATA/BINARY_BEHAVIOR/") && !o.StartsWith("DATA/TEXT/") && !o.StartsWith("DATA/SOUND/") && o != "DATA/UI.PAK" && !o.StartsWith("DATA/GLOBAL/"));
+            if (others.Any(IsInterface)) parts.Add("changes the user interface");
+            //An animation PAK whose only change is OpenCAGE's tree layouts in it changes nothing in the game
+            List<string> animationPaks = others.Where(IsAnimationPak).ToList();
+            List<int?> layoutsOnly = animationPaks.Select(LaidOutTreesKnown).ToList();
+            if (animationPaks.Count != 0 && layoutsOnly.All(o => o != null))
+            {
+                int trees = layoutsOnly.Max(o => o.Value);
+                parts.Add("changes how " + (trees == 0 ? "animation trees are" : trees == 1 ? "an animation tree is" : trees + " animation trees are")
+                    + " laid out in OpenCAGE's Animation Tree Editor (nothing in the game changes)");
+            }
+            else if (animationPaks.Count != 0)
+                parts.Add("changes animations");
+            int rest = others.Count(o => !o.StartsWith("DATA/BINARY_BEHAVIOR/") && !o.StartsWith("DATA/TEXT/") && !o.StartsWith("DATA/SOUND/") && !IsInterface(o) && !IsAnimationPak(o));
             if (rest != 0) parts.Add("changes " + rest + " other game file" + (rest == 1 ? "" : "s"));
             if (parts.Count == 0) return "";
             string text = string.Join("; ", parts) + ".";
             return char.ToUpperInvariant(text[0]) + text.Substring(1);
+        }
+
+        private static bool IsInterface(string normalisedPath) => normalisedPath == "DATA/UI.PAK" || normalisedPath == "DATA/GLOBAL/UI.PAK";
+
+        /// <summary>Whether a file is an animation PAK: ANIMATION.PAK, or the Switch build's ANIMATION_SWITCH.PAK.</summary>
+        public static bool IsAnimationPak(string normalisedPath) => normalisedPath == "DATA/GLOBAL/ANIMATION.PAK" || normalisedPath == "DATA/GLOBAL/ANIMATION_SWITCH.PAK";
+
+        /* Animation PAKs by the hash of their bytes: how many trees they lay out when OpenCAGE's tree layouts are all that's
+           changed in them, else null - for every version of one looked at so far */
+        private static readonly Dictionary<string, int?> _layoutChanges = new Dictionary<string, int?>();
+
+        /// <summary>
+        /// Work out what the animation PAKs among the files change - only OpenCAGE's tree layouts in them, or more - so
+        /// <see cref="Summarise"/> can say. A PAK that size takes seconds to read, so this is apart from it (best called off
+        /// the UI thread); a version of a file already looked at isn't read again.
+        /// </summary>
+        public void ExamineAnimationPaks()
+        {
+            foreach (string path in _files.Where(IsAnimationPak).ToList())
+            {
+                string key = ContentKey(path);
+                if (key == null)
+                    continue;
+                lock (_layoutChanges)
+                    if (_layoutChanges.ContainsKey(key))
+                        continue;
+                int? trees;
+                try
+                {
+                    byte[] vanilla = _installer?.VanillaBytes(path);
+                    byte[] content = _content.TryGetValue(path, out byte[] own) ? own : File.ReadAllBytes(ModToolkit.Denormalise(_gameRoot, path));
+                    trees = vanilla == null ? null : LaidOutTreesOnly(content, vanilla);
+                }
+                catch
+                {
+                    //Not known (out of memory, say): looked at again next time rather than taken as more than layouts for good
+                    continue;
+                }
+                lock (_layoutChanges)
+                    _layoutChanges[key] = trees;
+            }
+        }
+
+        /* What ExamineAnimationPaks found for a file as it is now, or null when it changes more than its layouts (or hasn't been looked at) */
+        private int? LaidOutTreesKnown(string path)
+        {
+            string key = ContentKey(path);
+            lock (_layoutChanges)
+                return key != null && _layoutChanges.TryGetValue(key, out int? trees) ? trees : null;
+        }
+
+        /* The identity of the bytes going in for a file: the user's own version's hash, or the one the index has for what's on disk */
+        private string ContentKey(string path)
+        {
+            try
+            {
+                if (_content.ContainsKey(path))
+                    return _installer?.OwnVersionSha(path);
+                byte[] hash = _cache?.Hash(path);
+                return hash == null ? null : ModToolkit.ToHex(hash);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /* How many trees an animation PAK lays out when OpenCAGE's tree layouts in it are all that differs from the original, else null */
+        private static int? LaidOutTreesOnly(byte[] content, byte[] original)
+        {
+            PAK2 now = new PAK2(content), was = new PAK2(original);
+            Dictionary<string, byte[]> shipped = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+            foreach (PAK2.File entry in was.Entries)
+                if (!AnimTreeLayouts.IsEntry(entry.Filename))
+                    shipped[entry.Filename ?? ""] = entry.Content;
+            if (shipped.Count == 0)
+                return null;
+            int same = 0;
+            AnimTreeLayouts layouts = null;
+            foreach (PAK2.File entry in now.Entries)
+            {
+                if (AnimTreeLayouts.IsEntry(entry.Filename))
+                {
+                    if (!Merging.AnimTreeLayoutsMerge.TryRead(entry.Content, out layouts))
+                        return null;
+                    continue;
+                }
+                if (!shipped.TryGetValue(entry.Filename ?? "", out byte[] bytes) || bytes == null || entry.Content == null || !bytes.AsSpan().SequenceEqual(entry.Content))
+                    return null;
+                same++;
+            }
+            return same == shipped.Count && layouts != null ? layouts.Trees.Count : (int?)null;
         }
 
         /// <summary>What a config file sets things for, in a player's words ("changes 2 settings for the alien").</summary>

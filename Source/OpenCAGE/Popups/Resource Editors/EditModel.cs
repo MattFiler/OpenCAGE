@@ -427,9 +427,9 @@ namespace OpenCAGE
                 problem = AnimationPakWrite.BeforeWholeSave(Singleton.Animations);
                 if (problem != null)
                     return false;
-                bool saved;
+                bool saved = false;
                 try { saved = Singleton.Animations.Save(); }
-                finally { AnimationPakWrite.Written(Singleton.Animations); }
+                finally { AnimationPakWrite.Written(Singleton.Animations, saved, true); }
                 if (saved) return true;
                 problem = "The file could not be written to.";
                 return false;

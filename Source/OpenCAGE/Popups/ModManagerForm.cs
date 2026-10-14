@@ -39,6 +39,7 @@ namespace OpenCAGE.Popups
 
         private ScanResult _scan;
         private bool _scanning;
+        private bool _scanAgain;
         private bool _refreshingList;
         private List<string> _stale = new List<string>();
 
@@ -184,15 +185,28 @@ namespace OpenCAGE.Popups
             //Half-applied mods aren't a state anyone wants to play: put back what was there before, every time
             if (installer.HasCrashJournal())
             {
+                //What OpenCAGE has open of the files being put back is loaded again after (saving it first would only be undone)
+                LoadedGameFiles.Change change = LoadedGameFiles.BeforeChange(this, installer.CrashJournalFiles(), out string refused, false, false);
+                if (change == null)
+                {
+                    if (refused == "")
+                        MessageBox.Show("OpenCAGE was closed part-way through applying mods last time. Your game files need putting back the way they were before that started, "
+                            + "before mods can be used: open the Mod Manager again to do it.", "Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Close();
+                    return;
+                }
                 try
                 {
                     installer.RecoverCrashJournal();
+                    LoadedGameFiles.AfterChange(change, true);
                     MessageBox.Show("OpenCAGE was closed part-way through applying mods last time. Your game files have been put back the way they were before that started."
-                        + (AnimationPakWrite.ChangedOnDisk(Singleton.Animations?.PAK?.Filepath) != null ? "\n\nANIMATION.PAK was one of them: restart OpenCAGE before working on animations, animation trees or blend sets, which still show it as it was." : ""),
+                        + (change.Reloaded.Count != 0 ? " OpenCAGE loaded " + Sentence(change.Reloaded) + " again." : "")
+                        + (change.Problems.Count != 0 ? "\n\n" + string.Join("\n\n", change.Problems) : ""),
                         "Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
                 {
+                    LoadedGameFiles.AfterChange(change, true);
                     MessageBox.Show("OpenCAGE was closed part-way through applying mods last time, and putting your game files back didn't work: " + ex.Message
                         + "\n\nClose anything that might be using the game's files, then open the Mod Manager again to try again.", "Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     Close();
@@ -207,40 +221,66 @@ namespace OpenCAGE.Popups
         #region GAME FILES
         private void StartScan()
         {
-            if (_scanning || ModServices.Installer == null)
+            if (ModServices.Installer == null)
                 return;
-            if (!ModServices.ManifestAvailable)
+            if (_scanning)
             {
-                _installState.Text = "This version of the game can't be checked against its original files, so mods are installed without combining.";
+                _scanAgain = true;
                 return;
             }
+            bool manifest = ModServices.ManifestAvailable;
+            if (!manifest)
+                _installState.Text = "This version of the game can't be checked against its original files, so mods are installed without combining.";
+            else
+            {
+                _installState.Text = "Checking your game files...";
+                _installAction.Visible = false;
+            }
             _scanning = true;
-            _installState.Text = "Checking your game files...";
-            _installAction.Visible = false;
 
             Thread thread = new Thread(() =>
             {
                 ScanResult result = null;
+                List<string> stale = null;
                 string error = null;
-                try
+                if (manifest)
                 {
-                    result = ModServices.NewScanner().Scan(null, (done, total) =>
+                    try
                     {
-                        int at = done;
-                        SafeInvoke(() => _installState.Text = "Checking your game files... " + (at * 100 / Math.Max(1, total)) + "%");
-                    });
+                        result = ModServices.NewScanner().Scan(null, (done, total) =>
+                        {
+                            //Files are only read when they've changed since they were last read: reading them all is the first check's
+                            string text = "Checking your game files... " + (done * 100 / Math.Max(1, total)) + "%"
+                                + (total > 2L * 1024 * 1024 * 1024 ? " (the first check reads every file - later ones only read the files that have changed)" : "");
+                            SafeInvoke(() => _installState.Text = text);
+                        });
+                    }
+                    catch (Exception e) { error = e.Message; }
                 }
-                catch (Exception e) { error = e.Message; }
+                //Which of the mods' files aren't as they were installed: quick once the check has read every file
+                try { stale = ModServices.Installer.PathsNeedingRepair(); }
+                catch { }
 
                 SafeInvoke(() =>
                 {
                     _scanning = false;
-                    _scan = result;
-                    if (error != null)
-                        _installState.Text = "Your game files couldn't be checked: " + error;
-                    else
-                        ShowScanSummary();
+                    if (stale != null)
+                        _stale = stale;
+                    if (manifest)
+                    {
+                        _scan = result;
+                        if (error != null)
+                            _installState.Text = "Your game files couldn't be checked: " + error;
+                        else
+                            ShowScanSummary();
+                    }
                     RefreshModList();
+                    //Asked for while this one ran (it started before an apply, say): it says how things were, not how they are
+                    if (_scanAgain)
+                    {
+                        _scanAgain = false;
+                        StartScan();
+                    }
                 });
             });
             thread.IsBackground = true;
@@ -300,8 +340,7 @@ namespace OpenCAGE.Popups
         {
             _refreshingList = true;
             ModState state = ModServices.State;
-            try { _stale = ModServices.Installer != null ? ModServices.Installer.PathsNeedingRepair() : new List<string>(); }
-            catch { _stale = new List<string>(); }
+            //Which of the mods' files need repairing is the check of the game files' to say (StartScan): it may have to read them
 
             string selectedId = SelectedMod?.Id;
             _modList.BeginUpdate();
@@ -584,78 +623,92 @@ namespace OpenCAGE.Popups
                 return;
             }
 
-            //Say what will happen before anything does
-            ModAnalysis analysis = ModServices.Installer.Analyze(desired);
-            if (analysis.Problems.Count != 0)
-            {
-                MessageBox.Show("Some mods can't be used:\n\n" + string.Join("\n\n", analysis.Problems.Take(8)), "Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            //What OpenCAGE has open of the files this may change: saved first (or let go) - before anything is worked out, as saving
+            //changes the files - and loaded again once they've changed
+            LoadedGameFiles.Change change = LoadedGameFiles.BeforeChange(this, ModServices.Installer.MayChange(desired), out _);
+            if (change == null)
                 return;
-            }
-            EditedFilesChoice edited = EditedFilesChoice.Ask;
-            if (analysis.EditedFiles.Count != 0)
+            TransactionResult result = null;
+            bool declined = false;
+            try
             {
-                EditedFilesChoice? choice = AskAboutEditedFiles(analysis.EditedFiles);
-                if (choice == null)
+                //Say what will happen before anything does
+                ModAnalysis analysis = ModServices.Installer.Analyze(desired);
+                if (analysis.Problems.Count != 0)
+                {
+                    MessageBox.Show("Some mods can't be used:\n\n" + string.Join("\n\n", analysis.Problems.Take(8)), "Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
-                edited = choice.Value;
-            }
-            List<MergeConflict> conflicts = analysis.Conflicts;
-            //Only the levels that will be put together again: one already combined from these very mods is left as it is
-            List<string> combinedLevels = analysis.CombinedLevels.Except(analysis.UnchangedLevels).ToList();
-            if (conflicts.Count != 0 || combinedLevels.Count != 0 || analysis.OwnChanges.Count != 0)
-            {
-                List<string> lines = new List<string>();
-                if (analysis.OwnChanges.Count != 0)
-                {
-                    lines.Add("You've changed some of these files yourself. Your changes are kept, and the mods are combined with them (where both change the very same thing, the mod is used while it's installed):");
-                    foreach (string what in Friendly(analysis.OwnChanges).Take(12))
-                        lines.Add("  • " + what);
-                    lines.Add("");
                 }
-                if (combinedLevels.Count != 0)
+                EditedFilesChoice edited = EditedFilesChoice.Ask;
+                if (analysis.EditedFiles.Count != 0)
                 {
-                    HashSet<string> withYours = new HashSet<string>(analysis.OwnChanges.Select(ModInstaller.LevelUnitOf).Where(o => o != null));
-                    lines.Add((combinedLevels.All(withYours.Contains) ? "These levels are changed by you and by your mods" : combinedLevels.Any(withYours.Contains) ? "These levels are changed by more than one of your mods (or by you and a mod)" : "These levels are changed by more than one of your mods")
-                        + ", so they'll be put together into one level with every change in it, which takes a minute or so each:");
-                    foreach (string level in combinedLevels)
-                        lines.Add("  • " + level.Replace("DLC/", ""));
-                    lines.Add("");
+                    EditedFilesChoice? choice = AskAboutEditedFiles(analysis.EditedFiles);
+                    if (choice == null)
+                        return;
+                    edited = choice.Value;
                 }
-                if (conflicts.Count != 0)
+                List<MergeConflict> conflicts = analysis.Conflicts;
+                //Only the levels that will be put together again: one already combined from these very mods is left as it is
+                List<string> combinedLevels = analysis.CombinedLevels.Except(analysis.UnchangedLevels).ToList();
+                if (conflicts.Count != 0 || combinedLevels.Count != 0 || analysis.OwnChanges.Count != 0)
                 {
-                    lines.Add("Some of your mods change the very same things. For each one, the mod lower in the list will be used:");
-                    foreach (MergeConflict conflict in conflicts.Take(20))
-                        lines.Add("  • " + conflict.Describe());
-                    if (conflicts.Count > 20)
-                        lines.Add("  ...and " + (conflicts.Count - 20) + " more");
-                    lines.Add("");
-                    lines.Add("Everything else every mod changes is kept. To use a different mod's version, move it lower in the list.");
-                }
-                if (ModReportDialog.Show(this, "Before applying", string.Join("\r\n", lines), "Apply", "Cancel") != DialogResult.OK)
-                    return;
-            }
-
-            TransactionResult result = RunTransaction(desired, false, edited);
-            if (result == null)
-                return;
-
-            if (!result.Success && result.Error != null && result.Error.Contains("no copy of the originals"))
-            {
-                if (MessageBox.Show("Some of the game files these mods change have already been changed outside the Mod Manager, and OpenCAGE has no original copy of them to go back to.\n\n"
-                    + "Keep what's in them now as the version to go back to when mods are removed? (If you'd rather go back to the original game, choose No and use 'Keep those changes safe...' first.)",
-                    "Changed game files", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
-                {
-                    result = RunTransaction(desired, true, edited);
-                    if (result == null)
+                    List<string> lines = new List<string>();
+                    if (analysis.OwnChanges.Count != 0)
+                    {
+                        lines.Add("You've changed some of these files yourself. Your changes are kept, and the mods are combined with them (where both change the very same thing, the mod is used while it's installed):");
+                        foreach (string what in Friendly(analysis.OwnChanges).Take(12))
+                            lines.Add("  • " + what);
+                        lines.Add("");
+                    }
+                    if (combinedLevels.Count != 0)
+                    {
+                        HashSet<string> withYours = new HashSet<string>(analysis.OwnChanges.Select(ModInstaller.LevelUnitOf).Where(o => o != null));
+                        lines.Add((combinedLevels.All(withYours.Contains) ? "These levels are changed by you and by your mods" : combinedLevels.Any(withYours.Contains) ? "These levels are changed by more than one of your mods (or by you and a mod)" : "These levels are changed by more than one of your mods")
+                            + ", so they'll be put together into one level with every change in it, which takes a minute or so each:");
+                        foreach (string level in combinedLevels)
+                            lines.Add("  • " + level.Replace("DLC/", ""));
+                        lines.Add("");
+                    }
+                    if (conflicts.Count != 0)
+                    {
+                        lines.Add("Some of your mods change the very same things. For each one, the mod lower in the list will be used:");
+                        foreach (MergeConflict conflict in conflicts.Take(20))
+                            lines.Add("  • " + conflict.Describe());
+                        if (conflicts.Count > 20)
+                            lines.Add("  ...and " + (conflicts.Count - 20) + " more");
+                        lines.Add("");
+                        lines.Add("Everything else every mod changes is kept. To use a different mod's version, move it lower in the list.");
+                    }
+                    if (ModReportDialog.Show(this, "Before applying", string.Join("\r\n", lines), "Apply", "Cancel") != DialogResult.OK)
                         return;
                 }
-                else
+
+                result = RunTransaction(desired, false, edited);
+                if (result != null && !result.Success && result.Error != null && result.Error.Contains("no copy of the originals"))
                 {
-                    RefreshModList();
-                    return;
+                    if (MessageBox.Show("Some of the game files these mods change have already been changed outside the Mod Manager, and OpenCAGE has no original copy of them to go back to.\n\n"
+                        + "Keep what's in them now as the version to go back to when mods are removed? (If you'd rather go back to the original game, choose No and use 'Keep those changes safe...' first.)",
+                        "Changed game files", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                        result = RunTransaction(desired, true, edited);
+                    else
+                        declined = true;
                 }
             }
+            finally
+            {
+                LoadedGameFiles.AfterChange(change, FilesChanged(result));
+            }
+            if (result == null)
+                return;
+            if (declined)
+            {
+                RefreshModList();
+                return;
+            }
 
+            //Every mod file was just put in as it should be: none needs repairing until the next check says so
+            if (result.Success)
+                _stale = new List<string>();
             RefreshModList();
             if (!result.Success)
             {
@@ -667,6 +720,9 @@ namespace OpenCAGE.Popups
             _statusLabel.Text = enabled == 0 ? "All mods removed." : "Done - " + enabled + " mod" + (enabled == 1 ? " is" : "s are") + " installed.";
             if (result.KeptAsMod != null)
                 _statusLabel.Text += " Your changes were kept as '" + result.KeptAsMod + "'.";
+            if (change.Reloaded.Count != 0)
+                _statusLabel.Text += " OpenCAGE loaded " + Sentence(change.Reloaded) + " again.";
+            result.Warnings.AddRange(change.Problems);
             if (result.Conflicts.Count != 0 || result.Warnings.Count != 0 || result.CombinedLevels.Count != 0 || result.KeptAsMod != null)
                 ShowResults(result);
             StartScan();
@@ -723,31 +779,59 @@ namespace OpenCAGE.Popups
                 MessageBox.Show(error.Message, "Couldn't apply", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return null;
             }
-            //OpenCAGE holds the animations in memory as they were loaded, and won't write them back over the changed file
-            if (result != null && result.Success && AnimationPakWrite.ChangedOnDisk(Singleton.Animations?.PAK?.Filepath) != null)
-                result.Warnings.Add("ANIMATION.PAK has changed: restart OpenCAGE before working on animations, animation trees or blend sets, which still show it as it was (and won't save over the new one).");
             return result;
+        }
+
+        /* Whether applying changed the game's files: it did when it went in - or when it failed part-way and couldn't put
+           them all back (its journal is kept, to finish that next time) */
+        private static bool FilesChanged(TransactionResult result)
+        {
+            return (result != null && result.Success) || ModServices.Installer.HasCrashJournal();
+        }
+
+        /* "the level BSP_TORRENS and the animations" */
+        private static string Sentence(List<string> things)
+        {
+            return things.Count == 1 ? things[0] : string.Join(", ", things.Take(things.Count - 1)) + " and " + things.Last();
         }
 
         private void Repair()
         {
             //The same mods again: everything rebuilt from the original files and the mods
             List<string> enabled = ModServices.State.ModsInPriorityOrder().Where(o => o.Enabled).Select(o => o.Id).ToList();
-            EditedFilesChoice edited = EditedFilesChoice.Ask;
-            List<string> editedFiles = ModServices.Installer.EditedSinceApplied();
-            if (editedFiles.Count != 0)
+            //What OpenCAGE has open of the files: saved (or let go) before the edited ones are worked out, as saving changes them
+            LoadedGameFiles.Change change = LoadedGameFiles.BeforeChange(this, ModServices.Installer.MayChange(enabled), out _);
+            if (change == null)
+                return;
+            TransactionResult result = null;
+            try
             {
-                EditedFilesChoice? choice = AskAboutEditedFiles(editedFiles);
-                if (choice == null)
-                    return;
-                edited = choice.Value;
+                EditedFilesChoice edited = EditedFilesChoice.Ask;
+                List<string> editedFiles = ModServices.Installer.EditedSinceApplied();
+                if (editedFiles.Count != 0)
+                {
+                    EditedFilesChoice? choice = AskAboutEditedFiles(editedFiles);
+                    if (choice == null)
+                        return;
+                    edited = choice.Value;
+                }
+                result = RunTransaction(enabled, false, edited);
             }
-            TransactionResult result = RunTransaction(enabled, false, edited);
+            finally
+            {
+                LoadedGameFiles.AfterChange(change, FilesChanged(result));
+            }
+            if (result != null && result.Success)
+                _stale = new List<string>();
             RefreshModList();
             if (result != null && !result.Success)
                 MessageBox.Show(result.Error, "Couldn't repair", MessageBoxButtons.OK, MessageBoxIcon.Error);
             else if (result != null)
-                _statusLabel.Text = "Repaired - your mods are installed again.";
+            {
+                _statusLabel.Text = "Repaired - your mods are installed again." + (change.Reloaded.Count != 0 ? " OpenCAGE loaded " + Sentence(change.Reloaded) + " again." : "");
+                if (change.Problems.Count != 0)
+                    MessageBox.Show(string.Join("\n\n", change.Problems), "Repaired", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
             StartScan();
         }
 

@@ -735,6 +735,12 @@ namespace OpenCAGE.MCP
          * edit_anim_tree and the tree editor write only their tree set, so every global write reports them. */
         private static readonly List<string> _pendingPak = new List<string>();
 
+        /// <summary>Whether changes these tools made are still only in memory (a write of them failed).</summary>
+        internal static bool HasUnwrittenChanges => _pendingPak.Count != 0;
+
+        /// <summary>The animations were written whole from elsewhere, or loaded again from disk: nothing of these tools' is left only in memory.</summary>
+        internal static void ForgetUnwrittenChanges() => _pendingPak.Clear();
+
         /// <summary>
         /// Write ANIMATION.PAK as the animation browser does, capturing the mod baseline first. UI thread.
         /// It serialises everything parsed - every tree set too, so an Animation Tree Editor window's unsaved edits go out with it.
@@ -747,34 +753,33 @@ namespace OpenCAGE.MCP
             string refused = AnimationPakWrite.BeforeWholeSave(animations);
             if (refused != null)
             {
-                //A broken tree can be put right and the next write takes this out; a PAK changed on disk can't be written until a restart
-                if (AnimationPakWrite.ChangedOnDisk(animations.PAK.Filepath) == null)
+                //A broken tree can be put right and the next write takes this out; a PAK changed on disk (or loaded again since) can't be written
+                if (AnimationPakWrite.Stale(animations) == null)
                     _pendingPak.Add(inMemory);
                 throw new McpError("ANIMATION.PAK was not written: " + refused + " " + inMemory + " kept in memory only.");
             }
-            bool saved;
+            //What earlier failed writes left in memory goes out with this one (a write of everything forgets them, once it's done)
+            List<string> earlier = _pendingPak.ToList();
+            bool saved = false;
             string why = null;
             try { saved = animations.Save(); }
             catch (Exception e) { saved = false; why = e.Message; }
-            finally { AnimationPakWrite.Written(animations); }
+            finally { AnimationPakWrite.Written(animations, saved, true); }
             if (!saved)
             {
                 _pendingPak.Add(inMemory);
                 throw new McpError("ANIMATION.PAK could not be written (" + (why ?? "is the game running, or the file read-only?") + "). " + inMemory + " kept in memory only: the next import_animation, remove_animation, "
                     + "edit_blend_set or edit_animation_events writes it (edit_anim_tree and the tree editor's Save write only their trees, not this). Close the game (close_game) and retry.");
             }
-            if (_pendingPak.Count != 0)
-            {
-                call.Note("This write also saved changes an earlier failed write had left in memory: " + string.Join("; ", _pendingPak) + ".");
-                _pendingPak.Clear();
-            }
+            if (earlier.Count != 0)
+                call.Note("This write also saved changes an earlier failed write had left in memory: " + string.Join("; ", earlier) + ".");
         }
 
         /// <summary>Refuse before anything changes in memory when ANIMATION.PAK has changed on disk since it was loaded: it couldn't be written back.</summary>
         private static void RefuseIfAnimationPakChanged()
         {
             //Not a step on the UI thread of its own: only the file on disk is looked at
-            string changed = AnimationPakWrite.ChangedOnDisk(Singleton.Animations?.PAK?.Filepath);
+            string changed = AnimationPakWrite.Stale(Singleton.Animations);
             if (changed != null)
                 throw new McpError(McpErrorCodes.Refused, changed + " Nothing was changed.");
         }
@@ -1755,6 +1760,10 @@ namespace OpenCAGE.MCP
             using (McpEditorTools.Heartbeat(call, "Writing ANIMATION.PAK"))
                 McpEditor.UI(() =>
                 {
+                    //Loaded again since this was read (the Mod Manager changed ANIMATION.PAK): the set it was read for is gone
+                    string stale = AnimationPakWrite.Stale(animations);
+                    if (stale != null)
+                        throw new McpError(McpErrorCodes.Refused, stale + " Nothing was imported.");
                     foreach (ClipPlan plan in ready)
                     {
                         string problem;
@@ -1918,6 +1927,10 @@ namespace OpenCAGE.MCP
             using (McpEditorTools.Heartbeat(call, "Writing ANIMATION.PAK"))
                 McpEditor.UI(() =>
                 {
+                    //Loaded again since the clip was found (the Mod Manager changed ANIMATION.PAK): it's of animations that are gone
+                    string stale = AnimationPakWrite.Stale(animations);
+                    if (stale != null)
+                        throw new McpError(McpErrorCodes.Refused, stale + " Nothing was removed.");
                     string set = clip.Context?.Set?.Name;
                     if (!animations.RemoveClip(clip, out string problem))
                         throw new McpError("'" + clip.Name + "' can't be removed: " + problem);
@@ -2074,6 +2087,10 @@ namespace OpenCAGE.MCP
             RefuseIfAnimationPakChanged();
             McpEditor.UI(() =>
             {
+                //Loaded again since the clip was found (the Mod Manager changed ANIMATION.PAK): it's of animations that are gone
+                string stale = AnimationPakWrite.Stale(animations);
+                if (stale != null)
+                    throw new McpError(McpErrorCodes.Refused, stale + " Nothing was changed.");
                 if (!animations.EditMetadata(clip, edit, out string problem))
                     throw new McpError(problem);
                 //Names are stored as hashes: new ones go in the debug string table so they read back
@@ -4035,7 +4052,7 @@ namespace OpenCAGE.MCP
                     AnimTreeDB database = FindTreeSet(animations, setName);
                     AnimationTree tree = FindTree(database, treeName);
                     //Nothing done to a PAK that can't be written back: one changed on disk since it was loaded would be put back as it was
-                    string changedOnDisk = AnimationPakWrite.ChangedOnDisk(animations.PAK.Filepath);
+                    string changedOnDisk = AnimationPakWrite.Stale(animations);
                     if (changedOnDisk != null)
                         throw new McpError(McpErrorCodes.Refused, changedOnDisk + " Nothing was changed.");
                     //A value half-typed into the open editor's inspector goes in first; the layout is taken by node, to follow renames and removals
@@ -4064,9 +4081,9 @@ namespace OpenCAGE.MCP
                     //The set's node layouts go into the PAK with it
                     PlaceAndCommitLayouts(call, database, tree, placed);
                     Modding.ModServices.CaptureBeforeWrite(animations.PAK.Filepath);
-                    bool saved;
+                    bool saved = false;
                     try { saved = animations.PAK.Save(); }
-                    finally { AnimationPakWrite.Written(animations); }
+                    finally { AnimationPakWrite.Written(animations, saved, false); }
                     if (!saved)
                         throw new McpError("ANIMATION.PAK could not be written (is the game running, or the file read-only?). The edit is in memory only: the next edit_anim_tree or ANIMATION.PAK write takes it out.");
                     //This writes the tree set and string table only: a change an earlier failed write left in memory is not in it
@@ -4287,7 +4304,7 @@ namespace OpenCAGE.MCP
         private static void WriteTreeLayouts(McpCall call, AnimTreeDB database, AnimationTree tree, JObject result)
         {
             Anim animations = RequireAnimations();
-            string changedOnDisk = AnimationPakWrite.ChangedOnDisk(animations.PAK.Filepath);
+            string changedOnDisk = AnimationPakWrite.Stale(animations);
             if (changedOnDisk != null)
             {
                 result["written"] = false;
@@ -4312,9 +4329,9 @@ namespace OpenCAGE.MCP
                 return;
             }
             Modding.ModServices.CaptureBeforeWrite(animations.PAK.Filepath);
-            bool saved;
+            bool saved = false;
             try { saved = animations.PAK.Save(); }
-            finally { AnimationPakWrite.Written(animations); }
+            finally { AnimationPakWrite.Written(animations, saved, false); }
             if (!saved)
                 throw new McpError("The layout is changed in the editor, but ANIMATION.PAK could not be written (is the file read-only?). It goes out with the PAK's next write.");
             if (_pendingPak.Count != 0)

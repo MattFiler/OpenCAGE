@@ -1036,6 +1036,7 @@
     <Compile Include="Scripts\CompositePreviewManager.cs" />
     <Compile Include="Scripts\AnimationPakWrite.cs" />
     <Compile Include="Scripts\AnimTreeLayoutManager.cs" />
+    <Compile Include="Scripts\LoadedGameFiles.cs" />
     <Compile Include="Scripts\AnimTreeLayouts.cs" />
     <Compile Include="Scripts\CollisionProxyImporter.cs" />
     <Compile Include="Scripts\PhysicsSystemImporter.cs" />

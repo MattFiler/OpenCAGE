@@ -478,10 +478,13 @@ namespace OpenCAGE.MCP
                 ["game_path"] = Singleton.PathToAI,
                 ["platform"] = Singleton.Platform.ToString(),
                 ["loading"] = editor.IsLevelLoadInProgress,
-                ["saving"] = UndoStack.Current.Blocked,
+                //Applying mods holds undo too, and says so on its own
+                ["saving"] = UndoStack.Current.Blocked && Singleton.CurrentBackupState != Singleton.BackupState.APPLYING_MODS,
                 ["viewport"] = new JObject() { ["enabled"] = Singleton.ViewportEnabled, ["connected"] = Send.Connected, ["ready"] = Send.Connected && ViewerResourceSync.ViewerReady && ViewerPopulateSync.ActivePopulateToken == 0 },
             };
-            if (Singleton.CurrentBackupState != Singleton.BackupState.NONE)
+            if (Singleton.CurrentBackupState == Singleton.BackupState.APPLYING_MODS)
+                state["applying_mods"] = true;
+            else if (Singleton.CurrentBackupState != Singleton.BackupState.NONE)
                 state["backup_running"] = Singleton.CurrentBackupState == Singleton.BackupState.ALL_LEVELS ? "all levels" : Singleton.BackupLevel;
             //What the status bar says: loading/saving steps, undo messages, background work such as the shader database harvest
             string status = StatusText(editor);
@@ -624,7 +627,7 @@ namespace OpenCAGE.MCP
             McpEditor.UI(() =>
             {
                 if (UndoStack.Current.Blocked) throw new McpError("OpenCAGE is saving the level.");
-                if (Singleton.CurrentBackupState != Singleton.BackupState.NONE) throw new McpError("A level backup is running.");
+                if (Singleton.CurrentBackupState != Singleton.BackupState.NONE) throw new McpError(Singleton.BusyText + ".");
                 if (Singleton.Editor.IsLevelLoadInProgress) throw new McpError("A level is already loading.");
             });
         }
@@ -941,7 +944,7 @@ namespace OpenCAGE.MCP
             McpEditor.UI(() =>
             {
                 if (UndoStack.Current.Blocked) throw McpError.Busy("OpenCAGE is saving a level. Try again when it has finished.");
-                if (Singleton.CurrentBackupState != Singleton.BackupState.NONE) throw McpError.Busy("A level backup is running. Try again when it has finished.");
+                if (Singleton.CurrentBackupState != Singleton.BackupState.NONE) throw McpError.Busy(Singleton.BusyText + ". Try again when it has finished.");
             });
 
             Stopwatch timer = Stopwatch.StartNew();
@@ -1037,7 +1040,7 @@ namespace OpenCAGE.MCP
             McpEditor.UI(() =>
             {
                 if (UndoStack.Current.Blocked) throw McpError.Busy("OpenCAGE is saving a level. Try again when it has finished.");
-                if (Singleton.CurrentBackupState != Singleton.BackupState.NONE) throw McpError.Busy("A level backup is running. Try again when it has finished.");
+                if (Singleton.CurrentBackupState != Singleton.BackupState.NONE) throw McpError.Busy(Singleton.BusyText + ". Try again when it has finished.");
                 if (string.Equals(Singleton.Editor.CompositeBrowser?.Content?.Level?.Name, level, StringComparison.OrdinalIgnoreCase) || Singleton.Editor.IsLevelLoadInProgress)
                     throw McpError.Busy(level + " is being opened in the editor. Nothing was deleted.");
             });
@@ -1499,7 +1502,7 @@ namespace OpenCAGE.MCP
                 if (UndoStack.Current.Blocked)
                     throw McpError.Busy("OpenCAGE is saving or writing a level. Launch when it has finished (get_editor_state shows 'saving').");
                 if (Singleton.CurrentBackupState != Singleton.BackupState.NONE)
-                    throw McpError.Busy("A level backup is running. Launch when it has finished.");
+                    throw McpError.Busy(Singleton.BusyText + ". Launch when it has finished.");
                 if (Singleton.Editor.IsLevelLoadInProgress)
                     throw McpError.Busy("A level is still loading. Launch when it is open.");
                 open = Singleton.Editor.CompositeBrowser?.Content?.IsLevelDataLoaded == true ? Singleton.Editor.CompositeBrowser.Content.Level.Name : null;
@@ -1783,7 +1786,7 @@ namespace OpenCAGE.MCP
             McpEditor.UI(() =>
             {
                 if (Singleton.CurrentBackupState != Singleton.BackupState.NONE)
-                    throw McpError.Busy("A backup is already running.");
+                    throw McpError.Busy(Singleton.BusyText + ". Try again when it has finished.");
                 if (UndoStack.Current.Blocked)
                     throw McpError.Busy("The level is being saved.");
                 Singleton.CurrentBackupState = Singleton.BackupState.SINGLE_LEVEL;
@@ -1913,7 +1916,7 @@ namespace OpenCAGE.MCP
             McpEditor.UI(() =>
             {
                 if (Singleton.CurrentBackupState != Singleton.BackupState.NONE)
-                    throw new McpError("A backup is already running.");
+                    throw new McpError(Singleton.BusyText + ". Try again when it has finished.");
                 if (UndoStack.Current.Blocked)
                     throw new McpError("A level is being saved.");
                 Singleton.CurrentBackupState = Singleton.BackupState.ALL_LEVELS;
@@ -1975,7 +1978,7 @@ namespace OpenCAGE.MCP
             McpEditor.UI(() =>
             {
                 if (Singleton.CurrentBackupState != Singleton.BackupState.NONE)
-                    throw McpError.Busy("A backup is running. Try again when it has finished.");
+                    throw McpError.Busy(Singleton.BusyText + ". Try again when it has finished.");
                 Singleton.CurrentBackupState = Singleton.BackupState.SINGLE_LEVEL;
                 Singleton.BackupLevel = level;
             });

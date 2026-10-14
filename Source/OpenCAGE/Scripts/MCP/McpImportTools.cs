@@ -976,7 +976,7 @@ namespace OpenCAGE.MCP
                 editor = McpEditor.Editor;
                 //A level being backed up or saved must not be rewritten underneath it (the window's own rule)
                 if (Singleton.CurrentBackupState != Singleton.BackupState.NONE)
-                    throw new McpError("A level backup is running. Try again when it has finished.");
+                    throw new McpError(Singleton.BusyText + ". Try again when it has finished.");
                 if (UndoStack.Current.Blocked)
                     throw new McpError("OpenCAGE is saving a level. Try again when it has finished.");
                 if (editor.IsLevelLoadInProgress)

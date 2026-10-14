@@ -63,18 +63,19 @@ namespace OpenCAGE.Modding
         }
 
         /// <summary>
-        /// Scan the whole DATA folder. Reports (done, total) through the callback if given.
+        /// Scan the whole DATA folder. Reports (bytes read, bytes to read) through the callback if given.
         /// </summary>
-        public ScanResult ScanAll(Action<int, int> progress = null)
+        public ScanResult ScanAll(Action<long, long> progress = null)
         {
             return Scan(null, progress);
         }
 
         /// <summary>
         /// Scan only paths under the given normalised prefix (e.g. one level's folder), or
-        /// everything when the prefix is null.
+        /// everything when the prefix is null. Reports (bytes read, bytes to read) through the callback if given: only files
+        /// changed since they were last read are read (the first scan reads everything).
         /// </summary>
-        public ScanResult Scan(string normalisedPrefix, Action<int, int> progress = null)
+        public ScanResult Scan(string normalisedPrefix, Action<long, long> progress = null)
         {
             //The union of what ships and what's on disk, so additions and deletions both show
             HashSet<string> paths = new HashSet<string>();
@@ -114,8 +115,12 @@ namespace OpenCAGE.Modding
                 }
             }
 
+            /* Every file read (those changed since last time - every one, the first time), several at a time. Even those whose
+               status their size gives away: what's worked out from the scan next (what to put in a mod, what the user changed
+               themselves) needs their hashes, and would otherwise read them one by one, on the UI thread */
+            _cache.HashAll(filtered, progress);
+
             ScanResult result = new ScanResult();
-            int done = 0;
             foreach (string path in filtered)
             {
                 byte[] hash = _cache.Hash(path);
@@ -136,10 +141,6 @@ namespace OpenCAGE.Modding
                         status = FileStatus.Foreign;
                 }
                 result.Files[path] = status;
-
-                done++;
-                if (progress != null && (done % 25 == 0 || done == filtered.Count))
-                    progress(done, filtered.Count);
             }
 
             _cache.Save();

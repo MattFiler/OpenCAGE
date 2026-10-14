@@ -605,9 +605,9 @@ namespace OpenCAGE
                     MessageBox.Show(refused, "Save failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
-                bool saved;
+                bool saved = false;
                 try { saved = _animations.Save(); }
-                finally { AnimationPakWrite.Written(_animations); }
+                finally { AnimationPakWrite.Written(_animations, saved, true); }
                 if (!saved)
                 {
                     statusLabel.Text = _animations.ClipIndex.BlendSets.Count + " blend set(s)   —   unsaved changes";
@@ -624,6 +624,24 @@ namespace OpenCAGE
                 MessageBox.Show(ex.ToString(), "Save failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally { Cursor.Current = Cursors.Default; }
+        }
+
+        /// <summary>Blend set changes not written to ANIMATION.PAK yet.</summary>
+        public bool HasUnsavedChanges => _dirty;
+
+        /// <summary>Something else wrote the animations in memory, these blend sets with them (<see cref="AnimationPakWrite.SaveWhole"/>).</summary>
+        public void MarkSaved()
+        {
+            _dirty = false;
+            if (!IsDisposed && _animations != null)
+                statusLabel.Text = _animations.ClipIndex.BlendSets.Count + " blend set(s)";
+        }
+
+        /// <summary>Close without asking about unsaved changes: they were saved, or let go, already (the animations are being loaded again).</summary>
+        public void CloseDiscarding()
+        {
+            _dirty = false;
+            Close();
         }
 
         private void EditBlendSets_FormClosing(object sender, FormClosingEventArgs e)

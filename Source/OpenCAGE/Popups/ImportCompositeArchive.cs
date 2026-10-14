@@ -417,7 +417,7 @@ namespace OpenCAGE
             //A level being backed up must not be rewritten under the backup (the same rule as saving)
             if (Singleton.CurrentBackupState != Singleton.BackupState.NONE)
             {
-                MessageBox.Show("Cannot import - a backup is in progress!", "Backup in progress...", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Cannot import - " + Singleton.BusyText.ToLowerInvariant() + "!", "Please wait...", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 

@@ -132,7 +132,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "mods",
                 Title = "Mod manager",
-                Description = "The mod manager: list the library, import an .omp package, remove one, apply (the enabled mods, in priority order, restoring everything else to how it is without mods - mods changing the same file are combined: configs and behaviour trees value by value, text string by string, PAKs entry by entry, a level entity by entity and then rebuilt; where two change the same thing the later wins and it's reported. The user's own changes to files no mod had changed are the starting point mods are combined onto, and come back when the mods are removed), repair, recover an interrupted apply, or export changed files as an .omp (a release for the mod manager; export_composite_package's .ocp is composites to import into a level instead). Game files are rewritten at once; not undoable. dry_run reports the clashes first, and files changed since the mods were installed (which apply refuses to replace until told keep or discard).",
+                Description = "The mod manager: list the library, import an .omp package, remove one, apply (the enabled mods, in priority order, restoring everything else to how it is without mods - mods changing the same file are combined: configs and behaviour trees value by value, text string by string, PAKs entry by entry, a level entity by entity and then rebuilt; where two change the same thing the later wins and it's reported. The user's own changes to files no mod had changed are the starting point mods are combined onto, and come back when the mods are removed), repair, recover an interrupted apply, or export changed files as an .omp (a release for the mod manager; export_composite_package's .ocp is composites to import into a level instead). Game files are rewritten at once; not undoable. dry_run reports the clashes first, and files changed since the mods were installed (which apply refuses to replace until told keep or discard). Afterwards OpenCAGE loads again whatever it has open that changed - the open level, the animations, the global textures and text (listed as reloaded); apply, repair and recover refuse while the open level or the animations have changes not saved in files they may change, unless discard_unsaved.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("action", "list (default), import, remove, apply, repair, recover, or export.", options: new[] { "list", "import", "remove", "apply", "repair", "recover", "export" }),
                     McpSchema.String("path", "import: the .omp package; export: where to write it. An absolute path."),
@@ -140,6 +140,7 @@ namespace OpenCAGE.MCP
                     McpSchema.Strings("enabled", "apply: the ids of the mods to have enabled, lowest priority first (default: those enabled now)."),
                     McpSchema.Boolean("adopt_current_files", "apply: take files that are neither vanilla nor stored as their restore point instead of refusing."),
                     McpSchema.String("edited_files", "apply: files installed mods had changed that were changed again since - keep (as a new mod at the end of the list) or discard. Without it apply refuses while there are any.", options: new[] { "keep", "discard" }),
+                    McpSchema.Boolean("discard_unsaved", "apply/repair/recover: go ahead even though the open level or the animations have changes not saved yet in files this may change - they're lost when OpenCAGE loads the files again afterwards (save them first instead: save_level, and the animation tools' writes)."),
                     McpSchema.String("name", "export: the mod's name."),
                     McpSchema.String("author", "export: its author."),
                     McpSchema.String("version", "export: its version (default 1.0)."),
@@ -1667,16 +1668,27 @@ namespace OpenCAGE.MCP
                         Modding.EditedFilesChoice edited = editedChoice == "keep" ? Modding.EditedFilesChoice.KeepAsMod : editedChoice == "discard" ? Modding.EditedFilesChoice.Discard : Modding.EditedFilesChoice.Ask;
                         if (ProcessRunning("AI"))
                             throw new McpError("Alien: Isolation is running: close it (close_game) before applying mods.");
+                        //What OpenCAGE has open of the files this may change: refused while it has changes not saved (unless let go), loaded again after
+                        LoadedGameFiles.Change change = null;
                         McpEditor.UI(() =>
                         {
-                            if (UndoStack.Current.Blocked || Singleton.CurrentBackupState != Singleton.BackupState.NONE)
-                                throw new McpError("A save or backup is running. Try again when it has finished.");
+                            change = LoadedGameFiles.BeforeChange(null, analysis.MayChange, out string refused, call.Bool("discard_unsaved"));
+                            if (change == null)
+                                throw new McpError(McpErrorCodes.Refused, refused + " Nothing was changed.");
                         });
-                        Modding.TransactionResult result;
-                        using (McpEditorTools.Heartbeat(call, "Applying mod changes"))
+                        Modding.TransactionResult result = null;
+                        try
                         {
-                            try { result = installer.ApplyConfiguration(desired, call.Bool("adopt_current_files"), null, edited); }
-                            catch (Exception e) { throw new McpError("Applying failed: " + e.Message); }
+                            using (McpEditorTools.Heartbeat(call, "Applying mod changes"))
+                            {
+                                try { result = installer.ApplyConfiguration(desired, call.Bool("adopt_current_files"), null, edited); }
+                                catch (Exception e) { throw new McpError("Applying failed: " + e.Message); }
+                            }
+                        }
+                        finally
+                        {
+                            bool filesChanged = (result != null && result.Success) || installer.HasCrashJournal();
+                            McpEditor.UI(() => LoadedGameFiles.AfterChange(change, filesChanged));
                         }
                         if (!result.Success && result.EditedFiles.Count != 0)
                             throw new McpError("Nothing was applied: " + result.Error + " Pass edited_files: keep or discard. Changed: " + string.Join(", ", result.EditedFiles.Take(20)));
@@ -1687,9 +1699,11 @@ namespace OpenCAGE.MCP
                         if (result.CombinedLevels.Count != 0) done["combined_levels"] = new JArray(result.CombinedLevels);
                         if (result.Warnings.Count != 0) done["warnings"] = new JArray(result.Warnings.Take(limit));
                         if (result.KeptAsMod != null) done["kept_as_mod"] = result.KeptAsMod;
-                        call.Note("An open level that a mod changed shows the old content until it is reloaded (load_level).");
-                        if (AnimationPakWrite.ChangedOnDisk(Singleton.Animations?.PAK?.Filepath) != null)
-                            call.Note("ANIMATION.PAK changed: OpenCAGE still holds it as it was loaded, so the animation tools refuse to write it until OpenCAGE is restarted.");
+                        if (change.Reloaded.Count != 0) done["reloaded"] = new JArray(change.Reloaded);
+                        foreach (string problem in change.Problems)
+                            call.Note(problem);
+                        if (change.Reloaded.Any(o => o.StartsWith("the level ")))
+                            call.Note("The open level is loading again from its files (wait for get_editor_state to show it loaded before editing it).");
                         return done;
                     }
 
@@ -1699,9 +1713,22 @@ namespace OpenCAGE.MCP
                             return new JObject() { ["recovered"] = false, ["reason"] = "No interrupted mod operation to recover." };
                         if (dryRun)
                             return new JObject() { ["dry_run"] = true, ["would_recover"] = true };
+                        //The files go back as they were: what OpenCAGE has open of them is loaded again after (saving it first would be undone)
+                        LoadedGameFiles.Change change = null;
+                        McpEditor.UI(() =>
+                        {
+                            change = LoadedGameFiles.BeforeChange(null, installer.CrashJournalFiles(), out string refused, call.Bool("discard_unsaved"), false);
+                            if (change == null)
+                                throw new McpError(McpErrorCodes.Refused, refused + " Nothing was changed.");
+                        });
                         try { installer.RecoverCrashJournal(); }
                         catch (Exception e) { throw new McpError("Recovery failed: " + e.Message); }
-                        return new JObject() { ["recovered"] = true };
+                        finally { McpEditor.UI(() => LoadedGameFiles.AfterChange(change, true)); }
+                        foreach (string problem in change.Problems)
+                            call.Note(problem);
+                        JObject recovered = new JObject() { ["recovered"] = true };
+                        if (change.Reloaded.Count != 0) recovered["reloaded"] = new JArray(change.Reloaded);
+                        return recovered;
                     }
 
                 case "export":

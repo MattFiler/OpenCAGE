@@ -172,18 +172,112 @@ namespace OpenCAGE.Modding
             return level;
         }
 
+        /// <summary>
+        /// A SHA-256 hasher: Windows' own, which uses the processor's SHA instructions where it has them (several times
+        /// faster than the managed one .NET Framework gives by default), or the default where Windows' can't be had - in
+        /// .NET 5 and later, the default is Windows' own.
+        /// </summary>
+        public static SHA256 NewSha256()
+        {
+            try
+            {
+                if (_windowsSha256 != null && Activator.CreateInstance(_windowsSha256) is SHA256 sha)
+                    return sha;
+            }
+            catch { }
+            return SHA256.Create();
+        }
+        //In System.Core with LINQ in .NET Framework; elsewhere, not found there
+        private static readonly Type _windowsSha256 = typeof(System.Linq.Enumerable).Assembly.GetType("System.Security.Cryptography.SHA256Cng", false);
+
         public static byte[] Sha256(byte[] content)
         {
-            using (SHA256 sha = SHA256.Create())
+            using (SHA256 sha = NewSha256())
                 return sha.ComputeHash(content);
         }
 
         public static byte[] Sha256File(string path)
         {
-            using (SHA256 sha = SHA256.Create())
-            using (FileStream stream = File.OpenRead(path))
-                return sha.ComputeHash(stream);
+            using (SHA256 sha = NewSha256())
+                return Sha256File(sha, path, new byte[1 << 20]);
         }
+
+        /// <summary>
+        /// A file's hash, read through the given buffer, telling <paramref name="read"/> each run of bytes read. Nothing else is
+        /// kept from writing, moving or deleting the file meanwhile (a check of the game files runs beside saves and applies):
+        /// whoever records the hash makes sure the file didn't change while it was read.
+        /// </summary>
+        public static byte[] Sha256File(SHA256 sha, string path, byte[] buffer, Action<long> read = null)
+        {
+            sha.Initialize();
+            using (FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 4096, FileOptions.SequentialScan))
+            {
+                int count;
+                while ((count = stream.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    sha.TransformBlock(buffer, 0, count, null, 0);
+                    read?.Invoke(count);
+                }
+            }
+            sha.TransformFinalBlock(buffer, 0, 0);
+            return sha.Hash;
+        }
+
+        /// <summary>
+        /// How many files to read at once from the drive the game is on: one from a spinning disk, which slows down reading
+        /// several (each read has to wait for the head to move), and one per processor core, up to 8, from anything else -
+        /// hashing is what's slow there. Two when the drive can't say which it is.
+        /// </summary>
+        public static int ReadersFor(string gameRoot)
+        {
+            int cores = Math.Max(1, Math.Min(Environment.ProcessorCount, 8));
+            switch (SeeksOnRead(gameRoot))
+            {
+                case true: return 1;
+                case false: return cores;
+                default: return Math.Min(2, cores);
+            }
+        }
+
+        private static readonly Dictionary<string, bool?> _seeks = new Dictionary<string, bool?>(StringComparer.OrdinalIgnoreCase);
+
+        /* Whether the drive holding a folder is a spinning disk (Windows says whether reading from it "incurs a seek penalty"),
+           or null when it can't say - a network share, a drive made of several disks */
+        private static bool? SeeksOnRead(string folder)
+        {
+            string root;
+            try { root = Path.GetPathRoot(Path.GetFullPath(folder)); }
+            catch { return null; }
+            if (string.IsNullOrEmpty(root) || root.Length < 2 || root[1] != ':')
+                return null;
+            lock (_seeks)
+            {
+                if (_seeks.TryGetValue(root, out bool? known))
+                    return known;
+                bool? seeks = null;
+                try
+                {
+                    using (Microsoft.Win32.SafeHandles.SafeFileHandle volume = CreateFile(@"\\.\" + root.Substring(0, 2), 0, 3 /* share read, write */, IntPtr.Zero, 3 /* open existing */, 0, IntPtr.Zero))
+                    {
+                        //STORAGE_PROPERTY_QUERY { StorageDeviceSeekPenaltyProperty (7), PropertyStandardQuery (0) } -> DEVICE_SEEK_PENALTY_DESCRIPTOR
+                        byte[] query = new byte[12];
+                        query[0] = 7;
+                        byte[] answer = new byte[12];
+                        if (!volume.IsInvalid && DeviceIoControl(volume, 0x2D1400 /* IOCTL_STORAGE_QUERY_PROPERTY */, query, query.Length, answer, answer.Length, out int returned, IntPtr.Zero) && returned >= 9)
+                            seeks = answer[8] != 0;
+                    }
+                }
+                catch { }
+                _seeks[root] = seeks;
+                return seeks;
+            }
+        }
+
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+        private static extern Microsoft.Win32.SafeHandles.SafeFileHandle CreateFile(string name, uint access, uint share, IntPtr security, uint disposition, uint flags, IntPtr template);
+
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool DeviceIoControl(Microsoft.Win32.SafeHandles.SafeFileHandle device, uint code, byte[] input, int inputSize, byte[] output, int outputSize, out int returned, IntPtr overlapped);
 
         public static string ToHex(byte[] hash)
         {

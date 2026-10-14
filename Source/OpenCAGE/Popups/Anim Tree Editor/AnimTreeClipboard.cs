@@ -51,6 +51,13 @@ namespace OpenCAGE.AnimTrees
             SourceTree = tree;
         }
 
+        /// <summary>Let go of what was copied: the animations it came from are being loaded again.</summary>
+        public static void Clear()
+        {
+            _entries.Clear();
+            SourceTree = null;
+        }
+
         /// <summary>
         /// The entries whose node is still in the tree it was copied from (one deleted since is left out), in copy order - none
         /// once that tree is no longer loaded (the animations read again from disk).

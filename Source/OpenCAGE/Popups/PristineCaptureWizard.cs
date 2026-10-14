@@ -188,9 +188,13 @@ namespace OpenCAGE.Popups
                     {
                         HashCache cache = ModServices.Cache;
                         VanillaManifest manifest = ModServices.Manifest;
+                        //Read again whatever their times say (the check may have put a file back as it was), several at once
+                        foreach (string path in _paths)
+                            cache.Invalidate(path);
+                        cache.HashAll(_paths, (done, total) => report("Checking the files the check put back... " + (done * 100 / Math.Max(1, total)) + "%"));
+                        report("Keeping copies of the originals...");
                         foreach (string path in _paths)
                         {
-                            cache.Invalidate(path);
                             byte[] hash = cache.Hash(path);
                             if (hash != null && manifest.IsVanilla(path, hash))
                             {

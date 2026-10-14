@@ -116,10 +116,11 @@ namespace OpenCAGE.MCP
                 _uiCall.Level = content.Level.Name;
             if (forEditing)
             {
+                //Before the save check: applying mods holds undo too
+                if (Singleton.CurrentBackupState != Singleton.BackupState.NONE)
+                    throw McpError.Busy(Singleton.BusyText + ". Try again when it has finished.");
                 if (UndoStack.Current.Blocked)
                     throw McpError.Busy("OpenCAGE is saving the level. Try again when it has finished.");
-                if (Singleton.CurrentBackupState != Singleton.BackupState.NONE)
-                    throw McpError.Busy("A level backup is running. Try again when it has finished.");
             }
             return content;
         }

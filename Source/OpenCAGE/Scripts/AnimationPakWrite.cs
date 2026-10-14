@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace OpenCAGE
 {
@@ -20,15 +21,22 @@ namespace OpenCAGE
     public static class AnimationPakWrite
     {
         //ANIMATION.PAK as it was on disk when OpenCAGE loaded it, or last wrote it: its size and time, and its contents' hash
-        //(worked out in the background, for when the file is written again unchanged - a mod manager rollback, say)
+        //(worked out in the background, for when the file is written again unchanged - a mod manager rollback, say) - and the
+        //animations in memory that are that file (loaded again, any held from before are not)
         private static string _path;
         private static long _length;
         private static DateTime _writtenUtc;
         private static Task<byte[]> _hash;
+        private static CathodeLib.Animation _stamped;
+        //A write that didn't go through left what it was writing in memory only (see Written)
+        private static bool _writeFailed;
 
         /// <summary>The file on disk is what's in memory now: just loaded, or just written by OpenCAGE (or tried to be).</summary>
-        public static void Stamp(string path)
+        public static void Stamp(CathodeLib.Animation animations)
         {
+            _stamped = animations;
+            _writeFailed = false;
+            string path = animations?.PAK?.Filepath;
             _path = null;
             _hash = null;
             if (string.IsNullOrEmpty(path))
@@ -79,13 +87,31 @@ namespace OpenCAGE
                     return null;
                 }
             }
-            return "ANIMATION.PAK has changed on disk since OpenCAGE loaded it (the Mod Manager, a game file check or another tool changed it), so saving "
+            return "ANIMATION.PAK has changed on disk since OpenCAGE loaded it (a game file check or another tool changed it), so saving "
                 + "now would put the old one back. Restart OpenCAGE to load it as it is now - changes to animations made here and not saved yet can't be kept.";
+        }
+
+        /// <summary>
+        /// Why these animations mustn't be written over ANIMATION.PAK: they've been loaded again since they were read (the Mod
+        /// Manager changed the file), or the file changed on disk since (<see cref="ChangedOnDisk"/>). Null when they can be.
+        /// </summary>
+        public static string Stale(CathodeLib.Animation animations)
+        {
+            if (Singleton.CurrentBackupState == Singleton.BackupState.APPLYING_MODS)
+                return "Mods are being applied, which can change ANIMATION.PAK. Save once that's done.";
+            //Every writer asks this first: the hash of the file as last loaded or written reads it in the background, and a
+            //writer can't open the file while it does - so it's let finish (a second or two after a load or a save)
+            try { _hash?.Wait(); }
+            catch { }
+            if (animations != null && _stamped != null && !ReferenceEquals(animations, _stamped))
+                return "ANIMATION.PAK was loaded again after these animations were read (the Mod Manager changed it), so they can't be written over it. "
+                    + "Open them again to work on them as they are now.";
+            return ChangedOnDisk(animations?.PAK?.Filepath);
         }
 
         private static byte[] Hash(string path)
         {
-            using (SHA256 sha = SHA256.Create())
+            using (SHA256 sha = Modding.ModToolkit.NewSha256())
             using (FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 1 << 20))
                 return sha.ComputeHash(stream);
         }
@@ -161,7 +187,7 @@ namespace OpenCAGE
         public static string BeforeWholeSave(CathodeLib.Animation animations)
         {
             string path = animations?.PAK?.Filepath;
-            string error = ChangedOnDisk(path);
+            string error = Stale(animations);
             if (error != null)
                 return error;
             PrepareTrees(animations, out error);
@@ -172,8 +198,74 @@ namespace OpenCAGE
             return null;
         }
 
-        /// <summary>After OpenCAGE wrote ANIMATION.PAK (or tried to - what's on disk is then its doing either way).</summary>
-        public static void Written(CathodeLib.Animation animations) => Stamp(animations?.PAK?.Filepath);
+        /// <summary>
+        /// After OpenCAGE wrote ANIMATION.PAK, or tried to (what's on disk is then its doing either way). <paramref name="saved"/>:
+        /// whether the write went through. <paramref name="whole"/>: whether it wrote everything in memory (CathodeLib's
+        /// Animation.Save), rather than the PAK with some entries put in first - which leaves out what else waits in memory.
+        /// </summary>
+        public static void Written(CathodeLib.Animation animations, bool saved, bool whole)
+        {
+            bool failedBefore = _writeFailed;
+            Stamp(animations);
+            //A write that didn't go through leaves what it was writing in memory only - out of sight of the trees' comparison with
+            //the PAK, as it put them in its entries first - until a write of everything puts it all out
+            _writeFailed = !saved || (failedBefore && !whole);
+            if (saved && whole)
+            {
+                foreach (EditBlendSets window in Application.OpenForms.OfType<EditBlendSets>().ToList())
+                    window.MarkSaved();
+                MCP.McpAnimationAssetTools.ForgetUnwrittenChanges();
+            }
+        }
+
+        /// <summary>
+        /// Changes to the animations in memory that aren't in ANIMATION.PAK yet, in words ("tree set HUMANOID", "blend sets"):
+        /// what writing the PAK from somewhere else (the Mod Manager) would leave behind. Trees are only looked at once they're
+        /// read - nothing can have changed them before.
+        /// </summary>
+        public static List<string> Unsaved(CathodeLib.Animation animations)
+        {
+            List<string> unsaved = new List<string>();
+            if (animations?.PAK == null)
+                return unsaved;
+            if (animations.ContentsLoaded)
+            {
+                foreach (AnimTreeDB database in animations.Trees)
+                {
+                    PAK2.File entry = animations.PAK.Entries.FirstOrDefault(o => string.Equals(o.Filename, database.Filepath, StringComparison.OrdinalIgnoreCase));
+                    byte[] content = null;
+                    try { content = database.ToBytes(); }
+                    catch { }
+                    if (entry?.Content == null || content == null || !entry.Content.AsSpan().SequenceEqual(content))
+                        unsaved.Add("the animation trees of " + database.Set);
+                }
+            }
+            if (_writeFailed)
+                unsaved.Add("what a save that didn't go through left unsaved");
+            if (AnimTreeLayoutManager.HasPending)
+                unsaved.Add("animation tree layouts");
+            if (Application.OpenForms.OfType<EditBlendSets>().Any(o => !o.IsDisposed && o.HasUnsavedChanges))
+                unsaved.Add("blend sets");
+            if (MCP.McpAnimationAssetTools.HasUnwrittenChanges)
+                unsaved.Add("changes the AI assistant made");
+            return unsaved;
+        }
+
+        /// <summary>
+        /// Write every animation in memory to ANIMATION.PAK as it is (<see cref="BeforeWholeSave"/>, then the PAK): what holds
+        /// unsaved changes then holds none. Null when written, else why not.
+        /// </summary>
+        public static string SaveWhole(CathodeLib.Animation animations)
+        {
+            string refused = BeforeWholeSave(animations);
+            if (refused != null)
+                return refused;
+            bool saved = false;
+            try { saved = animations.Save(); }
+            catch (Exception e) { return "ANIMATION.PAK could not be written: " + e.Message; }
+            finally { Written(animations, saved, true); }
+            return saved ? null : "ANIMATION.PAK could not be written.";
+        }
 
         /* Every node in a tree's flow - what is written, from the tree's children down - each once */
         private static IEnumerable<AnimationNode> FlowNodes(AnimationTree tree)

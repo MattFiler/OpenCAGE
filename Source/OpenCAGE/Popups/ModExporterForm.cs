@@ -82,6 +82,9 @@ namespace OpenCAGE.Popups
         private ModState.InstalledMod _updating;
         private byte[] _preview;
         private bool _changesEdited;
+        private bool _summarising;
+        //Working out whether an animation PAK changes only its tree layouts (once a form): the export waits for it rather than doing it again
+        private System.Threading.Thread _examiningAnimations;
 
         public ModExporterForm(ScanResult scan)
         {
@@ -136,7 +139,7 @@ namespace OpenCAGE.Popups
             meta.Controls.Add(_description);
             meta.Controls.Add(new Label() { Text = "What it changes (filled in for you - edit it if you like)", AutoSize = true, Margin = new Padding(0, 8, 0, 0) });
             _changes = new TextBox() { Dock = DockStyle.Top, Multiline = true, Height = 46 };
-            _changes.TextChanged += (s, e) => { if (_changes.Focused) _changesEdited = true; };
+            _changes.TextChanged += (s, e) => { if (_changes.Focused && !_summarising) _changesEdited = true; };
             meta.Controls.Add(_changes);
             FlowLayoutPanel pictureRow = new FlowLayoutPanel() { Dock = DockStyle.Top, AutoSize = true, Margin = new Padding(0, 8, 0, 0) };
             Button choosePicture = new Button() { Text = "Picture...", AutoSize = true };
@@ -490,7 +493,21 @@ namespace OpenCAGE.Popups
                     preview.AddFiles(files);
                     foreach (KeyValuePair<ConfigChange, List<BmlPatchOp>> config in configs)
                         preview.AddConfigPatch(config.Key.Path, config.Value, config.Key.VanillaBytes);
-                    _changes.Text = preview.Summarise();
+                    //Said by OpenCAGE, not written by the author, even with the box focused
+                    _summarising = true;
+                    try { _changes.Text = preview.Summarise(); }
+                    finally { _summarising = false; }
+
+                    //Whether an animation PAK changes more than its tree layouts takes reading it, which takes seconds: said once that's done
+                    if (_examiningAnimations == null && files.Any(ModExportBuilder.IsAnimationPak))
+                    {
+                        _examiningAnimations = new System.Threading.Thread(() =>
+                        {
+                            try { preview.ExamineAnimationPaks(); } catch { }
+                            try { if (!IsDisposed && IsHandleCreated) BeginInvoke((Action)UpdateSummary); } catch { }
+                        }) { IsBackground = true, Name = "Animation PAK changes" };
+                        _examiningAnimations.Start();
+                    }
                 }
                 catch { }
             }
@@ -588,10 +605,13 @@ namespace OpenCAGE.Popups
             Exception error = null;
             using (BusyDialog busy = new BusyDialog("Building the package..."))
             {
+                System.Threading.Thread examining = _examiningAnimations;
                 busy.Work = report =>
                 {
                     try
                     {
+                        //What an animation PAK changes is being worked out already: the package's summary uses that rather than doing it again
+                        examining?.Join();
                         ModExportBuilder builder = new ModExportBuilder(ModServices.GameRoot, ModServices.Manifest, ModServices.Cache, ModServices.Installer);
                         if (_updating != null)
                             builder.Info.Id = _updating.Id;
@@ -599,7 +619,8 @@ namespace OpenCAGE.Popups
                         builder.Info.Author = _author.Text.Trim();
                         builder.Info.Version = _version.Text.Trim();
                         builder.Info.Description = _description.Text;
-                        builder.Info.Summary = _changes.Text.Trim();
+                        //Left to the package to say unless the author wrote it: it can say for sure what an animation PAK changes
+                        builder.Info.Summary = _changesEdited ? _changes.Text.Trim() : "";
                         builder.Info.OpenCageVersion = Singleton.Version;
                         builder.Preview = _preview;
                         builder.AddFiles(files);

@@ -66,6 +66,24 @@ namespace OpenCAGE
                 AddItems(EnumStringType.ANIMATION, _globalEntries);
                 AddItems(EnumStringType.ANIMATION_SET, _globalEntries);
                 AddItems(EnumStringType.ANIMATION_TREE_SET, _globalEntries);
+                AddItems(EnumStringType.SKELETON_SET, _globalEntries);
+            }
+        }
+
+        /* Rebuild every list of the game's own things (not a level's) from the game's files, after they changed under OpenCAGE
+         * (mods applied): items, characters, awards, animations... Each list is replaced whole, as above. */
+        public static void RefreshGlobalEntries()
+        {
+            lock (_globalLock)
+            {
+                if (!_globalPopulated)
+                    return;
+                foreach (EnumStringType type in Enum.GetValues(typeof(EnumStringType)))
+                {
+                    if (type == EnumStringType.MATERIAL || type == EnumStringType.LEVEL_NAME || !IsTypeGlobal(type))
+                        continue;
+                    AddItems(type, _globalEntries);
+                }
             }
         }
 

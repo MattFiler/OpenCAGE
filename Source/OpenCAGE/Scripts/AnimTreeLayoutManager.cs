@@ -41,6 +41,15 @@ namespace OpenCAGE
 
         public static bool HasPending => _pending.Count != 0;
 
+        /// <summary>Let go of everything held: the animations are being loaded again, layouts and all (pending changes are dropped).</summary>
+        public static void Reset()
+        {
+            _pending.Clear();
+            _file = null;
+            _loadedPak = null;
+            _loadedContent = null;
+        }
+
         #region Reading
         /* The layouts as the PAK in memory holds them, read again once that is another PAK (the animations loaded again) or
            its entry was replaced */
@@ -240,15 +249,21 @@ namespace OpenCAGE
                 error = "ANIMATION.PAK's layouts are not ones this version of OpenCAGE can read (damaged, or from a newer version), so they were not written over";
                 return false;
             }
+            //A layout dropped from a PAK the Mod Manager put together from mods may be one a mod brings: the PAK then says the
+            //tree is laid out automatically, so that lasts if this is kept as a mod and the mods are put together again
+            bool fromMods = Modding.ModServices.MadeByMods(pak.Filepath);
             foreach (KeyValuePair<(uint, uint), TreeLayout> change in writing)
             {
                 if (change.Value == null)
-                    file.Remove(change.Key.Item1, change.Key.Item2);
+                {
+                    if (file.Remove(change.Key.Item1, change.Key.Item2) && fromMods)
+                        file.SetAutomatic(change.Key.Item1, change.Key.Item2);
+                }
                 else
                     file.Put(change.Value.Clone());
             }
 
-            if (file.Trees.Count == 0)
+            if (file.Empty)
             {
                 //Every layout gone: no entry at all, as before any was made
                 if (entry != null)

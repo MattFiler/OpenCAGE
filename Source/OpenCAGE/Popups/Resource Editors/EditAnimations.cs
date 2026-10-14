@@ -788,7 +788,7 @@ namespace OpenCAGE
             if (_set == null || _animations == null) return;
 
             //Saved straight after, so not even started when it can't be: the PAK changed on disk since it was loaded
-            string changedOnDisk = AnimationPakWrite.ChangedOnDisk(_animations.PAK.Filepath);
+            string changedOnDisk = AnimationPakWrite.Stale(_animations);
             if (changedOnDisk != null)
             {
                 MessageBox.Show(changedOnDisk, "Can't import", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -844,9 +844,9 @@ namespace OpenCAGE
                     MessageBox.Show(refused, "Save failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return false;
                 }
-                bool saved;
+                bool saved = false;
                 try { saved = _animations.Save(); }
-                finally { AnimationPakWrite.Written(_animations); }
+                finally { AnimationPakWrite.Written(_animations, saved, true); }
                 if (!saved)
                 {
                     statusLabel.Text = "ANIMATION.PAK could not be written.";

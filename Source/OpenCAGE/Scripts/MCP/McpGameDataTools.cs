@@ -218,7 +218,7 @@ namespace OpenCAGE.MCP
         }
 
         /// <summary>The configuration editor windows that hold their own copy of a file (under DATA) and save it back on their next change.</summary>
-        private static Type[] EditorsFor(string relative)
+        internal static Type[] EditorsFor(string relative)
         {
             string file = Relative(relative).ToUpperInvariant();
             if (file == "GBL_ITEM.BML") return new[] { typeof(HackingEditor), typeof(LoadMovieEditor), typeof(BlueprintEditor), typeof(InventoryItemEditor) };
@@ -242,7 +242,7 @@ namespace OpenCAGE.MCP
         }
 
         //These only write on their Save button, so closing one would throw away edits made in it
-        private static readonly Type[] SaveButtonEditors = { typeof(LoadMovieEditor), typeof(BlueprintEditor), typeof(CharacterAssetEditor), typeof(GraphicsEditor) };
+        internal static readonly Type[] SaveButtonEditors = { typeof(LoadMovieEditor), typeof(BlueprintEditor), typeof(CharacterAssetEditor), typeof(GraphicsEditor) };
 
         /// <summary>
         /// Everything checked, before writing these files (under DATA): false for a dry run, which only notes what

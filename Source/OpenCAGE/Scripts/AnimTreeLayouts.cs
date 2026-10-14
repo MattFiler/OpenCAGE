@@ -33,10 +33,20 @@ namespace OpenCAGE
         public static bool IsEntry(string entryName) => string.Equals((entryName ?? "").Replace('/', '\\'), EntryName, StringComparison.OrdinalIgnoreCase);
 
         public List<TreeLayout> Trees = new List<TreeLayout>();
+
+        /// <summary>
+        /// Trees set back to being laid out automatically while mods' layouts were installed (set hash, tree hash). To the
+        /// editor these are like any tree without a layout; when the Mod Manager puts several versions of the PAK together,
+        /// a version saying a tree is laid out automatically takes away the layout an earlier one gives it, as a later
+        /// layout would replace it - so setting a mod's layout back to automatic lasts when the edit is kept as a mod.
+        /// </summary>
+        public HashSet<(uint SetHash, uint TreeHash)> Automatic = new HashSet<(uint, uint)>();
+
         public static new Implementation Implementation = Implementation.CREATE | Implementation.LOAD | Implementation.SAVE;
 
         private const uint Magic = 0x594C5441; //ATLY
-        private const int Version = 1;
+        //1: layouts; 2: layouts, then the trees set back to automatic (written only when there are any, so a file without is as before)
+        private const int Version = 2;
 
         public AnimTreeLayouts(string path) : base(path) { }
         public AnimTreeLayouts(byte[] data, string path = "") : base(data, path) { }
@@ -53,11 +63,13 @@ namespace OpenCAGE
         override protected bool LoadInternal(MemoryStream stream)
         {
             List<TreeLayout> trees = new List<TreeLayout>();
+            HashSet<(uint, uint)> automatic = new HashSet<(uint, uint)>();
             using (BinaryReader reader = new BinaryReader(stream, Encoding.UTF8, true))
             {
                 if (reader.ReadUInt32() != Magic)
                     return false;
-                if (reader.ReadInt32() != Version)
+                int version = reader.ReadInt32();
+                if (version < 1 || version > Version)
                     return false;
                 int treeCount = reader.ReadInt32();
                 for (int i = 0; i < treeCount; i++)
@@ -98,8 +110,15 @@ namespace OpenCAGE
                     }
                     trees.Add(tree);
                 }
+                if (version >= 2)
+                {
+                    int automaticCount = reader.ReadInt32();
+                    for (int i = 0; i < automaticCount; i++)
+                        automatic.Add((reader.ReadUInt32(), reader.ReadUInt32()));
+                }
             }
             Trees = trees;
+            Automatic = automatic;
             return true;
         }
 
@@ -127,8 +146,9 @@ namespace OpenCAGE
             {
                 using (BinaryWriter writer = new BinaryWriter(stream, Encoding.UTF8, true))
                 {
+                    List<(uint, uint)> automatic = Automatic.Where(o => Find(o.SetHash, o.TreeHash) == null).OrderBy(o => o.SetHash).ThenBy(o => o.TreeHash).ToList();
                     writer.Write(Magic);
-                    writer.Write(Version);
+                    writer.Write(automatic.Count == 0 ? 1 : Version);
                     List<TreeLayout> trees = Trees.Where(o => o != null).OrderBy(o => o.SetHash).ThenBy(o => o.TreeHash).ToList();
                     writer.Write(trees.Count);
                     foreach (TreeLayout tree in trees)
@@ -164,6 +184,16 @@ namespace OpenCAGE
                             writer.Write(link.ToPin);
                         }
                     }
+
+                    if (automatic.Count != 0)
+                    {
+                        writer.Write(automatic.Count);
+                        foreach ((uint set, uint tree) in automatic)
+                        {
+                            writer.Write(set);
+                            writer.Write(tree);
+                        }
+                    }
                 }
                 return stream.ToArray();
             }
@@ -196,6 +226,7 @@ namespace OpenCAGE
                 return;
             Trees.RemoveAll(o => o == null || (o.SetHash == layout.SetHash && o.TreeHash == layout.TreeHash));
             Trees.Add(layout);
+            Automatic.Remove((layout.SetHash, layout.TreeHash));
         }
 
         /// <summary>Drop a tree's layout, so it is laid out automatically again. True if it had one.</summary>
@@ -203,6 +234,16 @@ namespace OpenCAGE
         {
             return Trees.RemoveAll(o => o == null || (o.SetHash == setHash && o.TreeHash == treeHash)) != 0;
         }
+
+        /// <summary>Drop a tree's layout and say it is laid out automatically (<see cref="Automatic"/>).</summary>
+        public void SetAutomatic(uint setHash, uint treeHash)
+        {
+            Remove(setHash, treeHash);
+            Automatic.Add((setHash, treeHash));
+        }
+
+        /// <summary>Whether there's nothing here: no layouts, and no tree said to be laid out automatically.</summary>
+        public bool Empty => Trees.Count(o => o != null) == 0 && Automatic.Count == 0;
         #endregion
 
         #region KEYS

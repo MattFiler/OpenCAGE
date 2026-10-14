@@ -44,6 +44,11 @@ namespace OpenCAGE.Modding
         public List<string> OwnChanges = new List<string>();
         /// <summary>Of <see cref="CombinedLevels"/>, those already combined from exactly these versions and still as they were left: applying leaves them be.</summary>
         public List<string> UnchangedLevels = new List<string>();
+        /// <summary>
+        /// The game files applying may write (normalised): what the last apply wrote, what the mods change, and every file of
+        /// a level they change. Some may be left as they are - this is for being ready, not for what changed.
+        /// </summary>
+        public HashSet<string> MayChange = new HashSet<string>();
     }
 
     /// <summary>What to do with files installed mods had changed that have been changed again since they were applied.</summary>
@@ -305,6 +310,39 @@ namespace OpenCAGE.Modding
             return files;
         }
 
+        /// <summary>
+        /// The game files applying these mods, in this order, may write - for anything holding them open to be ready (see
+        /// <see cref="ModAnalysis.MayChange"/>). Mods that can't be read are left out: applying refuses them.
+        /// </summary>
+        public HashSet<string> MayChange(List<string> enabledIdsInOrder)
+        {
+            lock (_mutex)
+            {
+                Dictionary<ModState.InstalledMod, ModPackage> packages = new Dictionary<ModState.InstalledMod, ModPackage>();
+                foreach (ModState.InstalledMod mod in enabledIdsInOrder.Select(o => _state.FindMod(o)).Where(o => o != null))
+                {
+                    try { packages[mod] = OpenPackage(mod); }
+                    catch { }
+                }
+                return MayChange(BuildPlan(packages.Keys.ToList(), packages));
+            }
+        }
+
+        /* Whatever the last apply wrote (it's put back, or made again), what the mods change, and the whole of each level they
+           change (one combined is rebuilt whole) - but not what's worked out from the rest afterwards: a level's behaviour tree
+           list follows its character configs whatever's open, and the level list only gains levels */
+        private HashSet<string> MayChange(Plan plan)
+        {
+            HashSet<string> paths = new HashSet<string>(_state.Composition.Keys);
+            foreach (ModState.InstalledMod mod in _state.Mods)
+                paths.UnionWith(mod.Applied.Keys);
+            paths.UnionWith(plan.Files.Keys);
+            foreach (string level in plan.Levels.Keys)
+                paths.UnionWith(LevelFiles(level));
+            paths.RemoveWhere(IsDerived);
+            return paths;
+        }
+
         /* Each level's behaviour tree list, which the trees and character configs decide - the lists there are, and the one
            a level a mod adds needs (packages never carry one) */
         private IEnumerable<string> TreeListFiles()
@@ -345,6 +383,7 @@ namespace OpenCAGE.Modding
                 }
                 mods = mods.Where(packages.ContainsKey).ToList();
                 Plan plan = BuildPlan(mods, packages);
+                analysis.MayChange = MayChange(plan);
                 analysis.EditedFiles = EditedSinceApplied();
 
                 //The user's own versions, as they'll be when applying starts: what's recorded, updated by what's on disk now
@@ -616,6 +655,13 @@ namespace OpenCAGE.Modding
             }
         }
 
+        /// <summary>The hash of the user's own version of a file that's combined with mods on disk (see <see cref="TryGetOwnVersion"/>), or null.</summary>
+        public string OwnVersionSha(string normalisedPath)
+        {
+            lock (_mutex)
+                return _state.Own.TryGetValue(normalisedPath, out string sha) && _state.Composition.ContainsKey(normalisedPath) ? sha : null;
+        }
+
         /// <summary>Files whose user's own version is kept apart from the combined file on disk (see <see cref="TryGetOwnVersion"/>).</summary>
         public List<string> OwnVersionsUnderMods()
         {
@@ -843,6 +889,8 @@ namespace OpenCAGE.Modding
                         return;
 
                     string sha = _store.StoreFile(ModToolkit.Denormalise(_gameRoot, normalisedPath));
+                    if (!StoredAsShipped(normalisedPath, hash, sha))
+                        return;
                     _state.Baseline[normalisedPath] = new ModState.BaselineRecord() { Sha256Hex = sha, IsVanilla = true };
                     if (saveState)
                     {
@@ -852,6 +900,17 @@ namespace OpenCAGE.Modding
                 }
             }
             catch { }
+        }
+
+        /* The bytes just stored as a file's original are the ones it shipped with, as the index of hashes said. That index
+           goes by each file's size and time, so a file changed without either changing (a tool putting its time back) reads as
+           it was: what's read to be stored is the last word, and the index is put right when they differ. */
+        private bool StoredAsShipped(string normalisedPath, byte[] indexed, string storedSha)
+        {
+            if (storedSha == ModToolkit.ToHex(indexed))
+                return true;
+            _cache.Invalidate(normalisedPath);
+            return false;
         }
 
         /// <summary>
@@ -919,10 +978,9 @@ namespace OpenCAGE.Modding
                 }
 
                 byte[] hash = _cache.Hash(path);
-                if (_manifest.IsVanilla(path, hash))
+                if (_manifest.IsVanilla(path, hash) && StoredAsShipped(path, hash, _store.StoreFile(fullPath)))
                 {
-                    string sha = _store.StoreFile(fullPath);
-                    _state.Baseline[path] = new ModState.BaselineRecord() { Sha256Hex = sha, IsVanilla = true };
+                    _state.Baseline[path] = new ModState.BaselineRecord() { Sha256Hex = ModToolkit.ToHex(hash), IsVanilla = true };
                 }
                 else if (adoptUnknown || !_manifest.Contains(path) || AdoptsAutomatically(path))
                 {
@@ -941,6 +999,23 @@ namespace OpenCAGE.Modding
         public bool HasCrashJournal()
         {
             return File.Exists(ModToolkit.JournalFile(_gameRoot));
+        }
+
+        /// <summary>The game files <see cref="RecoverCrashJournal"/> puts back (normalised), none without a journal - or null when that can't be told.</summary>
+        public List<string> CrashJournalFiles()
+        {
+            string journalPath = ModToolkit.JournalFile(_gameRoot);
+            if (!File.Exists(journalPath))
+                return new List<string>();
+            try
+            {
+                Snapshot snapshot = JsonConvert.DeserializeObject<Snapshot>(File.ReadAllText(SnapshotPath(File.ReadAllText(journalPath).Trim())));
+                return snapshot.Files.Keys.Concat((snapshot.Moved ?? new Dictionary<string, string>()).Keys).Distinct().ToList();
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         /// <summary>
@@ -983,6 +1058,12 @@ namespace OpenCAGE.Modding
             }
         }
 
+        /* A step's progress while it reads files: "Checking the files this changes... 40%" */
+        private static Action<long, long> Reading(Action<string> progress, string step)
+        {
+            return (done, total) => progress(step + "..." + (total > 0 ? " " + (done * 100 / total) + "%" : ""));
+        }
+
         /* A failure in words a player can act on */
         private static string Explain(Exception e)
         {
@@ -1012,6 +1093,7 @@ namespace OpenCAGE.Modding
 
             //Work done on installed mods' files since they went in is never replaced without being asked
             progress("Checking for changes made since mods were installed...");
+            _cache.HashAll(_state.Composition.Keys.Where(o => !ModToolkit.IsRegenerated(o)), Reading(progress, "Checking for changes made since mods were installed"));
             List<string> editedFiles = EditedSinceApplied();
             if (editedFiles.Count != 0)
             {
@@ -1072,6 +1154,7 @@ namespace OpenCAGE.Modding
              * together, from the level's originals. A level the game doesn't ship has nothing to combine from: the last
              * mod adding it is used whole. */
             progress("Checking the levels mods change...");
+            _cache.HashAll(plan.Levels.Keys.SelectMany(LevelFiles).Where(o => !ModToolkit.IsRegenerated(o)), Reading(progress, "Checking the levels mods change"));
             HashSet<string> ownLevels = new HashSet<string>(), wholeLevels = new HashSet<string>();
             foreach (KeyValuePair<string, List<List<Planned>>> level in plan.Levels)
             {
@@ -1107,6 +1190,7 @@ namespace OpenCAGE.Modding
                 affected.Add(ModToolkit.LevelListPath);
 
             //Baselines for everything we're about to touch
+            _cache.HashAll(affected, Reading(progress, "Checking the files this changes"));
             progress("Keeping copies of the original files...");
             List<string> blocked = PrepareBaselines(affected, adoptUnknownBaselines);
             if (blocked.Count != 0)

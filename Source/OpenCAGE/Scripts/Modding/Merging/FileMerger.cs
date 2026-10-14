@@ -369,8 +369,16 @@ namespace OpenCAGE.Modding.Merging
 
             TreeVersions installed = new TreeVersions(merged);
             AnimTreeLayouts result = AnimTreeLayouts.FromBytes(null);
-            //Per tree, the last mod to lay it out and its record as written - the same layout twice isn't a clash
+            //Per tree, the last mod to lay it out (or set it back to automatic) and its record as written - the same layout twice isn't a clash
             Dictionary<(uint, uint), (string Mod, byte[] Record)> claims = new Dictionary<(uint, uint), (string, byte[])>();
+            void Claim(string mod, uint setHash, uint treeHash, string what, byte[] record)
+            {
+                if (mod == null || mod == MergeConflict.OwnChanges)
+                    return;
+                if (claims.TryGetValue((setHash, treeHash), out (string Mod, byte[] Record) earlier) && earlier.Mod != mod && !earlier.Record.AsSpan().SequenceEqual(record))
+                    outcome.Conflicts.Add(new MergeConflict() { Target = entryTarget, Where = what, Kind = ConflictKind.Overridden, Kept = mod, Lost = earlier.Mod });
+                claims[(setHash, treeHash)] = (mod, record);
+            }
             foreach ((string mod, PAK2 archive) in sources)
             {
                 PAK2.File entry = archive.Entries.FirstOrDefault(o => AnimTreeLayouts.IsEntry(o.Filename));
@@ -382,19 +390,23 @@ namespace OpenCAGE.Modding.Merging
                     if (tree == null || !installed.Same(drawnOn, tree.SetHash, tree.TreeHash))
                         continue;
                     result.Put(tree);
-                    if (mod == null || mod == MergeConflict.OwnChanges)
+                    Claim(mod, tree.SetHash, tree.TreeHash, Describe(tree), RecordOf(tree));
+                }
+                //A tree this version sets back to automatic loses the layout an earlier one gave it (the tree as this version has it, too)
+                foreach ((uint setHash, uint treeHash) in layouts.Automatic)
+                {
+                    if (layouts.Find(setHash, treeHash) != null || !installed.Same(drawnOn, setHash, treeHash))
                         continue;
-                    byte[] record = RecordOf(tree);
-                    if (claims.TryGetValue((tree.SetHash, tree.TreeHash), out (string Mod, byte[] Record) earlier) && earlier.Mod != mod && !earlier.Record.AsSpan().SequenceEqual(record))
-                        outcome.Conflicts.Add(new MergeConflict() { Target = entryTarget, Where = Describe(tree), Kind = ConflictKind.Overridden, Kept = mod, Lost = earlier.Mod });
-                    claims[(tree.SetHash, tree.TreeHash)] = (mod, record);
+                    AnimTreeLayouts.TreeLayout earlier = result.Find(setHash, treeHash);
+                    result.SetAutomatic(setHash, treeHash);
+                    Claim(mod, setHash, treeHash, Describe(earlier ?? new AnimTreeLayouts.TreeLayout() { SetHash = setHash, TreeHash = treeHash }), new byte[0]);
                 }
             }
 
             //One entry, where the original had it (or at the end), and none at all when no tree has a layout
             int at = merged.FindIndex(o => AnimTreeLayouts.IsEntry(o.Filename));
             merged.RemoveAll(o => AnimTreeLayouts.IsEntry(o.Filename));
-            if (result.Trees.Count == 0)
+            if (result.Empty)
                 return;
             PAK2.File layoutsEntry = new PAK2.File() { Filename = AnimTreeLayouts.EntryName, Content = result.ToBytes() };
             if (at >= 0) merged.Insert(at, layoutsEntry);

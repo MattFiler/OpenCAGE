@@ -77,6 +77,30 @@ namespace OpenCAGE.Modding
         }
 #endif
 
+        /// <summary>
+        /// Whether the file on disk is one the Mod Manager put together from installed mods. False when it isn't, when that
+        /// can't be told, or without ENABLE_MOD_PACKAGES.
+        /// </summary>
+        public static bool MadeByMods(string fullPath)
+        {
+#if ENABLE_MOD_PACKAGES
+            try
+            {
+                EnsureBuilt();
+                if (_installer == null || string.IsNullOrEmpty(fullPath))
+                    return false;
+                string normalised = ModToolkit.NormaliseFull(_gameRoot, fullPath);
+                return normalised != null && _state.Composition.TryGetValue(normalised, out ModState.ComposedFile composed) && composed.Mods.Count != 0;
+            }
+            catch
+            {
+                return false;
+            }
+#else
+            return false;
+#endif
+        }
+
         #region CAPTURE HOOKS
         /// <summary>
         /// Call before overwriting any game file: if its bytes are still vanilla, a pristine copy

@@ -153,8 +153,12 @@ namespace OpenCAGE
             NONE,
             SINGLE_LEVEL,
             ALL_LEVELS,
+            //Not a backup: the Mod Manager is changing the game's files (see LoadedGameFiles), and nothing may save over them meanwhile
+            APPLYING_MODS,
         }
         public static BackupState CurrentBackupState = BackupState.NONE;
+        /// <summary>What the backup state stands for, in words for saying why something must wait: "A level backup is running", "Mods are being applied".</summary>
+        public static string BusyText => CurrentBackupState == BackupState.APPLYING_MODS ? "Mods are being applied" : "A level backup is running";
         public static string BackupLevel = ""; 
 
         public static Action OnAnimationsLoaded;
@@ -187,42 +191,111 @@ namespace OpenCAGE
 
             //Create global & load animation data
             Global = new Global(PathToAI + "\\DATA\\ENV\\GLOBAL\\");
-            AnimationPakWrite.Stamp(Global.Animations?.PAK?.Filepath);
+            AnimationPakWrite.Stamp(Global.Animations);
+            ListAnimations(Global.Animations)();
+
+            _loadedAnimationContent = true;
+            OnAnimationsLoaded?.Invoke();
+            _loadedGlobalAssets = true;
+            OnGlobalAssetsLoaded?.Invoke();
+        }
+
+        /// <summary>
+        /// Load the animations again from ANIMATION.PAK, after something else changed it (the Mod Manager): the windows showing
+        /// them as they were close, and every list of them follows. What wasn't saved of them is let go - see what that is
+        /// first (<see cref="AnimationPakWrite.Unsaved"/>). False, with why, when the file won't load: they then stay as they were.
+        /// </summary>
+        public static bool ReloadAnimations(out string error)
+        {
+            error = null;
+            string path = Global?.Animations?.PAK?.Filepath;
+            if (string.IsNullOrEmpty(path))
+            {
+                error = "the animations were never loaded";
+                return false;
+            }
+            Animation loaded;
+            try { loaded = new Animation(new PAK2(path), false); }
+            catch (Exception e)
+            {
+                error = e.Message;
+                return false;
+            }
+            if (!loaded.Loaded)
+            {
+                error = "ANIMATION.PAK couldn't be read";
+                return false;
+            }
+            //Listed before anything is let go of: one that can't be leaves the animations as they were
+            Action useLists;
+            try { useLists = ListAnimations(loaded); }
+            catch (Exception e)
+            {
+                error = "ANIMATION.PAK couldn't be read (" + e.Message + ")";
+                return false;
+            }
+
+            //Windows showing the animations as they were close (anything they had unsaved was saved, or let go, before the file changed)
+            foreach (System.Windows.Forms.Form window in System.Windows.Forms.Application.OpenForms.Cast<System.Windows.Forms.Form>().ToList())
+            {
+                if (window.IsDisposed)
+                    continue;
+                if (window is EditBlendSets blendSets)
+                    blendSets.CloseDiscarding();
+                else if (window is AnimTrees.AnimTreeEditor || window is EditAnimations || window is AnimationPreview)
+                    window.Close();
+            }
+            AnimTrees.AnimTreeClipboard.Clear();
+            AnimTreeLayoutManager.Reset();
+            MCP.McpAnimationAssetTools.ForgetUnwrittenChanges();
+
+            Global.Animations = loaded;
+            AnimationPakWrite.Stamp(loaded);
+            useLists();
+            OnAnimationsModified?.Invoke();
+            return true;
+        }
+
+        /* The lists of what ANIMATION.PAK holds - skeletons, sets and their clips, trees - named from its string tables. All are
+           built first; the action returned puts them in place of the last ones, so nothing reading one ever sees it half-built,
+           and nothing changes when the PAK can't be listed. */
+        private static Action ListAnimations(Animation loaded)
+        {
+            AnimationStrings strings = loaded.Strings, debugStrings = loaded.StringsDebug;
+            Dictionary<string, HashSet<string>> genderedSkeletons = new Dictionary<string, HashSet<string>>();
+            List<string> allSkeletons = new List<string>();
+            SortedDictionary<string, HashSet<string>> allAnimations = new SortedDictionary<string, HashSet<string>>();
+            List<string> allAnimTrees = new List<string>();
 
             //Load all male/female skeletons
-            List<PAK2.File> skeletonDefs = Global.Animations.PAK.Entries.FindAll(o => o.Filename.Length > 17 && o.Filename.Substring(0, 17) == "DATA\\SKELETONDEFS");
+            List<PAK2.File> skeletonDefs = loaded.PAK.Entries.FindAll(o => o.Filename.Length > 17 && o.Filename.Substring(0, 17) == "DATA\\SKELETONDEFS");
             for (int i = 0; i < skeletonDefs.Count; i++)
             {
                 string skeleton = Path.GetFileNameWithoutExtension(skeletonDefs[i].Filename);
                 XmlNode skeletonType = new BML(skeletonDefs[i].Content).Content.SelectSingleNode("//SkeletonDef/LoResReferenceSkeleton");
                 if (skeletonType?.InnerText == "MALE" || skeletonType?.InnerText == "FEMALENPC")
                 {
-                    if (!GenderedSkeletons.ContainsKey(skeletonType?.InnerText))
-                        GenderedSkeletons.Add(skeletonType?.InnerText, new HashSet<string>());
-                    GenderedSkeletons[skeletonType?.InnerText].Add(skeleton);
+                    if (!genderedSkeletons.ContainsKey(skeletonType?.InnerText))
+                        genderedSkeletons.Add(skeletonType?.InnerText, new HashSet<string>());
+                    genderedSkeletons[skeletonType?.InnerText].Add(skeleton);
                 }
-                File.Delete(skeleton);
             }
 
-            //Anim string dbs - the ones Global already parsed, rather than another copy of them
-            AnimationStrings = Global.AnimationStrings;
-            AnimationStrings_Debug = Global.AnimationStrings_Debug;
-
             //Load all skeleton names
-            List<PAK2.File> skeletonNames = Global.Animations.PAK.Entries.FindAll(o => o.Filename.Length > 24 && o.Filename.Substring(0, 24) == "DATA\\ANIM_SYS\\SKELE\\DEFS");
+            List<PAK2.File> skeletonNames = loaded.PAK.Entries.FindAll(o => o.Filename.Length > 24 && o.Filename.Substring(0, 24) == "DATA\\ANIM_SYS\\SKELE\\DEFS");
             for (int i = 0; i < skeletonNames.Count; i++)
-                AllSkeletons.Add(AnimationStrings_Debug.Entries[Convert.ToUInt32(Path.GetFileNameWithoutExtension(skeletonNames[i].Filename))]);
-            AllSkeletons.Sort();
+                allSkeletons.Add(debugStrings.Entries[Convert.ToUInt32(Path.GetFileNameWithoutExtension(skeletonNames[i].Filename))]);
+            allSkeletons.Sort();
 
             //Load all anim sets
-            List<PAK2.File> animClipDbs = Global.Animations.PAK.Entries.FindAll(o => { string path = Path.GetFileName(o.Filename); if (path.Length < ("_ANIM_CLIP_DB.BIN").Length) return false; return path.Substring(path.Length - ("_ANIM_CLIP_DB.BIN").Length) == "_ANIM_CLIP_DB.BIN"; });
+            List<PAK2.File> animClipDbs = loaded.PAK.Entries.FindAll(o => { string path = Path.GetFileName(o.Filename); if (path.Length < ("_ANIM_CLIP_DB.BIN").Length) return false; return path.Substring(path.Length - ("_ANIM_CLIP_DB.BIN").Length) == "_ANIM_CLIP_DB.BIN"; });
             for (int i = 0; i < animClipDbs.Count; i++)
             {
                 uint animSetID = Convert.ToUInt32(Path.GetFileName(animClipDbs[i].Filename).Split('_')[0]);
                 string animSet = "";
-                if (!AnimationStrings_Debug.Entries.TryGetValue(animSetID, out animSet))
+                if (!debugStrings.Entries.TryGetValue(animSetID, out animSet))
                 {
-                    if (!AnimationStrings.Entries.TryGetValue(animSetID, out animSet))
+                    if (!strings.Entries.TryGetValue(animSetID, out animSet))
                     {
                         Debug.Log("Animations", "WARNING - Failed to look up anim set " + animSetID + " in string db!");
                         continue;
@@ -246,15 +319,15 @@ namespace OpenCAGE
                     int countAnimFileNames = reader.ReadInt32();
                     for (int x = 0; x < countAnimNames; x++)
                     {
-                        animations.Add(AnimationStrings_Debug.Entries[reader.ReadUInt32()]);
+                        animations.Add(debugStrings.Entries[reader.ReadUInt32()]);
                         reader.BaseStream.Position += 4;
                     }
 
                     //TODO: There's more info here. Useful?
                 }
-                AllAnimations.Add(animSet, animations);
+                allAnimations.Add(animSet, animations);
             }
-            foreach (KeyValuePair<string, HashSet<string>> anims in AllAnimations)
+            foreach (KeyValuePair<string, HashSet<string>> anims in allAnimations)
             {
                 List<string> animList = anims.Value.ToList();
                 animList.Sort();
@@ -264,10 +337,10 @@ namespace OpenCAGE
             }
 
             //Load all anim trees
-            List<PAK2.File> animTreeDbs = Global.Animations.PAK.Entries.FindAll(o => { string path = Path.GetFileName(o.Filename); if (path.Length < ("_ANIM_TREE_DB.BIN").Length) return false; return path.Substring(path.Length - ("_ANIM_TREE_DB.BIN").Length) == "_ANIM_TREE_DB.BIN"; });
+            List<PAK2.File> animTreeDbs = loaded.PAK.Entries.FindAll(o => { string path = Path.GetFileName(o.Filename); if (path.Length < ("_ANIM_TREE_DB.BIN").Length) return false; return path.Substring(path.Length - ("_ANIM_TREE_DB.BIN").Length) == "_ANIM_TREE_DB.BIN"; });
             for (int i = 0; i < animTreeDbs.Count; i++)
-                AllAnimTrees.Add(AnimationStrings_Debug.Entries[Convert.ToUInt32(Path.GetFileName(animTreeDbs[i].Filename).Split('_')[0])]);
-            AllAnimTrees.Sort();
+                allAnimTrees.Add(debugStrings.Entries[Convert.ToUInt32(Path.GetFileName(animTreeDbs[i].Filename).Split('_')[0])]);
+            allAnimTrees.Sort();
 
             /*
             //Load all animations by anim set (NOTE: no longer using this as the ID gives the filename, not the anim name, but keeping it for future reference)
@@ -293,10 +366,16 @@ namespace OpenCAGE
             }
             */
 
-            _loadedAnimationContent = true;
-            OnAnimationsLoaded?.Invoke();
-            _loadedGlobalAssets = true;
-            OnGlobalAssetsLoaded?.Invoke();
+            return () =>
+            {
+                //Anim string dbs - the ones the animations already parsed, rather than another copy of them
+                AnimationStrings = strings;
+                AnimationStrings_Debug = debugStrings;
+                GenderedSkeletons = genderedSkeletons;
+                AllSkeletons = allSkeletons;
+                AllAnimations = allAnimations;
+                AllAnimTrees = allAnimTrees;
+            };
         }
     }
 

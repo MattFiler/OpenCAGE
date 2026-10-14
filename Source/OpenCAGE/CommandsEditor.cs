@@ -616,6 +616,54 @@ namespace OpenCAGE
             _levelSelect?.Close();
         }
 
+        /// <summary>Open the Load Level picker (when the open level can't be shown any more, say).</summary>
+        internal void ShowLevelPicker()
+        {
+            loadLevel_Click(null, null);
+        }
+
+        /// <summary>
+        /// Load the open level again from disk, after something else changed its files (the Mod Manager). The viewport
+        /// starts afresh too when <paramref name="restartViewport"/>: it keeps what every level shares (the global textures)
+        /// as it first read it.
+        /// </summary>
+        internal void ReloadLevel(bool restartViewport)
+        {
+            string level = _compositeBrowser?.Content?.Level?.Name;
+            if (level == null)
+                return;
+            CloseLevelPicker();
+            if (restartViewport)
+                KillLevelViewer();
+            LoadLevel(level);
+        }
+
+        /// <summary>
+        /// Save the open level as File > Save Level does, without the messages after. A save that fails part-way throws, as
+        /// SaveLevel does, but doesn't leave its progress window up.
+        /// </summary>
+        internal void SaveLevelQuietly()
+        {
+            try
+            {
+                SaveLevel(false, false, false);
+            }
+            catch
+            {
+                statusText.Text = "";
+                Cursor.Current = Cursors.Default;
+                CloseProgressUI();
+                throw;
+            }
+        }
+
+        /// <summary>Start the viewport afresh if it's running, so it reads what every level shares (the global textures) again.</summary>
+        internal void RestartLevelViewerIfRunning()
+        {
+            if (_levelViewerPanel?.IsRunning == true)
+                RestartLevelViewer();
+        }
+
         private void loadLevel_Click(object sender, EventArgs e)
         {
             if (_levelSelect == null)
@@ -1643,6 +1691,9 @@ namespace OpenCAGE
                         return;
                     }
                     break;
+                case Singleton.BackupState.APPLYING_MODS:
+                    MessageBox.Show("Cannot save level - the Mod Manager is changing the game's files. Save once it's done.", "Applying mods...", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
             }
 
             //Close alien down if it's open, it conflicts with our write locks!
