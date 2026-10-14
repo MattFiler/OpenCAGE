@@ -2168,7 +2168,8 @@ namespace AlienPAK
                     writer.Write(value.X); writer.Write(value.Y); writer.Write(value.Z); writer.Write(value.W);
                     break;
                 case VertexFormat.Type.Color:
-                    writer.Write(((uint)ToByte(value.X, 255.0f) << 24) | ((uint)ToByte(value.Y, 255.0f) << 16) | ((uint)ToByte(value.Z, 255.0f) << 8) | ToByte(value.W, 255.0f));
+                    //Red, green, blue, alpha in; the game reads this format as blue, green, red, alpha in memory (DXGI B8G8R8A8)
+                    writer.Write(((uint)ToByte(value.W, 255.0f) << 24) | ((uint)ToByte(value.X, 255.0f) << 16) | ((uint)ToByte(value.Y, 255.0f) << 8) | ToByte(value.Z, 255.0f));
                     break;
                 case VertexFormat.Type.U8_4:
                     writer.Write(ToByte(value.X, 1.0f)); writer.Write(ToByte(value.Y, 1.0f)); writer.Write(ToByte(value.Z, 1.0f)); writer.Write(ToByte(value.W, 1.0f));
