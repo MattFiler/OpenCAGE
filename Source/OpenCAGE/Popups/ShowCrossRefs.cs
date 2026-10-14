@@ -53,7 +53,12 @@ namespace OpenCAGE
             entityList.MouseDown += List_MouseDown;
             flowgraphList.MouseDown += List_MouseDown;
 
-            _scopeController = new EntitySearchScopeController(Settings.CrossRefSearchScope, GlobalEntitySearchScope.CurrentCompositeAndNested);
+            /* All composites unless the cog says otherwise: what points at an entity sits ABOVE its composite (an alias,
+               sequence or animation reaches down into instances) or anywhere (a proxy paths from the level root), so a
+               composite opened from the browser has none of it in its own "and nested" scope - over the shipped levels,
+               1 alias in 77,782 and 10% of proxies (issue 743). The inspector's orange rows and the flowgraph's P markers
+               count them from the whole level too. */
+            _scopeController = new EntitySearchScopeController(Settings.CrossRefSearchScope, GlobalEntitySearchScope.AllComposites);
             _scopeController.BindSettingsButton(scopeSettingsBtn);
             _scopeController.AddScopeChangedHandler(OnScopeChanged);
             UndoStack.Current.Changed += OnUndoChanged;
