@@ -1122,12 +1122,28 @@ namespace OpenCAGE
                     if (ParameterGridDescriptor.IsModified(proxy.Composite, proxy.Entity, target.Parameter.name))
                         return true;
                 }
-                else if (Content?.Level?.Commands?.Utils?.CreateDefaultParameterData(proxy.Entity, proxy.Composite, target.Parameter.name) != null)
+                else if (DefaultOfSameType(proxy, target.Parameter) != null)
                 {
                     return true;
                 }
             }
             return false;
+        }
+
+        /* CathodeLib's default for the parameter, when it is of the type the parameter holds. Where it isn't, Reset would
+           change the parameter's type rather than its value, so there is nothing to reset to (issue 744): a ZONE_LINK pin
+           like 'zonelink' defaults to empty text where a float is stored, a 'mapping' resource to text, a proxy's
+           'reference' text to a number. A STRING the definition lists values for is shown as that list, so those two match. */
+        private ParameterData DefaultOfSameType(EntityParameterProxy proxy, Parameter parameter)
+        {
+            ParameterData defaultData = Content?.Level?.Commands?.Utils?.CreateDefaultParameterData(proxy.Entity, proxy.Composite, parameter.name);
+            if (defaultData == null || parameter?.content == null)
+                return null;
+            DataType held = parameter.content.dataType;
+            bool sameType = defaultData.dataType == held
+                || (defaultData.dataType == DataType.ENUM_STRING && held == DataType.STRING)
+                || (defaultData.dataType == DataType.STRING && held == DataType.ENUM_STRING);
+            return sameType ? defaultData : null;
         }
 
         ShowCrossRefs _crossRefsDialog = null;
@@ -1181,7 +1197,7 @@ namespace OpenCAGE
                     }
                     else
                     {
-                        ParameterData defaultData = Content?.Level?.Commands?.Utils?.CreateDefaultParameterData(proxy.Entity, proxy.Composite, param.name);
+                        ParameterData defaultData = DefaultOfSameType(proxy, param);
                         if (defaultData == null)
                             continue;
 
