@@ -50,6 +50,7 @@ namespace OpenCAGE
             this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
             this.deleteEntityToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.changeProxyTargetToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.treatAsColourToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createParameterToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createFunctionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -93,6 +94,7 @@ namespace OpenCAGE
             this.toolStripSeparator4,
             this.deleteEntityToolStripMenuItem,
             this.changeProxyTargetToolStripMenuItem,
+            this.treatAsColourToolStripMenuItem,
             this.createToolStripMenuItem,
             this.addNodeForSelectedEntityToolStripMenuItem,
             this.addNodeToolStripMenuItem,
@@ -284,6 +286,13 @@ namespace OpenCAGE
             this.changeProxyTargetToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
             this.changeProxyTargetToolStripMenuItem.Text = "Change Proxy Target...";
             this.changeProxyTargetToolStripMenuItem.Click += new System.EventHandler(this.changeProxyTargetToolStripMenuItem_Click);
+            //
+            // treatAsColourToolStripMenuItem
+            //
+            this.treatAsColourToolStripMenuItem.Name = "treatAsColourToolStripMenuItem";
+            this.treatAsColourToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.treatAsColourToolStripMenuItem.Text = "Treat As Colour";
+            this.treatAsColourToolStripMenuItem.Click += new System.EventHandler(this.treatAsColourToolStripMenuItem_Click);
             //
             // createToolStripMenuItem
             // 
@@ -508,6 +517,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem createAliasToolStripMenuItem1;
         private System.Windows.Forms.ToolStripMenuItem deleteEntityToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem changeProxyTargetToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem treatAsColourToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
         private System.Windows.Forms.ToolStripMenuItem addNodeForSelectedEntityToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem deleteLinkToolStripMenuItem;

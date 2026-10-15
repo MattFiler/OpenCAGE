@@ -1164,6 +1164,8 @@ namespace OpenCAGE
             toolStripSeparator4.Visible = node != null && hoveredPin == null;
             deleteEntityToolStripMenuItem.Visible = node != null && hoveredPin == null;
             changeProxyTargetToolStripMenuItem.Visible = node != null && hoveredPin == null && node.Entity?.variant == EntityVariant.PROXY;
+            _colourMenuEntities = node != null && hoveredPin == null ? ColourMenuEntities(node, selectedNodes) : new List<Entity>();
+            ColourParameters.ConfigureMenuItem(treatAsColourToolStripMenuItem, _commands, _composite, _colourMenuEntities);
             toolStripSeparator5.Visible = node != null && hoveredPin == null;
             findReferencesToolStripMenuItem.Visible = node != null && hoveredPin == null;
             goToNextNodeInFlowgraphToolStripMenuItem.Visible = node != null && hoveredPin == null;
@@ -2034,6 +2036,23 @@ namespace OpenCAGE
             STNode node = GetContextNode();
             if (node?.Entity is ProxyEntity proxy)
                 Singleton.Editor?.CompositeDisplay?.ChangeProxyTarget(proxy);
+        }
+
+        //What Treat As Colour / Treat As Vector acts on, settled as the node menu opened
+        private List<Entity> _colourMenuEntities = new List<Entity>();
+
+        /* The node right-clicked, or every selected node's entity when it is one of a selection */
+        private static List<Entity> ColourMenuEntities(STNode node, STNode[] selectedNodes)
+        {
+            if (selectedNodes != null && selectedNodes.Length > 1 && Array.IndexOf(selectedNodes, node) >= 0)
+                return selectedNodes.Select(o => o.Entity).Where(o => o != null).Distinct().ToList();
+            return node.Entity != null ? new List<Entity>() { node.Entity } : new List<Entity>();
+        }
+
+        /* Show the parameter entities' values as colours, or as vectors again */
+        private void treatAsColourToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ColourParameters.MenuItemClicked(_commands, _composite, _colourMenuEntities, _colourMenuEntities.Count == 1 ? _colourMenuEntities[0] : null);
         }
         private void createAliasToolStripMenuItem1_Click(object sender, EventArgs e)
         {

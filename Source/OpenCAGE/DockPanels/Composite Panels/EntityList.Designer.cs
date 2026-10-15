@@ -45,6 +45,7 @@
             this.pasteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.findReferencesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.treatAsColourToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.refactorSeparator = new System.Windows.Forms.ToolStripSeparator();
             this.deinstanceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createVariantToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -75,6 +76,7 @@
             this.pasteToolStripMenuItem,
             this.toolStripSeparator3,
             this.findReferencesToolStripMenuItem,
+            this.treatAsColourToolStripMenuItem,
             this.refactorSeparator,
             this.deinstanceToolStripMenuItem,
             this.createVariantToolStripMenuItem,
@@ -180,7 +182,14 @@
             this.findReferencesToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.findReferencesToolStripMenuItem.Text = "Find References";
             this.findReferencesToolStripMenuItem.Click += new System.EventHandler(this.findReferencesToolStripMenuItem_Click);
-            // 
+            //
+            // treatAsColourToolStripMenuItem
+            //
+            this.treatAsColourToolStripMenuItem.Name = "treatAsColourToolStripMenuItem";
+            this.treatAsColourToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.treatAsColourToolStripMenuItem.Text = "Treat As Colour";
+            this.treatAsColourToolStripMenuItem.Click += new System.EventHandler(this.treatAsColourToolStripMenuItem_Click);
+            //
             // refactorSeparator
             // 
             this.refactorSeparator.Name = "refactorSeparator";
@@ -274,6 +283,7 @@
         private System.Windows.Forms.ToolStripMenuItem pasteToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
         private System.Windows.Forms.ToolStripMenuItem findReferencesToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem treatAsColourToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator refactorSeparator;
         private System.Windows.Forms.ToolStripMenuItem deinstanceToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem createVariantToolStripMenuItem;

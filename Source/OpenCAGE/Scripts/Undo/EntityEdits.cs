@@ -509,4 +509,53 @@ namespace OpenCAGE.Undo
 
         public bool TryMerge(IEdit next) => false;
     }
+
+    /// <summary>
+    /// Vector composite parameters shown as colours in the editor, or as vectors again (Treat As Colour / Treat As Vector):
+    /// rows of the level's ColourParameterTable, by composite and parameter entity (see ColourParameters). Nothing in the
+    /// script changes, but the table is saved with it. Undo goes back to where the choice was made - for a composite
+    /// instance's row that is the composite holding the instance, not the one whose parameter it is.
+    /// </summary>
+    public sealed class ColourParameterEdit : IEdit
+    {
+        private readonly List<(ShortGuid composite, ShortGuid variable, bool before)> _targets;
+        private readonly bool _colour;
+
+        public string Label { get; }
+        public ShortGuid CompositeId { get; }
+        public ShortGuid EntityId { get; }
+
+        /// <param name="shownIn">The composite on screen when the choice was made, and <paramref name="shownEntity"/> the entity inspected there.</param>
+        public ColourParameterEdit(Commands commands, IEnumerable<(Composite composite, VariableEntity variable)> targets, bool colour, Composite shownIn, Entity shownEntity, string label)
+        {
+            _targets = targets.Select(o => (o.composite.shortGUID, o.variable.shortGUID, commands.Utils.IsColourParameter(o.composite, o.variable))).ToList();
+            _colour = colour;
+            CompositeId = shownIn?.shortGUID ?? ShortGuid.Invalid;
+            EntityId = shownEntity?.shortGUID ?? ShortGuid.Invalid;
+            Label = label;
+        }
+
+        public void Apply(UndoContext context)
+        {
+            foreach ((ShortGuid composite, ShortGuid variable, bool before) target in _targets)
+                context.Commands.Utils.SetColourParameter(target.composite, target.variable, _colour);
+            Changed();
+        }
+
+        public void Revert(UndoContext context)
+        {
+            foreach ((ShortGuid composite, ShortGuid variable, bool before) target in _targets)
+                context.Commands.Utils.SetColourParameter(target.composite, target.variable, target.before);
+            Changed();
+        }
+
+        private static void Changed()
+        {
+            DirtyTracker.MarkLevelDataModified();
+            //Its rows swap between the vector and colour editors, wherever it is inspected
+            ParameterGridPanel.Current?.RebuildProperties();
+        }
+
+        public bool TryMerge(IEdit next) => false;
+    }
 }

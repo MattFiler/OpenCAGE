@@ -105,6 +105,8 @@ namespace OpenCAGE.DockPanels
             copyToolStripMenuItem.Enabled = hasSelectedEntity;
             pasteToolStripMenuItem.Enabled = EntityClipboard.HasContent;
             findReferencesToolStripMenuItem.Enabled = hasSelectedEntity; //any entity can be referenced, same as on a node
+            //Vector parameter entities can be shown as colours, or as vectors again (as on their nodes)
+            ColourParameters.ConfigureMenuItem(treatAsColourToolStripMenuItem, Content?.Level?.Commands, List.Composite, List.SelectedEntities);
 
             ConfigureRefactorItems();
             ConfigureTriggerSequenceItems();
@@ -126,6 +128,11 @@ namespace OpenCAGE.DockPanels
             createCompositeToolStripMenuItem.Enabled = CompositeRefactoring.CanCreateComposite(selected);
             //From what was decided: an item's Visible reads false until its menu is on screen, and this runs as it opens
             refactorSeparator.Visible = deinstance || variant || create;
+        }
+
+        private void treatAsColourToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ColourParameters.MenuItemClicked(Content?.Level?.Commands, List.Composite, List.SelectedEntities, List.SelectedEntity);
         }
 
         private void deinstanceToolStripMenuItem_Click(object sender, EventArgs e)

@@ -28,6 +28,7 @@ namespace OpenCAGE
         private readonly ContextMenuStrip _menu;
         private readonly ToolStripMenuItem _resetParam;
         private readonly ToolStripMenuItem _showAliases;
+        private readonly ToolStripMenuItem _treatAsColour;
         private readonly ToolStripSeparator _valueSeparator;
         private readonly ToolStripMenuItem _copyValue;
         private readonly ToolStripMenuItem _pasteValue;
@@ -89,13 +90,15 @@ namespace OpenCAGE
             _resetParam.Click += ResetParam_Click;
             _showAliases = new ToolStripMenuItem("Show Aliases");
             _showAliases.Click += ShowAliases_Click;
+            _treatAsColour = new ToolStripMenuItem("Treat As Colour");
+            _treatAsColour.Click += TreatAsColour_Click;
             _copyValue = new ToolStripMenuItem("Copy Value");
             _copyValue.Click += CopyValue_Click;
             _pasteValue = new ToolStripMenuItem("Paste Value");
             _pasteValue.Click += PasteValue_Click;
             _valueSeparator = new ToolStripSeparator();
             _menu = new ContextMenuStrip();
-            _menu.Items.AddRange(new ToolStripItem[] { _resetParam, _showAliases, _valueSeparator, _copyValue, _pasteValue });
+            _menu.Items.AddRange(new ToolStripItem[] { _resetParam, _showAliases, _treatAsColour, _valueSeparator, _copyValue, _pasteValue });
             _menu.Opening += Menu_Opening;
             _grid.ContextMenuStrip = _menu;
         }
@@ -1097,10 +1100,51 @@ namespace OpenCAGE
             //Jump to the aliases overriding this parameter
             _showAliases.Visible = !isOverride && descriptor.Status == ParameterStatus.AliasOverride;
 
+            //A composite's vector parameter, on its instances or itself, can be shown as a colour - or as a vector again
+            _treatAsColour.Visible = ColourTargets(descriptor).Count != 0;
+            _treatAsColour.Enabled = ColourParameters.CanEdit;
+            _treatAsColour.Text = descriptor is ColourParameterDescriptor ? "Treat As Vector" : "Treat As Colour";
+
             bool copyable = descriptor.Parameter.content is cTransform || descriptor.Parameter.content is cVector3;
             _copyValue.Visible = copyable;
             _pasteValue.Visible = copyable;
             _valueSeparator.Visible = copyable; //don't leave a divider dangling at the end of the menu
+        }
+
+        /* The composite parameters a vector row stands for on each entity it is shown for (an instance's, an alias or proxy's
+           through what it points at, or a parameter entity's own value), that can be switched between colour and vector */
+        private List<(Composite composite, VariableEntity variable)> ColourTargets(ParameterGridDescriptor descriptor)
+        {
+            List<(Composite composite, VariableEntity variable)> targets = new List<(Composite composite, VariableEntity variable)>();
+            if (!(descriptor is VectorParameterDescriptor) && !(descriptor is ColourParameterDescriptor))
+                return targets;
+
+            TypeGroup group = ActiveGroup;
+            IEnumerable<EntityParameterProxy> proxies = group != null && group.Proxies.Contains(descriptor.Proxy)
+                ? group.Proxies
+                : new List<EntityParameterProxy>() { descriptor.Proxy };
+            foreach (EntityParameterProxy proxy in proxies)
+            {
+                CATHODE.Commands commands = proxy.Content?.Level?.Commands;
+                ParameterGridDescriptor row = proxy.GetParameterDescriptor(descriptor.Name);
+                if (commands == null || !(row?.Parameter.content is cVector3))
+                    continue;
+                (Composite composite, VariableEntity variable) = ColourParameters.Resolve(commands, proxy.Entity, proxy.Composite, row.Parameter.name);
+                if (ColourParameters.CanSwitch(commands, composite, variable) && !targets.Contains((composite, variable)))
+                    targets.Add((composite, variable));
+            }
+            return targets;
+        }
+
+        private void TreatAsColour_Click(object sender, EventArgs e)
+        {
+            ParameterGridDescriptor descriptor = GetSelectedParameterDescriptor();
+            CATHODE.Commands commands = descriptor?.Proxy.Content?.Level?.Commands;
+            if (descriptor == null || commands == null)
+                return;
+            //Undo goes back to the entity inspected - or, for several, leaves the selection as it is
+            Entity shown = IsMultiEditing ? null : descriptor.Proxy.Entity;
+            ColourParameters.Set(commands, ColourTargets(descriptor), !(descriptor is ColourParameterDescriptor), descriptor.Proxy.Composite, shown);
         }
 
         /* Whether Reset has something to reset to on any entity it is shown for, as ResetParam_Click goes about it: an

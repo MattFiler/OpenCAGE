@@ -28,6 +28,9 @@ namespace OpenCAGE
             "light_shaft_colour", "initial_colour", "near_colour", "far_colour", "colour", "Colour"
         };
 
+        /// <summary>Whether a vector parameter of this name is shown as a colour whatever it is on (see also ColourParameters).</summary>
+        public static bool IsColourName(string name) => _colourParams.Contains(name);
+
         public Entity Entity { get; }
         public Composite Composite { get; }
         public LevelContent Content { get; }
@@ -487,7 +490,8 @@ namespace OpenCAGE
                 case DataType.ENUM_STRING:
                     return new EnumStringParameterDescriptor(this, parameter, paramName, attributes);
                 case DataType.VECTOR:
-                    if (_colourParams.Contains(paramName))
+                    //A colour by its name, or a composite parameter chosen to be shown as one (Treat As Colour)
+                    if (_colourParams.Contains(paramName) || ColourParameters.IsColour(commands, Entity, Composite, parameter.name))
                         return new ColourParameterDescriptor(this, parameter, paramName, attributes);
                     return new VectorParameterDescriptor(this, parameter, paramName, attributes);
                 case DataType.ENUM:
