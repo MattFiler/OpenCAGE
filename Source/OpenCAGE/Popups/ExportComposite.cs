@@ -216,7 +216,7 @@ namespace OpenCAGE
                 ProgressUI saveProgress = CompositeArchive.OpenProgress(p => p.ShowLevelSaving(lvl, build));
                 try
                 {
-                    if (build) lvl.SaveInstanced();
+                    if (build) LevelContent.SaveInstancedWithOptions(lvl);
                     else lvl.Save();
                 }
                 finally

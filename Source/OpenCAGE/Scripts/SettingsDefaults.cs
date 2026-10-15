@@ -48,6 +48,7 @@ namespace OpenCAGE
             EnsureInteger(Settings.LevelViewerHighlightMode, (int)LevelViewerHighlightMode.Green);
             EnsureBool(Settings.HideNestedScriptEntities, false);
             EnsureBool(Settings.ResetRenderFilters, false);
+            EnsureBool(Settings.AlwaysFullyRebuildRadiosity, false);
             EnsureBool(Settings.ShowZones, false);
             EnsureBool(Settings.TransformVertexSnap, false);
 

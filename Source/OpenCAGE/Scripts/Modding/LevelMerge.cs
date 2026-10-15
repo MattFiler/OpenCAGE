@@ -100,7 +100,7 @@ namespace OpenCAGE.Modding
                 if (versions.Any(v => v.Files.Keys.Any(IsBuildOutput)))
                 {
                     progress("Building " + level + " (navigation, collision, lighting)...");
-                    Instancing pass = dest.SaveInstanced();
+                    Instancing pass = LevelContent.SaveInstancedWithOptions(dest);
                     if (pass?.BakeWarnings != null)
                         foreach (string warning in pass.BakeWarnings)
                             result.Warnings.Add(level + ": " + warning);

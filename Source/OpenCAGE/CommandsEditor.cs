@@ -2107,6 +2107,11 @@ namespace OpenCAGE
             ToggleBoolSetting(Settings.ResetRenderFilters);
         }
 
+        private void alwaysFullyRebuildRadiosityToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.AlwaysFullyRebuildRadiosity);
+        }
+
         private bool _levelViewerToolbarConfigured;
 
         private void EnsureLevelViewerToolbarConfigured()
@@ -2524,6 +2529,8 @@ namespace OpenCAGE
                 hideNestedScriptEntitiesToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.HideNestedScriptEntities);
             if (ShouldApplySetting(Settings.ResetRenderFilters, changedKeys))
                 resetRenderFiltersOnLoadToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ResetRenderFilters);
+            if (ShouldApplySetting(Settings.AlwaysFullyRebuildRadiosity, changedKeys))
+                alwaysFullyRebuildRadiosityToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.AlwaysFullyRebuildRadiosity);
         }
 
         private void ApplySettingEffects(IReadOnlyList<string> changedKeys)

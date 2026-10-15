@@ -134,6 +134,24 @@ namespace OpenCAGE
             Save(doInstancing, bakers);
         }
 
+        /// <summary>
+        /// Radiosity settings for a save, honouring Options > Misc > Always Fully Rebuild Radiosity: when it is on, the whole
+        /// level's radiosity is regenerated from scratch instead of keeping the shipped lighting and baking only what changed.
+        /// </summary>
+        public static CathodeLib.Radiosity.RadiosityBakeSettings RadiositySettingsFromOptions()
+        {
+            return new CathodeLib.Radiosity.RadiosityBakeSettings() { PatchRetailRuntime = !SettingsManager.GetBool(Settings.AlwaysFullyRebuildRadiosity) };
+        }
+
+        /// <summary>
+        /// An instanced save with every baker, as <see cref="Level.SaveInstanced()"/>, but with radiosity settings from the options.
+        /// </summary>
+        public static Instancing SaveInstancedWithOptions(Level level)
+        {
+            return level.SaveInstanced(new CathodeLib.NavMesh.NavMeshBakeSettings(), new CathodeLib.NavMesh.CoverBakeSettings(), RadiositySettingsFromOptions(),
+                new CathodeLib.NavMesh.JobPositionBakeSettings(), new CathodeLib.Alphalight.AlphalightBakeSettings(), new CathodeLib.Sound.SoundNetworkBakeSettings());
+        }
+
         public void Save(bool doInstancing, BakeSelection bakers)
         {
             //Pristine copies of every still-vanilla file in the level, before the save rewrites them
@@ -146,7 +164,7 @@ namespace OpenCAGE
                 Instancing pass;
                 if (bakers == null || bakers.All)
                 {
-                    pass = Level.SaveInstanced();
+                    pass = SaveInstancedWithOptions(Level);
                 }
                 else
                 {
@@ -158,7 +176,7 @@ namespace OpenCAGE
                         pass = Level.SaveInstanced(
                             bakers.NavMesh ? new CathodeLib.NavMesh.NavMeshBakeSettings() : null,
                             bakers.Cover ? new CathodeLib.NavMesh.CoverBakeSettings() : null,
-                            bakers.Radiosity ? new CathodeLib.Radiosity.RadiosityBakeSettings() : null,
+                            bakers.Radiosity ? RadiositySettingsFromOptions() : null,
                             bakers.JobPositions ? new CathodeLib.NavMesh.JobPositionBakeSettings() : null,
                             bakers.Alphalight ? new CathodeLib.Alphalight.AlphalightBakeSettings() : null,
                             bakers.SoundNetworks ? new CathodeLib.Sound.SoundNetworkBakeSettings() : null);

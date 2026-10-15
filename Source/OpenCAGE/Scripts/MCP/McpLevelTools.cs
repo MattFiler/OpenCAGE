@@ -637,6 +637,7 @@ namespace OpenCAGE.MCP
             new BoolOption() { Arg = "open_game_on_save", Key = Settings.LaunchGameWhenSaved, Description = "Misc > Open Game On Save (release builds; save_level never launches the game)." },
             new BoolOption() { Arg = "show_game_platform", Key = Settings.ShowGamePlatform, Description = "Misc > Show Game Platform in the title bar." },
             new BoolOption() { Arg = "reset_render_filters_on_load", Key = Settings.ResetRenderFilters, Description = "Misc > Reset Render Filters On Load: viewport filters go back to default at each level load." },
+            new BoolOption() { Arg = "always_fully_rebuild_radiosity", Key = Settings.AlwaysFullyRebuildRadiosity, Description = "Misc > Always Fully Rebuild Radiosity: every save rebuilds the level's radiosity from scratch instead of keeping the existing lighting and baking only what changed." },
         };
 
         private static readonly Dictionary<string, CompositeBrowserMode> BrowserModes = new Dictionary<string, CompositeBrowserMode>()

@@ -761,7 +761,7 @@ namespace OpenCAGE
             try
             {
                 if (buildAfterImport)
-                    level.SaveInstanced();
+                    LevelContent.SaveInstancedWithOptions(level);
                 else
                     level.Save();
             }

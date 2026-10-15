@@ -140,6 +140,7 @@ namespace OpenCAGE
             this.showGamePlatformToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.writeCompressedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.resetRenderFiltersOnLoadToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.alwaysFullyRebuildRadiosityToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.controlsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.manageGameDirectoriesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpBtn = new System.Windows.Forms.ToolStripButton();
@@ -1017,6 +1018,7 @@ namespace OpenCAGE
             this.showGamePlatformToolStripMenuItem,
             this.writeCompressedToolStripMenuItem,
             this.resetRenderFiltersOnLoadToolStripMenuItem,
+            this.alwaysFullyRebuildRadiosityToolStripMenuItem,
             this.allowAiAssistantsToolStripMenuItem});
             this.miscToolStripMenuItem.Name = "miscToolStripMenuItem";
             this.miscToolStripMenuItem.Size = new System.Drawing.Size(210, 22);
@@ -1102,7 +1104,16 @@ namespace OpenCAGE
             this.resetRenderFiltersOnLoadToolStripMenuItem.Size = new System.Drawing.Size(254, 22);
             this.resetRenderFiltersOnLoadToolStripMenuItem.Text = "Reset Render Filters On Load";
             this.resetRenderFiltersOnLoadToolStripMenuItem.Click += new System.EventHandler(this.resetRenderFiltersOnLoadToolStripMenuItem_Click);
-            // 
+            //
+            // alwaysFullyRebuildRadiosityToolStripMenuItem
+            //
+            this.alwaysFullyRebuildRadiosityToolStripMenuItem.Name = "alwaysFullyRebuildRadiosityToolStripMenuItem";
+            this.alwaysFullyRebuildRadiosityToolStripMenuItem.Size = new System.Drawing.Size(254, 22);
+            this.alwaysFullyRebuildRadiosityToolStripMenuItem.Text = "Always Fully Rebuild Radiosity";
+            this.alwaysFullyRebuildRadiosityToolStripMenuItem.ToolTipText = "If enabled, saving rebuilds the level\'s radiosity from scratch every time, instead of keeping the existing light" +
+    "ing and only baking what changed. Slower, and replaces the game\'s own lighting on unedited areas too.";
+            this.alwaysFullyRebuildRadiosityToolStripMenuItem.Click += new System.EventHandler(this.alwaysFullyRebuildRadiosityToolStripMenuItem_Click);
+            //
             // controlsToolStripMenuItem
             // 
             this.controlsToolStripMenuItem.Name = "controlsToolStripMenuItem";
@@ -1426,6 +1437,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem controlsToolStripMenuItem;
         private System.Windows.Forms.ToolStripButton manageBackupsBtn;
         private System.Windows.Forms.ToolStripMenuItem resetRenderFiltersOnLoadToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem alwaysFullyRebuildRadiosityToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem manageGameDirectoriesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem logABugToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem openLogsFolderToolStripMenuItem;
