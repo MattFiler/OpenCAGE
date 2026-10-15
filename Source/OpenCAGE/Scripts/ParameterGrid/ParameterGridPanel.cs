@@ -516,7 +516,7 @@ namespace OpenCAGE
            orange highlight - the grid caches per-row paint state, so a repaint alone isn't enough. */
         private void AttachAliasOverrideIfVirtual(EntityParameterProxy proxy, Parameter parameter)
         {
-            if (proxy.Entity.variant != EntityVariant.ALIAS)
+            if (proxy.Entity.variant != EntityVariant.ALIAS && !ProxyParameters.IsOverride(proxy.Entity, parameter.name))
                 return;
             if (proxy.Entity.GetParameter(parameter.name) != null)
                 return;
@@ -1086,15 +1086,16 @@ namespace OpenCAGE
                 return;
             }
 
-            //On an alias, overrides reset by removal so the base value applies; virtual rows have nothing to reset
-            bool isAlias = descriptor.Proxy?.Entity?.variant == EntityVariant.ALIAS;
-            _resetParam.Text = isAlias
+            //On an alias, and on a proxy's rows for the entity it stands for (issue 742), overrides reset by removal so the
+            //base value applies; virtual rows have nothing to reset
+            bool isOverride = IsOverrideRow(descriptor.Proxy, descriptor.Parameter);
+            _resetParam.Text = isOverride
                 ? "Reset '" + descriptor.Name + "' (remove override)"
                 : "Reset '" + descriptor.Name + "' to default";
             _resetParam.Enabled = CanReset(descriptor);
 
             //Jump to the aliases overriding this parameter
-            _showAliases.Visible = !isAlias && descriptor.Status == ParameterStatus.AliasOverride;
+            _showAliases.Visible = !isOverride && descriptor.Status == ParameterStatus.AliasOverride;
 
             bool copyable = descriptor.Parameter.content is cTransform || descriptor.Parameter.content is cVector3;
             _copyValue.Visible = copyable;
@@ -1117,7 +1118,7 @@ namespace OpenCAGE
                 ParameterGridDescriptor target = proxy.GetParameterDescriptor(descriptor.Name);
                 if (target == null)
                     continue;
-                if (proxy.Entity.variant == EntityVariant.ALIAS)
+                if (IsOverrideRow(proxy, target.Parameter))
                 {
                     if (ParameterGridDescriptor.IsModified(proxy.Composite, proxy.Entity, target.Parameter.name))
                         return true;
@@ -1128,6 +1129,15 @@ namespace OpenCAGE
                 }
             }
             return false;
+        }
+
+        /* An alias's rows, and a proxy's rows for the entity it stands for: what they carry is an override of that entity, so
+           Reset takes it off rather than writing a default over it (an enabled proxy would apply that default to the entity) */
+        private static bool IsOverrideRow(EntityParameterProxy proxy, Parameter parameter)
+        {
+            if (proxy?.Entity == null || parameter == null)
+                return false;
+            return proxy.Entity.variant == EntityVariant.ALIAS || ProxyParameters.IsOverride(proxy.Entity, parameter.name);
         }
 
         /* CathodeLib's default for the parameter, when it is of the type the parameter holds. Where it isn't, Reset would
@@ -1182,9 +1192,10 @@ namespace OpenCAGE
                     Parameter param = target.Parameter;
                     bool wasModified = ParameterModificationTracker.IsParameterModified(proxy.Composite.shortGUID, proxy.Entity.shortGUID, param.name);
                     string label = "Reset " + descriptor.Name + " on " + UndoLabels.Entity(proxy.Composite, proxy.Entity);
-                    if (proxy.Entity.variant == EntityVariant.ALIAS)
+                    if (IsOverrideRow(proxy, param))
                     {
-                        //Alias parameters are overrides: reset = remove so the pointed-to entity's value applies
+                        //Alias parameters (and a proxy's for the entity it stands for) are overrides: reset = remove so the
+                        //pointed-to entity's value applies
                         int index = proxy.Entity.parameters.IndexOf(param);
                         Singleton.OnEntityParameterModified?.Invoke(proxy.Entity, param, true);
                         if (param?.content != null && param.name == ShortGuidUtils.Generate("position") && param.content.dataType == DataType.TRANSFORM)

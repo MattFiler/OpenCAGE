@@ -229,6 +229,40 @@ namespace OpenCAGE
             _defaultsTracker = (EntityAppliedDefaultsTable)CustomTable.ReadTable(filepath, CustomTableType.ENTITY_APPLIED_DEFAULTS);
             if (_defaultsTracker == null) _defaultsTracker = new EntityAppliedDefaultsTable();
             Debug.Log("Modification Tracker", "Loaded " + _defaultsTracker.applied_defaults.Count + " composites with defaults applied!");
+
+            StripFilledInProxyOverrides();
+        }
+
+        /* Issue 742: the inspector used to fill in every default of the entity a proxy stands for, the first time the proxy was
+           shown, and an enabled proxy applies all of that to the entity. Both tables are read now, so what it filled in (and
+           nobody edited) can come off. The level is left unsaved once it has opened, so the fix is kept by a save. */
+        private static void StripFilledInProxyOverrides()
+        {
+            int stripped = ProxyParameters.StripFilledInOverrides(_commands, out int proxies);
+            if (stripped == 0)
+                return;
+            Debug.Log("Modification Tracker", "Took " + stripped + " filled-in overrides off " + proxies + " proxies (issue 742)");
+
+            //After the load's own "clean" (DirtyTracker listens first), on the window's thread
+            Action<LevelContent> opened = null;
+            opened = content =>
+            {
+                Singleton.OnLevelLoaded -= opened;
+                string text = "OpenCAGE took " + stripped + " parameter" + (stripped == 1 ? "" : "s") + " off " + proxies + " prox" + (proxies == 1 ? "y" : "ies") + " in this level.\n\n" +
+                    "Earlier versions filled in every default of the entity a proxy stands for when the proxy was inspected. An enabled proxy applies " +
+                    "every parameter it carries to that entity, so those defaults overrode the real values (a door's zone link or keycard, for example). " +
+                    "Only values that were never edited were taken off.\n\nSave the level to keep this.";
+                try
+                {
+                    Singleton.Editor?.BeginInvoke(new Action(() =>
+                    {
+                        DirtyTracker.MarkLevelDataModified();
+                        System.Windows.Forms.MessageBox.Show(text, "Proxy parameters tidied", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    }));
+                }
+                catch { }
+            };
+            Singleton.OnLevelLoaded += opened;
         }
         /// <summary>
         /// The table a level gets when it has none: every parameter an entity carries counts as modified,

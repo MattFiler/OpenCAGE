@@ -1174,6 +1174,7 @@
     <Compile Include="Scripts\NodeUtils.cs" />
     <Compile Include="Scripts\ZoneColours.cs" />
     <Compile Include="Scripts\TriggerSequenceMembers.cs" />
+    <Compile Include="Scripts\ProxyParameters.cs" />
     <Compile Include="Popups\AddOrEditResource.cs">
       <SubType>Form</SubType>
     </Compile>

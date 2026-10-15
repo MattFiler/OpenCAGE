@@ -922,6 +922,24 @@ namespace OpenCAGE.DockPanels
             if (entity.variant != EntityVariant.FUNCTION && entity.variant != EntityVariant.PROXY)
                 return;
 
+            /* A proxy gets its own defaults only (issue 742). Everything else it carries is applied to the entity it stands for
+             * when it is enabled, so filling in that entity's defaults here - which this did, the first time a proxy was
+             * shown - overrode the real values: a door proxy's zonelink 0 cut the door off from its ZoneLink, and its card and
+             * gate defaults undid edits made on the door. The grid shows that entity's values as inherited rows instead. */
+            if (entity is ProxyEntity proxy)
+            {
+                FunctionEntity proxyInterface = new FunctionEntity(ShortGuid.Invalid) { function = new ShortGuid((uint)FunctionType.ProxyInterface) };
+                content.Level.Commands.Utils.AddAllDefaultParameters(proxyInterface, composite, false, ParameterVariant.STATE_PARAMETER | ParameterVariant.PARAMETER | ParameterVariant.INPUT_PIN);
+                foreach (Parameter own in proxyInterface.parameters)
+                {
+                    if (own?.content == null || own.name == ShortGuids.delete_me || !ProxyParameters.IsOwn(own.name) || proxy.GetParameter(own.name) != null)
+                        continue;
+                    proxy.AddParameter(own.name, own.content, own.variant);
+                }
+                ParameterModificationTracker.SetDefaultsApplied(composite.shortGUID, entity.shortGUID);
+                return;
+            }
+
             CompositeInstanceParameters.Ensure(entity, content.Level.Commands);
 
             /* Input pins that take a value (LogicDelay's delay and can_suspend) are set as plain parameters

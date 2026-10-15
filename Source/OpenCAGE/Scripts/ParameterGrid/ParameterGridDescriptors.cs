@@ -85,6 +85,9 @@ namespace OpenCAGE
                 return CommandsUtils.GetEntityNameParameter(entity) != null;
             if (entity.variant == EntityVariant.ALIAS)
                 return entity.GetParameter(parameter) != null;
+            //So is everything a proxy carries for the entity it stands for (issue 742); its own ProxyInterface rows go by the tracker
+            if (ProxyParameters.IsOverride(entity, parameter))
+                return entity.GetParameter(parameter) != null;
             return ParameterModificationTracker.IsParameterModified(composite.shortGUID, entity.shortGUID, parameter);
         }
 

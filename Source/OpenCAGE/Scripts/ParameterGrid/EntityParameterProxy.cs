@@ -81,6 +81,14 @@ namespace OpenCAGE
             if (Entity.variant == EntityVariant.ALIAS)
                 return ParameterGridDescriptor.IsModified(Composite, Entity, parameter) ? ParameterStatus.AliasOverride : ParameterStatus.None;
 
+            //A proxy's rows for the entity it stands for go the same way: what it carries overrides that entity (issue 742)
+            if (ProxyParameters.IsOverride(Entity, parameter))
+            {
+                if (_linkedInputParams.Contains(parameter))
+                    return ParameterStatus.LinkedInput;
+                return ParameterGridDescriptor.IsModified(Composite, Entity, parameter) ? ParameterStatus.AliasOverride : ParameterStatus.None;
+            }
+
             //A flowgraph-fed pin means the inspector value is ignored entirely, so it wins over alias overrides
             if (_linkedInputParams.Contains(parameter))
                 return ParameterStatus.LinkedInput;
@@ -187,6 +195,19 @@ namespace OpenCAGE
                         if (ParameterGridDescriptor.IsModified(composite, alias, parameter.name))
                             _aliasOverriddenParams.Add(parameter.name);
                 }
+
+                //An enabled proxy applies what it carries to this entity too (issue 742): those rows are overridden elsewhere as well
+                foreach (ProxyEntity proxy in composite.proxies)
+                {
+                    if (proxy.parameters.Count == 0 || proxy.proxy?.GetPointedEntityID() != Entity.shortGUID)
+                        continue;
+                    (Composite resolvedComposite, Entity resolvedEntity) = commands.Utils.GetResolvedTarget(commands.Utils.ResolveProxy(proxy));
+                    if (resolvedEntity != Entity)
+                        continue;
+                    foreach (Parameter parameter in proxy.parameters)
+                        if (parameter?.content != null && ProxyParameters.IsOverride(proxy, parameter.name))
+                            _aliasOverriddenParams.Add(parameter.name);
+                }
             }
         }
 
@@ -266,9 +287,9 @@ namespace OpenCAGE
             EnsureRowsForLinkedParameters(commands, visibleParams, dynamicPinParams, parameterVariants);
 
             List<Parameter> displayParameters;
-            if (Entity.variant == EntityVariant.ALIAS)
+            if (Entity.variant == EntityVariant.ALIAS || Entity.variant == EntityVariant.PROXY)
             {
-                //Aliases display the pointed-to entity's full parameter set: rows without an override are
+                //Aliases and proxies display the pointed-to entity's full parameter set: rows without an override are
                 //"virtual" (showing the target's value) and become real overrides the moment they're edited
                 displayParameters = BuildAliasParameterList(commands);
             }
@@ -364,7 +385,8 @@ namespace OpenCAGE
         private void EnsureRowsForLinkedParameters(Commands commands, HashSet<ShortGuid> visibleParams,
             HashSet<ShortGuid> dynamicPinParams, Dictionary<ShortGuid, ParameterVariant> parameterVariants)
         {
-            if (_linkedInputParams.Count == 0 || Entity.variant == EntityVariant.ALIAS)
+            //Not on an alias or proxy: a row added there is an override of the entity it points at (issue 742)
+            if (_linkedInputParams.Count == 0 || Entity.variant == EntityVariant.ALIAS || Entity.variant == EntityVariant.PROXY)
                 return;
 
             foreach (ShortGuid linkedParam in _linkedInputParams)
@@ -386,12 +408,15 @@ namespace OpenCAGE
             }
         }
 
-        /* The alias's own overrides plus virtual rows for every other parameter on the resolved target */
+        /* The alias's (or proxy's) own overrides plus virtual rows for every other parameter on the resolved target. A proxy's
+           own ProxyInterface parameters are its own rows, never the target's. */
         private List<Parameter> BuildAliasParameterList(Commands commands)
         {
             List<Parameter> result = new List<Parameter>(Entity.parameters);
 
-            (Composite targetComposite, Entity targetEntity) = commands.Utils.GetResolvedTarget(commands.Utils.ResolveAlias((AliasEntity)Entity, Composite));
+            (Composite targetComposite, Entity targetEntity) = Entity is ProxyEntity pointer
+                ? commands.Utils.GetResolvedTarget(commands.Utils.ResolveProxy(pointer))
+                : commands.Utils.GetResolvedTarget(commands.Utils.ResolveAlias((AliasEntity)Entity, Composite));
             if (targetEntity != null && targetComposite != null)
             {
 #if AUTO_POPULATE_PARAMS
@@ -404,6 +429,8 @@ namespace OpenCAGE
                         continue;
                     if (targetParameter.name == ShortGuids.name)
                         continue; //the alias has its own name row - blank there means "inherit the target's name"
+                    if (Entity is ProxyEntity && ProxyParameters.IsOwn(targetParameter.name))
+                        continue; //a proxy's reference and delete_me are its own
                     if (Entity.GetParameter(targetParameter.name) != null)
                         continue; //an override exists - show that instead
 
