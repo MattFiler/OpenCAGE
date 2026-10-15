@@ -1742,10 +1742,40 @@ namespace OpenCAGE.DockPanels
             ReloadAllEntities();
         }
 
+        //The selection last asked for (LoadEntity, LoadEntities, ClearEntitySelection), and the load generation whose inspector populate
+        //has run: while it lags _loadEntityGeneration, that selection is on its way to the inspector
+        private List<Entity> _requestedSelection = new List<Entity>();
+        private int _populatedGeneration = 0;
+
+        /// <summary>
+        /// Whether the editor's selection is exactly these entities already: they were asked for last, and the inspector shows them or
+        /// is about to (their populate is still waiting its turn). A click that picks them again changes nothing; any other has to be
+        /// loaded. What a flowgraph page remembers of its own last announcement cannot answer this - the selection moves on from the
+        /// viewport, the entity list and other pages without it.
+        /// </summary>
+        public bool IsSelectionOf(IList<Entity> entities)
+        {
+            if (entities == null || entities.Count == 0 || entities.Count != _requestedSelection.Count || !entities.All(_requestedSelection.Contains))
+                return false;
+            if (_populatedGeneration != _loadEntityGeneration)
+                return true;
+            if (_entityDisplay == null || _entityDisplay.IsDisposed)
+                return false;
+            if (entities.Count == 1)
+                return !_entityDisplay.IsMultiEditing && _entityDisplay.Entity == entities[0];
+            List<Entity> shown = _entityDisplay.MultiSelectedEntities;
+            return _entityDisplay.IsMultiEditing && shown != null && shown.Count == entities.Count && entities.All(shown.Contains);
+        }
+
+        /// <summary>Whether this entity, alone, is the selection last asked for (a deferred highlight of it is still wanted).</summary>
+        public bool IsRequestedSelection(Entity entity) => _requestedSelection.Count == 1 && _requestedSelection[0] == entity;
+
         /* Load an entity into the composite tabs UI */
         public void ClearEntitySelection()
         {
-            _loadEntityGeneration++;
+            _populatedGeneration = ++_loadEntityGeneration;
+            _requestedSelection = new List<Entity>();
+            ViewerSelectionSync.NoteLocalSelectionInput();
 
             if (_entityList?.List != null)
             {
@@ -1757,6 +1787,11 @@ namespace OpenCAGE.DockPanels
             }
 
             _entityDisplay?.ClearSelectedEntity();
+
+            //Nothing selected is highlighted either: a node left lit up looked selected, and clicking it again looked like no change
+            foreach (Flowgraph flowgraph in _flowgraphs)
+                if (flowgraph != null && !flowgraph.IsDisposed)
+                    flowgraph.ClearNodeSelection();
         }
 
         public void LoadEntityDontFocusNode(ShortGuid guid) => LoadEntity(guid, false);
@@ -1839,11 +1874,14 @@ namespace OpenCAGE.DockPanels
 
             int generation = ++_loadEntityGeneration;
             List<Entity> entitiesToLoad = new List<Entity>(entities);
+            _requestedSelection = new List<Entity>(entities);
+            ViewerSelectionSync.NoteLocalSelectionInput();
             bool viewerOriginated = ViewerSelectionSync.IsApplyingViewerSelection;
             BeginInvoke(new Action(() =>
             {
                 if (IsDisposed || Disposing || generation != _loadEntityGeneration)
                     return;
+                _populatedGeneration = generation;
                 if (_entityDisplay == null || _entityDisplay.IsDisposed)
                     return;
 
@@ -1889,6 +1927,8 @@ namespace OpenCAGE.DockPanels
             }
 
             int generation = ++_loadEntityGeneration;
+            _requestedSelection = new List<Entity>() { entity };
+            ViewerSelectionSync.NoteLocalSelectionInput();
             Entity entityToLoad = entity;
             bool displayLinks = !SupportsFlowgraphs;
             //The inspector populate is deferred, so the viewer-originated flag must be captured now
@@ -1899,6 +1939,7 @@ namespace OpenCAGE.DockPanels
             {
                 if (IsDisposed || Disposing || generation != _loadEntityGeneration)
                     return;
+                _populatedGeneration = generation;
                 if (_entityDisplay == null || _entityDisplay.IsDisposed)
                     return;
                 /* Deleted while this populate waited its turn. Deleting several entities selects the
@@ -2182,15 +2223,16 @@ namespace OpenCAGE.DockPanels
             }
         }
 
-        private static void FocusEntityOnFlowgraphDeferred(Flowgraph flowgraph, Entity entity)
+        private void FocusEntityOnFlowgraphDeferred(Flowgraph flowgraph, Entity entity)
         {
             if (flowgraph == null || entity == null || flowgraph.IsDisposed)
                 return;
 
-            // ShowFlowgraph restores canvas position via BeginInvoke; defer focus so it is not overwritten.
+            // ShowFlowgraph restores canvas position via BeginInvoke; defer focus so it is not overwritten - but only while that entity
+            // is still what was last selected, or a click made meanwhile would lose its highlight to this one
             flowgraph.BeginInvoke(new Action(() =>
             {
-                if (!flowgraph.IsDisposed)
+                if (!flowgraph.IsDisposed && IsRequestedSelection(entity))
                     flowgraph.SelectAllNodesForEntity(entity);
             }));
         }

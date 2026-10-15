@@ -326,9 +326,8 @@ namespace OpenCAGE
             return Color.Empty;
         }
 
-        private Entity _previouslySelectedEntity = null;
+        private Entity _previouslySelectedEntity = null; //the last entity selected on this page: what Focus falls back on
         private bool _selectedNodeChanged = false;
-        private readonly List<uint> _lastSelectionIds = new List<uint>();
         private void Owner_SelectedChanged(object sender, EventArgs e)
         {
             //Mid-rebuild states aren't real selections - see SelectAllNodesForEntity
@@ -349,8 +348,6 @@ namespace OpenCAGE
 
             if (selectedEntities.Count == 0)
             {
-                _lastSelectionIds.Clear();
-
                 //Deselecting from a multi-selection should clear the inspector's multi state
                 //(deselecting a single entity keeps it shown, matching previous behaviour)
                 if (Singleton.Editor?.CompositeDisplay?.EntityDisplay?.IsMultiEditing == true)
@@ -363,42 +360,51 @@ namespace OpenCAGE
                 return;
             }
 
-            //Rubber-band drags and ctrl-clicks fire selection events repeatedly - only act when the set changes
-            bool sameSelection = selectedEntities.Count == _lastSelectionIds.Count;
-            if (sameSelection)
-            {
-                foreach (Entity entity in selectedEntities)
-                {
-                    if (!_lastSelectionIds.Contains(entity.shortGUID.AsUInt32))
-                    {
-                        sameSelection = false;
-                        break;
-                    }
-                }
-            }
-            if (sameSelection)
+            /* Rubber-band drags and ctrl-clicks fire selection events repeatedly - only act when the selection changes. Whether it
+               does is what the editor has selected (or is loading), never a remembered copy of what this page last announced: that
+               went stale whenever the selection moved on elsewhere (the viewport, the entity list, another page, a deselection),
+               and the next click on the node it named did nothing. A click is still the user's latest choice, though, even when it
+               changes nothing - a viewport pick made before it must not win when it arrives after (ViewerSelectionSync). */
+            CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
+            if (display == null)
                 return;
-            _lastSelectionIds.Clear();
-            foreach (Entity entity in selectedEntities)
-                _lastSelectionIds.Add(entity.shortGUID.AsUInt32);
+            ViewerSelectionSync.NoteLocalSelectionInput();
+            if (display.IsSelectionOf(selectedEntities))
+                return;
 
             if (selectedEntities.Count > 1)
             {
                 _previouslySelectedEntity = null;
                 _selectedNodeChanged = true;
-                Singleton.Editor?.CompositeDisplay?.LoadEntities(selectedEntities);
+                display.LoadEntities(selectedEntities);
                 _selectedNodeChanged = false;
                 return;
             }
 
             Entity ent = selectedEntities[0];
-            if (ent == _previouslySelectedEntity) return;
             _previouslySelectedEntity = ent;
 
             _selectedNodeChanged = true;
-            Singleton.Editor?.CompositeDisplay?.LoadEntity(ent, false);
+            display.LoadEntity(ent, false);
             Singleton.OnEntitySelected?.Invoke(ent); //need to call this again b/c the activation event doesn't fire here
             _selectedNodeChanged = false;
+        }
+
+        /// <summary>Drop this page's highlight without announcing anything: the editor's selection was cleared elsewhere.</summary>
+        public void ClearNodeSelection()
+        {
+            if (stNodeEditor1.GetSelectedNode().Length == 0)
+                return;
+            _applyingEntitySelection = true;
+            try
+            {
+                DeselectAllNodes();
+            }
+            finally
+            {
+                _applyingEntitySelection = false;
+            }
+            stNodeEditor1.Invalidate();
         }
 
         private void StNodeEditor1_NodeCtrlMiddleMouseDown(object sender, STNodeEditorEventArgs e)
@@ -445,13 +451,6 @@ namespace OpenCAGE
             {
                 _applyingEntitySelection = false;
             }
-
-            //Owner_SelectedChanged was suppressed above, so bring its dedupe state up to date by hand -
-            //leaving it describing the previous selection would make the next real click on one of
-            //those nodes look like "no change" and skip updating the inspector.
-            _lastSelectionIds.Clear();
-            if (entity != null)
-                _lastSelectionIds.Add(entity.shortGUID.AsUInt32);
 
             //The canvas needs repainting for the new highlight (and its off-screen arrows)
             stNodeEditor1.Invalidate();
@@ -1786,10 +1785,6 @@ namespace OpenCAGE
             }
             if (entities.Count == 0)
                 return;
-
-            _lastSelectionIds.Clear();
-            foreach (Entity entity in entities)
-                _lastSelectionIds.Add(entity.shortGUID.AsUInt32);
 
             _previouslySelectedEntity = entities.Count == 1 ? entities[0] : null;
             _selectedNodeChanged = true;

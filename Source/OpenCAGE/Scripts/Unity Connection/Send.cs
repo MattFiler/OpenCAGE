@@ -676,6 +676,14 @@ namespace OpenCAGE.UnityConnection
 
             SendData(GeneratePacket(PacketEvent.ENTITY_SELECTED));
         }
+        /// <summary>
+        /// Tell the viewer the editor's selection again: after a pick of its own the editor did not take, because a newer choice was
+        /// made here before it arrived (see ViewerSelectionSync). The viewer shows its pick until told otherwise.
+        /// </summary>
+        public static void ResendSelection()
+        {
+            SendData(GeneratePacket(PacketEvent.ENTITY_SELECTED));
+        }
         /* The inspector was cleared, so nothing is selected any more. The plain packet carries no entity
            when nothing is selected, which is exactly the deselect the viewer needs to drop its highlight
            and gizmo - without this it kept showing the last selection (issue 675). */
