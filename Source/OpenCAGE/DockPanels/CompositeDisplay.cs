@@ -2124,7 +2124,8 @@ namespace OpenCAGE.DockPanels
 
         /// <summary>
         /// Stripe every node in the colour of its entity's zone, the colour the viewport draws that zone in,
-        /// while it is highlighting zones. The inspector shows the same colour for the entity it has open.
+        /// while it is highlighting zones - in each zone's colour in turn when it is in several. The inspector
+        /// shows the first (the one the viewport draws it in) for the entity it has open.
         /// </summary>
         public void RefreshZoneColours()
         {
@@ -2140,8 +2141,9 @@ namespace OpenCAGE.DockPanels
                 {
                     if (node.Entity == null)
                         continue;
+                    //Every zone it goes with, in turn: zones overlap, and a Zone node's colour is then on each entity it lists
                     ZoneColours.Match match = zones?.Find(node.Entity);
-                    changed |= node.SetZone(match?.Colour ?? Color.Empty);
+                    changed |= node.SetZones(match?.Colours);
                 }
                 if (changed)
                     flowgraph.Nodegraph.Invalidate();

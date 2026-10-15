@@ -55,8 +55,11 @@ namespace OpenCAGE.UnityConnection
             _initialised = true;
 
             /* Anything that can move an entity in or out of a zone. There is no event for a link being
-               made or broken, so the ones raised either side of that stand in for it: the inspector
-               reloads both ends of an edited link, and the flowgraph reloads the composite it rewired. */
+               made or broken on a flowgraph page, nor for most other page edits (deleting a node with its
+               links, a page, pins, and the undo of any of them) - but every edit ends in DirtyTracker, the
+               flowgraph's included, so that stands in for them, as it does for Live Link. The events below
+               it raises anyway; they are kept for edits made while the level is not marked (a save's own). */
+            DirtyTracker.OnDirty += MarkDirty;
             Singleton.OnLevelLoaded += content =>
             {
                 //The old level's table names nothing in the new one - drop it rather than colour by it
@@ -120,6 +123,12 @@ namespace OpenCAGE.UnityConnection
                 _coalesce.Tick += (sender, args) =>
                 {
                     _coalesce.Stop();
+                    //Save & Build writes the level on a worker while this thread pumps: not now, once it is done
+                    if (ViewerInboundDispatcher.IsHeldForSave)
+                    {
+                        _coalesce.Start();
+                        return;
+                    }
                     SendNow(skipIfUnchanged: true);
                 };
             }
@@ -159,6 +168,8 @@ namespace OpenCAGE.UnityConnection
             if (content == null || !content.IsLevelDataLoaded)
                 return;
 
+            CompileShownFlowgraphs();
+
             List<SyncedZone> zones;
             try
             {
@@ -184,6 +195,26 @@ namespace OpenCAGE.UnityConnection
             {
                 _lastSentTable = null;
             }
+        }
+
+        /* Zones are made of links, and a link made or broken on a flowgraph page lives in the page until the composite's
+           links are compiled from its pages - on leaving the composite, or on a save. Read before then, a Zone wired to a
+           sequence on screen was not in the table until the level was saved. So the composite on screen is compiled first,
+           as Live Link and the MCP tools do before they read a composite's scripting. Compiling is on the UI thread only, and
+           not mid-undo; a table worked out off it (a viewer connecting) uses the links as they stand. */
+        private static void CompileShownFlowgraphs()
+        {
+            CommandsEditor editor = Singleton.Editor;
+            if (editor == null || editor.IsDisposed || editor.InvokeRequired || ViewerInboundDispatcher.IsHeldForSave)
+                return;
+
+            CATHODE.Scripting.Composite shown = editor.CompositeDisplay?.Composite;
+            if (shown == null)
+                return;
+
+            RuntimeUtilsConnection.LiveLink.CompileIfShown(shown);
+            //A selected Zone's contents may have been worked out from the page's old links
+            DropSelectionTable();
         }
 
         private static void SetCurrent(List<SyncedZone> zones)

@@ -1067,7 +1067,7 @@ namespace OpenCAGE.DockPanels
             /* The drill path has to be read here, on the UI thread: it is what the user walked through
                to get to this entity, and it decides which instance's zones the answer is about. */
             Composite startComposite = HierarchyRootComposite;
-            List<uint> instancePath = InstancePathFor(_entity);
+            List<uint> instancePath = ZoneLookupPathFor(_entity, startComposite);
 
             //Kept for the jump: the zones' paths are written from here, so this is where a walk to one starts
             _zoneLookupStartComposite = startComposite;
@@ -1122,6 +1122,23 @@ namespace OpenCAGE.DockPanels
                 return;
             mainInst.ThreadedEntityUIUpdate(ent, isPointedTo, zones);
         }
+        /* Which zones an entity is in is decided by where it sits - except for an alias or proxy, which draws nothing of its
+           own: a zone names what it points at, never the pointer, so that is what is looked up. A proxy's path is written
+           from the level root, so it can only be followed when the hierarchy starts there. */
+        private List<uint> ZoneLookupPathFor(Entity entity, Composite startComposite)
+        {
+            List<uint> path = InstancePathFor(entity);
+            if (!(entity is AliasEntity || entity is ProxyEntity))
+                return path;
+
+            CATHODE.Commands commands = Content?.Level?.Commands;
+            Composite levelRoot = commands?.EntryPoints != null && commands.EntryPoints.Length != 0 ? commands.EntryPoints[0] : null;
+            if (EntityInstancePath.TryResolvePointer(commands, Composite, path.GetRange(0, path.Count - 1), entity, out List<uint> target, out bool relative)
+                && (relative || startComposite == levelRoot))
+                return target;
+            return path;
+        }
+
         private List<EditorUtils.ZoneReference> _zonesForSelectedEntity = null;
         private Composite _zoneLookupStartComposite = null;
 

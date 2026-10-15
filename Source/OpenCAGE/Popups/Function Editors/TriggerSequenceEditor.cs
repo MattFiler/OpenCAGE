@@ -282,6 +282,14 @@ namespace OpenCAGE
             _sequence[index].connectedEntity.path = generatedHierarchy;
             ReloadEntityList(index);
             LoadSelectedEntity();
+            EntriesChanged();
+        }
+
+        /* Which entities the sequence names has changed. If it fills a zone, so has the zone: the viewport's zone colours
+           follow now rather than when the window closes (the entries are edited in place, so nothing else is told). */
+        private static void EntriesChanged()
+        {
+            OpenCAGE.UnityConnection.ViewerZoneSync.MarkDirty();
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -329,15 +337,17 @@ namespace OpenCAGE
             int selectIndex = insertIndex + hierarchies.Count - 1;
             ReloadEntityList(selectIndex);
             LoadSelectedEntity();
+            EntriesChanged();
         }
 
         private void deleteSelectedEntity_Click(object sender, EventArgs e)
         {
-            if (entity_list.SelectedItems.Count == 0) 
+            if (entity_list.SelectedItems.Count == 0)
                 return;
             _sequence.RemoveAt(SelectedSequenceIndex);
             ReloadEntityList();
             LoadSelectedEntity();
+            EntriesChanged();
         }
 
         private void addNewParamTrigger_Click(object sender, EventArgs e)
@@ -511,6 +521,7 @@ namespace OpenCAGE
 
             ReloadEntityList();
             LoadSelectedEntity();
+            EntriesChanged();
         }
 
         private void button3_Click(object sender, EventArgs e)
