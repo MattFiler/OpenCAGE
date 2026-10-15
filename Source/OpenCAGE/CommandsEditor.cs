@@ -1778,10 +1778,14 @@ namespace OpenCAGE
             {
                 PatchManager.PatchLaunchMode(Singleton.Platform, Singleton.PathToAI, _compositeBrowser.Content.Level.Name);
 
-                //The scripting helpers (runtime utils ASI and its config) go in or come out as the Launch Game window's settings ask, as they do when launched from there
-                string runtimeUtilsProblem = LaunchGame.ApplyRuntimeUtils();
+                //The scripting helpers (runtime utils ASI and its config) go in or come out as the Launch Game window's settings ask, as they do when launched from there.
+                //Cinematic Tools are never started from here, so the helpers are as ticked even while they are
+                string runtimeUtilsProblem = LaunchGame.ApplyRuntimeUtils(false);
                 if (runtimeUtilsProblem != null)
                     MessageBox.Show(runtimeUtilsProblem, "Runtime utils error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                //...and an injector an earlier launch left waiting (its game never came up) would put them in this game beside
+                //the helpers: closed before the game starts (the save closed the game itself)
+                EditorUtils.CloseAI(new List<string>(new string[] { "CinematicTools", "CinematicToolsInjector" }), thisInstallOnly: true);
 
                 if (Singleton.Platform == PatchManager.Platform.STEAM)
                 {
@@ -2695,6 +2699,7 @@ namespace OpenCAGE
 
         private bool _liveLinkConnecting = false;
         private bool _liveLinkNotListeningShown = false;
+        private bool _liveLinkCinematicToolsShown = false; //said once a launch: the game has Cinematic Tools, so no Live Link
         private int _liveLinkRefusals = 0;
         private async void TryConnectLiveLink()
         {
@@ -2702,11 +2707,13 @@ namespace OpenCAGE
                 return;
             _liveLinkConnecting = true;
             bool running = false;
+            bool cinematicTools = false;
             bool connected;
             try
             {
-                //Looking for the game goes through every process: that too off the UI thread, as this is asked every 3 s
-                connected = await Task.Run(() => (running = GameRunning()) && RuntimeUtilsConnection.Send.Start());
+                //Looking for the game goes through every process: that too off the UI thread, as this is asked every 3 s. A game
+                //launched with Cinematic Tools serves no Live Link (they have its camera): not even tried
+                connected = await Task.Run(() => (running = GameRunning()) && !(cinematicTools = LaunchGame.CinematicToolsLaunched()) && RuntimeUtilsConnection.Send.Start());
             }
             finally
             {
@@ -2714,6 +2721,15 @@ namespace OpenCAGE
             }
             if (!running)
                 return; //no game yet: not a refusal
+            if (cinematicTools)
+            {
+                if (!_liveLinkCinematicToolsShown && !IsDisposed)
+                {
+                    _liveLinkCinematicToolsShown = true;
+                    ShowLiveLinkActivity("Live Link: the game is running with Cinematic Tools, which have its camera - restart it from OpenCAGE (Launch Game) with Cinematic Tools off and Enable Live Link ticked to use Live Link");
+                }
+                return;
+            }
             if (connected)
             {
                 _liveLinkNotListeningShown = false;
@@ -2737,21 +2753,24 @@ namespace OpenCAGE
             bool wanted = !SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
             SettingsManager.SetBool(Settings.RuntimeUtilsOpt, wanted);
             _liveLinkNotListeningShown = false;
+            _liveLinkCinematicToolsShown = false;
             _liveLinkRefusals = 0;
             ApplySettingEffects(new[] { Settings.RuntimeUtilsOpt });
             if (!wanted)
                 ShowLiveLinkActivity("Live Link: off");
             else if (!RuntimeUtilsConnection.Send.Connected && !GameRunning())
-                ShowLiveLinkActivity("Live Link: on - launch the game from OpenCAGE (Launch Game) with Enable Live Link ticked, and it connects once the game is up");
+                ShowLiveLinkActivity("Live Link: on - launch the game from OpenCAGE (Launch Game) with Enable Live Link ticked (and Cinematic Tools off), and it connects once the game is up");
             OnLiveLinkConnectionChanged();
         }
 
         /* The Live Link menu, beside Launch Game: there only while the game is running and serves Live Link, and only for
-           the Steam build (the runtime utils, which serve it, support no other). The game is looked for every couple of
-           seconds, off the UI thread, and again whenever it is launched. */
+           the Steam build (the runtime utils, which serve it, support no other) - never for a game launched with Cinematic
+           Tools, which have its camera instead. The game is looked for every couple of seconds, off the UI thread, and again
+           whenever it is launched. */
         private System.Windows.Forms.Timer _liveLinkMenuWatch;
         private bool _liveLinkMenuLooking = false;
         private bool _gameServesLiveLink = false;
+        private bool _gameRunsCinematicTools = false;
 
         private void StartLiveLinkMenuWatch()
         {
@@ -2770,9 +2789,16 @@ namespace OpenCAGE
             _liveLinkMenuLooking = true;
             try
             {
-                bool serves = false;
-                await Task.Run(() => serves = GameRunning() && LaunchGame.LiveLinkInstalled());
+                bool serves = false, cinematicTools = false;
+                await Task.Run(() =>
+                {
+                    if (!GameRunning())
+                        return;
+                    cinematicTools = LaunchGame.CinematicToolsLaunched();
+                    serves = !cinematicTools && LaunchGame.LiveLinkInstalled();
+                });
                 _gameServesLiveLink = serves;
+                _gameRunsCinematicTools = cinematicTools;
             }
             catch (Exception ex)
             {
@@ -2795,8 +2821,8 @@ namespace OpenCAGE
                 return;
             bool connected = RuntimeUtilsConnection.Send.Connected;
             bool wanted = SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
-            //A game launched without Live Link has nothing to connect to: no button for it
-            liveLinkBtn.Visible = Singleton.Platform == PatchManager.Platform.STEAM && (_gameServesLiveLink || connected);
+            //A game launched without Live Link has nothing to connect to, and one with Cinematic Tools gave its camera to them: no button for either
+            liveLinkBtn.Visible = Singleton.Platform == PatchManager.Platform.STEAM && !_gameRunsCinematicTools && (_gameServesLiveLink || connected);
             liveLinkBtn.Checked = wanted;
             liveLinkBtn.ToolTipText = connected ? "Connected to the game: script edits reach it as they are made, entity methods can be triggered from the Entity Inspector or a method pin's right-click menu, and the viewport's Live Link Camera menu is there. Click to disconnect."
                 : wanted ? "Waiting for the game to serve Live Link (it opens it a moment after starting). Click to stop connecting."
@@ -2823,6 +2849,7 @@ namespace OpenCAGE
                 }
                 return;
             }
+            _liveLinkCinematicToolsShown = false;
             if (servesLiveLink)
             {
                 SettingsManager.SetBool(Settings.RuntimeUtilsOpt, true);

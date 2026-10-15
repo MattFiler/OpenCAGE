@@ -1,5 +1,6 @@
 using OpenCAGE.UnityConnection;
 using System.Drawing;
+using System.Linq;
 
 namespace OpenCAGE
 {
@@ -40,6 +41,7 @@ namespace OpenCAGE
             EnsureBool(Settings.ScriptingHelpersDebugEnvironmentMarker, false);
             EnsureBool(Settings.ScriptingHelpersDebugPositionMarker, false);
             EnsureScriptingHelpersLiveLink();
+            EnsureCinematicToolsOrHelpers();
             EnsureBool(Settings.ShowGamePlatform, false);
             EnsureBool(Settings.ShowCameraPosition, false);
             EnsureBool(Settings.FocusOnSelected, false);
@@ -96,6 +98,18 @@ namespace OpenCAGE
         {
             if (!SettingsManager.IsSet(Settings.ScriptingHelpersLiveLink))
                 SettingsManager.SetBool(Settings.ScriptingHelpersLiveLink, SettingsManager.GetBool(Settings.RuntimeUtilsOpt));
+        }
+
+        /* Cinematic Tools and the scripting helpers became one or the other (LaunchGame.CinematicToolsChosen), Cinematic Tools
+           winning while ticked: whoever had both on keeps the helpers, Live Link among them, and has Cinematic Tools switched
+           off, once */
+        static void EnsureCinematicToolsOrHelpers()
+        {
+            if (SettingsManager.IsSet(Settings.CinematicToolsOrHelpers))
+                return;
+            if (SettingsManager.GetBool(Settings.CinematicTools) && LaunchGame.HelperSettings.Any(o => SettingsManager.GetBool(o)))
+                SettingsManager.SetBool(Settings.CinematicTools, false);
+            SettingsManager.SetBool(Settings.CinematicToolsOrHelpers, true);
         }
 
         /* The Live Link Camera menu replaced the Sync Game Camera button: on was what is now "Sync viewport camera to game".

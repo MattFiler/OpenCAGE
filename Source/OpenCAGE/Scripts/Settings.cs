@@ -118,6 +118,8 @@ namespace OpenCAGE
         public const string ScriptingHelpersDebugEnvironmentMarker = "ScriptingHelpers_DebugEnvironmentMarker";
         public const string ScriptingHelpersDebugPositionMarker = "ScriptingHelpers_DebugPositionMarker";
         public const string ScriptingHelpersLiveLink = "ScriptingHelpers_LiveLink";
+        //Set once whoever had Cinematic Tools and a scripting helper both on was moved to one or the other (SettingsDefaults)
+        public const string CinematicToolsOrHelpers = "CinematicToolsOrHelpers";
 
         public const string UiModPauseMenu = "PAUSEMENU";
         public const string UiModLoadingScreen = "LOADINGSCREEN";

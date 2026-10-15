@@ -172,7 +172,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "launch_game",
                 Title = "Launch the game",
-                Description = "Start Alien: Isolation straight into a level (Steam, Epic or GOG). Closes this install's game and Cinematic Tools first if running, and writes the launch_options AI.exe patches as set. The game loads what is on disk: save (or save_level first) - a level needing a Save & Build is refused unless allow_stale_build (get_editor_state level.build says why). Without skip_frontend the level's scripts start but the game waits at PRESS ANY BUTTON; skip_frontend (default: the launch_options setting) starts it playing. wait_for 'level' or 'playing' waits until the game reports it through Live Link (launch_options live_link on), 'process' until AI.exe runs. Installs or removes the scripting-helpers ASI and starts Cinematic Tools as launch_options say. Without a level it starts at the menu.",
+                Description = "Start Alien: Isolation straight into a level (Steam, Epic or GOG). Closes this install's game and Cinematic Tools first if running, and writes the launch_options AI.exe patches as set. The game loads what is on disk: save (or save_level first) - a level needing a Save & Build is refused unless allow_stale_build (get_editor_state level.build says why). Without skip_frontend the level's scripts start but the game waits at PRESS ANY BUTTON; skip_frontend (default: the launch_options setting) starts it playing. wait_for 'level' or 'playing' waits until the game reports it through Live Link (launch_options live_link on, cinematic_tools off), 'process' until AI.exe runs. Installs or removes the scripting-helpers ASI and starts Cinematic Tools as launch_options say - one or the other: with cinematic_tools on, every scripting helper is off for the run. Without a level it starts at the menu.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("level", "The level to start in, as list_levels names it. Defaults to the open level; 'menu' for the main menu."),
                     McpSchema.String("save", "Save the open level first when it is the one launched: none (default), save, build (Save & Build), or auto (build if it needs one, else save if it has unsaved changes).", options: new[] { "none", "save", "build", "auto" }),
@@ -1509,6 +1509,8 @@ namespace OpenCAGE.MCP
             bool? skipFrontend = call.Has("skip_frontend") ? call.Bool("skip_frontend") : (bool?)null;
             bool dryRun = call.Bool("dry_run");
             bool liveLinkWait = waitFor == "level" || waitFor == "playing";
+            if (liveLinkWait && global::OpenCAGE.LaunchGame.CinematicToolsChosen())
+                throw new McpError(McpErrorCodes.Refused, "wait_for '" + waitFor + "' needs Live Link, which is off while Cinematic Tools are on (launch_options cinematic_tools): Cinematic Tools and the scripting helpers are one or the other, as both take over the game's camera. Set launch_options cinematic_tools: false, or wait_for 'process'. Nothing was launched.");
             if (liveLinkWait && !(SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink) && global::OpenCAGE.LaunchGame.ScriptingHelpersAvailable()))
                 throw new McpError(McpErrorCodes.Refused, "wait_for '" + waitFor + "' needs Live Link, which the game serves only when launched with launch_options live_link: true (Steam build). Turn it on with launch_options, or wait_for 'process'. Nothing was launched.");
 
@@ -1587,8 +1589,9 @@ namespace OpenCAGE.MCP
             }
             //The launch_options patches as set (a verified AI.exe loses them), with skip_frontend as asked for this launch
             List<string> patchFailures = McpLevelTools.ApplyPatchSettings(platform, skipFrontend);
-            //The scripting helpers (runtime utils ASI) go in or come out as launch_options ask, as the Launch Game window does
-            string runtimeUtilsProblem = global::OpenCAGE.LaunchGame.ApplyRuntimeUtils();
+            //The scripting helpers (runtime utils ASI) go in or come out as launch_options ask, as the Launch Game window does: all
+            //off when Cinematic Tools start (below)
+            string runtimeUtilsProblem = global::OpenCAGE.LaunchGame.ApplyRuntimeUtils(global::OpenCAGE.LaunchGame.CinematicToolsChosen());
             if (runtimeUtilsProblem != null)
                 call.Note(runtimeUtilsProblem + " In-game scripting helpers (debug text, hot reload, Live Link) will not work this run.");
             //The level to start in, the integrity check and the popup are what a launch needs; the rest are options
@@ -1623,7 +1626,13 @@ namespace OpenCAGE.MCP
                 call.Note("The frontend is not skipped: the level's scripts start, but the game waits at PRESS ANY BUTTON until someone presses one (skip_frontend: true starts it playing).");
             if (waitFor != "none")
                 result["wait"] = WaitForGame(call, waitFor, TimeSpan.FromSeconds(timeoutSeconds), launched, launchesOpen);
-            result["scripting_helpers"] = global::OpenCAGE.LaunchGame.RuntimeUtilsNeeded() && runtimeUtilsProblem == null;
+            result["scripting_helpers"] = global::OpenCAGE.LaunchGame.AnyHelperOn() && runtimeUtilsProblem == null;
+            if (global::OpenCAGE.LaunchGame.CinematicToolsChosen())
+            {
+                List<string> parked = global::OpenCAGE.LaunchGame.HelperSettings.Where(o => SettingsManager.GetBool(o)).Select(McpLevelTools.LaunchOptionArg).ToList();
+                if (parked.Count != 0)
+                    call.Note("Cinematic Tools have the game's camera this run, so the scripting helpers set on (" + string.Join(", ", parked) + ") are off: the two are one or the other. launch_options cinematic_tools: false brings them back next launch.");
+            }
             if (SettingsManager.GetBool(Settings.CinematicTools))
             {
                 if (!global::OpenCAGE.LaunchGame.CinematicToolsAvailable())

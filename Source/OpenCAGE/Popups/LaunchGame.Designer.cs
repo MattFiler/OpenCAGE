@@ -94,7 +94,8 @@ namespace OpenCAGE
             this.enableCinematicTools.Size = new System.Drawing.Size(137, 17);
             this.enableCinematicTools.TabIndex = 27;
             this.enableCinematicTools.Text = "Enable Cinematic Tools";
-            this.toolTip1.SetToolTip(this.enableCinematicTools, "Enables HattiWatti\'s Cinematic Tools.");
+            this.toolTip1.SetToolTip(this.enableCinematicTools, "Enables HattiWatti\'s Cinematic Tools, a free camera for filming. Cinematic Tools and the scripting helpers are one or the other, " +
+        "as both take over the game\'s camera: while this is ticked, the Scripting Helpers (Live Link among them) are off.");
             this.enableCinematicTools.UseVisualStyleBackColor = true;
             this.enableCinematicTools.CheckedChanged += new System.EventHandler(this.enableCinematicTools_CheckedChanged);
             // 
@@ -315,7 +316,7 @@ namespace OpenCAGE
             this.toolTip1.SetToolTip(this.enableLiveLink, "The game serves OpenCAGE\'s Live Link (on this PC only), and OpenCAGE connects to it by itself once the game i" +
         "s up (the Live Link button, beside Launch Game): script edits reach the running level without a reload, entity " +
         "methods can be triggered from the Entity Inspector or a method pin\'s right-click menu, and the viewport\'s camer" +
-        "a and the game\'s can follow each other.");
+        "a and the game\'s can follow each other. Not with Cinematic Tools, which have the game\'s camera instead.");
             this.enableLiveLink.UseVisualStyleBackColor = true;
             this.enableLiveLink.CheckedChanged += new System.EventHandler(this.enableLiveLink_CheckedChanged);
             //

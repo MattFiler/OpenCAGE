@@ -57,6 +57,36 @@ namespace OpenCAGE
             return Singleton.Platform == PatchManager.Platform.STEAM && File.Exists(Beside(CinematicToolsDll)) && File.Exists(Beside(CinematicToolsInjector));
         }
 
+        //Every scripting helper's on/off setting (the Scripting Helpers box)
+        internal static readonly string[] HelperSettings = new string[]
+        {
+            Settings.ScriptingHelpersHotReload, Settings.ScriptingHelpersUnlockMouse, Settings.ScriptingHelpersCapFps,
+            Settings.ScriptingHelpersDebugText, Settings.ScriptingHelpersDebugTextStacking, Settings.ScriptingHelpersDebugEnvironmentMarker,
+            Settings.ScriptingHelpersDebugPositionMarker, Settings.ScriptingHelpersLiveLink,
+        };
+
+        /* Cinematic Tools and the scripting helpers are one or the other for a run: both take over the game's camera (their
+           free camera, Live Link's camera sync), and they are different jobs - filming, and working on a level's scripts. The
+           Launch Game window (and launch_game) start Cinematic Tools when they are ticked and can run, and then every scripting
+           helper is off, their ticks kept for a run without them. The runtime utils still go in for Cinematic Tools, which
+           stream zones around their free camera through it. Open Game On Save never starts them: its runs keep the helpers. */
+        internal static bool CinematicToolsChosen()
+        {
+            return SettingsManager.GetBool(Settings.CinematicTools) && CinematicToolsAvailable();
+        }
+
+        /* A scripting helper's setting as a launch applies it: off for one that starts Cinematic Tools */
+        internal static bool HelperOn(string setting, bool cinematicTools)
+        {
+            return SettingsManager.GetBool(setting) && !cinematicTools;
+        }
+
+        /* ...for a launch from the Launch Game window (or launch_game), which starts Cinematic Tools when they are chosen */
+        internal static bool HelperOn(string setting)
+        {
+            return HelperOn(setting, CinematicToolsChosen());
+        }
+
         public LaunchGame()
         {
             InitializeComponent();
@@ -99,17 +129,7 @@ namespace OpenCAGE
 
             enableCinematicTools.Enabled = CinematicToolsAvailable();
             _scriptingHelpersAvailable = ScriptingHelpersAvailable();
-            enableHotReload.Enabled = _scriptingHelpersAvailable;
-            enableUnlockMouse.Enabled = _scriptingHelpersAvailable;
-            enableCapFps.Enabled = _scriptingHelpersAvailable;
-            enableDebugText.Enabled = _scriptingHelpersAvailable;
-            enableDebugTextStacking.Enabled = _scriptingHelpersAvailable;
-            enableDebugEnvironmentMarker.Enabled = _scriptingHelpersAvailable;
-            enableDebugPositionMarker.Enabled = _scriptingHelpersAvailable;
-            enableLiveLink.Enabled = _scriptingHelpersAvailable;
-            hotReloadKey.Enabled = _scriptingHelpersAvailable && enableHotReload.Checked;
-            unlockMouseKey.Enabled = _scriptingHelpersAvailable && enableUnlockMouse.Checked;
-            capFpsRate.Enabled = _scriptingHelpersAvailable && enableCapFps.Checked;
+            UpdateScriptingHelpersEnabled();
 
             //The picker never offers FRONTEND: leaving this unchecked is how the game starts at its menu
             loadToLevel.Checked = SettingsManager.GetBool(Settings.LaunchToLevel);
@@ -123,6 +143,21 @@ namespace OpenCAGE
         private void LaunchGame_FormClosed(object sender, FormClosedEventArgs e)
         {
             SettingsManager.SettingsChanged -= OnSettingsChanged;
+        }
+
+        /* The scripting helpers can be ticked only while Cinematic Tools are not (see CinematicToolsChosen) */
+        private bool HelpersUsable => _scriptingHelpersAvailable && !(enableCinematicTools.Enabled && enableCinematicTools.Checked);
+
+        /* The Scripting Helpers box as Cinematic Tools leave it: greyed out while they are ticked, its ticks kept */
+        private void UpdateScriptingHelpersEnabled()
+        {
+            bool usable = HelpersUsable;
+            foreach (CheckBox helper in new CheckBox[] { enableHotReload, enableUnlockMouse, enableCapFps, enableDebugText, enableDebugTextStacking, enableDebugEnvironmentMarker, enableDebugPositionMarker, enableLiveLink })
+                helper.Enabled = usable;
+            hotReloadKey.Enabled = usable && enableHotReload.Checked;
+            unlockMouseKey.Enabled = usable && enableUnlockMouse.Checked;
+            capFpsRate.Enabled = usable && enableCapFps.Checked;
+            groupBox2.Text = _scriptingHelpersAvailable && !usable ? "Scripting Helpers (off while Cinematic Tools are enabled)" : "Scripting Helpers";
         }
 
         private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
@@ -285,7 +320,8 @@ namespace OpenCAGE
                 }
             }
 
-            string runtimeUtilsProblem = ApplyRuntimeUtils();
+            bool cinematicTools = CinematicToolsChosen();
+            string runtimeUtilsProblem = ApplyRuntimeUtils(cinematicTools);
             if (runtimeUtilsProblem != null)
                 MessageBox.Show(runtimeUtilsProblem, "Runtime utils error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
@@ -296,21 +332,30 @@ namespace OpenCAGE
             if (!LaunchToMap(startingLevel))
                 return;
 
-            //Enable Cinematic Tools if requested
-            if (SettingsManager.GetBool(Settings.CinematicTools))
+            //Enable Cinematic Tools if requested (the scripting helpers are off for this run then)
+            if (cinematicTools)
             {
                 string cinematicToolsProblem = StartCinematicTools(out string caption);
                 if (cinematicToolsProblem != null)
                     MessageBox.Show(cinematicToolsProblem, caption, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
+            //Ticked on a Steam install whose Cinematic Tools files have gone (antivirus often removes the injector): said, as
+            //the game runs the scripting helpers instead
+            else if (SettingsManager.GetBool(Settings.CinematicTools) && Singleton.Platform == PatchManager.Platform.STEAM)
+            {
+                MessageBox.Show("Enable Cinematic Tools is ticked, but their files are missing from:\n" + Path.GetFullPath(Beside("cinematictools")) +
+                    "\n\nThe game was launched with the scripting helpers instead. Antivirus software may have removed CinematicTools.exe: allow or exclude it, or reinstall/update OpenCAGE to restore it.",
+                    "Cinematic Tools missing", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
             this.Close();
         }
 
         /* Copy/delete the runtime utils ASI as the settings ask, for a game about to be launched - it is needed if any
-           scripting helper is on, or for Cinematic Tools, which rely on it to stream zones around the free camera. A game
-           that will serve the live link is connected to by itself: the Live Link button is switched on (as the editor is told). Returns
-           what went wrong, or null. */
-        internal static string ApplyRuntimeUtils()
+           scripting helper is on, or for Cinematic Tools (cinematicTools: this launch starts them), which rely on it to stream
+           zones around the free camera, and then have every helper off (see CinematicToolsChosen). A game that will serve
+           Live Link is connected to by itself: the Live Link button is switched on (as the editor is told). Returns what went
+           wrong, or null. */
+        internal static string ApplyRuntimeUtils(bool cinematicTools)
         {
             string rtUtilASI = Singleton.PathToAI + "\\OpenCAGE.RuntimeUtils.asi";
             string rtUtilDLL = Singleton.PathToAI + "\\d3d11.dll";
@@ -325,13 +370,12 @@ namespace OpenCAGE
                 catch { }
             }
 
-            if (RuntimeUtilsNeeded())
+            if (RuntimeUtilsNeeded(cinematicTools))
             {
                 try
                 {
                     CopyIfChanged(Beside(RuntimeUtilsFolder + "/OpenCAGE.RuntimeUtils.asi"), rtUtilASI);
                     CopyIfChanged(Beside(RuntimeUtilsFolder + "/winmm.dll"), rtUtilDLL);
-                    WriteScriptingHelpersConfig(Singleton.PathToAI);
                 }
                 catch
                 {
@@ -341,7 +385,14 @@ namespace OpenCAGE
                         return "Failed to install the runtime utils.";
                     }
                 }
-                liveLink = SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink);
+                //Written even when a copy failed and an older ASI stays: the config must be this launch's (an old one could
+                //say Cinematic Tools, or switch Live Link off)
+                try
+                {
+                    WriteScriptingHelpersConfig(Singleton.PathToAI, cinematicTools);
+                }
+                catch { }
+                liveLink = HelperOn(Settings.ScriptingHelpersLiveLink, cinematicTools);
             }
             else
             {
@@ -360,23 +411,38 @@ namespace OpenCAGE
            starts with what ApplyRuntimeUtils put there, so this is what the running game does. Any thread. */
         internal static bool LiveLinkInstalled()
         {
+            return RuntimeUtilsSwitch("LiveLink", true);
+        }
+
+        /* Whether a game started from this folder was launched with Cinematic Tools, which have its camera for the run: there
+           is no Live Link to offer it (the Live Link button hides). They always have the runtime utils installed (for their zone
+           streaming), and the config written for them says so (CinematicTools=, which only OpenCAGE reads). Any thread. */
+        internal static bool CinematicToolsLaunched()
+        {
+            return RuntimeUtilsSwitch("CinematicTools", false);
+        }
+
+        /* A switch in the runtime utils config beside the game, as it was written for the last launch: false while the runtime
+           utils are not installed, missingValue when the config does not name it */
+        private static bool RuntimeUtilsSwitch(string key, bool missingValue)
+        {
             try
             {
                 if (!File.Exists(Singleton.PathToAI + "\\OpenCAGE.RuntimeUtils.asi"))
                     return false;
                 string ini = Path.Combine(Singleton.PathToAI, "OpenCAGE.RuntimeUtils.ini");
                 if (!File.Exists(ini))
-                    return true;
+                    return missingValue;
                 foreach (string line in File.ReadAllLines(ini))
                 {
                     int equals = line.IndexOf('=');
-                    if (equals < 0 || !string.Equals(line.Substring(0, equals).Trim(), "LiveLink", StringComparison.OrdinalIgnoreCase))
+                    if (equals < 0 || !string.Equals(line.Substring(0, equals).Trim(), key, StringComparison.OrdinalIgnoreCase))
                         continue;
                     //Read as GetPrivateProfileInt reads it: the number it starts with, and none is 0
                     string digits = new string(line.Substring(equals + 1).Trim().TakeWhile(char.IsDigit).ToArray());
                     return long.TryParse(digits, out long value) && value != 0;
                 }
-                return true;
+                return missingValue;
             }
             catch
             {
@@ -439,9 +505,10 @@ namespace OpenCAGE
             SettingsManager.SetBool(Settings.LaunchToLevel, loadToLevel.Checked);
         }
 
-        /* Enable/disable the Cinematic Tools */
+        /* Enable/disable the Cinematic Tools (the scripting helpers are off while they are on) */
         private void enableCinematicTools_CheckedChanged(object sender, EventArgs e)
         {
+            UpdateScriptingHelpersEnabled();
             if (_applyingExternalSettings) return;
             SettingsManager.SetBool(Settings.CinematicTools, enableCinematicTools.Checked);
         }
@@ -467,7 +534,7 @@ namespace OpenCAGE
         /* Enable/disable the hot reload scripting helper */
         private void enableHotReload_CheckedChanged(object sender, EventArgs e)
         {
-            hotReloadKey.Enabled = _scriptingHelpersAvailable && enableHotReload.Checked;
+            hotReloadKey.Enabled = HelpersUsable && enableHotReload.Checked;
             if (_applyingExternalSettings) return;
             SettingsManager.SetBool(Settings.ScriptingHelpersHotReload, enableHotReload.Checked);
         }
@@ -482,7 +549,7 @@ namespace OpenCAGE
         /* Enable/disable the unlock mouse scripting helper: the game leaves the cursor free until its key is pressed */
         private void enableUnlockMouse_CheckedChanged(object sender, EventArgs e)
         {
-            unlockMouseKey.Enabled = _scriptingHelpersAvailable && enableUnlockMouse.Checked;
+            unlockMouseKey.Enabled = HelpersUsable && enableUnlockMouse.Checked;
             if (_applyingExternalSettings) return;
             SettingsManager.SetBool(Settings.ScriptingHelpersUnlockMouse, enableUnlockMouse.Checked);
         }
@@ -498,7 +565,7 @@ namespace OpenCAGE
            too fast - its clock never moves on less than 1/360 of a second a frame) */
         private void enableCapFps_CheckedChanged(object sender, EventArgs e)
         {
-            capFpsRate.Enabled = _scriptingHelpersAvailable && enableCapFps.Checked;
+            capFpsRate.Enabled = HelpersUsable && enableCapFps.Checked;
             if (_applyingExternalSettings) return;
             SettingsManager.SetBool(Settings.ScriptingHelpersCapFps, enableCapFps.Checked);
         }
@@ -539,19 +606,17 @@ namespace OpenCAGE
             SettingsManager.SetBool(Settings.ScriptingHelpersLiveLink, enableLiveLink.Checked);
         }
 
-        /* Whether the runtime utils ASI is needed at all */
-        internal static bool RuntimeUtilsNeeded()
+        /* Whether the runtime utils ASI is needed at all, for a launch that starts Cinematic Tools or not: for their zone
+           streaming, or any scripting helper (Live Link among them, which the ASI serves) */
+        internal static bool RuntimeUtilsNeeded(bool cinematicTools)
         {
-            return ScriptingHelpersAvailable() && (
-                SettingsManager.GetBool(Settings.CinematicTools)
-                || SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink) //the live link is served by the ASI
-                || SettingsManager.GetBool(Settings.ScriptingHelpersHotReload)
-                || SettingsManager.GetBool(Settings.ScriptingHelpersUnlockMouse)
-                || SettingsManager.GetBool(Settings.ScriptingHelpersCapFps)
-                || SettingsManager.GetBool(Settings.ScriptingHelpersDebugText)
-                || SettingsManager.GetBool(Settings.ScriptingHelpersDebugTextStacking)
-                || SettingsManager.GetBool(Settings.ScriptingHelpersDebugEnvironmentMarker)
-                || SettingsManager.GetBool(Settings.ScriptingHelpersDebugPositionMarker));
+            return ScriptingHelpersAvailable() && (cinematicTools || HelperSettings.Any(o => SettingsManager.GetBool(o)));
+        }
+
+        /* Whether a launch from the Launch Game window (or launch_game) runs any scripting helper: none with Cinematic Tools */
+        internal static bool AnyHelperOn()
+        {
+            return ScriptingHelpersAvailable() && HelperSettings.Any(o => HelperOn(o));
         }
 
         /* The hot reload and unlock mouse keys as set, or their defaults when the setting names none of the keys offered */
@@ -586,25 +651,28 @@ namespace OpenCAGE
                 return sha.ComputeHash(stream);
         }
 
-        /* Write the config file the runtime utils ASI reads on startup, next to the game executable */
-        private static void WriteScriptingHelpersConfig(string pathToAI)
+        /* Write the config file the runtime utils ASI reads on startup, next to the game executable. Every helper is off for
+           a launch that starts Cinematic Tools (cinematicTools). */
+        private static void WriteScriptingHelpersConfig(string pathToAI, bool cinematicTools)
         {
             string[] lines = new string[]
             {
                 "[RuntimeUtils]",
-                "HotReload=" + (SettingsManager.GetBool(Settings.ScriptingHelpersHotReload) ? "1" : "0"),
+                "HotReload=" + (HelperOn(Settings.ScriptingHelpersHotReload, cinematicTools) ? "1" : "0"),
                 "HotReloadKey=" + HotReloadKey(),
                 //The game leaves the cursor free until this key is pressed in its window
-                "UnlockMouse=" + (SettingsManager.GetBool(Settings.ScriptingHelpersUnlockMouse) ? "1" : "0"),
+                "UnlockMouse=" + (HelperOn(Settings.ScriptingHelpersUnlockMouse, cinematicTools) ? "1" : "0"),
                 "UnlockMouseKey=" + UnlockMouseKey(),
                 //The most frames a second the game runs at (0 = no cap)
-                "CapFps=" + (SettingsManager.GetBool(Settings.ScriptingHelpersCapFps) ? CapFpsRate() : "0"),
-                "DebugText=" + (SettingsManager.GetBool(Settings.ScriptingHelpersDebugText) ? "1" : "0"),
-                "DebugTextStacking=" + (SettingsManager.GetBool(Settings.ScriptingHelpersDebugTextStacking) ? "1" : "0"),
-                "DebugEnvironmentMarker=" + (SettingsManager.GetBool(Settings.ScriptingHelpersDebugEnvironmentMarker) ? "1" : "0"),
-                "DebugPositionMarker=" + (SettingsManager.GetBool(Settings.ScriptingHelpersDebugPositionMarker) ? "1" : "0"),
+                "CapFps=" + (HelperOn(Settings.ScriptingHelpersCapFps, cinematicTools) ? CapFpsRate() : "0"),
+                "DebugText=" + (HelperOn(Settings.ScriptingHelpersDebugText, cinematicTools) ? "1" : "0"),
+                "DebugTextStacking=" + (HelperOn(Settings.ScriptingHelpersDebugTextStacking, cinematicTools) ? "1" : "0"),
+                "DebugEnvironmentMarker=" + (HelperOn(Settings.ScriptingHelpersDebugEnvironmentMarker, cinematicTools) ? "1" : "0"),
+                "DebugPositionMarker=" + (HelperOn(Settings.ScriptingHelpersDebugPositionMarker, cinematicTools) ? "1" : "0"),
                 //The live link server (127.0.0.1 only) runs only when Enable Live Link is ticked
-                "LiveLink=" + (SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink) ? "1" : "0"),
+                "LiveLink=" + (HelperOn(Settings.ScriptingHelpersLiveLink, cinematicTools) ? "1" : "0"),
+                //Read by OpenCAGE only (CinematicToolsLaunched): this launch has Cinematic Tools, so no Live Link is offered to it
+                "CinematicTools=" + (cinematicTools ? "1" : "0"),
             };
             File.WriteAllLines(Path.Combine(pathToAI, "OpenCAGE.RuntimeUtils.ini"), lines);
         }

@@ -51,7 +51,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "launch_options",
                 Title = "Game launch options",
-                Description = "Read or set the Launch Game window's options. Scripting helpers and cinematic_tools are editor settings launch_game applies. AI.exe patches (no_ui, skip_frontend...) are written to the game at once and again at every launch_game; UI mods (debug_checkpoints...) swap a whole movie in DATA/UI.PAK, written when the setting changes or UI.PAK holds the other movie (as after verifying the game files) - a movie edited with edit_ui_pak is kept unless reapply. For every level; not undoable. No option given: report them, with which movie UI.PAK holds (ui_pak_movies). dry_run checks without writing.",
+                Description = "Read or set the Launch Game window's options. Scripting helpers and cinematic_tools are editor settings launch_game applies - one or the other, as both take over the game's camera: while cinematic_tools is on every scripting helper (live_link among them) is off at launch, its setting kept. AI.exe patches (no_ui, skip_frontend...) are written to the game at once and again at every launch_game; UI mods (debug_checkpoints...) swap a whole movie in DATA/UI.PAK, written when the setting changes or UI.PAK holds the other movie (as after verifying the game files) - a movie edited with edit_ui_pak is kept unless reapply. For every level; not undoable. No option given: report them, with which movie UI.PAK holds (ui_pak_movies). dry_run checks without writing.",
                 InputSchema = McpSchema.Object(LaunchOptionProps().ToArray()),
                 Idempotent = true,
                 Run = LaunchOptions,
@@ -82,7 +82,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "runtime_utils",
                 Title = "Live Link to the game",
-                Description = "Live Link to a running game (the toolbar's Live Link button, ws://127.0.0.1:8765, served by the runtime utils ASI when the game is launched with launch_options live_link on - which also connects by itself): status, connect, disconnect; game_status (is a level running, which, where the game camera is and faces - world space, for placing new entities in view - and camera_sync, whether it is following the viewport's camera: set_viewport_view live_link_camera 'viewport_to_game'); push a composite's scripting into the running level (entities added/removed/re-parameterised in every running instance, no reload); call_method on an entity (e.g. start); animate a CAGEAnimation in the running game as Animation Mode's In game does (the game holds it at 'time', or plays it, evaluating every track itself - no level data changes; it keeps it until release, Animation Mode takes the drive over, or OpenCAGE disconnects; get reports it, and game_status too); describe a composite's running instances; screenshot the game; load_level; activity - the composite display's Show Activity, which lights up the open composite's flowgraph links as the running game uses them (a logic link when its entity fires the output, a data link when its value is read or sent out through it) and counts how often each output fired and each method was called (shown beside the pins); in the instance navigated to from the root, or every instance when opened from the browser: mode on/off switches it (a saved setting; off stops the game tracing), clear forgets what has lit up and the counts (as Clear Activity), get (default) reports what is watched, every link used since the last clear - from and to (entity name and id, pin; the way the value went for a data link: from the entity it was read from or sent by, to the entity that read it or it was sent to), kind logic/data, direction read/write (data links: the last use), count, seconds_since_last and glowing (used within the last 1.5 s) - and pins: every output fired (side fired) and method called (side called), with entity, id, pin, count and seconds_since_last. The game must be running the level open here, as saved - push sends edits made since. The 3D viewport draws no lighting: to see a light edit, push it, call_method its 'refresh' (lights take new values on refresh), then screenshot. Where the player is: game_status' camera position, which check_zones near turns into the zones there. Saving the level closes the game.",
+                Description = "Live Link to a running game (the toolbar's Live Link button, ws://127.0.0.1:8765, served by the runtime utils ASI when the game is launched with launch_options live_link on and cinematic_tools off - which also connects by itself): status, connect, disconnect; game_status (is a level running, which, where the game camera is and faces - world space, for placing new entities in view - and camera_sync, whether it is following the viewport's camera: set_viewport_view live_link_camera 'viewport_to_game'); push a composite's scripting into the running level (entities added/removed/re-parameterised in every running instance, no reload); call_method on an entity (e.g. start); animate a CAGEAnimation in the running game as Animation Mode's In game does (the game holds it at 'time', or plays it, evaluating every track itself - no level data changes; it keeps it until release, Animation Mode takes the drive over, or OpenCAGE disconnects; get reports it, and game_status too); describe a composite's running instances; screenshot the game; load_level; activity - the composite display's Show Activity, which lights up the open composite's flowgraph links as the running game uses them (a logic link when its entity fires the output, a data link when its value is read or sent out through it) and counts how often each output fired and each method was called (shown beside the pins); in the instance navigated to from the root, or every instance when opened from the browser: mode on/off switches it (a saved setting; off stops the game tracing), clear forgets what has lit up and the counts (as Clear Activity), get (default) reports what is watched, every link used since the last clear - from and to (entity name and id, pin; the way the value went for a data link: from the entity it was read from or sent by, to the entity that read it or it was sent to), kind logic/data, direction read/write (data links: the last use), count, seconds_since_last and glowing (used within the last 1.5 s) - and pins: every output fired (side fired) and method called (side called), with entity, id, pin, count and seconds_since_last. The game must be running the level open here, as saved - push sends edits made since. The 3D viewport draws no lighting: to see a light edit, push it, call_method its 'refresh' (lights take new values on refresh), then screenshot. Where the player is: game_status' camera position, which check_zones near turns into the zones there. Saving the level closes the game.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("action", "status (default), connect, disconnect, game_status, push, call_method, animate, describe, screenshot, load_level, or activity.", options: new[] { "status", "connect", "disconnect", "game_status", "push", "call_method", "animate", "describe", "screenshot", "load_level", "activity" }),
                     McpSchema.String("level", "load_level: the level, as list_levels names it ('menu' for the frontend)."),
@@ -240,8 +240,8 @@ namespace OpenCAGE.MCP
             new LaunchOption() { Arg = "debug_text_stacking", Key = Settings.ScriptingHelpersDebugTextStacking, Kind = KindHelper, Description = "Scripting helper: DebugTextStacking entities draw their text in game." },
             new LaunchOption() { Arg = "debug_environment_marker", Key = Settings.ScriptingHelpersDebugEnvironmentMarker, Kind = KindHelper, Description = "Scripting helper: DebugEnvironmentMarker entities draw their text in the world." },
             new LaunchOption() { Arg = "debug_position_marker", Key = Settings.ScriptingHelpersDebugPositionMarker, Kind = KindHelper, Description = "Scripting helper: DebugPositionMarker entities draw axes in the world." },
-            new LaunchOption() { Arg = "live_link", Key = Settings.ScriptingHelpersLiveLink, Kind = KindHelper, Description = "Scripting helper (Enable Live Link): the game serves Live Link, and OpenCAGE connects to it by itself once the game is up (runtime_utils) - script edits reach the running level without a reload, entity methods can be called, and the viewport's camera and the game's can follow each other (set_viewport_view live_link_camera)." },
-            new LaunchOption() { Arg = "cinematic_tools", Key = Settings.CinematicTools, Kind = KindHelper, Description = "Start Cinematic Tools (free camera) with the game. Steam only." },
+            new LaunchOption() { Arg = "live_link", Key = Settings.ScriptingHelpersLiveLink, Kind = KindHelper, Description = "Scripting helper (Enable Live Link): the game serves Live Link, and OpenCAGE connects to it by itself once the game is up (runtime_utils) - script edits reach the running level without a reload, entity methods can be called, and the viewport's camera and the game's can follow each other (set_viewport_view live_link_camera). Off while cinematic_tools is on." },
+            new LaunchOption() { Arg = "cinematic_tools", Key = Settings.CinematicTools, Kind = KindHelper, Description = "Start Cinematic Tools (free camera) with the game. Steam only. They and the scripting helpers are one or the other: while this is on, every scripting helper (live_link among them) is off at launch, its setting kept." },
             new LaunchOption() { Arg = "no_ui", Key = Settings.HudDisabled, Kind = KindPatch, Patch = PatchManager.PatchNoUIFlag, Description = "AI.exe patch: no HUD or menus (clean screenshots)." },
             new LaunchOption() { Arg = "skip_frontend", Key = Settings.SkipFrontend, Kind = KindPatch, Patch = PatchManager.PatchSkipFrontendFlag, Description = "AI.exe patch: skip the frontend (returning to the menu then misbehaves)." },
             new LaunchOption() { Arg = "ui_memory_overlay", Key = Settings.UiEnabledUiPerf, Kind = KindPatch, Patch = PatchManager.PatchUIPerfFlag, Description = "AI.exe patch: the UI memory overlay." },
@@ -253,6 +253,9 @@ namespace OpenCAGE.MCP
             new LaunchOption() { Arg = "level_selection", Key = Settings.UiModNewFrontendMenu, Kind = KindUiMod, Description = "UI mod (UI.PAK): level selection in the main menu, custom levels included." },
             new LaunchOption() { Arg = "quit_to_menu_on_death", Key = Settings.UiModGameOverMenu, Kind = KindUiMod, Description = "UI mod (UI.PAK): a Quit To Menu option on the game-over screen." },
         };
+
+        /// <summary>The launch_options name of a launch option's setting (a scripting helper's, say), or the setting's own name.</summary>
+        internal static string LaunchOptionArg(string settingKey) => LaunchOptionList.FirstOrDefault(o => o.Key == settingKey)?.Arg ?? settingKey;
 
         private static IEnumerable<McpSchema.Prop> LaunchOptionProps()
         {
@@ -330,6 +333,10 @@ namespace OpenCAGE.MCP
             foreach (LaunchOption option in LaunchOptionList)
                 if (call.Has(option.Arg))
                     asked.Add(new KeyValuePair<LaunchOption, bool>(option, call.Bool(option.Arg)));
+            //Cinematic Tools and the scripting helpers are one or the other: a call cannot turn both on
+            List<string> helpersOn = asked.Where(o => o.Key.Kind == KindHelper && o.Key.Arg != "cinematic_tools" && o.Value).Select(o => o.Key.Arg).ToList();
+            if (helpersOn.Count != 0 && asked.Any(o => o.Key.Arg == "cinematic_tools" && o.Value))
+                throw new McpError("cinematic_tools and the scripting helpers are one or the other, as both take over the game's camera: this call turns on cinematic_tools and " + string.Join(", ", helpersOn) + ". Turn on one or the other. Nothing was changed.");
             List<KeyValuePair<KeyOption, string>> keys = new List<KeyValuePair<KeyOption, string>>();
             foreach (KeyOption key in KeyOptionList.Where(o => call.Has(o.Arg)))
             {
@@ -364,6 +371,7 @@ namespace OpenCAGE.MCP
                 result["platform"] = platform.ToString();
                 result["scripting_helpers_available"] = global::OpenCAGE.LaunchGame.ScriptingHelpersAvailable();
                 result["cinematic_tools_available"] = global::OpenCAGE.LaunchGame.CinematicToolsAvailable();
+                NoteCinematicToolsGate(call);
                 if (call.Has("close_game"))
                     call.Note("close_game only matters when an AI.exe patch or UI mod is being changed.");
                 return result;
@@ -490,8 +498,21 @@ namespace OpenCAGE.MCP
             if (failures.Count != 0)
                 result["failed"] = new JArray(failures);
             if (helpers.Count != 0 || keyChanges.Count != 0)
+            {
                 call.Note("Scripting helper and Cinematic Tools settings take effect at the next launch_game.");
+                NoteCinematicToolsGate(call);
+            }
             return result;
+        }
+
+        /// <summary>With Cinematic Tools on (and able to start), the scripting helpers set on are off at launch: said, as launch_game will do it.</summary>
+        private static void NoteCinematicToolsGate(McpCall call)
+        {
+            if (!global::OpenCAGE.LaunchGame.CinematicToolsChosen())
+                return;
+            List<string> parked = global::OpenCAGE.LaunchGame.HelperSettings.Where(o => SettingsManager.GetBool(o)).Select(LaunchOptionArg).ToList();
+            if (parked.Count != 0)
+                call.Note("cinematic_tools is on, so these scripting helpers are off at launch_game, their settings kept: " + string.Join(", ", parked) + ". Cinematic Tools and the scripting helpers are one or the other, as both take over the game's camera; cinematic_tools: false brings them back.");
         }
         #endregion
 
@@ -821,6 +842,8 @@ namespace OpenCAGE.MCP
                         bool connect = action == "connect";
                         if (connect && Singleton.Platform != PatchManager.Platform.STEAM)
                             throw new McpError("Live Link needs the Steam version of the game (the runtime utils that serve it support no other); this install is " + Singleton.Platform + ".");
+                        if (connect && CommandsEditor.GameRunning() && global::OpenCAGE.LaunchGame.CinematicToolsLaunched())
+                            throw new McpError("The running game was launched with Cinematic Tools, which have its camera: it serves no Live Link (the two are one or the other). launch_game again with launch_options cinematic_tools: false and live_link: true.");
                         McpEditor.UI(() =>
                         {
                             SettingsManager.SetBool(Settings.RuntimeUtilsOpt, connect);
@@ -1182,15 +1205,21 @@ namespace OpenCAGE.MCP
 
         private static T McpUI<T>(Func<T> work) => McpEditor.UI(work);
 
-        private static JObject RuntimeUtilsState() => new JObject()
+        private static JObject RuntimeUtilsState()
         {
-            ["connected"] = global::OpenCAGE.RuntimeUtilsConnection.Send.Connected,
-            ["connect_at_start"] = SettingsManager.GetBool(Settings.RuntimeUtilsOpt),
             //This install's game: the live link only connects to that (a game from another install is left alone)
-            ["game_running"] = CommandsEditor.GameRunning(),
-            //launch_options live_link: whether launch_game has the game serve it
-            ["served_at_launch"] = SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink),
-        };
+            bool running = CommandsEditor.GameRunning();
+            return new JObject()
+            {
+                ["connected"] = global::OpenCAGE.RuntimeUtilsConnection.Send.Connected,
+                ["connect_at_start"] = SettingsManager.GetBool(Settings.RuntimeUtilsOpt),
+                ["game_running"] = running,
+                //Launched with Cinematic Tools, the game serves no Live Link (they have its camera)
+                ["game_runs_cinematic_tools"] = running && global::OpenCAGE.LaunchGame.CinematicToolsLaunched(),
+                //launch_options live_link: whether launch_game has the game serve it (never with cinematic_tools)
+                ["served_at_launch"] = global::OpenCAGE.LaunchGame.HelperOn(Settings.ScriptingHelpersLiveLink),
+            };
+        }
 
         /// <summary>
         /// runtime_utils animate: the running game drives a CAGEAnimation as Animation Mode's "In game" does - held at a time,

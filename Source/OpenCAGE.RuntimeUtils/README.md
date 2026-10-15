@@ -33,6 +33,8 @@ LoadAllZones=0              ; 1/0 - stream every zone of the level in, not only 
 LiveLink=1                  ; 1/0 - let OpenCAGE edit the running level's scripting and call entity methods
 LiveLinkPort=8765           ; the local port OpenCAGE connects to
 LiveLinkCamera=1            ; 1/0 - let OpenCAGE's viewport camera drive the game camera when it asks (camera sync)
+CinematicTools=0            ; not read here: OpenCAGE notes a launch with Cinematic Tools (it then writes every helper off,
+                            ; as the two are one or the other, and offers no Live Link to that game)
 ```
 
 `OpenCAGE.RuntimeUtils.log` is written next to `AI.exe` each run: what Live Link did, and every `DebugText` / `DebugTextStacking` that started, with its text.
