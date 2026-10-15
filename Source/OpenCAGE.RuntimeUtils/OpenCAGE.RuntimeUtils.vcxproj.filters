@@ -114,6 +114,9 @@
     <ClCompile Include="MOUSE_UNLOCK.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="FRAME_CAP.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="SCREENSHOT.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -189,6 +192,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MOUSE_UNLOCK.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FRAME_CAP.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="SCREENSHOT.h">

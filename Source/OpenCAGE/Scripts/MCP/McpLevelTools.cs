@@ -215,23 +215,27 @@ namespace OpenCAGE.MCP
 
         private const string KindHelper = "helper", KindPatch = "patch", KindUiMod = "ui_mod";
 
-        //The scripting helpers that have a key, and the option for their key (listed beside them)
+        //The scripting helpers that have a choice beside them (a key, a frame rate), and the option for it (listed beside them)
         private sealed class KeyOption
         {
             public string Arg, Helper, Key, What;
             public Func<string> Current;
+            //What it takes: the helper keys unless given
+            public string[] Options = global::OpenCAGE.LaunchGame.HelperKeys;
         }
 
         private static readonly KeyOption[] KeyOptionList =
         {
-            new KeyOption() { Arg = "hot_reload_key", Helper = "hot_reload", Key = Settings.ScriptingHelpersHotReloadKey, What = "hot reload", Current = global::OpenCAGE.LaunchGame.HotReloadKey },
-            new KeyOption() { Arg = "unlock_mouse_key", Helper = "unlock_mouse", Key = Settings.ScriptingHelpersUnlockMouseKey, What = "unlock mouse", Current = global::OpenCAGE.LaunchGame.UnlockMouseKey },
+            new KeyOption() { Arg = "hot_reload_key", Helper = "hot_reload", Key = Settings.ScriptingHelpersHotReloadKey, What = "hot reload key", Current = global::OpenCAGE.LaunchGame.HotReloadKey },
+            new KeyOption() { Arg = "unlock_mouse_key", Helper = "unlock_mouse", Key = Settings.ScriptingHelpersUnlockMouseKey, What = "unlock mouse key", Current = global::OpenCAGE.LaunchGame.UnlockMouseKey },
+            new KeyOption() { Arg = "cap_fps_rate", Helper = "cap_fps", Key = Settings.ScriptingHelpersCapFpsRate, What = "Cap FPS frame rate (frames a second)", Current = global::OpenCAGE.LaunchGame.CapFpsRate, Options = global::OpenCAGE.LaunchGame.CapFpsRates },
         };
 
         private static readonly LaunchOption[] LaunchOptionList =
         {
             new LaunchOption() { Arg = "hot_reload", Key = Settings.ScriptingHelpersHotReload, Kind = KindHelper, Description = "Scripting helper: reload the current level in game with a key press." },
             new LaunchOption() { Arg = "unlock_mouse", Key = Settings.ScriptingHelpersUnlockMouse, Kind = KindHelper, Description = "Scripting helper (Unlock Mouse): the game leaves the mouse cursor free, so OpenCAGE can be used beside it (e.g. with Live Link's camera sync). Clicking the game window and pressing unlock_mouse_key gives the game the mouse to look around with; pressing it again frees the cursor." },
+            new LaunchOption() { Arg = "cap_fps", Key = Settings.ScriptingHelpersCapFps, Kind = KindHelper, Description = "Scripting helper (Cap FPS): the game runs at most cap_fps_rate frames a second. Its clock never moves on less than 1/360 s a frame, so above 360 fps (a near-empty level with V-Sync off) the whole game runs too fast; this keeps it at its proper speed." },
             new LaunchOption() { Arg = "debug_text", Key = Settings.ScriptingHelpersDebugText, Kind = KindHelper, Description = "Scripting helper: DebugText entities draw their text in game." },
             new LaunchOption() { Arg = "debug_text_stacking", Key = Settings.ScriptingHelpersDebugTextStacking, Kind = KindHelper, Description = "Scripting helper: DebugTextStacking entities draw their text in game." },
             new LaunchOption() { Arg = "debug_environment_marker", Key = Settings.ScriptingHelpersDebugEnvironmentMarker, Kind = KindHelper, Description = "Scripting helper: DebugEnvironmentMarker entities draw their text in the world." },
@@ -256,7 +260,7 @@ namespace OpenCAGE.MCP
             {
                 yield return McpSchema.Boolean(option.Arg, option.Description);
                 foreach (KeyOption key in KeyOptionList.Where(o => o.Helper == option.Arg))
-                    yield return McpSchema.String(key.Arg, "Scripting helper: the " + key.What + " key.", options: global::OpenCAGE.LaunchGame.HelperKeys);
+                    yield return McpSchema.String(key.Arg, "Scripting helper: the " + key.What + ".", options: key.Options);
             }
             yield return McpSchema.Boolean("reapply", "UI mods given: write their movie into UI.PAK even over one edited with edit_ui_pak. Without it a UI mod is written when its setting changes or UI.PAK holds the other stock movie (as after verifying the game files), and an edited movie is left alone.");
             yield return McpSchema.Boolean("close_game", "If the game is running, close it first so AI.exe / UI.PAK can be written (default false: refuse while it runs).");
@@ -330,8 +334,8 @@ namespace OpenCAGE.MCP
             foreach (KeyOption key in KeyOptionList.Where(o => call.Has(o.Arg)))
             {
                 string wanted = call.Str(key.Arg).Trim();
-                string named = global::OpenCAGE.LaunchGame.HelperKeys.FirstOrDefault(o => string.Equals(o, wanted, StringComparison.OrdinalIgnoreCase))
-                    ?? throw new McpError("'" + wanted + "' is not a " + key.What + " key. It takes: " + string.Join(", ", global::OpenCAGE.LaunchGame.HelperKeys) + ".");
+                string named = key.Options.FirstOrDefault(o => string.Equals(o, wanted, StringComparison.OrdinalIgnoreCase))
+                    ?? throw new McpError("'" + wanted + "' is not a " + key.What + " Launch Game offers. It takes: " + string.Join(", ", key.Options) + ".");
                 keys.Add(new KeyValuePair<KeyOption, string>(key, named));
             }
 

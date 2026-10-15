@@ -76,6 +76,9 @@ namespace
 		const int port = GetPrivateProfileIntA(section, "LiveLinkPort", settings.liveLinkPort, ini.c_str());
 		if (port > 0 && port < 65536)
 			settings.liveLinkPort = port;
+		const int capFps = static_cast<int>(GetPrivateProfileIntA(section, "CapFps", settings.capFps, ini.c_str()));
+		if (capFps > 0 && capFps <= 1000)
+			settings.capFps = capFps;
 
 		char key[64] = {};
 		GetPrivateProfileStringA(section, "HotReloadKey", "", key, sizeof(key), ini.c_str());

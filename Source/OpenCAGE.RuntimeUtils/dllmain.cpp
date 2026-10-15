@@ -14,6 +14,7 @@
 #include "LIVE_CAMERA.h"
 #include "LIVE_TRACE.h"
 #include "MOUSE_UNLOCK.h"
+#include "FRAME_CAP.h"
 
 // External includes.
 #include <detours.h>
@@ -191,6 +192,10 @@ static void AttachHooks(bool attach)
         hook(MOUSE_UNLOCK::set_cursor_pos, MOUSE_UNLOCK::h_set_cursor_pos);
     }
 
+    // Cap FPS: each frame waits its turn before the game reads its clock.
+    if (config.capFps > 0)
+        hook(FRAME_CAP::frame_start, FRAME_CAP::h_frame_start);
+
     // A hook on the start of gameplay (it only passes through).
     hook(GameFlow::start_gameplay, GameFlow::h_start_gameplay);
 
@@ -241,6 +246,7 @@ BOOL APIENTRY DllMain( HMODULE /*hModule*/,
     {
         const Config::Settings& config = Config::Get();
         ZONE_LOADER::SetForced(ZONE_LOADER::Source::Config, config.loadAllZones);
+        FRAME_CAP::SetLimit(config.capFps);
 
         // Re-enable the DebugText / DebugTextStacking script entities, which retail builds disable.
         if (Config::AnyDebug())

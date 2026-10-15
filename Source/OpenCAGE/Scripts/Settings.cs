@@ -111,6 +111,8 @@ namespace OpenCAGE
         public const string ScriptingHelpersHotReloadKey = "ScriptingHelpers_HotReloadKey";
         public const string ScriptingHelpersUnlockMouse = "ScriptingHelpers_UnlockMouse";
         public const string ScriptingHelpersUnlockMouseKey = "ScriptingHelpers_UnlockMouseKey";
+        public const string ScriptingHelpersCapFps = "ScriptingHelpers_CapFps";
+        public const string ScriptingHelpersCapFpsRate = "ScriptingHelpers_CapFpsRate";
         public const string ScriptingHelpersDebugText = "ScriptingHelpers_DebugText";
         public const string ScriptingHelpersDebugTextStacking = "ScriptingHelpers_DebugTextStacking";
         public const string ScriptingHelpersDebugEnvironmentMarker = "ScriptingHelpers_DebugEnvironmentMarker";

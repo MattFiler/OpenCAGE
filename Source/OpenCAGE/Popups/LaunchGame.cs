@@ -36,6 +36,10 @@ namespace OpenCAGE
         internal const string DefaultHotReloadKey = "INSERT";
         internal const string DefaultUnlockMouseKey = "F4";
 
+        //Frame rates Cap FPS offers (the runtime utils ASI's CapFps)
+        internal static readonly string[] CapFpsRates = new string[] { "30", "60", "90", "120" };
+        internal const string DefaultCapFpsRate = "60";
+
         //Shipped beside OpenCAGE.exe: resolved against its folder (Beside), since file dialogs move the current directory
         internal const string CinematicToolsDll = "cinematictools/CT_AlienIsolation.dll";
         internal const string CinematicToolsInjector = "cinematictools/CinematicTools.exe";
@@ -70,6 +74,7 @@ namespace OpenCAGE
             enableCinematicTools.Checked = SettingsManager.GetBool(Settings.CinematicTools);
             enableHotReload.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersHotReload);
             enableUnlockMouse.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersUnlockMouse);
+            enableCapFps.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersCapFps);
             enableDebugText.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugText);
             enableDebugTextStacking.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugTextStacking);
             enableDebugEnvironmentMarker.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugEnvironmentMarker);
@@ -79,6 +84,8 @@ namespace OpenCAGE
             hotReloadKey.SelectedIndex = Array.IndexOf(HelperKeys, HotReloadKey());
             unlockMouseKey.Items.AddRange(HelperKeys);
             unlockMouseKey.SelectedIndex = Array.IndexOf(HelperKeys, UnlockMouseKey());
+            capFpsRate.Items.AddRange(CapFpsRates);
+            capFpsRate.SelectedIndex = Array.IndexOf(CapFpsRates, CapFpsRate());
             disableUI.Checked = SettingsManager.GetBool(Settings.HudDisabled);
             skipFrontend.Checked = SettingsManager.GetBool(Settings.SkipFrontend);
             enableUIPerf.Checked = SettingsManager.GetBool(Settings.UiEnabledUiPerf);
@@ -94,6 +101,7 @@ namespace OpenCAGE
             _scriptingHelpersAvailable = ScriptingHelpersAvailable();
             enableHotReload.Enabled = _scriptingHelpersAvailable;
             enableUnlockMouse.Enabled = _scriptingHelpersAvailable;
+            enableCapFps.Enabled = _scriptingHelpersAvailable;
             enableDebugText.Enabled = _scriptingHelpersAvailable;
             enableDebugTextStacking.Enabled = _scriptingHelpersAvailable;
             enableDebugEnvironmentMarker.Enabled = _scriptingHelpersAvailable;
@@ -101,6 +109,7 @@ namespace OpenCAGE
             enableLiveLink.Enabled = _scriptingHelpersAvailable;
             hotReloadKey.Enabled = _scriptingHelpersAvailable && enableHotReload.Checked;
             unlockMouseKey.Enabled = _scriptingHelpersAvailable && enableUnlockMouse.Checked;
+            capFpsRate.Enabled = _scriptingHelpersAvailable && enableCapFps.Checked;
 
             //The picker never offers FRONTEND: leaving this unchecked is how the game starts at its menu
             loadToLevel.Checked = SettingsManager.GetBool(Settings.LaunchToLevel);
@@ -153,6 +162,12 @@ namespace OpenCAGE
                             break;
                         case Settings.ScriptingHelpersUnlockMouseKey:
                             unlockMouseKey.SelectedIndex = Array.IndexOf(HelperKeys, UnlockMouseKey());
+                            break;
+                        case Settings.ScriptingHelpersCapFps:
+                            enableCapFps.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersCapFps);
+                            break;
+                        case Settings.ScriptingHelpersCapFpsRate:
+                            capFpsRate.SelectedIndex = Array.IndexOf(CapFpsRates, CapFpsRate());
                             break;
                         case Settings.ScriptingHelpersDebugText:
                             enableDebugText.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugText);
@@ -479,6 +494,22 @@ namespace OpenCAGE
             SettingsManager.SetString(Settings.ScriptingHelpersUnlockMouseKey, HelperKeys[unlockMouseKey.SelectedIndex]);
         }
 
+        /* Enable/disable the cap FPS scripting helper: the game runs at most the chosen frames a second (above 360 it runs
+           too fast - its clock never moves on less than 1/360 of a second a frame) */
+        private void enableCapFps_CheckedChanged(object sender, EventArgs e)
+        {
+            capFpsRate.Enabled = _scriptingHelpersAvailable && enableCapFps.Checked;
+            if (_applyingExternalSettings) return;
+            SettingsManager.SetBool(Settings.ScriptingHelpersCapFps, enableCapFps.Checked);
+        }
+
+        /* Choose the frame rate cap */
+        private void capFpsRate_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_applyingExternalSettings || capFpsRate.SelectedIndex < 0) return;
+            SettingsManager.SetString(Settings.ScriptingHelpersCapFpsRate, CapFpsRates[capFpsRate.SelectedIndex]);
+        }
+
         /* Enable/disable the debug entity scripting helpers */
         private void enableDebugText_CheckedChanged(object sender, EventArgs e)
         {
@@ -516,6 +547,7 @@ namespace OpenCAGE
                 || SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink) //the live link is served by the ASI
                 || SettingsManager.GetBool(Settings.ScriptingHelpersHotReload)
                 || SettingsManager.GetBool(Settings.ScriptingHelpersUnlockMouse)
+                || SettingsManager.GetBool(Settings.ScriptingHelpersCapFps)
                 || SettingsManager.GetBool(Settings.ScriptingHelpersDebugText)
                 || SettingsManager.GetBool(Settings.ScriptingHelpersDebugTextStacking)
                 || SettingsManager.GetBool(Settings.ScriptingHelpersDebugEnvironmentMarker)
@@ -529,6 +561,13 @@ namespace OpenCAGE
         {
             string key = SettingsManager.GetString(setting, fallback);
             return Array.IndexOf(HelperKeys, key) >= 0 ? key : fallback;
+        }
+
+        /* The cap FPS frame rate as set, or the default when the setting names none of the rates offered */
+        internal static string CapFpsRate()
+        {
+            string rate = SettingsManager.GetString(Settings.ScriptingHelpersCapFpsRate, DefaultCapFpsRate);
+            return Array.IndexOf(CapFpsRates, rate) >= 0 ? rate : DefaultCapFpsRate;
         }
 
         /* Copy a file into the game folder unless an identical copy is already there, so the shipped
@@ -558,6 +597,8 @@ namespace OpenCAGE
                 //The game leaves the cursor free until this key is pressed in its window
                 "UnlockMouse=" + (SettingsManager.GetBool(Settings.ScriptingHelpersUnlockMouse) ? "1" : "0"),
                 "UnlockMouseKey=" + UnlockMouseKey(),
+                //The most frames a second the game runs at (0 = no cap)
+                "CapFps=" + (SettingsManager.GetBool(Settings.ScriptingHelpersCapFps) ? CapFpsRate() : "0"),
                 "DebugText=" + (SettingsManager.GetBool(Settings.ScriptingHelpersDebugText) ? "1" : "0"),
                 "DebugTextStacking=" + (SettingsManager.GetBool(Settings.ScriptingHelpersDebugTextStacking) ? "1" : "0"),
                 "DebugEnvironmentMarker=" + (SettingsManager.GetBool(Settings.ScriptingHelpersDebugEnvironmentMarker) ? "1" : "0"),

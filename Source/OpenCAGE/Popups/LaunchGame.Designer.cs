@@ -44,6 +44,8 @@ namespace OpenCAGE
             this.hotReloadKey = new System.Windows.Forms.ComboBox();
             this.enableUnlockMouse = new System.Windows.Forms.CheckBox();
             this.unlockMouseKey = new System.Windows.Forms.ComboBox();
+            this.enableCapFps = new System.Windows.Forms.CheckBox();
+            this.capFpsRate = new System.Windows.Forms.ComboBox();
             this.enableDebugText = new System.Windows.Forms.CheckBox();
             this.enableDebugTextStacking = new System.Windows.Forms.CheckBox();
             this.enableDebugEnvironmentMarker = new System.Windows.Forms.CheckBox();
@@ -221,6 +223,32 @@ namespace OpenCAGE
             this.unlockMouseKey.TabIndex = 43;
             this.toolTip1.SetToolTip(this.unlockMouseKey, "The key that gives the game the mouse to look around with, and frees the cursor again.");
             this.unlockMouseKey.SelectedIndexChanged += new System.EventHandler(this.unlockMouseKey_SelectedIndexChanged);
+            //
+            // enableCapFps
+            //
+            this.enableCapFps.AutoSize = true;
+            this.enableCapFps.Enabled = false;
+            this.enableCapFps.Location = new System.Drawing.Point(226, 90);
+            this.enableCapFps.Name = "enableCapFps";
+            this.enableCapFps.Size = new System.Drawing.Size(66, 17);
+            this.enableCapFps.TabIndex = 44;
+            this.enableCapFps.Text = "Cap FPS";
+            this.toolTip1.SetToolTip(this.enableCapFps, "The game runs at most the chosen frames a second. Above 360 it runs too fast (a near-empty level with V-Sync" +
+        " off, say), so this keeps it at its proper speed.");
+            this.enableCapFps.UseVisualStyleBackColor = true;
+            this.enableCapFps.CheckedChanged += new System.EventHandler(this.enableCapFps_CheckedChanged);
+            //
+            // capFpsRate
+            //
+            this.capFpsRate.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.capFpsRate.Enabled = false;
+            this.capFpsRate.FormattingEnabled = true;
+            this.capFpsRate.Location = new System.Drawing.Point(324, 87);
+            this.capFpsRate.Name = "capFpsRate";
+            this.capFpsRate.Size = new System.Drawing.Size(85, 21);
+            this.capFpsRate.TabIndex = 45;
+            this.toolTip1.SetToolTip(this.capFpsRate, "The most frames a second the game runs at.");
+            this.capFpsRate.SelectedIndexChanged += new System.EventHandler(this.capFpsRate_SelectedIndexChanged);
             // 
             // enableDebugText
             // 
@@ -372,6 +400,8 @@ namespace OpenCAGE
             this.groupBox2.Controls.Add(this.hotReloadKey);
             this.groupBox2.Controls.Add(this.enableUnlockMouse);
             this.groupBox2.Controls.Add(this.unlockMouseKey);
+            this.groupBox2.Controls.Add(this.enableCapFps);
+            this.groupBox2.Controls.Add(this.capFpsRate);
             this.groupBox2.Controls.Add(this.enableDebugText);
             this.groupBox2.Controls.Add(this.enableDebugTextStacking);
             this.groupBox2.Controls.Add(this.enableDebugEnvironmentMarker);
@@ -429,6 +459,8 @@ namespace OpenCAGE
         private System.Windows.Forms.ComboBox hotReloadKey;
         private System.Windows.Forms.CheckBox enableUnlockMouse;
         private System.Windows.Forms.ComboBox unlockMouseKey;
+        private System.Windows.Forms.CheckBox enableCapFps;
+        private System.Windows.Forms.ComboBox capFpsRate;
         private System.Windows.Forms.CheckBox enableDebugText;
         private System.Windows.Forms.CheckBox enableDebugTextStacking;
         private System.Windows.Forms.CheckBox enableDebugEnvironmentMarker;

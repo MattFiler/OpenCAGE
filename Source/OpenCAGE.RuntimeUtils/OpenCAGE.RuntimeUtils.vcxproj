@@ -92,6 +92,7 @@
     <ClCompile Include="libs\imgui\imgui_widgets.cpp" />
     <ClCompile Include="Menu.cpp" />
     <ClCompile Include="MOUSE_UNLOCK.cpp" />
+    <ClCompile Include="FRAME_CAP.cpp" />
     <ClCompile Include="SCREENSHOT.cpp" />
     <ClCompile Include="ZONE_LOADER.cpp" />
   </ItemGroup>
@@ -119,6 +120,7 @@
     <ClInclude Include="libs\imgui\imstb_truetype.h" />
     <ClInclude Include="Menu.h" />
     <ClInclude Include="MOUSE_UNLOCK.h" />
+    <ClInclude Include="FRAME_CAP.h" />
     <ClInclude Include="SCREENSHOT.h" />
     <ClInclude Include="ZONE_LOADER.h" />
   </ItemGroup>
