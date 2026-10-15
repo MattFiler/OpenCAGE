@@ -36,6 +36,7 @@ namespace OpenCAGE
             : base(EditorOrPicker(showSelectBtn))
         {
             InitializeComponent();
+            EnableDocumentation("https://opencage.co.uk/docs/collision-editor/");
             _current = current;
             selectButton.Visible = showSelectBtn;
             _selectionMode = showSelectBtn;
@@ -252,7 +253,7 @@ namespace OpenCAGE
                 CollisionProxyImporter.MeshSource source;
                 try
                 {
-                    source = CollisionProxyImporter.FromComponent(component, Content?.Level?.Models?.FindModel(component.LODs[0])?.Name);
+                    source = CollisionProxyImporter.FromComponent(component, CollisionProxyImporter.ModelDisplayName(Content?.Level?.Models?.FindModel(component.LODs[0])?.Name));
                 }
                 catch (Exception ex)
                 {

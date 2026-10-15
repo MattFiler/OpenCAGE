@@ -202,7 +202,8 @@ namespace OpenCAGE
             this.modelRendererHost.Child = null;
             // 
             // previewStatus
-            // 
+            //
+            this.previewStatus.AutoEllipsis = true;
             this.previewStatus.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.previewStatus.Location = new System.Drawing.Point(8, 491);
             this.previewStatus.Name = "previewStatus";

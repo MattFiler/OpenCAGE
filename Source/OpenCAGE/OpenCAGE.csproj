@@ -786,6 +786,9 @@
     <Compile Include="Popups\Resource Editors\PhysicsImportSettings.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\Resource Editors\PhysicsBodyProperties.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Popups\Resource Editors\EditPhysicsSystem.cs">
       <SubType>Form</SubType>
     </Compile>

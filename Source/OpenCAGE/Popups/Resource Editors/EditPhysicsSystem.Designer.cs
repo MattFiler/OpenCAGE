@@ -286,7 +286,8 @@ namespace OpenCAGE
             this.columnBodyDamping.Width = 60;
             // 
             // previewStatus
-            // 
+            //
+            this.previewStatus.AutoEllipsis = true;
             this.previewStatus.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.previewStatus.Location = new System.Drawing.Point(8, 591);
             this.previewStatus.Name = "previewStatus";

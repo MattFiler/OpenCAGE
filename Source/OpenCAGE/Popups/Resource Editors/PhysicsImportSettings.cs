@@ -39,8 +39,8 @@ namespace OpenCAGE
             {
                 Dock = DockStyle.Top,
                 Height = 48,
-                Text = shape.Vertices.Count + "-corner convex hull of " + sourceName
-                    + (shape.FullHullVertices > shape.Vertices.Count ? " (simplified from " + shape.FullHullVertices + ")" : "")
+                Text = shape.SurfaceVertices.Count + "-corner convex hull of " + sourceName
+                    + (shape.FullHullVertices > shape.SurfaceVertices.Count ? " (simplified from " + shape.FullHullVertices + ")" : "")
                     + "\nVolume " + (shape.Volume * 1000f).ToString("0.###", CultureInfo.InvariantCulture) + " L, convex radius "
                     + (shape.ConvexRadius * 100f).ToString("0.##", CultureInfo.InvariantCulture) + " cm. One dynamic body; it collides as the hull shown.",
             };

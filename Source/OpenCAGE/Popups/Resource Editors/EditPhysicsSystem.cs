@@ -21,6 +21,8 @@ namespace OpenCAGE
         private readonly bool _selectionMode;
         private GUI_ModelViewer _modelViewer;
         private EditModel _modelPicker;
+        private readonly Button _editBodyButton;
+        private HavokPackfile.PhysicsSystem _shown;
 
         /// <summary>What the composite the PhysicsSystem entity sits in suggests for a new system (set by the host before Show).</summary>
         public PhysicsSystemImporter.HostDefaults Defaults = new PhysicsSystemImporter.HostDefaults();
@@ -29,6 +31,7 @@ namespace OpenCAGE
             : base(EditorOrPicker(showSelectBtn))
         {
             InitializeComponent();
+            EnableDocumentation("https://opencage.co.uk/docs/physics-editor/");
             _current = current;
             selectButton.Visible = showSelectBtn;
             _selectionMode = showSelectBtn;
@@ -38,6 +41,17 @@ namespace OpenCAGE
                 Text = "Physics System Editor";
                 statusLabel.Width = selectButton.Right - statusLabel.Left;
             }
+
+            //The selected body's values can be changed: a button beside its details, or a double-click on its row
+            _editBodyButton = new Button { Text = "Edit Body...", AutoSize = true, Dock = DockStyle.Right, Enabled = false };
+            _editBodyButton.Click += (s, e) => EditSelectedBody();
+            Panel bodyDetail = new Panel { Dock = DockStyle.Bottom, Height = bodyDetailLabel.Height };
+            splitPreview.Panel2.Controls.Remove(bodyDetailLabel);
+            bodyDetailLabel.Dock = DockStyle.Fill;
+            bodyDetail.Controls.Add(bodyDetailLabel);
+            bodyDetail.Controls.Add(_editBodyButton);
+            splitPreview.Panel2.Controls.Add(bodyDetail);
+            bodyList.DoubleClick += (s, e) => EditSelectedBody();
 
             _modelViewer = new GUI_ModelViewer();
             modelRendererHost.Child = _modelViewer;
@@ -129,6 +143,8 @@ namespace OpenCAGE
 
             bodyList.Items.Clear();
             bodyDetailLabel.Text = "Select a rigid body for details.";
+            _editBodyButton.Enabled = false;
+            _shown = system;
 
             HavokPackfile hkx = Content?.Level?.Physics;
             if (system == null || hkx == null)
@@ -175,12 +191,14 @@ namespace OpenCAGE
             if (bodyList.SelectedItems.Count == 0)
             {
                 bodyDetailLabel.Text = "Select a rigid body for details.";
+                _editBodyButton.Enabled = false;
                 return;
             }
 
             var body = bodyList.SelectedItems[0].Tag as HavokPackfile.RigidBodyInfo;
             if (body == null)
                 return;
+            _editBodyButton.Enabled = true;
 
             bodyDetailLabel.Text = string.Format(
                 CultureInfo.InvariantCulture,
@@ -193,6 +211,55 @@ namespace OpenCAGE
                 body.Restitution,
                 body.GravityFactor,
                 body.DataOffset);
+        }
+
+        /* Change the selected body's mass, surface, damping or gravity factor, in both of a PC level's physics files at
+           once; it goes into them when the level is next saved, like an import */
+        private void EditSelectedBody()
+        {
+            if (_shown == null || bodyList.SelectedItems.Count == 0 || !(bodyList.SelectedItems[0].Tag is HavokPackfile.RigidBodyInfo body))
+                return;
+            if (!PhysicsSystemImporter.CanChangeBodies(Content?.Level, out string why))
+            {
+                MessageBox.Show(this, why, "Edit rigid body", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            //Its place in the system, by where it sits in the file rather than where its row sits in the list
+            int bodyIndex = Content.Level.Physics.GetRigidBodies(_shown).FindIndex(b => b.DataOffset == body.DataOffset);
+            if (bodyIndex < 0)
+                return;
+            using (PhysicsBodyProperties dialog = new PhysicsBodyProperties(body))
+            {
+                if (dialog.ShowDialog(this) != DialogResult.OK)
+                    return;
+                CathodeLib.Havok.RigidBodyChange change = dialog.Change;
+                if (change.IsEmpty)
+                    return;
+                try
+                {
+                    PhysicsSystemImporter.SetBodyProperties(Content.Level, _shown, bodyIndex, change);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, "The body could not be changed: " + ex.Message, "Edit rigid body", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+            }
+
+            UpdatePreview(_shown);
+            bodyList.SelectedItems.Clear();
+            foreach (ListViewItem item in bodyList.Items)
+            {
+                if (item.Tag is HavokPackfile.RigidBodyInfo row && row.DataOffset == body.DataOffset)
+                {
+                    item.Selected = true;
+                    item.EnsureVisible();
+                    break;
+                }
+            }
+            statusLabel.Text = "Body changed  ·  goes into " + (PhysicsSystemImporter.FilesWritten(Content.Level) ?? "PHYSICS.HKX") + " when the level is next saved";
+            Singleton.OnResourceModified?.Invoke();
         }
 
         private static string FormatMass(float mass)
@@ -265,7 +332,7 @@ namespace OpenCAGE
                 CollisionProxyImporter.MeshSource source;
                 try
                 {
-                    source = CollisionProxyImporter.FromComponent(component, Content?.Level?.Models?.FindModel(component.LODs[0])?.Name);
+                    source = CollisionProxyImporter.FromComponent(component, CollisionProxyImporter.ModelDisplayName(Content?.Level?.Models?.FindModel(component.LODs[0])?.Name));
                 }
                 catch (Exception ex)
                 {
@@ -307,8 +374,9 @@ namespace OpenCAGE
 
             bodyList.Items.Clear();
             bodyDetailLabel.Text = "";
+            _editBodyButton.Enabled = false;
             _modelViewer?.ShowPreviewMesh(PhysicsSystemImporter.ToPreviewMesh(shape));
-            previewStatus.Text = shape.Vertices.Count + "-corner hull of " + source.Name + "  \u00B7  not yet a system";
+            previewStatus.Text = shape.SurfaceVertices.Count + "-corner hull of " + source.Name + "  \u00B7  not yet a system";
 
             HavokPackfile.PhysicsSystem created;
             using (PhysicsImportSettings settings = new PhysicsImportSettings(shape, source.Name, Defaults))

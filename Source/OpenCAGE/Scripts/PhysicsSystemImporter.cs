@@ -159,6 +159,76 @@ namespace OpenCAGE
         }
 
         /// <summary>
+        /// Whether a body's values can be changed on this level: a PC level's packfiles can be, a mobile or Switch level's
+        /// tagfile cannot yet. <paramref name="why"/> says why not, fit to show.
+        /// </summary>
+        public static bool CanChangeBodies(Level level, out string why)
+        {
+            HavokPackfile hk32 = level?.PhysicsHKX != null && level.PhysicsHKX.Loaded ? level.PhysicsHKX : null;
+            HavokPackfile hk64 = level?.PhysicsHKX64 != null && level.PhysicsHKX64.Loaded ? level.PhysicsHKX64 : null;
+            why = null;
+            if (hk32 == null && hk64 == null)
+                why = "This level has no physics packfile loaded.";
+            else if ((hk32 != null && hk32.IsTagfile) || (hk64 != null && hk64.IsTagfile))
+                why = "Physics bodies can only be edited on PC levels so far: this level's physics is a mobile or Switch tagfile.";
+            return why == null;
+        }
+
+        /// <summary>
+        /// Change one body of a system the same way in each of a PC level's physics files (PHYSICS.HKX and .HKX64), the
+        /// system found in each by its index as PHYSICS.MAP finds it. Everything is checked against both files first, so
+        /// either both change or neither does.
+        /// </summary>
+        public static void SetBodyProperties(Level level, HavokPackfile.PhysicsSystem system, int bodyIndex, RigidBodyChange change)
+        {
+            if (level == null) throw new ArgumentNullException(nameof(level));
+            if (system == null) throw new ArgumentNullException(nameof(system));
+            if (change == null || change.IsEmpty) return;
+            if (!CanChangeBodies(level, out string why))
+                throw new InvalidOperationException(why);
+            change.Validate();
+
+            List<(HavokPackfile File, HavokPackfile.PhysicsSystem System, HavokPackfile.RigidBodyInfo Before, string Name)> targets = new List<(HavokPackfile, HavokPackfile.PhysicsSystem, HavokPackfile.RigidBodyInfo, string)>();
+            foreach ((HavokPackfile hkx, string name) in new[] { (level.PhysicsHKX, "PHYSICS.HKX"), (level.PhysicsHKX64, "PHYSICS.HKX64") })
+            {
+                if (hkx == null || !hkx.Loaded) continue;
+                HavokPackfile.PhysicsSystem inFile = hkx.GetPhysicsSystem(system.SystemIndex);
+                List<HavokPackfile.RigidBodyInfo> bodies = inFile == null ? null : hkx.GetRigidBodies(inFile);
+                if (bodies == null || bodyIndex < 0 || bodyIndex >= bodies.Count)
+                    throw new InvalidOperationException(name + " has no body " + bodyIndex + " in physics system " + system.SystemIndex + ", so the two files could not be changed alike.");
+                if (change.Mass.HasValue && !(bodies[bodyIndex].MassInv > 0f))
+                    throw new InvalidOperationException("This body has no mass to change: it is keyframed or fixed, so the game moves it rather than physics.");
+                targets.Add((hkx, inFile, bodies[bodyIndex], name));
+            }
+
+            //Both checked: change each, and if the second refuses after all, give the first its old values back
+            for (int i = 0; i < targets.Count; i++)
+            {
+                try
+                {
+                    targets[i].File.SetRigidBodyProperties(targets[i].System, bodyIndex, change);
+                }
+                catch
+                {
+                    for (int j = 0; j < i; j++)
+                    {
+                        HavokPackfile.RigidBodyInfo was = targets[j].Before;
+                        targets[j].File.SetRigidBodyProperties(targets[j].System, bodyIndex, new RigidBodyChange
+                        {
+                            Mass = change.Mass.HasValue ? was.Mass : (float?)null,
+                            Friction = change.Friction.HasValue ? was.Friction : (float?)null,
+                            Restitution = change.Restitution.HasValue ? was.Restitution : (float?)null,
+                            LinearDamping = change.LinearDamping.HasValue ? was.LinearDamping : (float?)null,
+                            AngularDamping = change.AngularDamping.HasValue ? was.AngularDamping : (float?)null,
+                            GravityFactor = change.GravityFactor.HasValue ? was.GravityFactor : (float?)null,
+                        });
+                    }
+                    throw;
+                }
+            }
+        }
+
+        /// <summary>
         /// The physics files an import writes, for saying so: both widths on PC, the 64-bit file alone on the
         /// mobile and Switch builds, which ship no 32-bit Havok data. Null when the level has neither loaded.
         /// </summary>

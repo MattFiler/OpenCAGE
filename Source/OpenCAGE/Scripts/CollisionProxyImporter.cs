@@ -152,6 +152,17 @@ namespace OpenCAGE
             return FromLod(component.LODs[0], name);
         }
 
+        /// <summary>A level model's name as it reads in a message: the last part of its path, without the ".cs2".</summary>
+        public static string ModelDisplayName(string modelName)
+        {
+            if (string.IsNullOrEmpty(modelName))
+                return modelName;
+            string leaf = modelName.Substring(Math.Max(modelName.LastIndexOf('\\'), modelName.LastIndexOf('/')) + 1);
+            if (leaf.EndsWith(".cs2", StringComparison.OrdinalIgnoreCase))
+                leaf = leaf.Substring(0, leaf.Length - 4);
+            return leaf.Length > 0 ? leaf : modelName;
+        }
+
         /// <summary>The triangles a renderable run draws (an entity's RENDERABLE_INSTANCE), in the model's space.</summary>
         public static MeshSource FromRenderableRun(IList<RenderableElements.Element> run, string name = null)
         {
