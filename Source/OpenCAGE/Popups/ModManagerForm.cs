@@ -616,6 +616,7 @@ namespace OpenCAGE.Popups
         private void ApplyChanges()
         {
             List<string> desired = DesiredEnabledIds();
+            HashSet<string> installedBefore = new HashSet<string>(ModServices.State.Mods.Where(o => o.Enabled).Select(o => o.Id));
 
             if (System.Diagnostics.Process.GetProcessesByName("AI").Length != 0)
             {
@@ -717,6 +718,10 @@ namespace OpenCAGE.Popups
             }
 
             int enabled = ModServices.State.Mods.Count(o => o.Enabled);
+            if (enabled != 0)
+                Steam.UnlockAchievement(Steam.Achievements.MOD_INSTALLED);
+            //Only the mods this put in count: applying the same set again (or in another order) installs nothing new, and your own kept changes aren't a mod you installed
+            Steam.CountTowards(Steam.Achievements.TEN_MODS_INSTALLED, ModServices.State.Mods.Count(o => o.Enabled && !installedBefore.Contains(o.Id) && o.Name != result.KeptAsMod));
             _statusLabel.Text = enabled == 0 ? "All mods removed." : "Done - " + enabled + " mod" + (enabled == 1 ? " is" : "s are") + " installed.";
             if (result.KeptAsMod != null)
                 _statusLabel.Text += " Your changes were kept as '" + result.KeptAsMod + "'.";

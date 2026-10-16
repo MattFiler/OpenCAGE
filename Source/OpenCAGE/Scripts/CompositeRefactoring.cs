@@ -127,7 +127,10 @@ namespace OpenCAGE
                 return;
 
             string leaf = EditorUtils.GetCompositeName(new Composite() { name = plan.Name });
-            Run("Create composite " + leaf, () => UndoStack.Current.Apply(CreateCompositeEdit(plan, "Create composite " + leaf)));
+            RefactorEdit edit = CreateCompositeEdit(plan, "Create composite " + leaf);
+            Run("Create composite " + leaf, () => UndoStack.Current.Apply(edit));
+            if (edit.Result?.CreatedComposite != null)
+                Steam.CountTowards(Steam.Achievements.ONE_HUNDRED_COMPOSITES);
         }
 
         /// <summary>The undo step that carries out a Create Composite plan (the parent's live pages must be compiled first).</summary>
@@ -212,6 +215,7 @@ namespace OpenCAGE
             Composite copy = edit.Result?.CreatedComposite;
             if (copy == null || !commands.Entries.Contains(copy))
                 return;
+            Steam.CountTowards(Steam.Achievements.ONE_HUNDRED_COMPOSITES);
             //A variant stays where the instance is (now placing the copy); a plain duplicate opens the copy
             if (switching == null || switching.Count == 0)
                 Singleton.Editor?.CompositeBrowser?.LoadComposite(copy);

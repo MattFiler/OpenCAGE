@@ -363,6 +363,8 @@ namespace OpenCAGE.MCP
         {
             foreach ((ShortGuid composite, ShortGuid entity) in _defaultsApplied)
                 ParameterModificationTracker.SetDefaultsApplied(composite, entity);
+            if (CreatedComposites.Count != 0)
+                Steam.CountTowards(Steam.Achievements.ONE_HUNDRED_COMPOSITES, CreatedComposites.Count);
         }
 
         private void ApplyModifiedMarks(bool reverted)

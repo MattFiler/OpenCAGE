@@ -638,6 +638,7 @@ namespace OpenCAGE.Popups
                 MessageBox.Show("Export failed: " + error.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
+            Steam.CountTowards(Steam.Achievements.TEN_MODS_CREATED);
 
             string message = "Your mod is saved as " + Path.GetFileName(output) + " (" + ModExportBuilder.PrettySize(result.PackageSize) + ").\n\n"
                 + "Share that file: anyone with OpenCAGE can add it to their Mod Manager (or just double-click it) and install it alongside their other mods."

@@ -64,6 +64,7 @@ namespace OpenCAGE
 
             Singleton.OnCompositeAdded?.Invoke(comp);
             OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.CompositeAddEdit(comp, false, "Add composite " + EditorUtils.GetCompositeName(comp)));
+            Steam.CountTowards(Steam.Achievements.ONE_HUNDRED_COMPOSITES);
             OnCompositeAdded?.Invoke(comp);
             this.Close();
         }

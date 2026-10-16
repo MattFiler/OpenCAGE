@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <clipPath id="panel"><rect x="39" y="39" width="178" height="178" rx="10"/></clipPath>
+    <pattern id="hazard" width="34" height="34" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="17" height="34" fill="#161616"/>
+    </pattern>
+  </defs>
+  <rect width="256" height="256" rx="26" fill="#EE2026"/>
+  <rect x="26" y="26" width="204" height="204" rx="16" fill="#FFFFFF"/>
+  <rect x="39" y="39" width="178" height="178" rx="10" fill="#1C2A44"/>
+  <g clip-path="url(#panel)" fill="#FFFFFF">
+      <g transform="rotate(-18 128 128)">
+        <path d="M46 128 A82 26 0 0 1 210 128 L198 128 A70 16 0 0 0 58 128 Z"/>
+        <circle cx="128" cy="128" r="38"/>
+        <path d="M46 128 A82 26 0 0 0 210 128 L198 128 A70 16 0 0 1 58 128 Z" stroke="#1C2A44" stroke-width="6" paint-order="stroke"/>
+        <circle cx="200" cy="140" r="11" stroke="#1C2A44" stroke-width="5" paint-order="stroke"/>
+      </g>
+      <path d="M72 58 l5 13 l13 5 l-13 5 l-5 13 l-5 -13 l-13 -5 l13 -5 z"/>
+      <path d="M186 168 l4 10 l10 4 l-10 4 l-4 10 l-4 -10 l-10 -4 l10 -4 z"/>
+      <path d="M66 176 l3 7 l7 3 l-7 3 l-3 7 l-3 -7 l-7 -3 l7 -3 z"/>
+  </g>
+
+</svg>

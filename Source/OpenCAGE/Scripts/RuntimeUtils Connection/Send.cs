@@ -39,6 +39,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
                 _client.OnConnected += () =>
                 {
                     Debug.Log("RuntimeUtils", "Successfully connected to RuntimeUtils");
+                    Steam.UnlockAchievement(Steam.Achievements.LIVE_LINK_CONNECTED);
                     LiveLink.NotifyConnectionChanged();
                 };
                 _client.OnDisconnected += () =>

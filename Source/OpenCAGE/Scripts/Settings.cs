@@ -87,6 +87,9 @@ namespace OpenCAGE
         public const string GameDirectories = "GameDirectories";
         public const string SaveCounter = "CS_SaveCounter";
         public const string EntityCounter = "CS_EntityCounter";
+        public const string CompositeCounter = "CS_CompositeCounter";
+        public const string ModInstalledCounter = "CS_ModInstalledCounter";
+        public const string ModCreatedCounter = "CS_ModCreatedCounter";
         public const string DidSteamReviewPrompt = "DidSteamReviewPrompt";
         public const string ResetRenderFilters = "ResetRenderFilters";
         public const string AlwaysFullyRebuildRadiosity = "AlwaysFullyRebuildRadiosity";

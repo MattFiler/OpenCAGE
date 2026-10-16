@@ -137,6 +137,8 @@ namespace OpenCAGE
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true);
             GC.WaitForPendingFinalizers();
 
+            Steam.UnlockAchievement(Steam.Achievements.NEW_LEVEL_CREATED);
+
             string summary = "Created '" + levelId + "'";
             if (imported.Ported.Count > 0)
                 summary += " with " + imported.Ported.Count + " imported composite" + (imported.Ported.Count == 1 ? "" : "s");

@@ -291,15 +291,11 @@ namespace OpenCAGE
 
         private void OnEntityAdded(Entity e)
         {
-            Steam.UnlockAchievement(Steam.Achievements.CREATE_A_NEW_ENTITY);
-
-            /* Counted only up to the hundredth, which is all the count is for: SetInteger writes the
-               settings file (about 10 ms), and an advanced deep-select box adds an alias per entity in it */
-            int entCount = SettingsManager.GetInteger(Settings.EntityCounter);
-            if (entCount < 100)
-                SettingsManager.SetInteger(Settings.EntityCounter, ++entCount);
-            if (entCount >= 100)
-                Steam.UnlockAchievement(Steam.Achievements.ONE_HUNDRED_ENTITIES);
+            //Entities made, not ones coming back: an undo or redo puts back one that was already counted, and an alias (each
+            //deep-selected entity gets one) overrides an entity that is already there
+            if (e == null || e is AliasEntity || OpenCAGE.Undo.UndoStack.Current.IsApplying)
+                return;
+            Steam.CountTowards(Steam.Achievements.ONE_HUNDRED_ENTITIES);
         }
 
         private void OnResourceModified()
@@ -1276,7 +1272,6 @@ namespace OpenCAGE
             if (!_levelViewerPanel.IsRunning)
                 return;
 
-            Steam.UnlockAchievement(Steam.Achievements.LEVEL_VIEWER_LAUNCHED); //todo - deprecate this post v18?
             _compositeDisplay.HideLevelViewerPanelForLoad();
         }
 
@@ -1817,12 +1812,7 @@ namespace OpenCAGE
             CloseProgressUI();
 
             Singleton.OnSaved?.Invoke();
-            Steam.UnlockAchievement(Steam.Achievements.FIRST_SAVE);
-
-            int saveCount = SettingsManager.GetInteger(Settings.SaveCounter) + 1;
-            SettingsManager.SetInteger(Settings.SaveCounter, saveCount);
-            if (saveCount >= 100)
-                Steam.UnlockAchievement(Steam.Achievements.ONE_HUNDRED_SAVES);
+            int saveCount = Steam.CountTowards(Steam.Achievements.ONE_HUNDRED_SAVES);
 
 #if SHIP_BUILD
             if (saveCount > 10 && !SettingsManager.GetBool(Settings.DidSteamReviewPrompt))

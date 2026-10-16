@@ -2243,6 +2243,7 @@ namespace OpenCAGE.MCP
                 RefactorEdit edit = CompositeRefactoring.CreateCompositeEdit(plan, "AI: Create composite " + McpScript.NormalisePath(name));
                 UndoStack.Current.Apply(edit);
                 RefactorResult result = edit.Result;
+                Steam.CountTowards(Steam.Achievements.ONE_HUNDRED_COMPOSITES);
                 return new JObject()
                 {
                     ["composite"] = McpScript.CompositeSummary(commands, result.CreatedComposite),
@@ -2299,6 +2300,7 @@ namespace OpenCAGE.MCP
                 RefactorEdit edit = CompositeRefactoring.DuplicateEdit(plan, "AI: " + (switching.Count != 0 ? "Create variant of " : "Duplicate ") + McpScript.CompositeLeaf(source));
                 UndoStack.Current.Apply(edit);
                 Composite copy = edit.Result.CreatedComposite;
+                Steam.CountTowards(Steam.Achievements.ONE_HUNDRED_COMPOSITES);
                 JObject result = new JObject()
                 {
                     ["composite"] = McpScript.CompositeSummary(commands, copy),

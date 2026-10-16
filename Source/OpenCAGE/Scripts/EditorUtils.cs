@@ -1137,8 +1137,46 @@ namespace OpenCAGE
             CONFIG_MODIFIED, // User has modified a config file
             BEHAVIOUR_TREE_TOOL_LAUNCHED, // User has launched the behaviour tree tool
             ASSETS_MODIFIED, // User has modified some assets
-            LEVEL_VIEWER_LAUNCHED, // User has launched the level viewer for the first time
             GALAXY_MODIFIED, // User has modified the galaxy config
+            NEW_LEVEL_CREATED, // User has created a new level
+            MOD_INSTALLED, // User has installed a mod through the Mod Manager
+            MOD_CREATED, // User has exported a mod of their own
+            LIVE_LINK_CONNECTED, // User has connected Live Link to a running game
+            CREATE_A_NEW_COMPOSITE, // User has created a new composite for the first time
+            ONE_HUNDRED_COMPOSITES, // User has created 100 new composites
+            TEN_MODS_INSTALLED, // User has installed 10 mods through the Mod Manager
+            TEN_MODS_CREATED, // User has exported 10 mods of their own
+        }
+
+        //The achievements for doing something a number of times: the achievement for doing it once, the setting the count is kept in, and how many it takes
+        private static readonly Dictionary<Achievements, (Achievements first, string setting, int target)> _counted = new Dictionary<Achievements, (Achievements, string, int)>()
+        {
+            { Achievements.ONE_HUNDRED_SAVES, (Achievements.FIRST_SAVE, Settings.SaveCounter, 100) },
+            { Achievements.ONE_HUNDRED_ENTITIES, (Achievements.CREATE_A_NEW_ENTITY, Settings.EntityCounter, 100) },
+            { Achievements.ONE_HUNDRED_COMPOSITES, (Achievements.CREATE_A_NEW_COMPOSITE, Settings.CompositeCounter, 100) },
+            { Achievements.TEN_MODS_INSTALLED, (Achievements.MOD_INSTALLED, Settings.ModInstalledCounter, 10) },
+            { Achievements.TEN_MODS_CREATED, (Achievements.MOD_CREATED, Settings.ModCreatedCounter, 10) },
+        };
+
+        /// <summary>
+        /// Count something done towards the achievement for doing it a number of times: unlocks the achievement for doing it once,
+        /// and this one when the count gets there. Counted only that far - the count is for nothing else, and each count writes the
+        /// settings file (about 10 ms). Returns the count.
+        /// </summary>
+        public static int CountTowards(Achievements achievement, int times = 1)
+        {
+            if (times <= 0 || !_counted.TryGetValue(achievement, out (Achievements first, string setting, int target) counted))
+                return 0;
+            UnlockAchievement(counted.first);
+            int count = SettingsManager.GetInteger(counted.setting);
+            if (count < counted.target)
+            {
+                count = Math.Min(counted.target, count + times);
+                SettingsManager.SetInteger(counted.setting, count);
+            }
+            if (count >= counted.target)
+                UnlockAchievement(achievement);
+            return count;
         }
 
         public static void UnlockAchievement(Achievements achievement)

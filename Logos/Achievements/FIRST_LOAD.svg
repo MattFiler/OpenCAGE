@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <clipPath id="panel"><rect x="39" y="39" width="178" height="178" rx="10"/></clipPath>
+    <pattern id="hazard" width="34" height="34" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="17" height="34" fill="#161616"/>
+    </pattern>
+  </defs>
+  <rect width="256" height="256" rx="26" fill="#EE2026"/>
+  <rect x="26" y="26" width="204" height="204" rx="16" fill="#FFFFFF"/>
+  <rect x="39" y="39" width="178" height="178" rx="10" fill="#2F7468"/>
+  <g clip-path="url(#panel)" fill="#FFFFFF">
+      <path d="M50 84 H98 L110 96 H186 V196 H50 Z"/>
+      <path d="M82 54 H146 L170 78 V170 H82 Z" stroke="#2F7468" stroke-width="8" paint-order="stroke"/>
+      <path d="M146 54 V78 H170 Z" fill="#2F7468"/>
+      <g fill="#2F7468"><rect x="96" y="96" width="60" height="10"/><rect x="96" y="114" width="44" height="10"/></g>
+      <path d="M50 200 L68 128 H212 L194 200 Z" stroke="#2F7468" stroke-width="8" paint-order="stroke"/>
+  </g>
+
+</svg>

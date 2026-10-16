@@ -1726,6 +1726,7 @@ namespace OpenCAGE.MCP
                                 throw new McpError(McpErrorCodes.Refused, refused + " Nothing was changed.");
                         });
                         Modding.TransactionResult result = null;
+                        HashSet<string> installedBefore = new HashSet<string>(state.Mods.Where(o => o.Enabled).Select(o => o.Id));
                         try
                         {
                             using (McpEditorTools.Heartbeat(call, "Applying mod changes"))
@@ -1743,6 +1744,11 @@ namespace OpenCAGE.MCP
                             throw new McpError("Nothing was applied: " + result.Error + " Pass edited_files: keep or discard. Changed: " + string.Join(", ", result.EditedFiles.Take(20)));
                         if (!result.Success)
                             throw new McpError("Apply failed, and no changes were made: " + result.Error + (result.Error != null && result.Error.Contains("no copy of the originals") ? " Pass adopt_current_files: true to keep those files' current bytes as their restore point." : ""));
+                        if (mods.Count != 0)
+                            McpEditor.UI(() => Steam.UnlockAchievement(Steam.Achievements.MOD_INSTALLED));
+                        //Only the mods this put in count (as the Mod Manager counts them)
+                        int newlyInstalled = state.Mods.Count(o => o.Enabled && !installedBefore.Contains(o.Id) && o.Name != result.KeptAsMod);
+                        McpEditor.UI(() => Steam.CountTowards(Steam.Achievements.TEN_MODS_INSTALLED, newlyInstalled));
                         JObject done = new JObject() { ["applied"] = new JArray(mods.Select(o => o.Name)), ["library"] = ModList(installer, state, limit) };
                         if (result.Conflicts.Count != 0) done["conflicts"] = new JArray(result.Conflicts.Take(limit).Select(o => new JObject() { ["kept"] = o.Kept, ["lost"] = o.Lost, ["target"] = o.Target, ["where"] = o.Where, ["text"] = o.Describe() }));
                         if (result.CombinedLevels.Count != 0) done["combined_levels"] = new JArray(result.CombinedLevels);
@@ -1945,6 +1951,7 @@ namespace OpenCAGE.MCP
                 }
                 catch (Exception e) { throw new McpError("Export failed: " + e.Message); }
             }
+            McpEditor.UI(() => Steam.CountTowards(Steam.Achievements.TEN_MODS_CREATED));
             result["written"] = output;
             result["entries"] = written.Entries.Count;
             result["as_patches"] = written.Entries.Count(o => o.Kind == Modding.ModPackageEntry.KindDelta);
