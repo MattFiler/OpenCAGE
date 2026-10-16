@@ -93,6 +93,7 @@
     <ClCompile Include="Menu.cpp" />
     <ClCompile Include="MOUSE_UNLOCK.cpp" />
     <ClCompile Include="FRAME_CAP.cpp" />
+    <ClCompile Include="POSSESS.cpp" />
     <ClCompile Include="SCREENSHOT.cpp" />
     <ClCompile Include="ZONE_LOADER.cpp" />
   </ItemGroup>
@@ -121,6 +122,7 @@
     <ClInclude Include="Menu.h" />
     <ClInclude Include="MOUSE_UNLOCK.h" />
     <ClInclude Include="FRAME_CAP.h" />
+    <ClInclude Include="POSSESS.h" />
     <ClInclude Include="SCREENSHOT.h" />
     <ClInclude Include="ZONE_LOADER.h" />
   </ItemGroup>

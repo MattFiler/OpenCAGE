@@ -1,6 +1,7 @@
 #include "LIVE_CAMERA.h"
 #include "LIVE_LINK_SERVER.h"
 #include "ZONE_LOADER.h"
+#include "POSSESS.h"
 #include "Config.h"
 
 #define WIN32_LEAN_AND_MEAN
@@ -420,12 +421,30 @@ void __fastcall LIVE_CAMERA::h_synchronize_with_engine(void* _this, void* /*_EDX
 		camera = nullptr;
 	if (camera)
 		TakeSnapshot(saved);
-	if (state != State::Applying)
-		camera = nullptr;
-	else if (camera && !WritePose(camera, pose, saved))
-		camera = nullptr;
+	bool written = false, behind = false;
+	if (camera && state == State::Applying)
+		written = WritePose(camera, pose, saved);
+	else if (camera && Config::Get().possess)
+	{
+		// While a character is possessed (and OpenCAGE's camera isn't driving the game's), the camera behind it
+		float position[3], forward[3], up[3];
+		Pose follow;
+		if (POSSESS::CameraPose(position, forward, up) && RotationFromAxes(forward, up, follow.rotation))
+		{
+			memcpy(follow.position, position, sizeof(follow.position));
+			written = behind = WritePose(camera, follow, saved);
+		}
+	}
+	// Where the frame is drawn from, for a possessed character's keys to move it relative to
+	if (camera && Config::Get().possess)
+	{
+		CameraState drawn;
+		float forward[3], up[3];
+		if (ReadState(camera, drawn) && AxesFromRotation(drawn.rotation, forward, up))
+			POSSESS::SeenFrom(drawn.position, forward, behind);
+	}
 	synchronize_with_engine(_this);
-	if (camera)
+	if (written)
 		RestoreState(camera, saved);
 }
 

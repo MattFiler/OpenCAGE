@@ -3,6 +3,7 @@
 #include "LIVE_CAMERA.h"
 #include "LIVE_ANIMATION.h"
 #include "LIVE_TRACE.h"
+#include "POSSESS.h"
 #include "GAME_LEVEL_MANAGER.h"
 #include "SCREENSHOT.h"
 #include "DevTools.h"
@@ -530,6 +531,56 @@ namespace
 		Reply(request, result.ok, result.message, payload);
 	}
 
+	// What to possess, or the stick, is only stored here (the characters' behaviour updates act on it, see POSSESS.h), so it
+	// is answered at once too: OpenCAGE sends a stick as often as it changes.
+	void HandlePossess(const Request& request)
+	{
+		Reader reader(request.payload);
+		const uint32_t root = reader.U32();
+		const uint8_t mode = reader.U8();
+		LIVE_LINK::Result result{ false, "Malformed request" };
+		if (mode == 0 && !reader.failed)
+			result = POSSESS::Release();
+		else if (mode == 1)
+		{
+			const uint32_t length = reader.U32();
+			const uint8_t* text = length <= 256 ? reader.Bytes(length) : nullptr;
+			if (!reader.failed && (text || length == 0))
+				result = POSSESS::Take(root, std::string(reinterpret_cast<const char*>(text), text ? length : 0));
+		}
+		else if (mode == 2)
+		{
+			const float x = reader.F32();
+			const float y = reader.F32();
+			const int speed = static_cast<int8_t>(reader.U8());
+			const uint32_t milliseconds = reader.U32();
+			if (!reader.failed)
+				result = POSSESS::SetStick(request.connection, x, y, speed, milliseconds);
+		}
+		else if (mode == 3 || mode == 4)
+		{
+			const bool on = reader.U8() != 0;
+			if (!reader.failed)
+				result = mode == 3 ? POSSESS::SetCrouch(on) : POSSESS::SetMenu(on);
+		}
+		if (mode != 2)
+			SetActivity(result.message);
+		Reply(request, result.ok, result.message);
+	}
+
+	void HandlePossessGet(const Request& request)
+	{
+		Reader reader(request.payload);
+		const uint32_t root = reader.U32();
+		if (reader.failed)
+		{
+			Reply(request, false, "Malformed request");
+			return;
+		}
+		const LIVE_LINK::Result result = POSSESS::GetState(root);
+		Reply(request, result.ok, result.message);
+	}
+
 	void QueueBinaryMessage(const std::vector<uint8_t>& message)
 	{
 		Request request;
@@ -577,6 +628,16 @@ namespace
 		if (request.command == LIVE_LINK_SERVER::TRACE_GET)
 		{
 			HandleTraceGet(request);
+			return;
+		}
+		if (request.command == LIVE_LINK_SERVER::POSSESS)
+		{
+			HandlePossess(request);
+			return;
+		}
+		if (request.command == LIVE_LINK_SERVER::POSSESS_GET)
+		{
+			HandlePossessGet(request);
 			return;
 		}
 

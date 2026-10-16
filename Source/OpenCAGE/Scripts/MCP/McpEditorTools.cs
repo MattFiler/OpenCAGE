@@ -1629,6 +1629,7 @@ namespace OpenCAGE.MCP
             if (waitFor != "none")
                 result["wait"] = WaitForGame(call, waitFor, TimeSpan.FromSeconds(timeoutSeconds), launched, launchesOpen);
             result["scripting_helpers"] = global::OpenCAGE.LaunchGame.AnyHelperOn() && runtimeUtilsProblem == null;
+            result["possess_characters"] = SettingsManager.GetBool(Settings.PossessCharacters) && global::OpenCAGE.LaunchGame.ScriptingHelpersAvailable() && runtimeUtilsProblem == null;
             if (global::OpenCAGE.LaunchGame.CinematicToolsChosen())
             {
                 List<string> parked = global::OpenCAGE.LaunchGame.HelperSettings.Where(o => SettingsManager.GetBool(o)).Select(McpLevelTools.LaunchOptionArg).ToList();

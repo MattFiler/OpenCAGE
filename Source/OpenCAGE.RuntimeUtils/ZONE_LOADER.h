@@ -28,6 +28,7 @@ namespace ZONE_LOADER
 		Config = 1 << 0,     // LoadAllZones in OpenCAGE.RuntimeUtils.ini
 		External = 1 << 1,   // other injected tools, through this DLL's exported zone loading switch (Cinematic Tools, while its camera is on)
 		LiveCamera = 1 << 2, // the live link camera sync, while the game renders from OpenCAGE's camera (LIVE_CAMERA.h)
+		Possess = 1 << 3,    // the camera behind a possessed character (POSSESS.h)
 	};
 
 	void SetForced(Source source, bool forced);

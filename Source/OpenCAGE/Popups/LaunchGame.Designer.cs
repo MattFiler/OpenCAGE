@@ -56,6 +56,8 @@ namespace OpenCAGE
             this.UIMOD_MapName = new System.Windows.Forms.CheckBox();
             this.UIMOD_ReturnFrontend = new System.Windows.Forms.CheckBox();
             this.levelList = new System.Windows.Forms.ComboBox();
+            this.enablePossess = new System.Windows.Forms.CheckBox();
+            this.possessKey = new System.Windows.Forms.ComboBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.groupBox1.SuspendLayout();
@@ -374,9 +376,35 @@ namespace OpenCAGE
             this.levelList.Size = new System.Drawing.Size(434, 21);
             this.levelList.TabIndex = 30;
             this.levelList.SelectedIndexChanged += new System.EventHandler(this.levelList_SelectedIndexChanged);
-            // 
+            //
+            // enablePossess
+            //
+            this.enablePossess.AutoSize = true;
+            this.enablePossess.Enabled = false;
+            this.enablePossess.Location = new System.Drawing.Point(226, 137);
+            this.enablePossess.Name = "enablePossess";
+            this.enablePossess.Size = new System.Drawing.Size(117, 17);
+            this.enablePossess.TabIndex = 46;
+            this.enablePossess.Text = "Possess Characters";
+            this.toolTip1.SetToolTip(this.enablePossess, "Take control of a character (the alien, an android, a human) in-game: press the chosen key to open a menu of " +
+        "the characters around you and pick one. W/A/S/D move it, Shift faster, Ctrl slower, C crouches, the mouse turns the camera behind it and the wheel zooms it.");
+            this.enablePossess.UseVisualStyleBackColor = true;
+            this.enablePossess.CheckedChanged += new System.EventHandler(this.enablePossess_CheckedChanged);
+            //
+            // possessKey
+            //
+            this.possessKey.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.possessKey.Enabled = false;
+            this.possessKey.FormattingEnabled = true;
+            this.possessKey.Location = new System.Drawing.Point(346, 134);
+            this.possessKey.Name = "possessKey";
+            this.possessKey.Size = new System.Drawing.Size(80, 21);
+            this.possessKey.TabIndex = 47;
+            this.toolTip1.SetToolTip(this.possessKey, "The key that opens and closes the in-game menu of characters to possess.");
+            this.possessKey.SelectedIndexChanged += new System.EventHandler(this.possessKey_SelectedIndexChanged);
+            //
             // groupBox1
-            // 
+            //
             this.groupBox1.Controls.Add(this.renderConstantAmbient);
             this.groupBox1.Controls.Add(this.patchCurrentGen);
             this.groupBox1.Controls.Add(this.skipFrontend);
@@ -388,6 +416,8 @@ namespace OpenCAGE
             this.groupBox1.Controls.Add(this.UIMOD_ReturnFrontend);
             this.groupBox1.Controls.Add(this.enableUIPerf);
             this.groupBox1.Controls.Add(this.enableCinematicTools);
+            this.groupBox1.Controls.Add(this.enablePossess);
+            this.groupBox1.Controls.Add(this.possessKey);
             this.groupBox1.Location = new System.Drawing.Point(12, 61);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.Size = new System.Drawing.Size(434, 163);
@@ -471,5 +501,7 @@ namespace OpenCAGE
         private System.Windows.Forms.CheckBox skipFrontend;
         private System.Windows.Forms.CheckBox patchCurrentGen;
         private System.Windows.Forms.CheckBox renderConstantAmbient;
+        private System.Windows.Forms.CheckBox enablePossess;
+        private System.Windows.Forms.ComboBox possessKey;
     }
 }

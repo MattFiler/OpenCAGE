@@ -19,6 +19,8 @@
 	  LiveLink=1                  ; 1/0 - let OpenCAGE edit the running level's scripting and call entity methods
 	  LiveLinkPort=8765           ; the local port OpenCAGE connects to
 	  LiveLinkCamera=1            ; 1/0 - let OpenCAGE's viewport camera drive the game camera when it asks (camera sync)
+	  Possess=0                   ; 1/0 - Possess Characters: the key below opens a menu to take a character (the alien...) and move it, see POSSESS.h
+	  PossessKey=F6               ; the key that opens and closes that menu (named as HotReloadKey)
 */
 namespace Config
 {
@@ -37,6 +39,8 @@ namespace Config
 		bool liveLink = true;
 		int liveLinkPort = 8765;
 		bool liveLinkCamera = true;
+		bool possess = false;
+		int possessKey = 0x75; // the F6 key
 	};
 
 	// Loads the settings on first use.

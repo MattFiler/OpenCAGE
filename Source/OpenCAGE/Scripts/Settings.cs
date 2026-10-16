@@ -124,6 +124,9 @@ namespace OpenCAGE
         public const string ScriptingHelpersLiveLink = "ScriptingHelpers_LiveLink";
         //Set once whoever had Cinematic Tools and a scripting helper both on was moved to one or the other (SettingsDefaults)
         public const string CinematicToolsOrHelpers = "CinematicToolsOrHelpers";
+        //Possess Characters (Launch Options): its key opens an in-game menu to take a character and move it
+        public const string PossessCharacters = "PossessCharacters";
+        public const string PossessCharactersKey = "PossessCharactersKey";
 
         public const string UiModPauseMenu = "PAUSEMENU";
         public const string UiModLoadingScreen = "LOADINGSCREEN";

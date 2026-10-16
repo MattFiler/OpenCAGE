@@ -117,6 +117,9 @@
     <ClCompile Include="FRAME_CAP.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="POSSESS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="SCREENSHOT.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -195,6 +198,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FRAME_CAP.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="POSSESS.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="SCREENSHOT.h">

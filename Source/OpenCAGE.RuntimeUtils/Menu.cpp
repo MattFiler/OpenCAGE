@@ -8,6 +8,7 @@
 #include "LIVE_LINK_SERVER.h"
 #include "LIVE_CAMERA.h"
 #include "MOUSE_UNLOCK.h"
+#include "POSSESS.h"
 
 // Engine-specific code classes.
 
@@ -69,6 +70,13 @@ LRESULT CALLBACK Menu::WndProcHandler(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
     if (config.unlockMouse) {
         LRESULT result = 0;
         if (MOUSE_UNLOCK::OnWindowMessage(hWnd, uMsg, wParam, lParam, result))
+            return result;
+    }
+
+    // Possess: its key, and the keyboard and mouse kept from the game while a character is possessed.
+    if (config.possess) {
+        LRESULT result = 0;
+        if (POSSESS::OnWindowMessage(hWnd, uMsg, wParam, lParam, result))
             return result;
     }
 
@@ -164,6 +172,10 @@ void Menu::DrawMenu() {
     // Unlock Mouse: a note when its key is pressed.
     if (Config::Get().unlockMouse)
         MOUSE_UNLOCK::DrawOverlay();
+
+    // Possess: what is possessed and its keys.
+    if (Config::Get().possess)
+        POSSESS::DrawOverlay();
 
     // Live link: a quiet note in the top right while OpenCAGE is connected, with what it last did for a few seconds.
     if (Config::Get().liveLink && LIVE_LINK_SERVER::Connected())

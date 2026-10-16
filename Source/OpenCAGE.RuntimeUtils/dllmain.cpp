@@ -15,6 +15,7 @@
 #include "LIVE_TRACE.h"
 #include "MOUSE_UNLOCK.h"
 #include "FRAME_CAP.h"
+#include "POSSESS.h"
 
 // External includes.
 #include <detours.h>
@@ -154,8 +155,8 @@ static void AttachHooks(bool attach)
         else DEVTOOLS_DETOURS_DETACH(original, detoured);
     };
 
-    // Rendering hooks: needed for the hot reload and unlock mouse keys (window procedure) and the overlay.
-    if ((config.hotReload || config.unlockMouse || Config::AnyDebug() || config.liveLink) && d3d11CreateDeviceAndSwapChain)
+    // Rendering hooks: needed for the hot reload, unlock mouse and possess keys (window procedure) and the overlay.
+    if ((config.hotReload || config.unlockMouse || Config::AnyDebug() || config.liveLink || config.possess) && d3d11CreateDeviceAndSwapChain)
     {
         hook(d3d11CreateDeviceAndSwapChain, hD3D11CreateDeviceAndSwapChain);
         if (!attach && d3d11Present)
@@ -177,8 +178,17 @@ static void AttachHooks(bool attach)
 
     // Live link camera sync: renders the game from OpenCAGE's viewport camera while OpenCAGE asks. Attached for the whole
     // run and gated by the pose instead: Cinematic Tools hooks the same function later (MinHook), and the two chain.
-    if (config.liveLink && config.liveLinkCamera)
+    // Possess puts the camera behind the possessed character through it too.
+    if ((config.liveLink && config.liveLinkCamera) || config.possess)
         hook(LIVE_CAMERA::synchronize_with_engine, LIVE_CAMERA::h_synchronize_with_engine);
+
+    // Possess: each character's behaviour update, to give the possessed one its orders from the keys in place of its
+    // behaviour tree. They only pass through while nobody is possessed.
+    if (config.possess)
+    {
+        hook(POSSESS::behaviour_update, POSSESS::h_behaviour_update);
+        hook(POSSESS::tree_update, POSSESS::h_tree_update);
+    }
 
     // Live link script activity: the game's firing of outputs and reading of parameters, noted for the composites OpenCAGE
     // watches while it asks. They only pass through (after checking a flag) otherwise.
@@ -262,7 +272,7 @@ BOOL APIENTRY DllMain( HMODULE /*hModule*/,
         DetourUpdateThread(GetCurrentThread());
 
     	// Overlay hooks / initialisation code, adapted from Alias Isolation.
-        if (config.hotReload || config.unlockMouse || Config::AnyDebug() || config.liveLink)
+        if (config.hotReload || config.unlockMouse || Config::AnyDebug() || config.liveLink || config.possess)
         {
             const HMODULE hModule = GetModuleHandle(L"d3d11");
 

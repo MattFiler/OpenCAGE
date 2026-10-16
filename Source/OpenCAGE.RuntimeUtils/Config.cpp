@@ -73,6 +73,7 @@ namespace
 		settings.loadAllZones = flag("LoadAllZones", settings.loadAllZones);
 		settings.liveLink = flag("LiveLink", settings.liveLink);
 		settings.liveLinkCamera = flag("LiveLinkCamera", settings.liveLinkCamera);
+		settings.possess = flag("Possess", settings.possess);
 		const int port = GetPrivateProfileIntA(section, "LiveLinkPort", settings.liveLinkPort, ini.c_str());
 		if (port > 0 && port < 65536)
 			settings.liveLinkPort = port;
@@ -85,6 +86,8 @@ namespace
 		settings.hotReloadKey = ParseKey(key, settings.hotReloadKey);
 		GetPrivateProfileStringA(section, "UnlockMouseKey", "", key, sizeof(key), ini.c_str());
 		settings.unlockMouseKey = ParseKey(key, settings.unlockMouseKey);
+		GetPrivateProfileStringA(section, "PossessKey", "", key, sizeof(key), ini.c_str());
+		settings.possessKey = ParseKey(key, settings.possessKey);
 
 		return settings;
 	}

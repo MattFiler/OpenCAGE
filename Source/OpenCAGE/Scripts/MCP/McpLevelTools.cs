@@ -229,6 +229,7 @@ namespace OpenCAGE.MCP
             new KeyOption() { Arg = "hot_reload_key", Helper = "hot_reload", Key = Settings.ScriptingHelpersHotReloadKey, What = "hot reload key", Current = global::OpenCAGE.LaunchGame.HotReloadKey },
             new KeyOption() { Arg = "unlock_mouse_key", Helper = "unlock_mouse", Key = Settings.ScriptingHelpersUnlockMouseKey, What = "unlock mouse key", Current = global::OpenCAGE.LaunchGame.UnlockMouseKey },
             new KeyOption() { Arg = "cap_fps_rate", Helper = "cap_fps", Key = Settings.ScriptingHelpersCapFpsRate, What = "Cap FPS frame rate (frames a second)", Current = global::OpenCAGE.LaunchGame.CapFpsRate, Options = global::OpenCAGE.LaunchGame.CapFpsRates },
+            new KeyOption() { Arg = "possess_key", Helper = "possess_characters", Key = Settings.PossessCharactersKey, What = "key that opens the Possess Characters menu", Current = global::OpenCAGE.LaunchGame.PossessKey },
         };
 
         private static readonly LaunchOption[] LaunchOptionList =
@@ -242,6 +243,7 @@ namespace OpenCAGE.MCP
             new LaunchOption() { Arg = "debug_position_marker", Key = Settings.ScriptingHelpersDebugPositionMarker, Kind = KindHelper, Description = "Scripting helper: DebugPositionMarker entities draw axes in the world." },
             new LaunchOption() { Arg = "live_link", Key = Settings.ScriptingHelpersLiveLink, Kind = KindHelper, Description = "Scripting helper (Enable Live Link): the game serves Live Link, and OpenCAGE connects to it by itself once the game is up (runtime_utils) - script edits reach the running level without a reload, entity methods can be called, and the viewport's camera and the game's can follow each other (set_viewport_view live_link_camera). Off while cinematic_tools is on." },
             new LaunchOption() { Arg = "cinematic_tools", Key = Settings.CinematicTools, Kind = KindHelper, Description = "Start Cinematic Tools (free camera) with the game. Steam only. They and the scripting helpers are one or the other: while this is on, every scripting helper (live_link among them) is off at launch, its setting kept." },
+            new LaunchOption() { Arg = "possess_characters", Key = Settings.PossessCharacters, Kind = KindHelper, Description = "Possess Characters (Steam only): in game, possess_key opens a menu of the characters the game runs (the one in view first, then the nearest); picking one takes control of it - W/A/S/D move it relative to the camera, Shift faster, Ctrl slower, C crouches, the mouse turns the camera behind it and its wheel moves the camera closer or further (1.5 to 10 m). A launch option, not a scripting helper: cinematic_tools does not switch it off." },
             new LaunchOption() { Arg = "no_ui", Key = Settings.HudDisabled, Kind = KindPatch, Patch = PatchManager.PatchNoUIFlag, Description = "AI.exe patch: no HUD or menus (clean screenshots)." },
             new LaunchOption() { Arg = "skip_frontend", Key = Settings.SkipFrontend, Kind = KindPatch, Patch = PatchManager.PatchSkipFrontendFlag, Description = "AI.exe patch: skip the frontend (returning to the menu then misbehaves)." },
             new LaunchOption() { Arg = "ui_memory_overlay", Key = Settings.UiEnabledUiPerf, Kind = KindPatch, Patch = PatchManager.PatchUIPerfFlag, Description = "AI.exe patch: the UI memory overlay." },
@@ -263,7 +265,7 @@ namespace OpenCAGE.MCP
             {
                 yield return McpSchema.Boolean(option.Arg, option.Description);
                 foreach (KeyOption key in KeyOptionList.Where(o => o.Helper == option.Arg))
-                    yield return McpSchema.String(key.Arg, "Scripting helper: the " + key.What + ".", options: key.Options);
+                    yield return McpSchema.String(key.Arg, (option.Arg == "possess_characters" ? "Possess Characters: the " : "Scripting helper: the ") + key.What + ".", options: key.Options);
             }
             yield return McpSchema.Boolean("reapply", "UI mods given: write their movie into UI.PAK even over one edited with edit_ui_pak. Without it a UI mod is written when its setting changes or UI.PAK holds the other stock movie (as after verifying the game files), and an edited movie is left alone.");
             yield return McpSchema.Boolean("close_game", "If the game is running, close it first so AI.exe / UI.PAK can be written (default false: refuse while it runs).");
@@ -334,7 +336,7 @@ namespace OpenCAGE.MCP
                 if (call.Has(option.Arg))
                     asked.Add(new KeyValuePair<LaunchOption, bool>(option, call.Bool(option.Arg)));
             //Cinematic Tools and the scripting helpers are one or the other: a call cannot turn both on
-            List<string> helpersOn = asked.Where(o => o.Key.Kind == KindHelper && o.Key.Arg != "cinematic_tools" && o.Value).Select(o => o.Key.Arg).ToList();
+            List<string> helpersOn = asked.Where(o => o.Key.Kind == KindHelper && o.Key.Arg != "cinematic_tools" && o.Key.Arg != "possess_characters" && o.Value).Select(o => o.Key.Arg).ToList();
             if (helpersOn.Count != 0 && asked.Any(o => o.Key.Arg == "cinematic_tools" && o.Value))
                 throw new McpError("cinematic_tools and the scripting helpers are one or the other, as both take over the game's camera: this call turns on cinematic_tools and " + string.Join(", ", helpersOn) + ". Turn on one or the other. Nothing was changed.");
             List<KeyValuePair<KeyOption, string>> keys = new List<KeyValuePair<KeyOption, string>>();
@@ -413,7 +415,7 @@ namespace OpenCAGE.MCP
             if (asked.Any(o => (o.Key.Arg == "cinematic_tools" && o.Value && !global::OpenCAGE.LaunchGame.CinematicToolsAvailable())))
                 call.Note("Cinematic Tools only work with the Steam build and a complete OpenCAGE install: the setting is kept, but launch_game will not start them here.");
             if ((helpers.Any(o => o.Key.Arg != "cinematic_tools" && o.Value) || keyChanges.Count != 0) && !global::OpenCAGE.LaunchGame.ScriptingHelpersAvailable())
-                call.Note("The scripting helpers only work with the Steam build (and OpenCAGE's runtimeutils folder): the settings are kept, but launch_game will not install them here.");
+                call.Note("The scripting helpers (and Possess Characters) only work with the Steam build (and OpenCAGE's runtimeutils folder): the settings are kept, but launch_game will not install them here.");
 
             JArray changes = new JArray();
             foreach (var change in helpers) changes.Add(new JObject() { ["option"] = change.Key.Arg, ["to"] = change.Value, ["writes"] = "OpenCAGE settings (applied at launch_game)" });

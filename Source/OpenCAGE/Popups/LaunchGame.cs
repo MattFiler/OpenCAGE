@@ -35,6 +35,7 @@ namespace OpenCAGE
         };
         internal const string DefaultHotReloadKey = "INSERT";
         internal const string DefaultUnlockMouseKey = "F4";
+        internal const string DefaultPossessKey = "F6";
 
         //Frame rates Cap FPS offers (the runtime utils ASI's CapFps)
         internal static readonly string[] CapFpsRates = new string[] { "30", "60", "90", "120" };
@@ -116,6 +117,9 @@ namespace OpenCAGE
             unlockMouseKey.SelectedIndex = Array.IndexOf(HelperKeys, UnlockMouseKey());
             capFpsRate.Items.AddRange(CapFpsRates);
             capFpsRate.SelectedIndex = Array.IndexOf(CapFpsRates, CapFpsRate());
+            enablePossess.Checked = SettingsManager.GetBool(Settings.PossessCharacters);
+            possessKey.Items.AddRange(HelperKeys);
+            possessKey.SelectedIndex = Array.IndexOf(HelperKeys, PossessKey());
             disableUI.Checked = SettingsManager.GetBool(Settings.HudDisabled);
             skipFrontend.Checked = SettingsManager.GetBool(Settings.SkipFrontend);
             enableUIPerf.Checked = SettingsManager.GetBool(Settings.UiEnabledUiPerf);
@@ -130,6 +134,9 @@ namespace OpenCAGE
             enableCinematicTools.Enabled = CinematicToolsAvailable();
             _scriptingHelpersAvailable = ScriptingHelpersAvailable();
             UpdateScriptingHelpersEnabled();
+            //Possess Characters runs in the runtime utils ASI too (Steam only), but is not one of the scripting helpers
+            enablePossess.Enabled = _scriptingHelpersAvailable;
+            possessKey.Enabled = _scriptingHelpersAvailable && enablePossess.Checked;
 
             //The picker never offers FRONTEND: leaving this unchecked is how the game starts at its menu
             loadToLevel.Checked = SettingsManager.GetBool(Settings.LaunchToLevel);
@@ -218,6 +225,12 @@ namespace OpenCAGE
                             break;
                         case Settings.ScriptingHelpersLiveLink:
                             enableLiveLink.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink);
+                            break;
+                        case Settings.PossessCharacters:
+                            enablePossess.Checked = SettingsManager.GetBool(Settings.PossessCharacters);
+                            break;
+                        case Settings.PossessCharactersKey:
+                            possessKey.SelectedIndex = Array.IndexOf(HelperKeys, PossessKey());
                             break;
                         case Settings.HudDisabled:
                             disableUI.Checked = SettingsManager.GetBool(Settings.HudDisabled);
@@ -606,11 +619,26 @@ namespace OpenCAGE
             SettingsManager.SetBool(Settings.ScriptingHelpersLiveLink, enableLiveLink.Checked);
         }
 
+        /* Enable/disable Possess Characters: its key opens an in-game menu to take control of a character */
+        private void enablePossess_CheckedChanged(object sender, EventArgs e)
+        {
+            possessKey.Enabled = _scriptingHelpersAvailable && enablePossess.Checked;
+            if (_applyingExternalSettings) return;
+            SettingsManager.SetBool(Settings.PossessCharacters, enablePossess.Checked);
+        }
+
+        /* Choose the key that opens the Possess Characters menu */
+        private void possessKey_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_applyingExternalSettings || possessKey.SelectedIndex < 0) return;
+            SettingsManager.SetString(Settings.PossessCharactersKey, HelperKeys[possessKey.SelectedIndex]);
+        }
+
         /* Whether the runtime utils ASI is needed at all, for a launch that starts Cinematic Tools or not: for their zone
-           streaming, or any scripting helper (Live Link among them, which the ASI serves) */
+           streaming, any scripting helper (Live Link among them, which the ASI serves), or Possess Characters */
         internal static bool RuntimeUtilsNeeded(bool cinematicTools)
         {
-            return ScriptingHelpersAvailable() && (cinematicTools || HelperSettings.Any(o => SettingsManager.GetBool(o)));
+            return ScriptingHelpersAvailable() && (cinematicTools || HelperSettings.Any(o => SettingsManager.GetBool(o)) || SettingsManager.GetBool(Settings.PossessCharacters));
         }
 
         /* Whether a launch from the Launch Game window (or launch_game) runs any scripting helper: none with Cinematic Tools */
@@ -619,9 +647,10 @@ namespace OpenCAGE
             return ScriptingHelpersAvailable() && HelperSettings.Any(o => HelperOn(o));
         }
 
-        /* The hot reload and unlock mouse keys as set, or their defaults when the setting names none of the keys offered */
+        /* The hot reload, unlock mouse and possess keys as set, or their defaults when the setting names none of the keys offered */
         internal static string HotReloadKey() => HelperKey(Settings.ScriptingHelpersHotReloadKey, DefaultHotReloadKey);
         internal static string UnlockMouseKey() => HelperKey(Settings.ScriptingHelpersUnlockMouseKey, DefaultUnlockMouseKey);
+        internal static string PossessKey() => HelperKey(Settings.PossessCharactersKey, DefaultPossessKey);
         private static string HelperKey(string setting, string fallback)
         {
             string key = SettingsManager.GetString(setting, fallback);
@@ -673,6 +702,9 @@ namespace OpenCAGE
                 "LiveLink=" + (HelperOn(Settings.ScriptingHelpersLiveLink, cinematicTools) ? "1" : "0"),
                 //Read by OpenCAGE only (CinematicToolsLaunched): this launch has Cinematic Tools, so no Live Link is offered to it
                 "CinematicTools=" + (cinematicTools ? "1" : "0"),
+                //Possess Characters (a launch option, not a scripting helper): its key opens the in-game menu of characters
+                "Possess=" + (SettingsManager.GetBool(Settings.PossessCharacters) ? "1" : "0"),
+                "PossessKey=" + PossessKey(),
             };
             File.WriteAllLines(Path.Combine(pathToAI, "OpenCAGE.RuntimeUtils.ini"), lines);
         }

@@ -25,7 +25,9 @@ struct IDXGISwapChain;
 	hook applies the pose (see LIVE_CAMERA.cpp). ANIMATION and ANIMATION_GET are answered at once the same way: the
 	request is stored, or the entity thread's last snapshot of what it did with it read, and the entity thread carries
 	it out every frame (see LIVE_ANIMATION.h). So are TRACE and TRACE_GET: what to trace is stored, or what the trace hooks
-	gathered handed over, and the hooks gather it on whichever threads run the level's scripts (see LIVE_TRACE.h).
+	gathered handed over, and the hooks gather it on whichever threads run the level's scripts (see LIVE_TRACE.h). And so
+	are POSSESS and POSSESS_GET: what to possess, or the stick, is stored, and the characters' behaviour updates act on it
+	(see POSSESS.h).
 */
 namespace LIVE_LINK_SERVER
 {
@@ -99,6 +101,18 @@ namespace LIVE_LINK_SERVER
 		                     //    from the root to the instance holding the entity), kinds 2-4 only: u32 source path[source path count].
 		                     //    Everything handed over is cleared. Not tracing: no records. Refused only when malformed or while another level
 		                     //    runs.
+		POSSESS = 13,        // u32 root (0: any), u8 mode: 0 let go of the possessed character; 1 take one: u32 length + UTF-8 text in its
+		                     //    name (any case; empty: the character nearest the middle of the view); 2 a stick in place of the keys: f32 x
+		                     //    (right), f32 y (forward), relative to the camera, each -1..1, i8 speed (0 slowest to 3; negative gives the
+		                     //    keys back), u32 ms it lasts (0: until another comes; it also ends with the connection); 3 crouch: u8 (1
+		                     //    crouched, 0 standing), as C does; 4 the menu: u8 (1 open, 0 closed), as the key does. Stored, and acted on
+		                     //    by the next frame (see POSSESS.h): POSSESS_GET says what came of it. Refused while Possess=0 in the ini.
+		POSSESS_GET = 14,    // u32 root (0: any) -> message "state=none|possessing|waiting\ncharacter=..\nposition=x,y,z\nfacing=..\nheading=..
+		                     //    \nspeed=..\nmoving=0|1\nstick=0|1\ncrouched=0|1\ncrouch_wanted=-1|0|1\nmenu=0|1\nframes=..\n(how its orders
+		                     //    are going: order_status, orders_given, layer_state, layer_next, walk, speed_now, stuck_for)\nlet_go=..
+		                     //    \ncharacters=NAME@x,y,z;...": as of the last frame
+		                     //    (yaws in radians, forward = (sin, 0, cos)); let_go says why the last character was let go of, or why none
+		                     //    was taken; characters lists those the game runs that aren't players.
 	};
 
 	void Start(uint16_t port);
