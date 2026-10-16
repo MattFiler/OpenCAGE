@@ -396,6 +396,17 @@ namespace OpenCAGE.DockPanels
         {
             ClearCompositeTreeSearch();
             SelectCompositeAndReloadList(Content.Level.Commands.EntryPoints[0]);
+
+            //The level is open once what this queued behind it has run (the panel docked and shown): from then on the tree is
+            //rebuilt every time it's asked for, as it always was
+            if (_openingLevel)
+                Application.Idle += EndOpeningLevel;
+        }
+
+        private void EndOpeningLevel(object sender, EventArgs e)
+        {
+            Application.Idle -= EndOpeningLevel;
+            _openingLevel = false;
         }
 
         public void EnsureCompositeTreePopulated()
@@ -407,7 +418,7 @@ namespace OpenCAGE.DockPanels
                 return;
 
             Content.EnsureEditorUtils();
-            if (_populatedSignature.HasValue && _populatedSignature.Value == PopulationSignature())
+            if (_openingLevel && _populatedSignature.HasValue && _populatedSignature.Value == PopulationSignature())
                 return;
             ReloadList();
         }
@@ -415,9 +426,11 @@ namespace OpenCAGE.DockPanels
         /* What the last full reload of the tree and list was made from: the level's composites (each one, and its name),
            any edit since, the search, and how the browser shows them. Being shown, docked, and the level's data being
            ready each ask for the tree as a level opens, several times over, and the level opening on its first composite
-           reloads again - each a rebuild of both, near a second apiece on the biggest levels. Only an ask that would show
-           something different does it again; everything that changes the list reloads it as it always has. */
+           reloads again - each a rebuild of both, near a second apiece on the biggest levels. While the level is opening,
+           only an ask that would show something different does it again. Once it's open every ask rebuilds, as it always
+           did: a rebuild also folds the tree back to the open composite and scrolls to it, which a tab shown again keeps. */
         private long? _populatedSignature = null;
+        private bool _openingLevel = true;
 
         private long PopulationSignature()
         {
@@ -492,6 +505,7 @@ namespace OpenCAGE.DockPanels
 
         private void CompositeBrowser_FormClosed(object sender, FormClosedEventArgs e)
         {
+            Application.Idle -= EndOpeningLevel;
             this.FormClosed -= CompositeBrowser_FormClosed;
             this.Load -= CompositeBrowser_Load;
             this.VisibleChanged -= CompositeBrowser_VisibleChanged;

@@ -906,9 +906,18 @@ namespace OpenCAGE.Modding
         /// <see cref="CaptureVanillaBaseline"/> for each of these files, then the state flushed. Most of a level's first save went
         /// on this, a file at a time: now up to <paramref name="readers"/> files are read at once (what the drive does well) and
         /// up to <paramref name="workers"/> hashed and compressed into the store at once, and what was captured is recorded in the
-        /// order given, as one at a time would have.
+        /// order given, as one at a time would have. The whole of it holds the installer's lock, as each file's capture did: nothing
+        /// else (a mod apply, a prune of the store) can change the state or the store part-way through it.
         /// </summary>
         public void CaptureVanillaBaselines(IList<string> normalisedPaths, int readers, int workers)
+        {
+            lock (_mutex)
+                CaptureVanillaBaselinesLocked(normalisedPaths, readers, workers);
+        }
+
+        //Holding _mutex: the workers read the state without it (nothing can write it meanwhile) - taking it from their threads
+        //would wait on this one forever
+        private void CaptureVanillaBaselinesLocked(IList<string> normalisedPaths, int readers, int workers)
         {
             byte[][] hashes = new byte[normalisedPaths.Count][];
             string[] stored = new string[normalisedPaths.Count];
@@ -919,22 +928,17 @@ namespace OpenCAGE.Modding
                     try
                     {
                         string normalisedPath = normalisedPaths[i];
-                        lock (_mutex)
-                        {
-                            ModState.BaselineRecord existing;
-                            if (_state.Baseline.TryGetValue(normalisedPath, out existing) && existing.IsVanilla)
-                                return;
-                        }
+                        ModState.BaselineRecord existing;
+                        if (_state.Baseline.TryGetValue(normalisedPath, out existing) && existing.IsVanilla)
+                            return;
 
-                        //The hash index and the store look after themselves: only the state needs the lock
+                        //The hash index and the store look after themselves; the manifest is only read
                         byte[] hash, content;
                         reading.Wait();
                         try
                         {
                             hash = _cache.Hash(normalisedPath);
-                            bool vanilla;
-                            lock (_mutex)
-                                vanilla = hash != null && _manifest.IsVanilla(normalisedPath, hash);
+                            bool vanilla = hash != null && _manifest.IsVanilla(normalisedPath, hash);
                             if (!vanilla)
                                 return;
                             content = File.ReadAllBytes(ModToolkit.Denormalise(_gameRoot, normalisedPath));
@@ -967,20 +971,17 @@ namespace OpenCAGE.Modding
                 }
             }
 
-            lock (_mutex)
+            for (int i = 0; i < normalisedPaths.Count; i++)
             {
-                for (int i = 0; i < normalisedPaths.Count; i++)
+                if (stored[i] == null)
+                    continue;
+                try
                 {
-                    if (stored[i] == null)
+                    if (!StoredAsShipped(normalisedPaths[i], hashes[i], stored[i]))
                         continue;
-                    try
-                    {
-                        if (!StoredAsShipped(normalisedPaths[i], hashes[i], stored[i]))
-                            continue;
-                        _state.Baseline[normalisedPaths[i]] = new ModState.BaselineRecord() { Sha256Hex = stored[i], IsVanilla = true };
-                    }
-                    catch { }
+                    _state.Baseline[normalisedPaths[i]] = new ModState.BaselineRecord() { Sha256Hex = stored[i], IsVanilla = true };
                 }
+                catch { }
             }
             SaveState();
         }

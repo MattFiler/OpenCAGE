@@ -178,7 +178,7 @@ namespace OpenCAGE.UnityConnection
             if (skipIfUnchanged && Current != null && _lastSentTable != null && _calculatedFor == content && _calculatedAtEdit == DirtyTracker.Modifications)
                 return;
 
-            CompileShownFlowgraphs();
+            bool compiled = CompileShownFlowgraphs();
 
             List<SyncedZone> zones;
             try
@@ -191,7 +191,9 @@ namespace OpenCAGE.UnityConnection
                 return;
             }
 
-            _calculatedFor = content;
+            //Only a table worked out from compiled pages stands for the level as it is: one read while they couldn't be (mid-undo,
+            //a save holding the viewer) is worked out again next time, as it always was
+            _calculatedFor = compiled ? content : null;
             _calculatedAtEdit = DirtyTracker.Modifications;
 
             string table = JsonConvert.SerializeObject(zones);
@@ -215,19 +217,21 @@ namespace OpenCAGE.UnityConnection
            sequence on screen was not in the table until the level was saved. So the composite on screen is compiled first,
            as Live Link and the MCP tools do before they read a composite's scripting. Compiling is on the UI thread only, and
            not mid-undo; a table worked out off it (a viewer connecting) uses the links as they stand. */
-        private static void CompileShownFlowgraphs()
+        //True when the links are all the pages hold: the composite on screen was compiled from its pages, or none is on screen
+        private static bool CompileShownFlowgraphs()
         {
             CommandsEditor editor = Singleton.Editor;
             if (editor == null || editor.IsDisposed || editor.InvokeRequired || ViewerInboundDispatcher.IsHeldForSave)
-                return;
+                return false;
 
             CATHODE.Scripting.Composite shown = editor.CompositeDisplay?.Composite;
             if (shown == null)
-                return;
+                return true;
 
             RuntimeUtilsConnection.LiveLink.CompileIfShown(shown);
             //A selected Zone's contents may have been worked out from the page's old links
             DropSelectionTable();
+            return !Undo.UndoStack.Current.Blocked; //which CompileIfShown doesn't compile under
         }
 
         private static void SetCurrent(List<SyncedZone> zones)
