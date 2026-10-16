@@ -834,7 +834,7 @@ namespace OpenCAGE.MCP
                 GC.WaitForPendingFinalizers();
             }
 
-            McpEditor.UI(() => Steam.UnlockAchievement(Steam.Achievements.NEW_LEVEL_CREATED));
+            McpEditor.UI(() => Steam.CountTowards(Steam.Achievements.TEN_LEVELS_CREATED));
             if (!listed)
                 call.Note("The game's level list (DATA/PACKAGES/MAIN.PKG) could not be updated to include " + levelId + "; launch_game updates it before starting the game.");
             //Its subtitles, barks and the imported composites' mission strings, as Create Level lists them: FRONTEND's block is
@@ -989,7 +989,7 @@ namespace OpenCAGE.MCP
                 throw new McpError(McpErrorCodes.Failed, "Copying " + source + " failed (" + e.Message + "); the part-made copy was removed" + (Directory.Exists(to) ? " as far as it could be: delete " + Path.GetFullPath(to) + " by hand" : "") + ".");
             }
             result["seconds"] = Math.Round(timer.Elapsed.TotalSeconds, 1);
-            McpEditor.UI(() => Steam.UnlockAchievement(Steam.Achievements.NEW_LEVEL_CREATED));
+            McpEditor.UI(() => Steam.CountTowards(Steam.Achievements.TEN_LEVELS_CREATED));
 
             //Its subtitles and objectives: the source's block of LEVEL_TEXT_DATABASES.XML, under the new name
             if (textDatabases.Count != 0)

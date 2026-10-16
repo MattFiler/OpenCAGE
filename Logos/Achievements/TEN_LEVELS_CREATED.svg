@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <clipPath id="panel"><rect x="39" y="39" width="178" height="178" rx="10"/></clipPath>
+    <pattern id="hazard" width="34" height="34" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="17" height="34" fill="#161616"/>
+    </pattern>
+  </defs>
+  <rect width="256" height="256" rx="26" fill="#F2B705"/><rect width="256" height="256" rx="26" fill="url(#hazard)"/>
+  <rect x="26" y="26" width="204" height="204" rx="16" fill="#FFFFFF"/>
+  <rect x="39" y="39" width="178" height="178" rx="10" fill="#3E6B2A"/>
+  <g clip-path="url(#panel)" fill="#FFFFFF">
+      <path fill-rule="evenodd" d="M54 80 H176 V202 H54 Z M66 92 V190 H164 V92 Z"/>
+      <rect x="108" y="92" width="12" height="44"/>
+      <rect x="108" y="152" width="12" height="38"/>
+      <rect x="120" y="136" width="44" height="12"/>
+      <rect x="66" y="136" width="20" height="12"/>
+      <path d="M163 46 h20 v24 h24 v20 h-24 v24 h-20 v-24 h-24 v-20 h24 z" stroke="#3E6B2A" stroke-width="8" paint-order="stroke"/>
+  </g>
+  <g>
+    <rect x="92" y="190" width="72" height="44" rx="6" fill="#161616" stroke="#FFFFFF" stroke-width="5"/>
+    <g fill="#F2B705">
+      <path d="M106 200 h12 v24 h-12 v-15 l-5 3 v-8 z"/>
+      <path fill-rule="evenodd" d="M132 200 h20 a6 6 0 0 1 6 6 v12 a6 6 0 0 1 -6 6 h-20 a6 6 0 0 1 -6 -6 v-12 a6 6 0 0 1 6 -6 z M137 207 v10 h10 v-10 z"/>
+    </g>
+  </g>
+</svg>

@@ -1146,6 +1146,7 @@ namespace OpenCAGE
             ONE_HUNDRED_COMPOSITES, // User has created 100 new composites
             TEN_MODS_INSTALLED, // User has installed 10 mods through the Mod Manager
             TEN_MODS_CREATED, // User has exported 10 mods of their own
+            TEN_LEVELS_CREATED, // User has created 10 new levels
         }
 
         //The achievements for doing something a number of times: the achievement for doing it once, the setting the count is kept in, and how many it takes
@@ -1156,6 +1157,7 @@ namespace OpenCAGE
             { Achievements.ONE_HUNDRED_COMPOSITES, (Achievements.CREATE_A_NEW_COMPOSITE, Settings.CompositeCounter, 100) },
             { Achievements.TEN_MODS_INSTALLED, (Achievements.MOD_INSTALLED, Settings.ModInstalledCounter, 10) },
             { Achievements.TEN_MODS_CREATED, (Achievements.MOD_CREATED, Settings.ModCreatedCounter, 10) },
+            { Achievements.TEN_LEVELS_CREATED, (Achievements.NEW_LEVEL_CREATED, Settings.LevelCounter, 10) },
         };
 
         /// <summary>

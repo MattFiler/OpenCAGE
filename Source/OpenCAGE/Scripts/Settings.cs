@@ -90,6 +90,7 @@ namespace OpenCAGE
         public const string CompositeCounter = "CS_CompositeCounter";
         public const string ModInstalledCounter = "CS_ModInstalledCounter";
         public const string ModCreatedCounter = "CS_ModCreatedCounter";
+        public const string LevelCounter = "CS_LevelCounter";
         public const string DidSteamReviewPrompt = "DidSteamReviewPrompt";
         public const string ResetRenderFilters = "ResetRenderFilters";
         public const string AlwaysFullyRebuildRadiosity = "AlwaysFullyRebuildRadiosity";
