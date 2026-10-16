@@ -782,7 +782,14 @@ namespace OpenCAGE.Popups.UserControls
            on 4,500 rows: each row leaving a group is a native item update. */
         private void ClearGroupsAndItems()
         {
+            /* The rows go with group view off: the list ends the same (its groups stay, shown again as they were), but a row
+               leaving a group that's showing makes the framework search that group's rows for it - most of emptying a
+               composite of thousands, done on every composite opened */
+            bool showGroups = composite_content.ShowGroups;
+            if (showGroups && composite_content.Items.Count != 0)
+                composite_content.ShowGroups = false;
             composite_content.Items.Clear();
+            composite_content.ShowGroups = showGroups;
             for (int g = 0; g < composite_content.Groups.Count; g++)
                 composite_content.Groups[g].Items.Clear();
             for (int g = 0; g < _orderedByGroup.Length; g++)

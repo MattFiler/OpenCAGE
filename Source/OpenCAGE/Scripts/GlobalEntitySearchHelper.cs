@@ -46,34 +46,25 @@ namespace OpenCAGE.Scripts
             bool showId = SettingsManager.GetBool(Settings.ShowShortGuids);
             entityComposites.Clear();
 
-            entityList.BeginUpdate();
-            entityList.Items.Clear();
-            entityList.Groups.Clear();
+            ResultRows rows = new ResultRows(entityList);
 
             string normalizedName = name.ToUpper().Replace(" ", "");
+            string idSearch = name.Replace("-", "");
             foreach (Composite comp in GetCompositesInScope(content, scope))
             {
                 List<Entity> ents = comp.GetEntities().FindAll(o =>
                     content.Level.Commands.Utils.GetEntityName(comp, o).ToUpper().Replace(" ", "").Contains(normalizedName)
-                    || (showId && o.shortGUID.ToByteString().Replace("-", "").Contains(name.Replace("-", ""))));
+                    || (showId && o.shortGUID.ToByteString().Replace("-", "").Contains(idSearch)));
 
                 if (ents.Count == 0)
                     continue;
 
-                entityList.Groups.Add(new ListViewGroup() { Header = comp.name });
+                rows.StartGroup(comp);
                 foreach (Entity ent in ents)
-                {
-                    ListViewItem item = (ListViewItem)content.GenerateListViewItem(ent, comp).Clone();
-                    item.Tag = new SearchResultTag(ent, comp);
-                    item.Group = entityList.Groups[entityList.Groups.Count - 1];
-                    item.ImageIndex = EditorUtils.GetIndexesForListViewItem(ent, comp, content.Level.Commands).Item1;
-                    entityList.Items.Add(item);
-                    entityComposites.Add(ent, comp);
-                }
+                    rows.Add(content, ent, comp, entityComposites);
             }
 
-            entityList.EndUpdate();
-            return entityList.Items.Count;
+            return rows.Fill();
         }
 
         public static int SearchByFunction(LevelContent content, ShortGuid functionGuid, ListView entityList, Dictionary<Entity, Composite> entityComposites)
@@ -96,9 +87,7 @@ namespace OpenCAGE.Scripts
         {
             entityComposites.Clear();
 
-            entityList.BeginUpdate();
-            entityList.Items.Clear();
-            entityList.Groups.Clear();
+            ResultRows rows = new ResultRows(entityList);
 
             foreach (Composite comp in GetCompositesInScope(content, scope))
             {
@@ -109,20 +98,12 @@ namespace OpenCAGE.Scripts
                 if (funcs.Count == 0)
                     continue;
 
-                entityList.Groups.Add(new ListViewGroup() { Header = comp.name });
+                rows.StartGroup(comp);
                 foreach (FunctionEntity ent in funcs)
-                {
-                    ListViewItem item = (ListViewItem)content.GenerateListViewItem(ent, comp).Clone();
-                    item.Tag = new SearchResultTag(ent, comp);
-                    item.Group = entityList.Groups[entityList.Groups.Count - 1];
-                    item.ImageIndex = EditorUtils.GetIndexesForListViewItem(ent, comp, content.Level.Commands).Item1;
-                    entityList.Items.Add(item);
-                    entityComposites.Add(ent, comp);
-                }
+                    rows.Add(content, ent, comp, entityComposites);
             }
 
-            entityList.EndUpdate();
-            return entityList.Items.Count;
+            return rows.Fill();
         }
 
         public static int SearchByComposite(LevelContent content, ShortGuid compositeGuid, ListView entityList, Dictionary<Entity, Composite> entityComposites)
@@ -134,9 +115,7 @@ namespace OpenCAGE.Scripts
         {
             entityComposites.Clear();
 
-            entityList.BeginUpdate();
-            entityList.Items.Clear();
-            entityList.Groups.Clear();
+            ResultRows rows = new ResultRows(entityList);
 
             foreach (Composite comp in GetCompositesInScope(content, scope))
             {
@@ -144,20 +123,67 @@ namespace OpenCAGE.Scripts
                 if (funcs.Count == 0)
                     continue;
 
-                entityList.Groups.Add(new ListViewGroup() { Header = comp.name });
+                rows.StartGroup(comp);
                 foreach (FunctionEntity ent in funcs)
-                {
-                    ListViewItem item = (ListViewItem)content.GenerateListViewItem(ent, comp).Clone();
-                    item.Tag = new SearchResultTag(ent, comp);
-                    item.Group = entityList.Groups[entityList.Groups.Count - 1];
-                    item.ImageIndex = EditorUtils.GetIndexesForListViewItem(ent, comp, content.Level.Commands).Item1;
-                    entityList.Items.Add(item);
-                    entityComposites.Add(ent, comp);
-                }
+                    rows.Add(content, ent, comp, entityComposites);
             }
 
-            entityList.EndUpdate();
-            return entityList.Items.Count;
+            return rows.Fill();
+        }
+
+        /* A search's rows, made before any go in: then the groups, and all the rows, are each added to the list in one go.
+           Added a group and its rows at a time, a few thousand results took longer to fill, and twice as long again to
+           empty for the next search - which a scope following the open composite runs for every composite opened. */
+        private sealed class ResultRows
+        {
+            private readonly ListView _list;
+            private readonly List<ListViewGroup> _groups = new List<ListViewGroup>();
+            private readonly List<ListViewItem> _items = new List<ListViewItem>();
+            private ListViewGroup _group;
+
+            public ResultRows(ListView list)
+            {
+                _list = list;
+                _list.BeginUpdate();
+                ClearResultList(_list);
+            }
+
+            public void StartGroup(Composite comp)
+            {
+                _group = new ListViewGroup() { Header = comp.name };
+                _groups.Add(_group);
+            }
+
+            public void Add(LevelContent content, Entity ent, Composite comp, Dictionary<Entity, Composite> entityComposites)
+            {
+                ListViewItem item = (ListViewItem)content.GenerateListViewItem(ent, comp).Clone();
+                item.Tag = new SearchResultTag(ent, comp);
+                item.Group = _group;
+                item.ImageIndex = EditorUtils.GetIndexesForListViewItem(ent, comp, content.Level.Commands).Item1;
+                _items.Add(item);
+                entityComposites.Add(ent, comp);
+            }
+
+            public int Fill()
+            {
+                _list.Groups.AddRange(_groups.ToArray());
+                _list.Items.AddRange(_items.ToArray());
+                _list.EndUpdate();
+                return _list.Items.Count;
+            }
+        }
+
+        /* Empties a list of results and their groups. Group view is off while the rows go: the list ends the same either
+           way (the framework turns the native group view off once the last group has gone), but thousands of rows are
+           deleted in about half the time when the native list isn't keeping its groups up to date as each one goes. */
+        public static void ClearResultList(ListView entityList)
+        {
+            bool showGroups = entityList.ShowGroups;
+            if (showGroups && entityList.Items.Count != 0)
+                entityList.ShowGroups = false;
+            entityList.Items.Clear();
+            entityList.Groups.Clear();
+            entityList.ShowGroups = showGroups;
         }
 
         public static void JumpToSelectedEntity(ListView entityList, Dictionary<Entity, Composite> entityComposites)

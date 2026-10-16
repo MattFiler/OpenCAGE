@@ -849,12 +849,19 @@ namespace OpenCAGE
                     entities[i].Item2.UnlinkedPins);
             }
 
-            //Populate connections
+            //Populate connections - each to the first node with its node id and entity, found by those rather than by walking
+            //every node on the page for every link
+            Dictionary<(int, ShortGuid), STNode> nodesById = new Dictionary<(int, ShortGuid), STNode>(nodes.Length);
+            foreach (STNode node in nodes)
+            {
+                if (node.Entity != null && !nodesById.ContainsKey((node.NodeID, node.ShortGUID)))
+                    nodesById.Add((node.NodeID, node.ShortGUID), node);
+            }
             for (int i = 0; i < entities.Count; i++)
             {
                 foreach (FlowgraphMeta.NodeMeta.ConnectionMeta connectionMeta in entities[i].Item2.ConnectionsOut)
                 {
-                    STNode connectedNode = nodes.FirstOrDefault(o => o.NodeID == connectionMeta.ConnectedNodeID && o.ShortGUID == connectionMeta.ConnectedEntityGUID);
+                    nodesById.TryGetValue((connectionMeta.ConnectedNodeID, connectionMeta.ConnectedEntityGUID), out STNode connectedNode);
 
                     EntityConnector connector = nodes[i].Entity.childLinks.FirstOrDefault(o => o.thisParamID == connectionMeta.ParameterGUID && o.linkedParamID == connectionMeta.ConnectedParameterGUID && o.linkedEntityID == connectedNode?.ShortGUID);
                     if (!connector.ID.IsInvalid) //NOTE: This condition should never fail if the layout has been checked by FlowgraphLayoutManager!

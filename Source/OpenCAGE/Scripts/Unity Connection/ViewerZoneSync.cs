@@ -73,6 +73,7 @@ namespace OpenCAGE.UnityConnection
             {
                 _coalesce?.Stop();
                 _lastSentTable = null;
+                _calculatedFor = null;
                 SetCurrent(null);
                 DropSelectionTable();
             };
@@ -155,6 +156,12 @@ namespace OpenCAGE.UnityConnection
            may have nothing. */
         private static string _lastSentTable;
 
+        /* And what that table was worked out from: the level, as it stood at that count of edits (every edit ends in
+           DirtyTracker - see Initialise). A selection with nothing edited since would work the level's zones out again
+           (around 200 ms on the larger levels) and serialise them, only to find the table the same: it isn't redone. */
+        private static LevelContent _calculatedFor;
+        private static int _calculatedAtEdit;
+
         private static void SendNow(bool skipIfUnchanged)
         {
             if (!Showing)
@@ -166,6 +173,9 @@ namespace OpenCAGE.UnityConnection
 
             LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
             if (content == null || !content.IsLevelDataLoaded)
+                return;
+
+            if (skipIfUnchanged && Current != null && _lastSentTable != null && _calculatedFor == content && _calculatedAtEdit == DirtyTracker.Modifications)
                 return;
 
             CompileShownFlowgraphs();
@@ -180,6 +190,9 @@ namespace OpenCAGE.UnityConnection
                 Debug.Log("Websocket", "Failed to calculate zones for the viewport: " + ex.Message);
                 return;
             }
+
+            _calculatedFor = content;
+            _calculatedAtEdit = DirtyTracker.Modifications;
 
             string table = JsonConvert.SerializeObject(zones);
             if (skipIfUnchanged && Current != null && table == _lastSentTable)

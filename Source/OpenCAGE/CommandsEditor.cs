@@ -1222,8 +1222,17 @@ namespace OpenCAGE
         {
             EnsureDockPanelsCreated();
 
-            // Always rebuild the fixed dock structure, then restore saved splitter ratios.
-            ApplyDefaultDockLayout();
+            // Always rebuild the fixed dock structure, then restore saved splitter ratios. Laid out once, when it's all in
+            // place: each panel hidden and shown again was otherwise a layout of the whole dock, a good part of a second.
+            dockPanel.SuspendLayout(true);
+            try
+            {
+                ApplyDefaultDockLayout();
+            }
+            finally
+            {
+                dockPanel.ResumeLayout(true, true);
+            }
 
             _compositeDisplay.Show(dockPanel, DockState.Document);
             _compositeDisplay.EnsureInnerDockLayoutRestored();

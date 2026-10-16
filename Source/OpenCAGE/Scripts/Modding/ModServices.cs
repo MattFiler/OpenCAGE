@@ -174,13 +174,16 @@ namespace OpenCAGE.Modding
                 string levelDir = Path.Combine(_gameRoot, "DATA", "ENV", levelName.Replace('/', Path.DirectorySeparatorChar));
                 if (!Directory.Exists(levelDir))
                     return;
+                List<string> files = new List<string>();
                 foreach (string file in Directory.GetFiles(levelDir, "*", SearchOption.AllDirectories))
                 {
                     string normalised = ModToolkit.NormaliseFull(_gameRoot, file);
                     if (normalised != null && !ModToolkit.IsExcluded(normalised))
-                        _installer.CaptureVanillaBaseline(normalised, false);
+                        files.Add(normalised);
                 }
-                _installer.SaveState();
+                //Read as many at once as the drive reads well (one on a spinning disk), compressed four at once at most: each is
+                //held whole to be stored, and a level's biggest files are a good part of a gigabyte between them
+                _installer.CaptureVanillaBaselines(files, ModToolkit.ReadersFor(_gameRoot), Math.Min(4, Environment.ProcessorCount));
             }
             catch { }
 #endif

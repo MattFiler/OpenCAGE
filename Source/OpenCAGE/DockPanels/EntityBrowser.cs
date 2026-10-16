@@ -70,7 +70,6 @@ namespace OpenCAGE.DockPanels
 
             Load += EntityBrowser_Load;
             SizeChanged += EntityBrowser_SizeChanged;
-            Singleton.OnLevelLoaded += OnLevelLoaded;
             EntityPaletteRecent.Changed += RefreshLastUsedList;
             FormClosed += EntityBrowser_FormClosed;
 
@@ -101,7 +100,6 @@ namespace OpenCAGE.DockPanels
 
         private void EntityBrowser_FormClosed(object sender, FormClosedEventArgs e)
         {
-            Singleton.OnLevelLoaded -= OnLevelLoaded;
             EntityPaletteRecent.Changed -= RefreshLastUsedList;
             if (_functionTypeList?.FunctionTree != null)
             {
@@ -115,14 +113,7 @@ namespace OpenCAGE.DockPanels
             }
         }
 
-        private void OnLevelLoaded(LevelContent content)
-        {
-            if (IsDisposed)
-                return;
-
-            BeginInvoke(new Action(InitializeFromLevel));
-        }
-
+        //Called by the editor for each level, as it sets up the level's panels
         public void InitializeFromLevel()
         {
             if (Singleton.Editor?.CompositeBrowser?.Content != null)

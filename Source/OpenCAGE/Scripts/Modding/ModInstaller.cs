@@ -902,6 +902,89 @@ namespace OpenCAGE.Modding
             catch { }
         }
 
+        /// <summary>
+        /// <see cref="CaptureVanillaBaseline"/> for each of these files, then the state flushed. Most of a level's first save went
+        /// on this, a file at a time: now up to <paramref name="readers"/> files are read at once (what the drive does well) and
+        /// up to <paramref name="workers"/> hashed and compressed into the store at once, and what was captured is recorded in the
+        /// order given, as one at a time would have.
+        /// </summary>
+        public void CaptureVanillaBaselines(IList<string> normalisedPaths, int readers, int workers)
+        {
+            byte[][] hashes = new byte[normalisedPaths.Count][];
+            string[] stored = new string[normalisedPaths.Count];
+            using (System.Threading.SemaphoreSlim reading = new System.Threading.SemaphoreSlim(Math.Max(1, readers)))
+            {
+                Action<int> capture = i =>
+                {
+                    try
+                    {
+                        string normalisedPath = normalisedPaths[i];
+                        lock (_mutex)
+                        {
+                            ModState.BaselineRecord existing;
+                            if (_state.Baseline.TryGetValue(normalisedPath, out existing) && existing.IsVanilla)
+                                return;
+                        }
+
+                        //The hash index and the store look after themselves: only the state needs the lock
+                        byte[] hash, content;
+                        reading.Wait();
+                        try
+                        {
+                            hash = _cache.Hash(normalisedPath);
+                            bool vanilla;
+                            lock (_mutex)
+                                vanilla = hash != null && _manifest.IsVanilla(normalisedPath, hash);
+                            if (!vanilla)
+                                return;
+                            content = File.ReadAllBytes(ModToolkit.Denormalise(_gameRoot, normalisedPath));
+                        }
+                        finally
+                        {
+                            reading.Release();
+                        }
+                        stored[i] = _store.Store(content);
+                        hashes[i] = hash;
+                    }
+                    catch { }
+                };
+                if (workers <= 1)
+                {
+                    for (int i = 0; i < normalisedPaths.Count; i++)
+                        capture(i);
+                }
+                else
+                {
+                    //Biggest first, handed out one at a time: a level's textures are most of its bytes, and left to the end the
+                    //one file compressed alone while the rest waited; started first, everything else is done alongside it
+                    int[] order = Enumerable.Range(0, normalisedPaths.Count).OrderByDescending(i =>
+                    {
+                        try { return new FileInfo(ModToolkit.Denormalise(_gameRoot, normalisedPaths[i])).Length; }
+                        catch { return 0L; }
+                    }).ToArray();
+                    System.Threading.Tasks.Parallel.ForEach(System.Collections.Concurrent.Partitioner.Create(order, System.Collections.Concurrent.EnumerablePartitionerOptions.NoBuffering),
+                        new System.Threading.Tasks.ParallelOptions() { MaxDegreeOfParallelism = workers }, capture);
+                }
+            }
+
+            lock (_mutex)
+            {
+                for (int i = 0; i < normalisedPaths.Count; i++)
+                {
+                    if (stored[i] == null)
+                        continue;
+                    try
+                    {
+                        if (!StoredAsShipped(normalisedPaths[i], hashes[i], stored[i]))
+                            continue;
+                        _state.Baseline[normalisedPaths[i]] = new ModState.BaselineRecord() { Sha256Hex = stored[i], IsVanilla = true };
+                    }
+                    catch { }
+                }
+            }
+            SaveState();
+        }
+
         /// <summary>Whether this file's original is kept already, so <see cref="CaptureVanillaBaseline"/> has nothing to do.</summary>
         public bool HasVanillaBaseline(string normalisedPath)
         {

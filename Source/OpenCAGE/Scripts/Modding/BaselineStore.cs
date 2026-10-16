@@ -38,12 +38,18 @@ namespace OpenCAGE.Modding
             if (!File.Exists(path))
             {
                 Directory.CreateDirectory(_dir);
-                string temp = path + ".tmp";
+                //A temp of its own: the same bytes can be being stored twice at once (a level's files are captured several at a
+                //time), and whichever lands second finds the first's - the same bytes, the same name - and leaves it be
+                string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
                 using (FileStream file = File.Create(temp))
                 using (GZipStream gzip = new GZipStream(file, CompressionMode.Compress))
                     gzip.Write(content, 0, content.Length);
                 if (File.Exists(path)) File.Delete(temp);
-                else File.Move(temp, path);
+                else
+                {
+                    try { File.Move(temp, path); }
+                    catch (IOException) when (File.Exists(path)) { File.Delete(temp); }
+                }
             }
             return shaHex;
         }

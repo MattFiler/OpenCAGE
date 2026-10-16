@@ -407,7 +407,43 @@ namespace OpenCAGE.DockPanels
                 return;
 
             Content.EnsureEditorUtils();
+            if (_populatedSignature.HasValue && _populatedSignature.Value == PopulationSignature())
+                return;
             ReloadList();
+        }
+
+        /* What the last full reload of the tree and list was made from: the level's composites (each one, and its name),
+           any edit since, the search, and how the browser shows them. Being shown, docked, and the level's data being
+           ready each ask for the tree as a level opens, several times over, and the level opening on its first composite
+           reloads again - each a rebuild of both, near a second apiece on the biggest levels. Only an ask that would show
+           something different does it again; everything that changes the list reloads it as it always has. */
+        private long? _populatedSignature = null;
+
+        private long PopulationSignature()
+        {
+            unchecked
+            {
+                long hash = 17;
+                List<Composite> entries = Content.Level.Commands.Entries;
+                hash = hash * 31 + System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(Content);
+                hash = hash * 31 + entries.Count;
+                foreach (Composite composite in entries)
+                {
+                    hash = hash * 31 + System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(composite);
+                    hash = hash * 31 + (composite?.name?.GetHashCode() ?? 0);
+                }
+                hash = hash * 31 + System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(Content.Level.Commands.EntryPoints[0]);
+                hash = hash * 31 + DirtyTracker.Modifications;
+                hash = hash * 31 + _currentSearch.GetHashCode();
+                hash = hash * 31 + (int)_mode;
+                hash = hash * 31 + (_currentDisplayFolderPath?.GetHashCode() ?? 0);
+                hash = hash * 31 + (SettingsManager.GetBool(Settings.CompNameOnlyOpt) ? 1 : 2);
+                hash = hash * 31 + (int)listView1.View;
+                hash = hash * 31 + (CompositePreviewImages.TreesEnabled ? 1 : 2);
+                hash = hash * 31 + treeView1.Nodes.Count;
+                hash = hash * 31 + listView1.Items.Count;
+                return hash;
+            }
         }
 
         public void FocusPanel()
@@ -539,7 +575,7 @@ namespace OpenCAGE.DockPanels
         {
             Content.EnsureEditorUtils();
             Content.Level.Commands.Entries = Content.Level.Commands.Entries.OrderBy(o => o.name).ToList();
-            ReloadList();
+            EnsureCompositeTreePopulated(); //opening it selects it in the tree and list
             LoadComposite(composite, false, path);
         }
 
@@ -612,6 +648,9 @@ namespace OpenCAGE.DockPanels
 
             if (!_suppressSelectionRestore)
                 RestoreSelectionForLoadedComposite(updateListViewToo);
+
+            if (updateListViewToo)
+                _populatedSignature = PopulationSignature();
         }
 
         /* The folder being browsed: its subfolders, and the composites directly in it */

@@ -912,15 +912,17 @@ namespace OpenCAGE
 #if DEBUG
             HashSet<ShortGuid> mappedComps = new HashSet<ShortGuid>();
 #endif
+            HashSet<ShortGuid> levelComposites = new HashSet<ShortGuid>(_commands.Entries.Select(o => o.shortGUID));
+            HashSet<ShortGuid> laidOutComposites = new HashSet<ShortGuid>(_userDefinedLayouts.flowgraphs.Select(o => o.CompositeGUID));
             for (int i = 0; i < _preDefinedLayouts.flowgraphs.Count; i++)
             {
                 if (!_preDefinedLayouts.flowgraphs[i].AlwaysUse && (!hasLevelID || !_preDefinedLayouts.flowgraphs[i].SupportedLevels.HasFlag(levelID)))
                     continue;
-                if (_commands.Entries.FirstOrDefault(o => o.shortGUID == _preDefinedLayouts.flowgraphs[i].CompositeGUID) == null)
+                if (!levelComposites.Contains(_preDefinedLayouts.flowgraphs[i].CompositeGUID))
                     continue;
-                if (_userDefinedLayouts.flowgraphs.FirstOrDefault(o => o.CompositeGUID == _preDefinedLayouts.flowgraphs[i].CompositeGUID) != null)
+                if (laidOutComposites.Contains(_preDefinedLayouts.flowgraphs[i].CompositeGUID))
                     continue;
-                newFlowgraphs.Add(_preDefinedLayouts.flowgraphs[i].Copy());
+                newFlowgraphs.Add(_preDefinedLayouts.flowgraphs[i].Clone());
 #if DEBUG
                 mappedComps.Add(_preDefinedLayouts.flowgraphs[i].CompositeGUID);
 #endif

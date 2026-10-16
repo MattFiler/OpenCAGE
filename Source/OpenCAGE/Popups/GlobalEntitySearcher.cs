@@ -196,8 +196,7 @@ namespace OpenCAGE
             _entityComposites.Clear();
 
             entityList.BeginUpdate();
-            entityList.Items.Clear();
-            entityList.Groups.Clear();
+            GlobalEntitySearchHelper.ClearResultList(entityList);
             foreach (Composite comp in Content.Level.Commands.Entries)
             {
                 List<FunctionEntity> funcs = comp.functions.FindAll(o => o.function == compositeGuid);

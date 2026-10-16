@@ -16,6 +16,13 @@ namespace OpenCAGE
         private static bool _isDirty = false;
         public static bool IsDirty => _isDirty;
 
+        /// <summary>
+        /// How many times level data has been marked as changed since the editor started, saves and loads included. Equal
+        /// at two points means nothing was edited between them, for what is only rebuilt when something could differ.
+        /// </summary>
+        public static int Modifications => _modifications;
+        private static int _modifications = 0;
+
         public static Action OnDirty;
         public static Action OnClean;
         public static Action<bool> OnChanged;
@@ -95,6 +102,7 @@ namespace OpenCAGE
         private static void MarkDirty(object a) => MarkDirty();
         private static void MarkDirty()
         {
+            System.Threading.Interlocked.Increment(ref _modifications);
             bool changed = !_isDirty;
             _isDirty = true;
             OnDirty?.Invoke();

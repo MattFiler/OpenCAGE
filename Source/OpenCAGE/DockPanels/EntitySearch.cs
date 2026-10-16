@@ -37,6 +37,8 @@ namespace OpenCAGE.DockPanels
         //Listening for what changes the results (only while the panel is showing), and a search again already asked for
         private bool _watching = false;
         private bool _refreshQueued = false;
+        private bool _rerunQueued = false;
+        private int _searchAsks = 0, _searchedAtAsk = 0;
 
         protected LevelContent Content => Singleton.Editor?.CompositeBrowser?.Content;
 
@@ -72,7 +74,6 @@ namespace OpenCAGE.DockPanels
 
             SettingsManager.SettingsChanged += OnSettingsChanged;
 
-            Singleton.OnLevelLoaded += OnLevelLoaded;
             VisibleChanged += EntitySearch_VisibleChanged;
         }
 
@@ -139,7 +140,6 @@ namespace OpenCAGE.DockPanels
         private void Unsubscribe()
         {
             SettingsManager.SettingsChanged -= OnSettingsChanged;
-            Singleton.OnLevelLoaded -= OnLevelLoaded;
             VisibleChanged -= EntitySearch_VisibleChanged;
             Watch(false);
         }
@@ -162,10 +162,21 @@ namespace OpenCAGE.DockPanels
 
             _initializing = false;
 
-            //Hidden, it searches when it is next shown; until then it holds nothing of the level before
-            ApplyMode(_currentMode, runSearch: Visible);
-            if (!Visible)
-                ClearResults();
+            /* The search runs once the rest of the level's panels are up, not here: a level's panels are set up before it
+               opens its first composite, so a search now (for a scope that follows the open composite) went through the
+               whole level, only to be refilled straight away for that composite - each a full refill of the list, the
+               biggest part of a level load with a broad search showing. Hidden, it searches when it is next shown; until
+               then it holds nothing of the level before. */
+            ApplyMode(_currentMode, runSearch: false);
+            if (IsDisposed || !IsHandleCreated)
+            {
+                if (Visible)
+                    RunSearch();
+                else
+                    ClearResults();
+                return;
+            }
+            QueueSearchPass(rerun: true);
         }
 
         private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
@@ -332,14 +343,6 @@ namespace OpenCAGE.DockPanels
                 RunSearch();
         }
 
-        private void OnLevelLoaded(LevelContent content)
-        {
-            if (IsDisposed)
-                return;
-
-            BeginInvoke(new Action(InitializeFromLevel));
-        }
-
         private void OnCompositeSelected(Composite composite)
         {
             if (IsDisposed
@@ -370,8 +373,17 @@ namespace OpenCAGE.DockPanels
 
         /* Search again once whatever raised this has finished: a paste or an undo raises an event per entity, and the
            composite has to be through the change before it is searched. Any number of asks before then is one search. */
-        private void QueueRefresh()
+        private void QueueRefresh() => QueueSearchPass(rerun: false);
+
+        /* The one queued search. Each ask is counted, and a search that fills the list notes the count it saw: one that
+           ran after the last ask (the level's first search, or the user's own) already shows what the ask was for, so
+           the queued one isn't run again on top of it. A rerun (the level's panels set up) is a search afresh, as from
+           the search box; otherwise the search showing is refreshed, keeping its selected row and scroll. */
+        private void QueueSearchPass(bool rerun)
         {
+            _searchAsks++;
+            if (rerun)
+                _rerunQueued = true;
             if (_refreshQueued || IsDisposed || !IsHandleCreated)
                 return;
 
@@ -379,7 +391,19 @@ namespace OpenCAGE.DockPanels
             BeginInvoke(new Action(() =>
             {
                 _refreshQueued = false;
-                if (IsDisposed || !Visible || Content == null || !HasActiveQuery())
+                bool rerunNow = _rerunQueued;
+                _rerunQueued = false;
+                if (IsDisposed || _searchedAtAsk == _searchAsks)
+                    return;
+                if (rerunNow)
+                {
+                    if (Visible)
+                        RunSearch();
+                    else
+                        ClearResults();
+                    return;
+                }
+                if (!Visible || Content == null || !HasActiveQuery())
                     return;
                 RefreshResults();
             }));
@@ -395,6 +419,7 @@ namespace OpenCAGE.DockPanels
             if (_currentMode == SearchMode.ByName)
             {
                 GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Settings.ShowShortGuids));
+                _searchedAtAsk = _searchAsks;
                 UpdateResultTitle(GlobalEntitySearchHelper.SearchByName(Content, _currentNameSearch, entityList, _entityComposites));
             }
             else
@@ -576,6 +601,7 @@ namespace OpenCAGE.DockPanels
             clearSearchBtn.Visible = _currentMode == SearchMode.ByName;
             SettingsManager.SetString(Settings.PrevEntNameSearch, name);
             GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Settings.ShowShortGuids));
+            _searchedAtAsk = _searchAsks;
             int count = GlobalEntitySearchHelper.SearchByName(Content, name, entityList, _entityComposites);
             UpdateResultTitle(count);
         }
@@ -590,6 +616,7 @@ namespace OpenCAGE.DockPanels
 
             FunctionType functionType = (FunctionType)Enum.Parse(typeof(FunctionType), functionTypeCombo.Text);
             GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Settings.ShowShortGuids));
+            _searchedAtAsk = _searchAsks;
             int count = GlobalEntitySearchHelper.SearchByFunction(Content, functionType, entityList, _entityComposites);
             UpdateResultTitle(count);
         }
@@ -603,6 +630,7 @@ namespace OpenCAGE.DockPanels
             }
 
             GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Settings.ShowShortGuids));
+            _searchedAtAsk = _searchAsks;
             int count = GlobalEntitySearchHelper.SearchByComposite(Content, _selectedComposite.shortGUID, entityList, _entityComposites);
             UpdateResultTitle(count);
         }
@@ -630,8 +658,7 @@ namespace OpenCAGE.DockPanels
         private void ClearResults()
         {
             _entityComposites.Clear();
-            entityList.Items.Clear();
-            entityList.Groups.Clear();
+            GlobalEntitySearchHelper.ClearResultList(entityList);
             Text = "Search";
         }
 
