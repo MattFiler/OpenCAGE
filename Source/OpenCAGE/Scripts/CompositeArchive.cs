@@ -221,6 +221,8 @@ namespace OpenCAGE
                    package stands on its own; with absorption off, Save will not add the rest. */
                 int absorbed = scratch.AbsorbReferencedGlobalTextures();
                 Debug.Log("Composite Archive", "Absorbed " + absorbed + " global texture reference(s) into the package");
+                //When the composites were last changed is the history of the level they came from: a package carries none
+                scratch.Commands.Utils.ClearModificationInfo();
 
                 using (ProgressUI progress = new ProgressUI())
                 {
@@ -742,6 +744,7 @@ namespace OpenCAGE
                     tables.ReplacePreview(copy.shortGUID, null);
                 tables.ReplaceLayouts(copy.shortGUID, FlowgraphLayoutManager.GetLayoutsForPort(original, archive.Layouts, archive.Manifest.BundledLevelName(), archive.Scratch.Commands));
                 ParameterModificationTracker.CopyCompositeRows(copy.shortGUID, archive.Modifications, archive.Defaults, tables.Modifications, tables.Defaults);
+                EditHistory.CompositesChanged(level.Commands, new[] { copy });
             });
             //Counts are all the caller needs; the objects would keep this level's meshes and textures alive
             result.Ported.Clear();

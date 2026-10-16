@@ -127,12 +127,14 @@ namespace OpenCAGE.Modding
         /// </summary>
         public ModState.InstalledMod ImportPackage(string packagePath)
         {
+            if (_manifest.Unsupported != null)
+                throw new Exception(_manifest.Unsupported);
             ModPackage package = ModPackage.Read(packagePath);
             /* Deltas are measured against one build's vanilla bytes and whole-file entries carry that
              * build's file outright, so a package from another build does not belong here. STEAM, EPIC
              * and GOG ship identical bytes for all but the localised UI.TXT files, but WINDOWS_STORE
-             * and the console builds differ widely. UNKNOWN means we could not identify one end, and
-             * there is nothing to compare. */
+             * and the console builds differ widely. A package from a build we could not identify (UNKNOWN)
+             * was measured against nothing we know, so it fits nowhere. */
             if (!SamePlatformFamily(package.Info.HashSet, _manifest.Platform))
                 throw new Exception("This mod was made for the " + PlatformName(package.Info.HashSet) + " version of the game, and this is the "
                     + PlatformName(_manifest.Platform) + " version. Its changes are measured against that version's files, so it can't be installed here.");
@@ -169,7 +171,8 @@ namespace OpenCAGE.Modding
         /* Steam, Epic and GOG ship the same bytes for everything but a handful of text files */
         private static bool SamePlatformFamily(PatchManager.Platform a, PatchManager.Platform b)
         {
-            if (a == b || a == PatchManager.Platform.UNKNOWN || b == PatchManager.Platform.UNKNOWN) return true;
+            if (a == PatchManager.Platform.UNKNOWN || b == PatchManager.Platform.UNKNOWN) return false;
+            if (a == b) return true;
             bool pcA = a == PatchManager.Platform.STEAM || a == PatchManager.Platform.EPIC_GAMES_STORE || a == PatchManager.Platform.GOG;
             bool pcB = b == PatchManager.Platform.STEAM || b == PatchManager.Platform.EPIC_GAMES_STORE || b == PatchManager.Platform.GOG;
             return pcA && pcB;
@@ -567,7 +570,7 @@ namespace OpenCAGE.Modding
 
         private static string CantCombineOwnLevel(string level, List<string> mods)
         {
-            return level + " has changes of your own, and OpenCAGE doesn't have all of that level's original files to combine them with "
+            return ModToolkit.LevelName(level) + " has changes of your own, and OpenCAGE doesn't have all of that level's original files to combine them with "
                 + string.Join(", ", mods.Select(o => "'" + o + "'")) + ". Use 'Keep those changes safe...' at the top of the Mod Manager first.";
         }
 
@@ -1017,6 +1020,32 @@ namespace OpenCAGE.Modding
         }
 
         /// <summary>
+        /// Write a level as the game shipped it (and its _PATCH folder) into another folder laid out as a game folder: each
+        /// file from the game folder where it's still as shipped, else the original kept for it. Throws when a changed file's
+        /// original isn't kept.
+        /// </summary>
+        public void WriteOriginalLevel(string level, string intoRoot)
+        {
+            foreach (string folder in new[] { ModToolkit.LevelFolder(level), ModToolkit.LevelFolder(level + "_PATCH") })
+                foreach (CathodeLib.FileHashTable.Entry entry in _manifest.Entries.Where(o => o.Path.StartsWith(folder)).ToList())
+                {
+                    string to = ModToolkit.Denormalise(intoRoot, entry.Path);
+                    Directory.CreateDirectory(Path.GetDirectoryName(to));
+                    string from = ModToolkit.Denormalise(_gameRoot, entry.Path);
+                    byte[] hash = File.Exists(from) ? _cache.Hash(entry.Path) : null;
+                    if (hash != null && _manifest.IsVanilla(entry.Path, hash))
+                    {
+                        File.Copy(from, to, true);
+                        continue;
+                    }
+                    byte[] bytes = VanillaBytes(entry.Path);
+                    if (bytes == null)
+                        throw new Exception("OpenCAGE doesn't have the original of " + entry.Path + ", so only the whole level can go in the mod.");
+                    File.WriteAllBytes(to, bytes);
+                }
+        }
+
+        /// <summary>
         /// The vanilla bytes for a path, when the baseline store holds them.
         /// </summary>
         public byte[] VanillaBytes(string normalisedPath)
@@ -1130,6 +1159,8 @@ namespace OpenCAGE.Modding
         /// they were applied. Left at Ask, nothing is done while there are any: they're listed in the result.</param>
         public TransactionResult ApplyConfiguration(List<string> enabledIdsInOrder, bool adoptUnknownBaselines = false, Action<string> progress = null, EditedFilesChoice edited = EditedFilesChoice.Ask)
         {
+            if (_manifest.Unsupported != null)
+                return new TransactionResult() { Error = _manifest.Unsupported };
             lock (_mutex)
             {
                 _sources = new Dictionary<string, byte[]>();
@@ -1392,14 +1423,14 @@ namespace OpenCAGE.Modding
                 {
                     if (keptLevels.Contains(level.Key))
                     {
-                        progress(level.Key + " is unchanged since last time - leaving it as it is...");
+                        progress(ModToolkit.LevelName(level.Key) + " is unchanged since last time - leaving it as it is...");
                         continue;
                     }
                     _state.LevelSignatures[level.Key] = levelSignatures[level.Key];
                     bool withOwn = ownLevels.Contains(level.Key);
                     if (wholeLevels.Contains(level.Key))
                     {
-                        progress("Installing " + level.Key + "...");
+                        progress("Installing " + ModToolkit.LevelName(level.Key) + "...");
                         string used = level.Value.Last()[0].Mod.Name;
                         if (LevelFiles(level.Key).Any(_state.Own.ContainsKey))
                             result.Conflicts.Add(new MergeConflict() { Target = level.Key, Where = "the whole level", Kind = ConflictKind.WholeFile, Kept = used, Lost = MergeConflict.OwnChanges, Detail = "a level the game doesn't ship can't be combined; yours comes back when the mod is removed" });
@@ -1410,13 +1441,13 @@ namespace OpenCAGE.Modding
                     }
                     else if (level.Value.Count == 1 && !withOwn)
                     {
-                        progress("Installing " + level.Key + "...");
+                        progress("Installing " + ModToolkit.LevelName(level.Key) + "...");
                         foreach (Planned planned in level.Value[0])
                             ComposeFile(ModToolkit.Normalise(planned.Entry.Target), new List<Planned>() { planned }, result);
                     }
                     else
                     {
-                        progress("Combining " + (level.Value.Count + (withOwn ? 1 : 0)) + " versions of " + level.Key + "...");
+                        progress("Combining " + (level.Value.Count + (withOwn ? 1 : 0)) + " versions of " + ModToolkit.LevelName(level.Key) + "...");
                         ComposeLevel(level.Key, level.Value, withOwn, result, progress);
                     }
                     //One level's originals at a time - a mod changing every level would otherwise hold all of them
@@ -1776,7 +1807,7 @@ namespace OpenCAGE.Modding
                 }
                 catch (Exception e)
                 {
-                    result.Warnings.Add("Couldn't update the behaviour tree list of " + ModToolkit.LevelOf(path) + ": " + e.Message);
+                    result.Warnings.Add("Couldn't update the behaviour tree list of " + ModToolkit.LevelName(ModToolkit.LevelOf(path)) + ": " + e.Message);
                 }
             }
             foreach (string problem in requirements.Problems)

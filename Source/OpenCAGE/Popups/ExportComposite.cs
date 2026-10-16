@@ -191,6 +191,7 @@ namespace OpenCAGE
                     ParameterModificationTracker.ExportCompositeRows(original.shortGUID, tables.Modifications, tables.Defaults);
                     //And the source level's own preview of it, if it has one (else the shipped one stands)
                     tables.ReplacePreview(copy.shortGUID, CompositePreviewManager.GetUserPreview(original.shortGUID));
+                    EditHistory.CompositesChanged(lvl.Commands, new[] { copy });
                 };
                 foreach (Composite composite in composites)
                     porter.Port(composite);

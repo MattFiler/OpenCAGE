@@ -20,7 +20,7 @@ namespace OpenCAGE.Undo
     /// dropped the next time their composite opens (CommandsUtils.PurgeDeadLinks), outside any undo step, so undoing the
     /// delete afterwards could not bring them back. Proxies stay, as dead proxies always have.
     /// </remarks>
-    public sealed class EntityDeleteEdit : IEdit
+    public sealed class EntityDeleteEdit : IEdit, IChangesComposites
     {
         private struct LinkRecord
         {
@@ -65,6 +65,12 @@ namespace OpenCAGE.Undo
         public string Label { get; }
         public ShortGuid CompositeId => _composite;
         public ShortGuid EntityId => _entity.shortGUID;
+        //Its own composite, and those whose aliases, trigger sequences and animations pointing at it went with it
+        public IEnumerable<ShortGuid> ChangedComposites => new[] { _composite }
+            .Concat(_aliases?.Select(o => o.Composite) ?? Enumerable.Empty<ShortGuid>())
+            .Concat(_triggerEntries?.Select(o => o.Composite) ?? Enumerable.Empty<ShortGuid>())
+            .Concat(_animationConnections?.Select(o => o.Composite) ?? Enumerable.Empty<ShortGuid>())
+            .Distinct();
 
         public EntityDeleteEdit(Composite composite, Entity entity, string label)
         {
@@ -516,7 +522,7 @@ namespace OpenCAGE.Undo
     /// script changes, but the table is saved with it. Undo goes back to where the choice was made - for a composite
     /// instance's row that is the composite holding the instance, not the one whose parameter it is.
     /// </summary>
-    public sealed class ColourParameterEdit : IEdit
+    public sealed class ColourParameterEdit : IEdit, IChangesComposites
     {
         private readonly List<(ShortGuid composite, ShortGuid variable, bool before)> _targets;
         private readonly bool _colour;
@@ -524,6 +530,8 @@ namespace OpenCAGE.Undo
         public string Label { get; }
         public ShortGuid CompositeId { get; }
         public ShortGuid EntityId { get; }
+        //How the editor shows a pin, not what the scripts say
+        public IEnumerable<ShortGuid> ChangedComposites => Enumerable.Empty<ShortGuid>();
 
         /// <param name="shownIn">The composite on screen when the choice was made, and <paramref name="shownEntity"/> the entity inspected there.</param>
         public ColourParameterEdit(Commands commands, IEnumerable<(Composite composite, VariableEntity variable)> targets, bool colour, Composite shownIn, Entity shownEntity, string label)

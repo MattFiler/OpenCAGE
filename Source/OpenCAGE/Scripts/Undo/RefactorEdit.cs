@@ -26,7 +26,7 @@ namespace OpenCAGE.Undo
     /// first; its pages are then rebuilt from the page table, and the viewer is told exactly what came and
     /// went in each composite.</para>
     /// </remarks>
-    public sealed class RefactorEdit : IEdit
+    public sealed class RefactorEdit : IEdit, IChangesComposites
     {
         private readonly Composite _parent;
         private readonly Func<IRefactorPageSource, RefactorResult> _run;
@@ -40,6 +40,26 @@ namespace OpenCAGE.Undo
         public string Label { get; }
         public ShortGuid CompositeId => _parent.shortGUID;
         public ShortGuid EntityId => ShortGuid.Invalid;
+
+        /// <summary>The composite it was made in, and every composite it added, removed or changed (both ways round).</summary>
+        public IEnumerable<ShortGuid> ChangedComposites
+        {
+            get
+            {
+                HashSet<ShortGuid> ids = new HashSet<ShortGuid>() { _parent.shortGUID };
+                ScriptTransaction tx = _result?.Transaction;
+                if (tx != null)
+                {
+                    ids.UnionWith(tx.TouchedComposites.Select(o => o.shortGUID));
+                    foreach (bool reverted in new[] { false, true })
+                    {
+                        ids.UnionWith(tx.AddedComposites(reverted).Select(o => o.shortGUID));
+                        ids.UnionWith(tx.RemovedComposites(reverted).Select(o => o.shortGUID));
+                    }
+                }
+                return ids;
+            }
+        }
 
         /// <param name="run">Carries out the refactor, the first time: the plan's Apply.</param>
         /// <param name="selectAfter">What to select once done (false) or undone (true).</param>

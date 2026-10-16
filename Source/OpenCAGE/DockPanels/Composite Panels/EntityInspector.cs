@@ -926,16 +926,9 @@ namespace OpenCAGE.DockPanels
              * when it is enabled, so filling in that entity's defaults here - which this did, the first time a proxy was
              * shown - overrode the real values: a door proxy's zonelink 0 cut the door off from its ZoneLink, and its card and
              * gate defaults undid edits made on the door. The grid shows that entity's values as inherited rows instead. */
-            if (entity is ProxyEntity proxy)
+            if (entity is ProxyEntity)
             {
-                FunctionEntity proxyInterface = new FunctionEntity(ShortGuid.Invalid) { function = new ShortGuid((uint)FunctionType.ProxyInterface) };
-                content.Level.Commands.Utils.AddAllDefaultParameters(proxyInterface, composite, false, ParameterVariant.STATE_PARAMETER | ParameterVariant.PARAMETER | ParameterVariant.INPUT_PIN);
-                foreach (Parameter own in proxyInterface.parameters)
-                {
-                    if (own?.content == null || own.name == ShortGuids.delete_me || !ProxyParameters.IsOwn(own.name) || proxy.GetParameter(own.name) != null)
-                        continue;
-                    proxy.AddParameter(own.name, own.content, own.variant);
-                }
+                AddDefaults(entity, composite, content.Level.Commands);
                 ParameterModificationTracker.SetDefaultsApplied(composite.shortGUID, entity.shortGUID);
                 return;
             }
@@ -952,14 +945,44 @@ namespace OpenCAGE.DockPanels
             if (applied && entity.parameters.Any(p => p.variant == ParameterVariant.INPUT_PIN))
                 return;
 
+            AddDefaults(entity, composite, content.Level.Commands);
+            ParameterModificationTracker.SetDefaultsApplied(composite.shortGUID, entity.shortGUID);
+        }
+
+        /// <summary>
+        /// What inspecting an entity fills in, without the record of having done it: its default parameters (a proxy, its
+        /// own only), and a composite instance's parameters. Only adds what is missing. Create a Mod fills the same into
+        /// the unmodified level, so the defaults OpenCAGE added to the user's level aren't taken for their changes.
+        /// </summary>
+        public static void AddDefaults(Entity entity, Composite composite, CATHODE.Commands commands)
+        {
+            if (entity == null || composite == null || commands?.Utils == null)
+                return;
+
+            if (entity is ProxyEntity proxy)
+            {
+                FunctionEntity proxyInterface = new FunctionEntity(ShortGuid.Invalid) { function = new ShortGuid((uint)FunctionType.ProxyInterface) };
+                commands.Utils.AddAllDefaultParameters(proxyInterface, composite, false, ParameterVariant.STATE_PARAMETER | ParameterVariant.PARAMETER | ParameterVariant.INPUT_PIN);
+                foreach (Parameter own in proxyInterface.parameters)
+                {
+                    if (own?.content == null || own.name == ShortGuids.delete_me || !ProxyParameters.IsOwn(own.name) || proxy.GetParameter(own.name) != null)
+                        continue;
+                    proxy.AddParameter(own.name, own.content, own.variant);
+                }
+                return;
+            }
+            if (entity.variant != EntityVariant.FUNCTION)
+                return;
+
+            CompositeInstanceParameters.Ensure(entity, commands);
+
             /* INTERNAL stays out of the mask: most INTERNAL parameters are indices the level build writes. CathodeLib adds
              * the entity's own data whatever the mask - its resource, and a SplinePath's (empty) points. A SplinePath has
              * no input pin that takes a value, so the gate above lets the pass run again, and one saved without points by
              * an earlier build gains them the first time it is shown. */
             bool hasDeleteMe = entity.GetParameter("delete_me") != null;
-            content.Level.Commands.Utils.AddAllDefaultParameters(entity, composite, false, ParameterVariant.STATE_PARAMETER | ParameterVariant.PARAMETER | ParameterVariant.INPUT_PIN);
+            commands.Utils.AddAllDefaultParameters(entity, composite, false, ParameterVariant.STATE_PARAMETER | ParameterVariant.PARAMETER | ParameterVariant.INPUT_PIN);
             if (!hasDeleteMe) entity.RemoveParameter("delete_me");
-            ParameterModificationTracker.SetDefaultsApplied(composite.shortGUID, entity.shortGUID);
         }
 #endif
 

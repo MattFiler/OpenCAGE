@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using AssetKind = CathodeLib.AssetModificationInfoTable.AssetKind;
 
 namespace OpenCAGE.MCP
 {
@@ -479,7 +480,7 @@ namespace OpenCAGE.MCP
                         foreach (Shaders.Shader shader in added)
                             if (!level.Materials.Entries.Any(o => o != null && ReferenceEquals(o.Shader, shader)))
                                 level.Shaders.Entries.RemoveAll(o => ReferenceEquals(o, shader));
-                    });
+                    }, level, (AssetKind.MATERIAL, made.Name));
 
                     JObject result = DescribeMaterial(level, material, false);
                     call.Note("Bind textures and set features/parameters with edit_material; draw a model with it via edit_model(action: set_material).");
@@ -1044,8 +1045,8 @@ namespace OpenCAGE.MCP
                 int at = entries.FindIndex(o => ReferenceEquals(o, edited));
                 (Action apply, Action revert) listed = McpAssetEdit.ListChange(entries, edited, at, true);
                 string label = (created ? "Create material mapping " : "Edit material mapping ") + edited.Name;
-                if (created) McpAssetEdit.Record(label, () => { listed.apply(); Pairs(pairsAfter); }, () => listed.revert());
-                else McpAssetEdit.Record(label, () => Pairs(pairsAfter), () => Pairs(pairsBefore));
+                if (created) McpAssetEdit.Record(label, () => { listed.apply(); Pairs(pairsAfter); }, () => listed.revert(), level, (AssetKind.MATERIAL_MAPPING, edited.Name));
+                else McpAssetEdit.Record(label, () => Pairs(pairsAfter), () => Pairs(pairsBefore), level, (AssetKind.MATERIAL_MAPPING, edited.Name));
 
                 McpAssets.MaterialNames names = McpAssets.Names(level);
                 JObject result = new JObject()

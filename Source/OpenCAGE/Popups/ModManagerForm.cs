@@ -214,6 +214,18 @@ namespace OpenCAGE.Popups
                 }
             }
 
+            //A version whose original files OpenCAGE has no record of (mobile, Mac/Linux): mods couldn't be combined with
+            //its files or taken out again, and every one of them would look like a mod's
+            string unsupported = ModServices.Manifest.Unsupported;
+            if (unsupported != null)
+            {
+                _headline.Text = "Mods can't be used with this version of the game yet.";
+                _installState.Text = unsupported;
+                foreach (Control control in new Control[] { _modList, _addButton, _removeButton, _upButton, _downButton, _applyButton, _repairButton, _createButton })
+                    control.Enabled = false;
+                return;
+            }
+
             RefreshModList();
             StartScan();
         }
@@ -221,21 +233,15 @@ namespace OpenCAGE.Popups
         #region GAME FILES
         private void StartScan()
         {
-            if (ModServices.Installer == null)
+            if (ModServices.Installer == null || !ModServices.ManifestAvailable)
                 return;
             if (_scanning)
             {
                 _scanAgain = true;
                 return;
             }
-            bool manifest = ModServices.ManifestAvailable;
-            if (!manifest)
-                _installState.Text = "This version of the game can't be checked against its original files, so mods are installed without combining.";
-            else
-            {
-                _installState.Text = "Checking your game files...";
-                _installAction.Visible = false;
-            }
+            _installState.Text = "Checking your game files...";
+            _installAction.Visible = false;
             _scanning = true;
 
             Thread thread = new Thread(() =>
@@ -243,20 +249,17 @@ namespace OpenCAGE.Popups
                 ScanResult result = null;
                 List<string> stale = null;
                 string error = null;
-                if (manifest)
+                try
                 {
-                    try
+                    result = ModServices.NewScanner().Scan(null, (done, total) =>
                     {
-                        result = ModServices.NewScanner().Scan(null, (done, total) =>
-                        {
-                            //Files are only read when they've changed since they were last read: reading them all is the first check's
-                            string text = "Checking your game files... " + (done * 100 / Math.Max(1, total)) + "%"
-                                + (total > 2L * 1024 * 1024 * 1024 ? " (the first check reads every file - later ones only read the files that have changed)" : "");
-                            SafeInvoke(() => _installState.Text = text);
-                        });
-                    }
-                    catch (Exception e) { error = e.Message; }
+                        //Files are only read when they've changed since they were last read: reading them all is the first check's
+                        string text = "Checking your game files... " + (done * 100 / Math.Max(1, total)) + "%"
+                            + (total > 2L * 1024 * 1024 * 1024 ? " (the first check reads every file - later ones only read the files that have changed)" : "");
+                        SafeInvoke(() => _installState.Text = text);
+                    });
                 }
+                catch (Exception e) { error = e.Message; }
                 //Which of the mods' files aren't as they were installed: quick once the check has read every file
                 try { stale = ModServices.Installer.PathsNeedingRepair(); }
                 catch { }
@@ -266,14 +269,11 @@ namespace OpenCAGE.Popups
                     _scanning = false;
                     if (stale != null)
                         _stale = stale;
-                    if (manifest)
-                    {
-                        _scan = result;
-                        if (error != null)
-                            _installState.Text = "Your game files couldn't be checked: " + error;
-                        else
-                            ShowScanSummary();
-                    }
+                    _scan = result;
+                    if (error != null)
+                        _installState.Text = "Your game files couldn't be checked: " + error;
+                    else
+                        ShowScanSummary();
                     RefreshModList();
                     //Asked for while this one ran (it started before an apply, say): it says how things were, not how they are
                     if (_scanAgain)
@@ -321,7 +321,7 @@ namespace OpenCAGE.Popups
                 List<string> ownLevels = changed.Select(ModInstaller.LevelUnitOf).Where(o => o != null).Distinct().OrderBy(o => o).ToList();
                 int ownFiles = changed.Count(o => ModInstaller.LevelUnitOf(o) == null);
                 List<string> what = new List<string>();
-                if (ownLevels.Count != 0) what.Add(ownLevels.Count <= 3 ? string.Join(", ", ownLevels.Select(o => o.Replace("DLC/", ""))) : ownLevels.Count + " levels");
+                if (ownLevels.Count != 0) what.Add(ownLevels.Count <= 3 ? string.Join(", ", ownLevels.Select(ModToolkit.LevelName)) : ownLevels.Count + " levels");
                 if (ownFiles != 0) what.Add((ownLevels.Count != 0 ? ownFiles + " other" : ownFiles.ToString()) + " game file" + (ownFiles == 1 ? "" : "s"));
                 _installState.Text = changed.Count == 0 ? "Your game files are in good shape."
                     : "You've changed " + string.Join(" and ", what) + " yourself. OpenCAGE keeps the originals, so mods are combined with your changes.";
@@ -329,7 +329,7 @@ namespace OpenCAGE.Popups
             }
             List<string> levels = unsafeChanges.Select(ModToolkit.LevelOf).Where(o => o != null).Distinct().OrderBy(o => o).ToList();
             _installState.Text = unsafeChanges.Count + " game file" + (unsafeChanges.Count == 1 ? " has" : "s have") + " been changed without OpenCAGE keeping the original"
-                + (levels.Count > 0 ? " (in " + string.Join(", ", levels.Take(3)) + (levels.Count > 3 ? " and more" : "") + ")" : "") + ". Mods can't be combined with those changes until it has one.";
+                + (levels.Count > 0 ? " (in " + string.Join(", ", levels.Take(3).Select(ModToolkit.LevelName)) + (levels.Count > 3 ? " and more" : "") + ")" : "") + ". Mods can't be combined with those changes until it has one.";
             _installAction.Text = "Keep those changes safe...";
             _installAction.Visible = true;
         }
@@ -478,7 +478,7 @@ namespace OpenCAGE.Popups
         {
             List<string> levels = package.Info.Levels;
             int other = package.Info.Entries.Count(o => ModToolkit.LevelOf(o.Target) == null);
-            return (levels.Count != 0 ? "the level" + (levels.Count == 1 ? " " : "s ") + string.Join(", ", levels) : "")
+            return (levels.Count != 0 ? "the level" + (levels.Count == 1 ? " " : "s ") + string.Join(", ", levels.Select(ModToolkit.LevelName)) : "")
                 + (levels.Count != 0 && other != 0 ? ", and " : "")
                 + (other != 0 ? other + " other game file" + (other == 1 ? "" : "s") : "") + ".";
         }
@@ -667,7 +667,7 @@ namespace OpenCAGE.Popups
                         lines.Add((combinedLevels.All(withYours.Contains) ? "These levels are changed by you and by your mods" : combinedLevels.Any(withYours.Contains) ? "These levels are changed by more than one of your mods (or by you and a mod)" : "These levels are changed by more than one of your mods")
                             + ", so they'll be put together into one level with every change in it, which takes a minute or so each:");
                         foreach (string level in combinedLevels)
-                            lines.Add("  • " + level.Replace("DLC/", ""));
+                            lines.Add("  • " + ModToolkit.LevelName(level));
                         lines.Add("");
                     }
                     if (conflicts.Count != 0)
@@ -745,7 +745,7 @@ namespace OpenCAGE.Popups
             if (result.CombinedLevels.Count != 0)
             {
                 lines.Add("");
-                lines.Add("Combined from several mods: " + string.Join(", ", result.CombinedLevels) + ".");
+                lines.Add("Combined from several mods: " + string.Join(", ", result.CombinedLevels.Select(ModToolkit.LevelName)) + ".");
             }
             if (result.Conflicts.Count != 0)
             {
@@ -872,7 +872,7 @@ namespace OpenCAGE.Popups
             foreach (string path in paths)
             {
                 string level = ModInstaller.LevelUnitOf(path);
-                string what = level != null ? "the level " + level.Replace("DLC/", "") : MergeConflict.Place(path);
+                string what = level != null ? "the level " + ModToolkit.LevelName(level) : MergeConflict.Place(path);
                 if (!result.Contains(what))
                     result.Add(what);
             }

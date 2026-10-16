@@ -40,7 +40,7 @@ namespace OpenCAGE.Modding
 
         public List<string> FilesOfLevel(string level)
         {
-            string prefix = "DATA/ENV/PRODUCTION/" + level + "/";
+            string prefix = ModToolkit.LevelFolder(level);
             return Files.Keys.Where(o => o.StartsWith(prefix)).OrderBy(o => o).ToList();
         }
     }

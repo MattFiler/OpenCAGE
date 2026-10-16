@@ -66,8 +66,14 @@ namespace AlienPAK
                 return;
             }
 
+            MarkModelChanged();
             Singleton.OnResourceModified?.Invoke();
             RefreshSelectedModelPreview(false);
+        }
+
+        private void MarkModelChanged()
+        {
+            EditHistory.AssetChanged(Singleton.Editor?.CompositeBrowser?.Content?.Level, AssetModificationInfoTable.AssetKind.MODEL, _model?.Name);
         }
 
         private void OnDeleteRequested()
@@ -96,6 +102,7 @@ namespace AlienPAK
 
             RefreshTree();
             RefreshSelectedModelPreview();
+            MarkModelChanged();
             Singleton.OnResourceModified?.Invoke();
         }
 
@@ -139,6 +146,7 @@ namespace AlienPAK
             lookup.submesh.Bones.AddRange(submesh.Bones);
             RefreshTree();
             RefreshSelectedModelPreview();
+            MarkModelChanged();
             Singleton.OnResourceModified?.Invoke();
         }
 
@@ -219,6 +227,7 @@ namespace AlienPAK
                     break;
             }
             RefreshTree();
+            MarkModelChanged();
             Singleton.OnResourceModified?.Invoke();
         }
 
@@ -251,6 +260,7 @@ namespace AlienPAK
             if (target == null) return;
             target.Material = material;
             RefreshSelectedModelPreview(false);
+            MarkModelChanged();
             Singleton.OnResourceModified?.Invoke();
 
             this.Focus();

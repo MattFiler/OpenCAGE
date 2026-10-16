@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Linq;
 using System.Numerics;
 using System.Windows.Forms;
+using AssetKind = CathodeLib.AssetModificationInfoTable.AssetKind;
 
 namespace OpenCAGE.Popups
 {
@@ -18,6 +19,7 @@ namespace OpenCAGE.Popups
             OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/galaxy-editor/");
             SetupGridColumns();
 
+            gridEntries.CellBeginEdit += GridEntries_CellBeginEdit;
             gridEntries.CellEndEdit += GridEntries_CellEndEdit;
             gridEntries.CellValidating += GridEntries_CellValidating;
             this.FormClosing += GalaxyEditor_FormClosing;
@@ -27,9 +29,17 @@ namespace OpenCAGE.Popups
 
         private void GalaxyEditor_FormClosing(object sender, FormClosingEventArgs e)
         {
+            gridEntries.CellBeginEdit -= GridEntries_CellBeginEdit;
             gridEntries.CellEndEdit -= GridEntries_CellEndEdit;
             gridEntries.CellValidating -= GridEntries_CellValidating;
             this.FormClosing -= GalaxyEditor_FormClosing;
+        }
+
+        //What the cell said when editing it began: an edit that leaves it saying the same changed nothing
+        private string _cellBeforeEdit;
+        private void GridEntries_CellBeginEdit(object sender, DataGridViewCellCancelEventArgs e)
+        {
+            _cellBeforeEdit = e.RowIndex < 0 || e.ColumnIndex < 0 ? null : gridEntries.Rows[e.RowIndex].Cells[e.ColumnIndex].Value?.ToString();
         }
 
         private void SetupGridColumns()
@@ -131,18 +141,24 @@ namespace OpenCAGE.Popups
         {
             if (Content.Level.GalaxyDefinition?.Entries == null || e.RowIndex < 0 || e.RowIndex >= Content.Level.GalaxyDefinition.Entries.Count) return;
             gridEntries.Rows[e.RowIndex].ErrorText = null;
-            SyncRowToEntry(e.RowIndex);
+            //Read back from the cells as they're shown (rounded): only when one was changed, or the rest would lose their precision
+            if (e.ColumnIndex >= 0 && gridEntries.Rows[e.RowIndex].Cells[e.ColumnIndex].Value?.ToString() == _cellBeforeEdit)
+                return;
+            if (SyncRowToEntry(e.RowIndex))
+                EditHistory.AssetChanged(Content.Level, AssetKind.GALAXY, CathodeLib.LevelMerger.StandaloneData[6]);
         }
 
-        private void SyncRowToEntry(int rowIndex)
+        //True if the entry changed
+        private bool SyncRowToEntry(int rowIndex)
         {
-            if (Content.Level.GalaxyDefinition.Entries == null || rowIndex < 0 || rowIndex >= Content.Level.GalaxyDefinition.Entries.Count || rowIndex >= gridEntries.Rows.Count) return;
+            if (Content.Level.GalaxyDefinition.Entries == null || rowIndex < 0 || rowIndex >= Content.Level.GalaxyDefinition.Entries.Count || rowIndex >= gridEntries.Rows.Count) return false;
             var row = gridEntries.Rows[rowIndex];
             var entry = Content.Level.GalaxyDefinition.Entries[rowIndex];
             float parse(string col, float def)
             {
                 return float.TryParse(row.Cells[col].Value?.ToString(), out float f) ? f : def;
             }
+            var before = (entry.Frequency, entry.MinSize, entry.MaxSize, entry.MinIntensity, entry.MaxIntensity, entry.Colour);
             entry.Frequency = parse("Frequency", 1f);
             entry.MinSize = parse("MinSize", 0f);
             entry.MaxSize = parse("MaxSize", 0.001f);
@@ -152,6 +168,7 @@ namespace OpenCAGE.Popups
                 parse("R", 1f),
                 parse("G", 1f),
                 parse("B", 1f));
+            return before != (entry.Frequency, entry.MinSize, entry.MaxSize, entry.MinIntensity, entry.MaxIntensity, entry.Colour);
         }
 
         private void btnAddEntry_Click(object sender, EventArgs e)
@@ -167,6 +184,7 @@ namespace OpenCAGE.Popups
                 Colour = new Vector3(1f, 1f, 1f)
             };
             Content.Level.GalaxyDefinition.Entries.Add(template);
+            EditHistory.AssetChanged(Content.Level, AssetKind.GALAXY, CathodeLib.LevelMerger.StandaloneData[6]);
             gridEntries.Rows.Add(
                 template.Frequency.ToString("G4"),
                 template.MinSize.ToString("G4"),
@@ -184,6 +202,7 @@ namespace OpenCAGE.Popups
             int idx = gridEntries.SelectedCells.Count > 0 ? gridEntries.SelectedCells[0].RowIndex : -1;
             if (idx < 0 || idx >= Content.Level.GalaxyDefinition.Entries.Count) return;
             Content.Level.GalaxyDefinition.Entries.RemoveAt(idx);
+            EditHistory.AssetChanged(Content.Level, AssetKind.GALAXY, CathodeLib.LevelMerger.StandaloneData[6]);
             gridEntries.Rows.RemoveAt(idx);
         }
 
@@ -194,7 +213,10 @@ namespace OpenCAGE.Popups
 
             Content.Level.GalaxyDefinition.Name = textBoxName.Text ?? "";
             Content.Level.GalaxyDefinition.StarCount = (int)numericUpDown1.Value;
-            
+            //Regenerating replaces the items even when it fails
+            EditHistory.AssetChanged(Content.Level, AssetKind.GALAXY, CathodeLib.LevelMerger.StandaloneData[6]);
+            EditHistory.AssetChanged(Content.Level, AssetKind.GALAXY, CathodeLib.LevelMerger.StandaloneData[5]);
+
             if (Content.Level.GalaxyItems.Generate(Content.Level.GalaxyDefinition))
             {
                 //The viewport draws the galaxy as its sky; send it the new one rather than wait for a save

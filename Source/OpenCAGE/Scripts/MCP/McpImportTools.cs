@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml;
+using AssetKind = CathodeLib.AssetModificationInfoTable.AssetKind;
 
 namespace OpenCAGE.MCP
 {
@@ -450,6 +451,7 @@ namespace OpenCAGE.MCP
 
                     //Generation happens only now: it adds textures to the level and entries to the shader pool
                     Dictionary<int, Materials.Material> generated = new Dictionary<int, Materials.Material>();
+                    int materialsBefore = level.Materials?.Entries.Count ?? 0, texturesBefore = level.Textures?.Entries.Count ?? 0;
                     foreach (KeyValuePair<int, MaterialGenerator.Plan> entry in plans)
                     {
                         string error = entry.Value.Error;
@@ -469,6 +471,11 @@ namespace OpenCAGE.MCP
                         int index = SourceMaterialIndex(scene, submesh);
                         if (index >= 0 && generated.TryGetValue(index, out Materials.Material made) && made != null) submesh.Material = made;
                     }
+                    //Only what generation built (a failed one can leave its textures), not a material it reused
+                    for (int i = materialsBefore; i < (level.Materials?.Entries.Count ?? 0); i++)
+                        EditHistory.AssetChanged(level, AssetKind.MATERIAL, level.Materials.Entries[i].Name);
+                    for (int i = texturesBefore; i < (level.Textures?.Entries.Count ?? 0); i++)
+                        EditHistory.AssetChanged(level, AssetKind.TEXTURE, level.Textures.Entries[i].Name);
                     if (generated.Values.Any(o => o != null))
                         Singleton.OnResourceModified?.Invoke();
 
@@ -483,6 +490,7 @@ namespace OpenCAGE.MCP
                     model.Name = UniqueModelName(level, modelName);
                     if (model.Name != modelName) notes.Add("The level already had a model called " + modelName + ", so this one is " + model.Name + ".");
                     level.Models.Entries.Add(model);
+                    EditHistory.AssetChanged(level, AssetKind.MODEL, model.Name);
 
                     JObject result = new JObject()
                     {
@@ -505,6 +513,7 @@ namespace OpenCAGE.MCP
                             Singleton.OnCompositeAddPending?.Invoke();
                             ModelCompositeBuilder.Result made = ModelCompositeBuilder.Create(level, model, compositeName, skeleton, skeleton?.Name);
                             Singleton.OnCompositeAdded?.Invoke(made.Composite);
+                            EditHistory.CompositesChanged(level.Commands, new[] { made.Composite });
                             Singleton.Editor.CompositeBrowser?.RefreshList();
                             result["composite"] = made.Composite.name;
                             if (displayModel) result["display_model_skeleton"] = skeleton.Name;
@@ -916,6 +925,7 @@ namespace OpenCAGE.MCP
                             if (manifest.Composites.Any(o => o.IsRoot && o.Guid == copy.shortGUID.AsUInt32))
                                 CompositePreviewManager.MarkEdited(copy);
                             FlowgraphLayoutManager.ImportLayouts(copy, layouts);
+                            EditHistory.CompositesChanged(destination.Commands, new[] { copy });
                         });
                         //Put back inside the batch, as the import window does: the rebuild it asks the viewer for is then the batch's only
                         //one. Ended with nothing open, the batch had the viewer rebuild the old scene first.

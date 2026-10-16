@@ -51,11 +51,12 @@ namespace OpenCAGE.Modding
             try
             {
                 string levelDir = LevelDir(gameRoot, level);
+                string name = ModToolkit.LevelName(level);
                 Global global = new Global(Path.Combine(gameRoot, "DATA", "ENV", "GLOBAL") + Path.DirectorySeparatorChar);
 
                 //The game's folder holds the level unmodified: one copy to diff against, one to build the result in - read
                 //together, and the first mod's copy alongside them
-                progress("Reading the original " + level + "...");
+                progress("Reading the original " + name + "...");
                 Func<int, Level> readVersion = i =>
                 {
                     string copyRoot = Path.Combine(work, "m" + i);
@@ -72,12 +73,14 @@ namespace OpenCAGE.Modding
 
                 for (int i = 0; i < versions.Count; i++)
                 {
-                    progress("Reading '" + versions[i].ModName + "''s " + level + " (" + (i + 1) + " of " + versions.Count + ")...");
+                    progress("Reading '" + versions[i].ModName + "''s " + name + " (" + (i + 1) + " of " + versions.Count + ")...");
                     Level modLevel = next.GetAwaiter().GetResult();
                     //The next copy is read while this one is combined - when there's the memory for two at once
                     int following = i + 1;
                     next = following < versions.Count ? (PlentyOfMemory() ? Task.Run(() => readVersion(following)) : null) : null;
-                    progress("Combining '" + versions[i].ModName + "''s changes to " + level + "...");
+                    progress("Combining '" + versions[i].ModName + "''s changes to " + name + "...");
+                    //The level's edit history is its owner's: a mod's author's goes no further
+                    merger.CarryEditHistory = versions[i].ModId == null;
                     merger.Apply(modLevel, versions[i].ModName);
                     editorTables.Add((versions[i].ModName, modLevel.Commands.Filepath));
                     modLevel = null;
@@ -99,15 +102,15 @@ namespace OpenCAGE.Modding
                 //anyway would regenerate them for nothing
                 if (versions.Any(v => v.Files.Keys.Any(IsBuildOutput)))
                 {
-                    progress("Building " + level + " (navigation, collision, lighting)...");
+                    progress("Building " + name + " (navigation, collision, lighting)...");
                     Instancing pass = LevelContent.SaveInstancedWithOptions(dest);
                     if (pass?.BakeWarnings != null)
                         foreach (string warning in pass.BakeWarnings)
-                            result.Warnings.Add(level + ": " + warning);
+                            result.Warnings.Add(name + ": " + warning);
                 }
                 else
                 {
-                    progress("Saving " + level + "...");
+                    progress("Saving " + name + "...");
                     dest.Save();
                 }
                 merged.Write(dest.Commands.Filepath);
@@ -118,7 +121,7 @@ namespace OpenCAGE.Modding
                 foreach (LevelMerger.Conflict conflict in merger.Conflicts)
                     result.Conflicts.Add(new MergeConflict() { Target = level, Where = conflict.Where, Kind = ConflictKind.Overridden, Kept = conflict.Kept, Lost = conflict.Lost, Detail = conflict.Detail });
                 foreach (string note in merger.Notes)
-                    result.Warnings.Add(level + ": " + note);
+                    result.Warnings.Add(name + ": " + note);
                 return result;
             }
             finally
@@ -127,9 +130,154 @@ namespace OpenCAGE.Modding
             }
         }
 
+        /// <summary>
+        /// The part of the user's version of a level that a mod carries: the level as it shipped, with only the chosen
+        /// composites' changes on it - and whatever new they use, and the user's changes to the composites they can't work
+        /// without - plus the chosen assets and level data. Built in a folder of its own, and saved as the user's version
+        /// was (built when theirs was), with the chosen composites' pages. The caller packages its files that differ from
+        /// the original, then deletes the folder.
+        /// </summary>
+        /// <param name="writeOriginal">Writes the level as it shipped into the folder given, laid out as a game folder (DATA/ENV/...).</param>
+        /// <param name="notes">Gains what the caller should be told: composites brought in as needed, nothing left to take.</param>
+        /// <returns>The folder holding the result, laid out as a game folder - or null when nothing chosen differs from the original.</returns>
+        public string Extract(string gameRoot, string level, Action<string> writeOriginal, LevelPart part, Action<string> progress, List<string> notes)
+        {
+            string work = Path.Combine(WorkRoot ?? Path.Combine(ModToolkit.ModsDir(gameRoot), "WORK"), "x" + Guid.NewGuid().ToString("N").Substring(0, 8));
+            string name = ModToolkit.LevelName(level);
+            Task<Level> originalRead = null, destRead = null;
+            try
+            {
+                //Only files the level's save doesn't write (its text): they're all there is to take - the level itself is
+                //left as it shipped, not read and saved again
+                if (part.Composites.Count == 0 && part.Textures.Count == 0 && part.Models.Count == 0 && part.Materials.Count == 0 && part.StandaloneData.Count == 0)
+                {
+                    CopyLooseFiles(gameRoot, work, part);
+                    return work;
+                }
+
+                progress("Reading the original " + name + "...");
+                writeOriginal(work);
+                Global global = new Global(Path.Combine(gameRoot, "DATA", "ENV", "GLOBAL") + Path.DirectorySeparatorChar);
+                string originalDir = LevelDir(work, level);
+                //One copy to tell the user's changes by, one to build the result in (saved where it was read from)
+                originalRead = Task.Run(() => new Level(originalDir, global));
+                destRead = Task.Run(() => new Level(originalDir, global));
+                progress("Reading your " + name + "...");
+                Level user = new Level(LevelDir(gameRoot, level), global);
+                Level original = originalRead.GetAwaiter().GetResult();
+                Level dest = destRead.GetAwaiter().GetResult();
+
+                HashSet<ShortGuid> chosen = new HashSet<ShortGuid>(part.Composites);
+                foreach (KeyValuePair<ShortGuid, string> needed in LevelPartDependencies.Needed(user, original, chosen))
+                {
+                    chosen.Add(needed.Key);
+                    string leaf = (user.Commands.GetComposite(needed.Key)?.name ?? needed.Key.ToByteString()).Replace('\\', '/');
+                    notes.Add(name + ": your changes to " + leaf.Substring(leaf.LastIndexOf('/') + 1) + " went in too - " + needed.Value + ".");
+                }
+
+                //What OpenCAGE changes by itself, done to the original too, so only the user's own changes count: the dead links
+                //it takes out of a composite the first time it's shown, and the defaults it fills in when an entity is inspected
+                EntityAppliedDefaultsTable defaults = CustomTable.ReadTable(user.Commands.Filepath, CustomTableType.ENTITY_APPLIED_DEFAULTS) as EntityAppliedDefaultsTable;
+                foreach (ShortGuid id in chosen)
+                {
+                    Composite oc = original.Commands.GetComposite(id), uc = user.Commands.GetComposite(id);
+                    if (oc == null || uc == null) continue;
+                    original.Commands.Utils.PurgeDeadLinks(oc);
+                    user.Commands.Utils.PurgeDeadLinks(uc);
+#if AUTO_POPULATE_PARAMS
+                    if (defaults != null && defaults.applied_defaults.TryGetValue(id, out HashSet<ShortGuid> inspected))
+                        foreach (ShortGuid entity in inspected)
+                            DockPanels.EntityInspector.AddDefaults(oc.GetEntityByID(entity), oc, original.Commands);
+#endif
+                }
+
+                progress("Taking your chosen changes to " + name + "...");
+                LevelMerger merger = new LevelMerger(original, dest)
+                {
+                    OnlyComposites = chosen,
+                    OnlyTextures = part.Textures,
+                    OnlyModels = part.Models,
+                    OnlyMaterials = part.Materials,
+                    OnlyStandaloneData = part.StandaloneData,
+                    CarryEditHistory = false,
+                };
+                merger.Apply(user, "your changes");
+                merger.Finish();
+
+                //An asset can only be taken on its own where it was changed in place: a new one comes with what uses it, and only
+                //the whole level carries one deleted
+                foreach (string asset in part.Textures.Select(o => "texture " + o).Concat(part.Models.Select(o => "model " + o)).Concat(part.Materials.Select(o => "material " + o)))
+                    if (!merger.TakenAssets.Contains(asset))
+                        notes.Add(name + ": the " + asset + " didn't go in on its own - it's new (it goes in with what uses it), deleted (only the whole level carries that), or as the level shipped it.");
+
+                if (merger.ChangedComposites.Count == 0 && merger.TakenAssets.Count == 0 && part.LooseFiles.Count == 0)
+                {
+                    //(Changes since undone, say) - saving it anyway would only give the level as it shipped, re-saved
+                    notes.Add(name + ": nothing you ticked in it differs from the original level, so it was left out.");
+                    try { Directory.Delete(work, true); } catch { }
+                    return null;
+                }
+
+                //The editor's records for what changed, read before the save truncates COMMANDS.PAK
+                LevelMergeResult result = new LevelMergeResult();
+                EditorTables merged = EditorTables.Read(dest.Commands.Filepath);
+                merged.Absorb(EditorTables.Read(user.Commands.Filepath), "your changes", merger.ChangedComposites, VanillaPages == null ? null : (Func<ShortGuid, List<FlowgraphMeta>>)(id => VanillaPages(original.Commands.GetComposite(id), level)));
+                merged.Finalise(dest.Commands, merger.ChangedComposites, result);
+                List<string> mergeNotes = merger.Notes.Concat(result.Warnings).ToList();
+                //Rebuilt only for what a build makes something of: scripts, models, materials (not textures or the level's data)
+                bool build = part.Build && (merger.ChangedComposites.Count != 0 || merger.TakenAssets.Any(o => o.StartsWith("model ") || o.StartsWith("material ")));
+                //Only the copy being saved is needed from here: a build wants the memory the others hold
+                merger = null;
+                user = null;
+                original = null;
+                GC.Collect();
+
+                //A mod's levels carry no edit history: it's the history of the level they came from
+                dest.Commands.Utils.ClearModificationInfo();
+                if (build)
+                {
+                    progress("Building " + name + " (navigation, collision, lighting)...");
+                    Instancing pass = LevelContent.SaveInstancedWithOptions(dest);
+                    if (pass?.BakeWarnings != null)
+                        foreach (string warning in pass.BakeWarnings)
+                            notes.Add(name + ": " + warning);
+                }
+                else
+                {
+                    progress("Saving " + name + "...");
+                    dest.Save();
+                }
+                merged.Write(dest.Commands.Filepath);
+                CopyLooseFiles(gameRoot, work, part);
+
+                foreach (string note in mergeNotes)
+                    notes.Add(name + ": " + note);
+                return work;
+            }
+            catch
+            {
+                //The copies still being read hold files in the folder
+                try { Task.WaitAll(new Task[] { originalRead, destRead }.Where(o => o != null).ToArray()); } catch { }
+                try { Directory.Delete(work, true); } catch { }
+                throw;
+            }
+        }
+
+        /* The level folder's files a save doesn't write (its text), as the user has them */
+        private static void CopyLooseFiles(string gameRoot, string work, LevelPart part)
+        {
+            foreach (string loose in part.LooseFiles)
+            {
+                string from = ModToolkit.Denormalise(gameRoot, loose), to = ModToolkit.Denormalise(work, loose);
+                if (!File.Exists(from)) continue;
+                Directory.CreateDirectory(Path.GetDirectoryName(to));
+                File.Copy(from, to, true);
+            }
+        }
+
         private static string LevelDir(string root, string level)
         {
-            return Path.Combine(root, "DATA", "ENV", "PRODUCTION", level.Replace('/', Path.DirectorySeparatorChar));
+            return Path.Combine(root, "DATA", "ENV", level.Replace('/', Path.DirectorySeparatorChar));
         }
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]

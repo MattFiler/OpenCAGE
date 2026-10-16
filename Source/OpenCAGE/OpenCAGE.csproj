@@ -1014,6 +1014,7 @@
     <Compile Include="Scripts\Modding\ModExportBuilder.cs" />
     <Compile Include="Scripts\Modding\ModInstaller.cs" />
     <Compile Include="Scripts\Modding\LevelMerge.cs" />
+    <Compile Include="Scripts\Modding\LevelPart.cs" />
     <Compile Include="Scripts\Modding\Merging\MergeCore.cs" />
     <Compile Include="Scripts\Modding\Merging\XmlMerge.cs" />
     <Compile Include="Scripts\Modding\Merging\TextMerge.cs" />
@@ -1034,6 +1035,7 @@
     <Compile Include="Scripts\CloseReasons.cs" />
     <Compile Include="Scripts\DirectXTexUtility.cs" />
     <Compile Include="Scripts\DirtyTracker.cs" />
+    <Compile Include="Scripts\EditHistory.cs" />
     <Compile Include="Scripts\EnumStringListViewItems.cs" />
     <Compile Include="Scripts\FlowgraphLayoutManager.cs" />
     <Compile Include="Scripts\CompositePreviewManager.cs" />

@@ -28,6 +28,7 @@ using WpfTextBlock = System.Windows.Controls.TextBlock;
 using WpfTextBox = System.Windows.Controls.TextBox;
 using System.Windows.Media;
 using static CATHODE.Materials.Material;
+using AssetKind = CathodeLib.AssetModificationInfoTable.AssetKind;
 
 namespace OpenCAGE
 {
@@ -142,6 +143,7 @@ namespace OpenCAGE
                 _samplerInfo[samplerTabIndex] = new Tuple<string, int, int>(samplerInfo.Item1, samplerIndex, textureRefIndex);
             }
 
+            EditHistory.AssetChanged(Content?.Level, AssetKind.MATERIAL, material.Name);
             Singleton.OnResourceModified?.Invoke();
             materialList_SelectedIndexChanged(null, EventArgs.Empty);
         }
@@ -173,6 +175,7 @@ namespace OpenCAGE
 
             _samplerInfo[samplerTabIndex] = new Tuple<string, int, int>(samplerInfo.Item1, samplerIndex, 255);
 
+            EditHistory.AssetChanged(Content?.Level, AssetKind.MATERIAL, material.Name);
             Singleton.OnResourceModified?.Invoke();
             materialList_SelectedIndexChanged(null, EventArgs.Empty);
         }
@@ -218,6 +221,7 @@ namespace OpenCAGE
             }
 
             WarnIfInconsistent(material);
+            EditHistory.AssetChanged(Content?.Level, AssetKind.MATERIAL, material.Name);
             Singleton.OnResourceModified?.Invoke();
             materialList_SelectedIndexChanged(null, EventArgs.Empty);
         }
@@ -338,6 +342,7 @@ namespace OpenCAGE
                             box.Text = toString(current);
                     }
                     updateColorPreview?.Invoke();
+                    EditHistory.AssetChanged(Content?.Level, AssetKind.MATERIAL, material.Name);
                     Singleton.OnResourceModified?.Invoke();
                 };
             };
@@ -432,6 +437,7 @@ namespace OpenCAGE
                         if (floatCount >= 4 && remappedIndex + 3 < material.PixelShaderConstants.Count)
                             material.PixelShaderConstants[remappedIndex + 3] = fromByte(dialog.Color.A);
 
+                        EditHistory.AssetChanged(Content?.Level, AssetKind.MATERIAL, material.Name);
                         Singleton.OnResourceModified?.Invoke();
                         RefreshParameterGroupBox(material, parameterName);
                     }
@@ -921,6 +927,7 @@ namespace OpenCAGE
             }
 
             WarnIfInconsistent(material);
+            EditHistory.AssetChanged(Content?.Level, AssetKind.MATERIAL, material.Name);
             Singleton.OnResourceModified?.Invoke();
             materialList_SelectedIndexChanged(null, EventArgs.Empty);
         }
@@ -977,6 +984,7 @@ namespace OpenCAGE
                 {
                     if (value == material.Priority) return;
                     material.Priority = value;
+                    EditHistory.AssetChanged(Content?.Level, AssetKind.MATERIAL, material.Name);
                     Singleton.OnResourceModified?.Invoke();
                     materialList_SelectedIndexChanged(null, EventArgs.Empty);
                 }
@@ -1161,6 +1169,7 @@ namespace OpenCAGE
                 return;
             }
 
+            EditHistory.AssetChanged(Content?.Level, AssetKind.MATERIAL, material.Name);
             Singleton.OnResourceModified?.Invoke();
             PopulateUI(material);
 
@@ -1213,6 +1222,7 @@ namespace OpenCAGE
                 : (Materials.LightFlags)material.OfflineLightFeatures.Copy();
 
             Content.Level.Materials.Entries.Add(newMaterial);
+            EditHistory.AssetChanged(Content.Level, AssetKind.MATERIAL, newMaterial.Name);
             Singleton.OnResourceModified?.Invoke();
             PopulateUI(newMaterial);
 

@@ -37,9 +37,9 @@ namespace OpenCAGE.Modding
         public static ModInstaller Installer { get { EnsureBuilt(); return _installer; } }
 
         /// <summary>
-        /// True when a game directory is set and the embedded manifest covers it. Without this the
-        /// mod manager still works (file-level, whole files), but nothing can be told apart from
-        /// vanilla.
+        /// True when a game directory is set and the embedded manifest covers it. Without this
+        /// nothing can be told apart from vanilla, so mods can't be installed or made
+        /// (<see cref="VanillaManifest.Unsupported"/> says why).
         /// </summary>
         public static bool ManifestAvailable { get { EnsureBuilt(); return _manifest != null && _manifest.Available; } }
 
@@ -119,6 +119,8 @@ namespace OpenCAGE.Modding
                 if (normalised == null || ModToolkit.IsExcluded(normalised))
                     return;
                 _installer.CaptureVanillaBaseline(normalised);
+                //When the user last changed it, for Create a Mod
+                EditHistory.SharedFileChanged(_gameRoot, normalised);
             }
             catch { }
 #endif

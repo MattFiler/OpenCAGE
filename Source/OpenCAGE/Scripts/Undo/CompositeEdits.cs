@@ -14,7 +14,7 @@ namespace OpenCAGE.Undo
     /// A composite or folder placeholder was created. Undo takes it out again (with the layout rows a
     /// real composite was given); redo puts it back.
     /// </summary>
-    public sealed class CompositeAddEdit : IEdit
+    public sealed class CompositeAddEdit : IEdit, IChangesComposites
     {
         private readonly Composite _composite;
         private readonly bool _folder;
@@ -23,6 +23,7 @@ namespace OpenCAGE.Undo
         public string Label { get; }
         public ShortGuid CompositeId => ShortGuid.Invalid;
         public ShortGuid EntityId => ShortGuid.Invalid;
+        public IEnumerable<ShortGuid> ChangedComposites => _folder || _composite == null ? new ShortGuid[0] : new[] { _composite.shortGUID };
 
         public CompositeAddEdit(Composite composite, bool folder, string label)
         {
@@ -82,7 +83,7 @@ namespace OpenCAGE.Undo
     /// has its pages saved without them), and the composite on screen is shown again after each step, as a
     /// refactor does: pages drawn from before the step would be compiled back over the links at the next save.
     /// </remarks>
-    public sealed class CompositeDeleteEdit : IEdit
+    public sealed class CompositeDeleteEdit : IEdit, IChangesComposites
     {
         private struct EntryRecord
         {
@@ -126,6 +127,8 @@ namespace OpenCAGE.Undo
         public string Label { get; }
         public ShortGuid CompositeId => ShortGuid.Invalid;
         public ShortGuid EntityId => ShortGuid.Invalid;
+        //The composites deleted, and every composite the delete took something out of (known once it has been applied)
+        public IEnumerable<ShortGuid> ChangedComposites => _composites.Select(o => o.shortGUID).Concat(_removedFunctions == null ? new HashSet<ShortGuid>() : OwnerIds());
 
         public CompositeDeleteEdit(List<Composite> composites, string label)
         {
@@ -441,7 +444,7 @@ namespace OpenCAGE.Undo
     }
 
     /// <summary>Composites renamed or moved between folders: one edit however many paths changed.</summary>
-    public sealed class CompositeRenameEdit : IEdit
+    public sealed class CompositeRenameEdit : IEdit, IChangesComposites
     {
         public struct Rename
         {
@@ -455,6 +458,7 @@ namespace OpenCAGE.Undo
         public string Label { get; }
         public ShortGuid CompositeId => ShortGuid.Invalid;
         public ShortGuid EntityId => ShortGuid.Invalid;
+        public IEnumerable<ShortGuid> ChangedComposites => _renames.Select(o => o.Composite);
 
         public CompositeRenameEdit(List<Rename> renames, string label)
         {

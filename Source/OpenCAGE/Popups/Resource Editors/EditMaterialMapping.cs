@@ -291,6 +291,7 @@ namespace OpenCAGE
             if (mappingSet == null)
                 return;
 
+            EditHistory.AssetChanged(Content?.Level, AssetModificationInfoTable.AssetKind.MATERIAL_MAPPING, mappingSet.Name);
             Singleton.OnResourceModified?.Invoke();
             Send.NotifyMaterialMappingModified(mappingSet);
         }

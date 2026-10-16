@@ -13,6 +13,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using AssetKind = CathodeLib.AssetModificationInfoTable.AssetKind;
 
 namespace OpenCAGE.MCP
 {
@@ -744,7 +745,7 @@ namespace OpenCAGE.MCP
                 //An entity pointed at the copy since by a change that kept no step would draw nothing
                 McpAssets.RefuseRemovalWhileUsed("Model " + copy.Name, McpAssets.UsersOf(level, copy));
                 listed.revert();
-            });
+            }, level, (AssetKind.MODEL, copy.Name));
             call.Note("The copy shares the original's materials and collision proxies. set_renderable {model: '" + copy.Name + "'} points an entity at it; edit_model then changes the copy alone.");
             return new JObject() { ["model"] = copy.Name, ["copied_from"] = model.Name, ["components"] = copy.Components.Count, ["undo"] = "One undo step: 'AI: Duplicate model " + Leaf(model.Name) + "'." };
         }
@@ -787,7 +788,7 @@ namespace OpenCAGE.MCP
                 {
                     Singleton.OnResourceModified?.Invoke();
                     List<KeyValuePair<Models.CS2.Component.LOD.Submesh, Materials.Material>> was = previous.ToList();
-                    McpAssetEdit.Record("Re-material " + McpAssets.Leaf(model.Name), () => { foreach (var o in was) o.Key.Material = material; }, () => { foreach (var o in was) o.Key.Material = o.Value; });
+                    McpAssetEdit.Record("Re-material " + McpAssets.Leaf(model.Name), () => { foreach (var o in was) o.Key.Material = material; }, () => { foreach (var o in was) o.Key.Material = o.Value; }, level, (AssetKind.MODEL, model.Name));
                 }
 
                 JObject summary = new JObject() { ["model"] = model.Name, ["material"] = McpAssets.MaterialRef(level, material), ["changed"] = changed };
@@ -920,7 +921,7 @@ namespace OpenCAGE.MCP
                         if (changed != 0)
                         {
                             Singleton.OnResourceModified?.Invoke();
-                            McpAssetEdit.Record("Set render flags of " + McpAssets.Leaf(model.Name), () => { foreach (var o in flags) o.submesh.RenderFlags = o.after; }, () => { foreach (var o in flags) o.submesh.RenderFlags = o.before; });
+                            McpAssetEdit.Record("Set render flags of " + McpAssets.Leaf(model.Name), () => { foreach (var o in flags) o.submesh.RenderFlags = o.after; }, () => { foreach (var o in flags) o.submesh.RenderFlags = o.before; }, level, (AssetKind.MODEL, model.Name));
                         }
                         result["submeshes"] = scope.Count;
                         result["changed"] = changed;
@@ -942,7 +943,11 @@ namespace OpenCAGE.MCP
                             if (ModelIO.RescaleSubmesh(target.submesh, (float)factor)) resized++;
                             else skipped.Add(Address(target.c, target.l, target.s));
                         }
-                        if (resized != 0) Singleton.OnResourceModified?.Invoke();
+                        if (resized != 0)
+                        {
+                            EditHistory.AssetChanged(level, AssetKind.MODEL, model.Name);
+                            Singleton.OnResourceModified?.Invoke();
+                        }
                         result["resized"] = resized;
                         if (skipped.Count != 0) result["skipped_no_positions"] = new JArray(skipped);
                         List<McpAssets.Placement> drawing = McpAssets.PlacedBy(level, new HashSet<Models.CS2.Component.LOD.Submesh>(scope.Select(o => o.submesh), McpAssets.ByReference<Models.CS2.Component.LOD.Submesh>.Instance));
@@ -1019,7 +1024,7 @@ namespace OpenCAGE.MCP
                         }
                         removal.apply();
                         Singleton.OnResourceModified?.Invoke();
-                        McpAssetEdit.Record("Remove part of " + McpAssets.Leaf(model.Name), removal.apply, removal.revert);
+                        McpAssetEdit.Record("Remove part of " + McpAssets.Leaf(model.Name), removal.apply, removal.revert, level, (AssetKind.MODEL, model.Name));
                         result["removed_submeshes"] = scope.Count;
                         result["components_now"] = model.Components.Count;
                         result["undo"] = "One undo step.";
@@ -1035,7 +1040,7 @@ namespace OpenCAGE.MCP
                         (Action apply, Action revert) removal = McpAssetEdit.ListChange(level.Models.Entries, model, level.Models.Entries.FindIndex(o => ReferenceEquals(o, model)), false);
                         removal.apply();
                         Singleton.OnResourceModified?.Invoke();
-                        McpAssetEdit.Record("Delete model " + McpAssets.Leaf(model.Name), removal.apply, removal.revert);
+                        McpAssetEdit.Record("Delete model " + McpAssets.Leaf(model.Name), removal.apply, removal.revert, level, (AssetKind.MODEL, model.Name));
                         result["deleted"] = true;
                         result["undo"] = "One undo step.";
                         return result;
@@ -1187,6 +1192,7 @@ namespace OpenCAGE.MCP
                 result["material"] = McpAssets.MaterialRef(level, fallback);
             }
 
+            EditHistory.AssetChanged(level, AssetKind.MODEL, model.Name);
             Singleton.OnResourceModified?.Invoke();
             foreach (string warning in warnings.Take(15)) call.Note(warning);
             call.Note("This changed the model's mesh data and cannot be undone (reload the level without saving to drop it). Placed entities show it in game after save_level build=true.");
@@ -1553,7 +1559,8 @@ namespace OpenCAGE.MCP
                     var was = before;
                     McpAssetEdit.Record("Replace texture " + made.Name,
                         () => { made.StateFlags = after.Item1; made.UsageFlags = after.Item2; made.Format = after.Item3; made.TextureStreamed = after.Item4; made.TexturePersistent = after.Item5; },
-                        () => { made.StateFlags = was.state; made.UsageFlags = was.usage; made.Format = was.format; made.TextureStreamed = was.streamed; made.TexturePersistent = was.persistent; });
+                        () => { made.StateFlags = was.state; made.UsageFlags = was.usage; made.Format = was.format; made.TextureStreamed = was.streamed; made.TexturePersistent = was.persistent; },
+                        level, (AssetKind.TEXTURE, made.Name));
                 }
                 else
                 {
@@ -1563,7 +1570,7 @@ namespace OpenCAGE.MCP
                         //A material bound to it since (the Material Editor keeps no step) would sample nothing
                         McpAssets.RefuseRemovalWhileUsed("Texture " + made.Name, McpAssets.UsersOf(level, made));
                         listed.revert();
-                    });
+                    }, level, (AssetKind.TEXTURE, made.Name));
                 }
 
                 JObject result = new JObject()
@@ -1767,7 +1774,7 @@ namespace OpenCAGE.MCP
                     Textures.TextureStateFlag stateAfter = texture.StateFlags;
                     Textures.TextureUsageFlag usageAfter = texture.UsageFlags;
                     Singleton.OnResourceModified?.Invoke();
-                    McpAssetEdit.Record("Set flags of texture " + texture.Name, () => { texture.StateFlags = stateAfter; texture.UsageFlags = usageAfter; }, () => { texture.StateFlags = stateBefore; texture.UsageFlags = usageBefore; });
+                    McpAssetEdit.Record("Set flags of texture " + texture.Name, () => { texture.StateFlags = stateAfter; texture.UsageFlags = usageAfter; }, () => { texture.StateFlags = stateBefore; texture.UsageFlags = usageBefore; }, level, (AssetKind.TEXTURE, texture.Name));
                     result["state_flags"] = new JArray(McpAssets.FlagNames(texture.StateFlags));
                     result["usage_flags"] = new JArray(McpAssets.FlagNames(texture.UsageFlags));
                     return result;
@@ -1822,7 +1829,7 @@ namespace OpenCAGE.MCP
                         foreach (Shaders.Shader shader in added)
                             if (!level.Materials.Entries.Any(o => o != null && ReferenceEquals(o.Shader, shader)))
                                 level.Shaders.Entries.RemoveAll(o => ReferenceEquals(o, shader));
-                    });
+                    }, level, new[] { (AssetKind.TEXTURE, texture.Name) }.Concat(users.Select(o => (AssetKind.MATERIAL, o.Name))).ToArray());
                     result["deleted"] = true;
                     result["undo"] = "One undo step (it comes back with the materials' samplers).";
                     if (users.Count != 0)
@@ -2112,6 +2119,9 @@ namespace OpenCAGE.MCP
                 if (call.Has("name")) galaxy.Name = call.Str("name") ?? "";
                 if (starCount != null) galaxy.StarCount = starCount.Value;
                 if (entries != null) galaxy.Entries = entries;
+                //Regenerating replaces the items even when it fails
+                EditHistory.AssetChanged(level, AssetKind.GALAXY, LevelMerger.StandaloneData[6]);
+                EditHistory.AssetChanged(level, AssetKind.GALAXY, LevelMerger.StandaloneData[5]);
                 if (!level.GalaxyItems.Generate(galaxy))
                     throw new McpError("The galaxy could not be generated from that definition.");
                 //Marks the level changed and sends the viewport its new sky, as the Galaxy Editor's Generate does
@@ -2801,6 +2811,8 @@ namespace OpenCAGE.MCP
     internal sealed class McpAssetEdit : IEdit
     {
         private readonly Action _apply, _revert;
+        private readonly Level _level;
+        private readonly (AssetKind kind, string name)[] _assets;
 
         public string Label { get; }
         public ShortGuid CompositeId => ShortGuid.Invalid;
@@ -2808,15 +2820,18 @@ namespace OpenCAGE.MCP
 
         /// <param name="apply">Does the change again (the change itself is made before the step is recorded).</param>
         /// <param name="revert">Puts things back as they were.</param>
-        public McpAssetEdit(string label, Action apply, Action revert)
+        /// <param name="assets">The level's assets the change touches, for the edit history: stamped when it is made, undone and done again.</param>
+        public McpAssetEdit(string label, Action apply, Action revert, Level level = null, params (AssetKind kind, string name)[] assets)
         {
             Label = label.StartsWith("AI: ", StringComparison.Ordinal) ? label : "AI: " + label;
             _apply = apply;
             _revert = revert;
+            _level = level;
+            _assets = assets;
         }
 
-        public void Apply(UndoContext context) { _apply(); Changed(); }
-        public void Revert(UndoContext context) { _revert(); Changed(); }
+        public void Apply(UndoContext context) { _apply(); Stamp(); Changed(); }
+        public void Revert(UndoContext context) { _revert(); Stamp(); Changed(); }
         public bool TryMerge(IEdit next) => false;
 
         private static void Changed()
@@ -2825,10 +2840,19 @@ namespace OpenCAGE.MCP
             Singleton.OnResourceModified?.Invoke();
         }
 
-        /// <summary>Record a change already made (UI thread). Nothing is recorded while undo is applying or blocked.</summary>
-        public static void Record(string label, Action apply, Action revert)
+        private void Stamp()
         {
-            UndoStack.Current?.Record(new McpAssetEdit(label, apply, revert));
+            if (_assets != null)
+                foreach ((AssetKind kind, string name) in _assets)
+                    EditHistory.AssetChanged(_level, kind, name);
+        }
+
+        /// <summary>Record a change already made (UI thread), stamping the assets it touches. Nothing is recorded while undo is applying or blocked.</summary>
+        public static void Record(string label, Action apply, Action revert, Level level = null, params (AssetKind kind, string name)[] assets)
+        {
+            McpAssetEdit edit = new McpAssetEdit(label, apply, revert, level, assets);
+            edit.Stamp();
+            UndoStack.Current?.Record(edit);
         }
 
         /// <summary>An object put into (or taken out of) a level list at an index, as an undo pair.</summary>
@@ -2904,7 +2928,7 @@ namespace OpenCAGE.MCP
                 foreach (Shaders.Shader shader in added)
                     if (!level.Materials.Entries.Any(o => o != null && ReferenceEquals(o.Shader, shader)))
                         level.Shaders.Entries.RemoveAll(o => ReferenceEquals(o, shader));
-            });
+            }, level, before.Concat(after).Select(o => o.Name).Distinct().Select(o => (AssetKind.MATERIAL, o)).ToArray());
         }
     }
 }

@@ -33,7 +33,7 @@ namespace OpenCAGE.Undo
     }
 
     /// <summary>A node's pin set changed: add all, remove unused, the manage-pins dialog, a pin made for a new connection.</summary>
-    public sealed class PinSetEdit : IEdit
+    public sealed class PinSetEdit : IEdit, IChangesComposites
     {
         private readonly ShortGuid _composite;
         private readonly string _page;
@@ -44,6 +44,8 @@ namespace OpenCAGE.Undo
         public string Label { get; }
         public ShortGuid CompositeId => _composite;
         public ShortGuid EntityId => ShortGuid.Invalid;
+        //Which pins a node shows, not what the scripts say
+        public IEnumerable<ShortGuid> ChangedComposites => new ShortGuid[0];
 
         public PinSetEdit(Composite composite, string page, NodeRef node, PinSet before, PinSet after, string label)
         {
@@ -151,7 +153,7 @@ namespace OpenCAGE.Undo
     }
 
     /// <summary>A flowgraph page renamed.</summary>
-    public sealed class PageRenameEdit : IEdit
+    public sealed class PageRenameEdit : IEdit, IChangesComposites
     {
         private readonly ShortGuid _composite;
         private readonly string _before;
@@ -160,6 +162,8 @@ namespace OpenCAGE.Undo
         public string Label { get; }
         public ShortGuid CompositeId => _composite;
         public ShortGuid EntityId => ShortGuid.Invalid;
+        //A page's name, not what the scripts say
+        public IEnumerable<ShortGuid> ChangedComposites => new ShortGuid[0];
 
         /// <param name="label">The step's label (default "Rename page &lt;before&gt;"); the AI assistant tools give theirs an 'AI: ' one.</param>
         public PageRenameEdit(Composite composite, string before, string after, string label = null)

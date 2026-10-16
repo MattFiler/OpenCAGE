@@ -133,10 +133,16 @@ namespace OpenCAGE.Modding
                 || normalisedPath.EndsWith("/WORLD/COMMANDS.BIN");
         }
 
-        /// <summary>The level folder of a level name: DATA/ENV/PRODUCTION/BSP_TORRENS/.</summary>
+        /// <summary>The level folder of a level name: DATA/ENV/PRODUCTION/BSP_TORRENS/, DATA/ENV/MY_LEVEL/.</summary>
         public static string LevelFolder(string level)
         {
-            return "DATA/ENV/PRODUCTION/" + level + "/";
+            return "DATA/ENV/" + level + "/";
+        }
+
+        /// <summary>A level's name as a player knows it - the last part: "BSP_TORRENS", "BSPNOSTROMO_RIPLEY", "MY_LEVEL".</summary>
+        public static string LevelName(string level)
+        {
+            return level == null ? null : level.Substring(level.LastIndexOf('/') + 1);
         }
 
         /// <summary>
@@ -149,27 +155,28 @@ namespace OpenCAGE.Modding
         }
 
         /// <summary>
-        /// The level a path belongs to ("BSP_TORRENS", "DLC/BSPNOSTROMO_RIPLEY"), or null for
-        /// files outside the ENV level folders.
+        /// The level a path belongs to, named from DATA/ENV as the editor names levels ("PRODUCTION/BSP_TORRENS",
+        /// "PRODUCTION/DLC/BSPNOSTROMO_RIPLEY", "MY_LEVEL"), or null for files outside the level folders.
         /// </summary>
         public static string LevelOf(string normalisedPath)
         {
-            const string prefix = "DATA/ENV/PRODUCTION/";
+            const string prefix = "DATA/ENV/";
             if (!normalisedPath.StartsWith(prefix))
                 return null;
-            string rest = normalisedPath.Substring(prefix.Length);
-            int slash = rest.IndexOf('/');
-            if (slash < 0)
+            string[] parts = normalisedPath.Substring(prefix.Length).Split('/');
+            //The game's levels are in PRODUCTION (its DLC's in PRODUCTION/DLC). Create Level makes new ones straight in ENV,
+            //beside GLOBAL - which isn't a level, but what every level shares.
+            int depth;
+            if (parts[0] == "PRODUCTION")
+                depth = parts.Length > 1 && parts[1] == "DLC" ? 3 : 2;
+            else if (parts[0] == "GLOBAL")
                 return null;
-            string level = rest.Substring(0, slash);
-            if (level == "DLC")
-            {
-                int slash2 = rest.IndexOf('/', slash + 1);
-                if (slash2 < 0)
-                    return null;
-                level = rest.Substring(0, slash2);
-            }
-            return level;
+            else
+                depth = 1;
+            //A file in the level's folder, not the folder's own name (or a file beside the levels)
+            if (parts.Length <= depth)
+                return null;
+            return string.Join("/", parts, 0, depth);
         }
 
         /// <summary>

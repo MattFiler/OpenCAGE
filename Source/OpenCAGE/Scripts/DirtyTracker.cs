@@ -74,19 +74,21 @@ namespace OpenCAGE
 
         /// <summary>
         /// Mark the level as modified if the data differs from the snapshot (or if it couldn't be captured -
-        /// a spurious "unsaved changes" prompt is far better than silently losing an edit).
+        /// a spurious "unsaved changes" prompt is far better than silently losing an edit). True if it was marked.
         /// </summary>
-        public static void MarkIfChanged(string snapshot, object data)
+        public static bool MarkIfChanged(string snapshot, object data)
         {
             if (snapshot == null)
             {
                 MarkDirty();
-                return;
+                return true;
             }
 
             string current = Snapshot(data);
-            if (current == null || current != snapshot)
-                MarkDirty();
+            if (current != null && current == snapshot)
+                return false;
+            MarkDirty();
+            return true;
         }
 
         private static void MarkClean(object a) => MarkClean();

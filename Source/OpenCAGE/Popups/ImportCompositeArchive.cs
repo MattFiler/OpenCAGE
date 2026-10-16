@@ -406,6 +406,7 @@ namespace OpenCAGE
                 if (_manifest.Composites.Any(o => o.IsRoot && o.Guid == composite.shortGUID.AsUInt32))
                     CompositePreviewManager.MarkEdited(composite);
                 FlowgraphLayoutManager.ImportLayouts(composite, layouts);
+                EditHistory.CompositesChanged(destination.Commands, new[] { composite.shortGUID });
             });
             return result;
         }

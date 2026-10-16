@@ -33,6 +33,17 @@ namespace OpenCAGE.Undo
     }
 
     /// <summary>
+    /// An edit that changes other composites than <see cref="IEdit.CompositeId"/> names, or none of the level's scripts at
+    /// all (only where nodes sit on a page, say). The level's edit history - when the user last changed each composite,
+    /// which Create a Mod lists changes by - is kept from it; any other edit changes its <see cref="IEdit.CompositeId"/>.
+    /// </summary>
+    public interface IChangesComposites
+    {
+        /// <summary>Every composite the edit changes the scripts of - empty for an edit to editor data only.</summary>
+        IEnumerable<ShortGuid> ChangedComposites { get; }
+    }
+
+    /// <summary>
     /// An edit made to several entities in one gesture - a viewport drag of a multi-selection. Undo and
     /// redo select all of them again, where any other edit selects its <see cref="IEdit.EntityId"/>.
     /// </summary>

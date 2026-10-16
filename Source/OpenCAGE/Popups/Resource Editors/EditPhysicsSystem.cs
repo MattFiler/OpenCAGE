@@ -259,6 +259,7 @@ namespace OpenCAGE
                 }
             }
             statusLabel.Text = "Body changed  ·  goes into " + (PhysicsSystemImporter.FilesWritten(Content.Level) ?? "PHYSICS.HKX") + " when the level is next saved";
+            EditHistory.AssetChanged(Content.Level, CathodeLib.AssetModificationInfoTable.AssetKind.PHYSICS_SYSTEM, _shown.SystemIndex.ToString());
             Singleton.OnResourceModified?.Invoke();
         }
 
@@ -406,6 +407,7 @@ namespace OpenCAGE
             PopulateList();
             UpdatePreview(created);
             statusLabel.Text = "System #" + created.SystemIndex + " created from " + source.Name + "  \u00B7  " + systemList.Items.Count + " / " + _allSystems.Count + " systems";
+            EditHistory.AssetChanged(Content.Level, CathodeLib.AssetModificationInfoTable.AssetKind.PHYSICS_SYSTEM, created.SystemIndex.ToString());
             Singleton.OnResourceModified?.Invoke();
         }
 

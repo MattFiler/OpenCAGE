@@ -1217,6 +1217,7 @@ namespace OpenCAGE.MCP
                 }
             }
             HavokPackfile.StaticCompoundShape created = CollisionProxyImporter.Import(level, source, userData, filterInfo);
+            EditHistory.AssetChanged(level, AssetModificationInfoTable.AssetKind.COLLISION, created.ProxyIndex.ToString());
             Singleton.OnResourceModified?.Invoke();
             _importedProxies[key] = (new WeakReference(level), created.ProxyIndex);
             return created;
@@ -1926,6 +1927,7 @@ namespace OpenCAGE.MCP
                         created = PhysicsSystemImporter.Import(level, systemName, shape, body);
                 }
                 catch (Exception e) when (!(e is McpError)) { throw new McpError("The physics system could not be created: " + e.Message); }
+                EditHistory.AssetChanged(level, AssetModificationInfoTable.AssetKind.PHYSICS_SYSTEM, created.SystemIndex.ToString());
                 Singleton.OnResourceModified?.Invoke();
                 result["system"] = created.SystemIndex;
                 call.Note("System " + created.SystemIndex + " is in " + files + " in memory and is written by save_level. It cannot be undone or deleted.");
@@ -2813,6 +2815,7 @@ namespace OpenCAGE.MCP
                 if (at < 0)
                     entries.Insert(Math.Min(Math.Max(_index, 0), entries.Count), _set);
             }
+            EditHistory.AssetChanged(context.Content?.Level, AssetModificationInfoTable.AssetKind.CHARACTER_ACCESSORIES, LevelMerger.StandaloneData[4]);
             DirtyTracker.MarkLevelDataModified();
             Entity entity = context.Entity(CompositeId, EntityId);
             if (entity != null)

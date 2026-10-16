@@ -46,7 +46,7 @@ namespace OpenCAGE.Modding.Merging
         {
             if (string.IsNullOrEmpty(target)) return "a game file";
             string t = target.ToUpperInvariant();
-            if (!t.StartsWith("DATA/")) return "the level " + target.Replace("DLC/", "");
+            if (!t.StartsWith("DATA/")) return "the level " + ModToolkit.LevelName(target);
             string file = target.Substring(target.LastIndexOf('/') + 1);
             if (t.StartsWith("DATA/ALIENCONFIGS/")) return "the alien's settings (" + file + ")";
             if (t.StartsWith("DATA/BINARY_BEHAVIOR/")) return "the AI's behaviour trees";
@@ -62,13 +62,8 @@ namespace OpenCAGE.Modding.Merging
             int inside = target.IndexOf(" › ", StringComparison.Ordinal);
             if (inside > 0 && AnimTreeLayouts.IsEntry(target.Substring(inside + 3))) return "the animation tree layouts";
             if (t == "DATA/GLOBAL/ANIMATION.PAK" || t == "DATA/GLOBAL/ANIMATION_SWITCH.PAK") return "the animations (" + file + ")";
-            int production = t.IndexOf("/ENV/PRODUCTION/");
-            if (production >= 0)
-            {
-                string rest = target.Substring(production + "/ENV/PRODUCTION/".Length);
-                int slash = rest.IndexOf('/');
-                if (slash > 0) return file + " in the level " + rest.Substring(0, slash);
-            }
+            string level = ModToolkit.LevelOf(t);
+            if (level != null) return file + " in the level " + ModToolkit.LevelName(level);
             return file;
         }
 

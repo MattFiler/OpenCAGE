@@ -42,6 +42,9 @@ namespace OpenCAGE.Modding
 
         public ModExportBuilder(string gameRoot, VanillaManifest manifest, HashCache cache, ModInstaller installer)
         {
+            //What a mod changes is what differs from the shipped files: without them, every file is a change
+            if (manifest.Unsupported != null)
+                throw new InvalidOperationException(manifest.Unsupported);
             _gameRoot = gameRoot;
             _manifest = manifest;
             _cache = cache;
@@ -117,6 +120,74 @@ namespace OpenCAGE.Modding
         private readonly List<string> _deleted = new List<string>();
         /* Files whose content isn't what's on disk: the user's own version of a file combined with installed mods there */
         private readonly Dictionary<string, byte[]> _content = new Dictionary<string, byte[]>();
+        /* ...or a part of a level built elsewhere (see AddLevelPart): where each such file is */
+        private readonly Dictionary<string, string> _sources = new Dictionary<string, string>();
+
+        /// <summary>
+        /// Include part of a level: <see cref="ModLevelMerger.Extract"/>'s result, laid out as a game folder under
+        /// <paramref name="partRoot"/>. Its files that aren't as the game shipped them go in.
+        /// </summary>
+        public void AddLevelPart(string partRoot, string level)
+        {
+            foreach (string folder in new[] { ModToolkit.LevelFolder(level), ModToolkit.LevelFolder(level + "_PATCH") })
+            {
+                string dir = ModToolkit.Denormalise(partRoot, folder);
+                if (!Directory.Exists(dir))
+                    continue;
+                foreach (string file in Directory.GetFiles(dir, "*", SearchOption.AllDirectories))
+                {
+                    string normalised = ModToolkit.NormaliseFull(partRoot, file);
+                    if (normalised == null || ModToolkit.IsRegenerated(normalised) || ModToolkit.IsExcluded(normalised))
+                        continue;
+                    if (_manifest.IsVanilla(normalised, ModToolkit.Sha256File(file)))
+                        continue;
+                    _sources[normalised] = file;
+                    if (!_files.Contains(normalised))
+                        _files.Add(normalised);
+                }
+            }
+        }
+
+        /* What a file was as the game shipped it, to make it a patch against: the kept original, or the game folder's
+           copy when that's still as shipped */
+        private byte[] OriginalBytes(string normalisedPath)
+        {
+            if (_installer == null)
+                return null;
+            byte[] kept = _installer.VanillaBytes(normalisedPath);
+            if (kept != null)
+                return kept;
+            byte[] hash = _cache.Hash(normalisedPath);
+            return hash != null && _manifest.IsVanilla(normalisedPath, hash) ? File.ReadAllBytes(ModToolkit.Denormalise(_gameRoot, normalisedPath)) : null;
+        }
+
+        /* A level's scripts as a mod carries them: without the edit history kept in them (when their owner changed what),
+           which is the history of the level they came from, not of the ones they go into */
+        private static byte[] WithoutEditHistory(string normalisedPath, byte[] content)
+        {
+            string file = normalisedPath.Substring(normalisedPath.LastIndexOf('/') + 1);
+            if (file != "COMMANDS.PAK" && file != "COMMANDS.PAK.META")
+                return content;
+            CATHODE.Scripting.Internal.CustomTableFileType type = file == "COMMANDS.PAK" ? CATHODE.Scripting.Internal.CustomTableFileType.COMMANDS_PAK : CATHODE.Scripting.Internal.CustomTableFileType.STANDALONE;
+            bool any = (CathodeLib.CustomTable.ReadTable(content, CATHODE.Scripting.Internal.CustomTableType.COMPOSITE_MODIFICATION_INFO, type) as CathodeLib.CompositeModificationInfoTable)?.modification_info.Count > 0
+                || (CathodeLib.CustomTable.ReadTable(content, CATHODE.Scripting.Internal.CustomTableType.ASSET_MODIFICATION_INFO, type) as CathodeLib.AssetModificationInfoTable)?.modification_info.Count > 0;
+            if (!any)
+                return content;
+            string dir = Path.Combine(Path.GetTempPath(), "OpenCAGE_" + Guid.NewGuid().ToString("N").Substring(0, 8));
+            Directory.CreateDirectory(dir);
+            try
+            {
+                string temp = Path.Combine(dir, file);
+                File.WriteAllBytes(temp, content);
+                CathodeLib.CustomTable.WriteTable(temp, CATHODE.Scripting.Internal.CustomTableType.COMPOSITE_MODIFICATION_INFO, new CathodeLib.CompositeModificationInfoTable());
+                CathodeLib.CustomTable.WriteTable(temp, CATHODE.Scripting.Internal.CustomTableType.ASSET_MODIFICATION_INFO, new CathodeLib.AssetModificationInfoTable());
+                return File.ReadAllBytes(temp);
+            }
+            finally
+            {
+                try { Directory.Delete(dir, true); } catch { }
+            }
+        }
         private readonly HashSet<string> _ownVersions = new HashSet<string>();
 
         private void Include(string normalisedPath)
@@ -200,8 +271,9 @@ namespace OpenCAGE.Modding
 
             foreach (string path in _files.OrderBy(o => o))
             {
-                byte[] content = _content.TryGetValue(path, out byte[] own) ? own : File.ReadAllBytes(ModToolkit.Denormalise(_gameRoot, path));
-                AddContent(writer, result, path, content, _installer == null ? null : _installer.VanillaBytes(path));
+                byte[] content = _content.TryGetValue(path, out byte[] own) ? own
+                    : File.ReadAllBytes(_sources.TryGetValue(path, out string source) ? source : ModToolkit.Denormalise(_gameRoot, path));
+                AddContent(writer, result, path, WithoutEditHistory(path, content), _sources.ContainsKey(path) ? OriginalBytes(path) : (_installer == null ? null : _installer.VanillaBytes(path)));
             }
 
             //Configs ship as the finished file - vanilla with the chosen values changed - which the installer can
@@ -237,7 +309,7 @@ namespace OpenCAGE.Modding
             List<string> all = _files.Concat(_configs.Keys).Concat(_deleted).ToList();
             List<string> levels = all.Select(ModInstaller.LevelUnitOf).Where(o => o != null).Distinct().OrderBy(o => o).ToList();
             if (levels.Count != 0)
-                parts.Add("Changes the level" + (levels.Count == 1 ? " " : "s ") + string.Join(", ", levels.Select(o => o.Replace("DLC/", ""))));
+                parts.Add("Changes the level" + (levels.Count == 1 ? " " : "s ") + string.Join(", ", levels.Select(ModToolkit.LevelName)));
             //Settings by what they're for; behaviour trees by tree (the tree directory is one config file, but a tree is a tree)
             List<KeyValuePair<string, List<BmlPatchOp>>> settings = _configs.Where(o => !o.Key.StartsWith("DATA/BINARY_BEHAVIOR/")).ToList();
             int values = settings.Sum(o => o.Value.Count);
@@ -440,7 +512,7 @@ namespace OpenCAGE.Modding
         /// </summary>
         public static string GlobalTexturesPath(string normalisedTarget)
         {
-            if (!normalisedTarget.StartsWith("DATA/ENV/PRODUCTION/"))
+            if (ModToolkit.LevelOf(normalisedTarget) == null)
                 return null;
             string fileName = normalisedTarget.Substring(normalisedTarget.LastIndexOf('/') + 1);
             return fileName.StartsWith("LEVEL_TEXTURES") ? GlobalTexturesPak : null;

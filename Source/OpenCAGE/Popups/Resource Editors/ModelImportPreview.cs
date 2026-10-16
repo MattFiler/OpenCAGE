@@ -716,6 +716,16 @@ namespace AlienPAK
         {
             if (_generatedPlans.Count == 0 || _level == null) return true;
 
+            //Only what gets built here, not a material reused - and it stays even if the import stops part way
+            int materialsBefore = _level.Materials?.Entries.Count ?? 0, texturesBefore = _level.Textures?.Entries.Count ?? 0;
+            void MarkBuilt()
+            {
+                for (int i = materialsBefore; i < (_level.Materials?.Entries.Count ?? 0); i++)
+                    EditHistory.AssetChanged(_level, AssetModificationInfoTable.AssetKind.MATERIAL, _level.Materials.Entries[i].Name);
+                for (int i = texturesBefore; i < (_level.Textures?.Entries.Count ?? 0); i++)
+                    EditHistory.AssetChanged(_level, AssetModificationInfoTable.AssetKind.TEXTURE, _level.Textures.Entries[i].Name);
+            }
+
             Cursor = Cursors.WaitCursor;
             try
             {
@@ -742,7 +752,10 @@ namespace AlienPAK
                                 "'" + entry.Value.Name + "' could not be generated:\n\n" + (error ?? "unknown reason")
                                 + "\n\nImport without it? Those submeshes will use the fallback material.",
                                 "Could not generate material", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                        {
+                            MarkBuilt();
                             return false;
+                        }
                         Cursor = Cursors.WaitCursor;
                         continue;
                     }
@@ -752,6 +765,7 @@ namespace AlienPAK
                             _submeshMaterials[submesh] = material;
                 }
 
+                MarkBuilt();
                 Singleton.OnResourceModified?.Invoke();
                 return true;
             }

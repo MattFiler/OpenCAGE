@@ -21,7 +21,28 @@ namespace OpenCAGE.Modding
         public PatchManager.Platform Platform { get; private set; }
         private readonly int _bit;
 
-        public bool Available { get { return _table != null && _table.files.Count != 0; } }
+        /// <summary>
+        /// Whether the table has this platform's files: the table holds every build's, and not every build has been
+        /// recorded (none of mobile or Mac/Linux, say), so a table with rows can still know nothing of this one.
+        /// </summary>
+        public bool Available { get; private set; }
+
+        /// <summary>
+        /// Why mods can't be installed or made for this build, or null when they can. Mods are combined with the game's
+        /// files and taken out again by putting those back: without this build's hashes, nothing tells its files from
+        /// changed ones - every file would look like one a mod added.
+        /// </summary>
+        public string Unsupported
+        {
+            get
+            {
+                if (Available)
+                    return null;
+                if (Platform == PatchManager.Platform.UNKNOWN)
+                    return "OpenCAGE can't tell which version of the game this is, so it can't install or make mods for it.";
+                return "OpenCAGE has no record of the " + ModInstaller.PlatformName(Platform) + " version's original files, so it can't install or make mods for it.";
+            }
+        }
 
         public VanillaManifest(PatchManager.Platform platform = PatchManager.Platform.STEAM)
             : this(Shipped, platform) { }
@@ -49,6 +70,8 @@ namespace OpenCAGE.Modding
             _table = table;
             Platform = platform;
             _bit = FileHashTable.PlatformBit(platform);
+            using (IEnumerator<FileHashTable.Entry> entries = Entries.GetEnumerator())
+                Available = entries.MoveNext();
         }
 
         public FileHashTable.Entry Lookup(string normalisedPath)

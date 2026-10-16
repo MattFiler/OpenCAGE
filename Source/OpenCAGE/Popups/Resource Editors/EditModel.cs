@@ -304,6 +304,7 @@ namespace OpenCAGE
                             "Imported under a new name", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                     Content.Level.Models.Entries.Add(previewForm.ResultCs2);
+                    EditHistory.AssetChanged(Content.Level, AssetModificationInfoTable.AssetKind.MODEL, previewForm.ResultCs2.Name);
                     if (previewForm.ResultCs2.Components.Count > 0 && previewForm.ResultCs2.Components[0].LODs.Count > 0)
                         toSelect = previewForm.ResultCs2.Components[0].LODs[0];
 
@@ -339,6 +340,7 @@ namespace OpenCAGE
                 Singleton.OnCompositeAddPending?.Invoke();
                 ModelCompositeBuilder.Result result = ModelCompositeBuilder.Create(Content.Level, model, compositeName, skeleton, skeleton?.Name);
                 Singleton.OnCompositeAdded?.Invoke(result.Composite);
+                EditHistory.CompositesChanged(Content.Level.Commands, new[] { result.Composite });
 
                 string message = "Created composite '" + result.Composite.name + "' with " + result.ModelReferences
                     + (result.ModelReferences == 1 ? " ModelReference" : " ModelReferences") + ".";
@@ -600,6 +602,7 @@ namespace OpenCAGE
             }
             if (MessageBox.Show("Are you sure you want to delete '" + cs2.Name + "'?", "About to delete...", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
+            EditHistory.AssetChanged(Content.Level, AssetModificationInfoTable.AssetKind.MODEL, cs2.Name);
             Content.Level.Models.Entries.Remove(cs2);
             RebuildModelFileTree(filter: modelSearchTextBox.Text);
         }
@@ -1156,6 +1159,8 @@ namespace OpenCAGE
                     submesh.RenderFlags &= ~changedPair.flag;
             }
 
+            if (TryGetSelectedCs2(out Models.CS2 changedModel))
+                EditHistory.AssetChanged(Content.Level, AssetModificationInfoTable.AssetKind.MODEL, changedModel.Name);
             Singleton.OnResourceModified?.Invoke();
         }
     }

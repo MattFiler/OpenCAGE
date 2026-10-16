@@ -310,6 +310,7 @@ namespace OpenCAGE
             PopulateList();
             UpdatePreview(created);
             statusLabel.Text = "Proxy #" + created.ProxyIndex + " created from " + source.Name + "  \u00B7  " + compoundList.Items.Count + " / " + _allCompounds.Count + " compounds";
+            EditHistory.AssetChanged(Content?.Level, CathodeLib.AssetModificationInfoTable.AssetKind.COLLISION, created.ProxyIndex.ToString());
             Singleton.OnResourceModified?.Invoke();
         }
 

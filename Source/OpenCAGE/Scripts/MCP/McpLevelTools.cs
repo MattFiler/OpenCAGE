@@ -1655,6 +1655,10 @@ namespace OpenCAGE.MCP
             Modding.ModState state = Modding.ModServices.State;
             if (installer == null || state == null)
                 throw new McpError("The mod manager is not available: no game install is set.");
+            //No hashes of this build's files: nothing to combine mods with, put back, or tell a mod's changes by
+            string unsupported = Modding.ModServices.Manifest.Unsupported;
+            if (unsupported != null && action != "list")
+                throw new McpError("The mod manager is not available: " + unsupported);
             bool dryRun = call.Bool("dry_run");
             int limit = Math.Max(1, call.Int("limit", 100));
             switch (action)

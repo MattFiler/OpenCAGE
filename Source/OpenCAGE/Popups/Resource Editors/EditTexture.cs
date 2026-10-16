@@ -13,6 +13,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using static CATHODE.Textures;
+using AssetKind = CathodeLib.AssetModificationInfoTable.AssetKind;
 
 namespace OpenCAGE
 {
@@ -324,6 +325,7 @@ namespace OpenCAGE
                     combined |= pair.flag;
             }
             _selectedTexture.StateFlags = combined;
+            EditHistory.AssetChanged(Content?.Level, AssetKind.TEXTURE, _selectedTexture.Name);
             Singleton.OnResourceModified?.Invoke();
             RefreshTexturePreviewsForSelected();
         }
@@ -339,6 +341,7 @@ namespace OpenCAGE
                     combined |= pair.flag;
             }
             _selectedTexture.UsageFlags = combined;
+            EditHistory.AssetChanged(Content?.Level, AssetKind.TEXTURE, _selectedTexture.Name);
             Singleton.OnResourceModified?.Invoke();
             RefreshTexturePreviewsForSelected();
         }
@@ -527,6 +530,7 @@ namespace OpenCAGE
                     texture.Format = chosen;
                     ApplyParts(texture, part, persistentDrop, persistentOnly);
                     _activeTextures.Entries.Add(texture);
+                    EditHistory.AssetChanged(Content?.Level, AssetKind.TEXTURE, texture.Name);
                     Singleton.OnResourceModified?.Invoke();
                     _suppressSearchChanged = true;
                     textureSearchBox.Text = "";
@@ -620,6 +624,7 @@ namespace OpenCAGE
 
                     texture.Format = chosen;
                     ApplyParts(texture, part, persistentDrop, persistentOnly);
+                    EditHistory.AssetChanged(Content?.Level, AssetKind.TEXTURE, texture.Name);
                     Singleton.OnResourceModified?.Invoke();
                     RefreshTexturePreviewFromSelection();
                 }
@@ -649,6 +654,8 @@ namespace OpenCAGE
             try
             {
                 string norm = nodeVal.Replace('\\', '/');
+                foreach (Textures.TEX4 removed in _activeTextures.Entries.Where(o => o.Name.Replace('\\', '/') == norm))
+                    EditHistory.AssetChanged(Content?.Level, AssetKind.TEXTURE, removed.Name);
                 _activeTextures.Entries.RemoveAll(o => o.Name.Replace('\\', '/') == norm);
                 Singleton.OnResourceModified?.Invoke();
                 FileTree.SelectedNode = null;

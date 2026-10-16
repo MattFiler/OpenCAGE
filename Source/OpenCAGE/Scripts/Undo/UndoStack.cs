@@ -259,6 +259,10 @@ namespace OpenCAGE.Undo
             if (IsSuspended)
                 return;
 
+            //When the user last changed each composite, kept with the level for Create a Mod (a step's pieces each, and the
+            //whole step when it ends: the same moment twice)
+            EditHistory.Record(MakeContext().Commands, edit);
+
             if (_group != null)
             {
                 _group.Add(edit);
@@ -328,6 +332,8 @@ namespace OpenCAGE.Undo
                     edit.Apply(context);
                 context.Ui?.AfterEdit(edit);
                 to.Add(edit);
+                //Undone or done again, it changed those composites once more
+                EditHistory.Record(context.Commands, edit);
                 Status?.Invoke((undo ? "Undid " : "Redid ") + edit.Label);
             }
             catch (Exception ex)
@@ -376,7 +382,7 @@ namespace OpenCAGE.Undo
         }
 
         /// <summary>Several edits that undo and redo as one.</summary>
-        private sealed class Group : IEdit, IMultiEntityEdit
+        private sealed class Group : IEdit, IMultiEntityEdit, IChangesComposites
         {
             private readonly List<IEdit> _edits = new List<IEdit>();
             public string Label;
@@ -404,6 +410,16 @@ namespace OpenCAGE.Undo
 
             string IEdit.Label => Label ?? (_edits.Count > 0 ? _edits[_edits.Count - 1].Label : "");
             public ShortGuid CompositeId => _edits.Count > 0 ? _edits[0].CompositeId : ShortGuid.Invalid;
+            public IEnumerable<ShortGuid> ChangedComposites
+            {
+                get
+                {
+                    HashSet<ShortGuid> ids = new HashSet<ShortGuid>();
+                    foreach (IEdit edit in _edits)
+                        ids.UnionWith(EditHistory.CompositesChangedBy(edit));
+                    return ids;
+                }
+            }
             public ShortGuid EntityId
             {
                 get

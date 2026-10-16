@@ -32,6 +32,53 @@ namespace OpenCAGE.Popups
             public List<BmlPatchOp> Ops;
         }
 
+        /* A level the user changed, and the parts of it the list offers by its edit history */
+        private class LevelChanges
+        {
+            public string Level;
+            public List<string> Files = new List<string>(); //Every changed file of it: what goes when it goes whole
+            public bool New; //The game doesn't ship it: it goes whole
+            public bool UnderMods; //Installed mods change it too: the user's own version goes, whole
+            public bool Built; //Its lighting and navigation were rebuilt: a part of it is built too
+            public List<CompositeRow> Composites = new List<CompositeRow>();
+            public List<AssetRow> Assets = new List<AssetRow>();
+            public List<string> LooseFiles = new List<string>(); //Files its save doesn't write (its text)
+            public bool HasHistory => Composites.Count != 0 || Assets.Count != 0;
+            public bool Whole => New || UnderMods;
+        }
+
+        /* A composite of a level the user changed, from its edit history */
+        private class CompositeRow
+        {
+            public LevelChanges Level;
+            public CATHODE.Scripting.ShortGuid Id;
+            public string Name; //Its path, as the composite browser shows it - null for one since deleted
+            public DateTime Edited;
+        }
+
+        /* An asset of a level the user changed in place, from its edit history */
+        private class AssetRow
+        {
+            public LevelChanges Level;
+            public CathodeLib.AssetModificationInfoTable.AssetKind Kind;
+            public string Name;
+            public DateTime Edited;
+            public bool WholeOnly; //Can't be taken out of the level on its own: it goes with everything else in the level
+        }
+
+        /* One of a level's files its save doesn't write (its text), taken as it is */
+        private class LooseRow
+        {
+            public LevelChanges Level;
+            public string Path;
+        }
+
+        /* Everything else the user changed in a level - with the rest of its rows, the whole level as it is now */
+        private class RestRow
+        {
+            public LevelChanges Level;
+        }
+
         private const string TreeDirectory = "DATA/BINARY_BEHAVIOR/_DIRECTORY_CONTENTS.BML";
 
         /* What a level's changed files say about what changed in it, in words */
@@ -324,14 +371,21 @@ namespace OpenCAGE.Popups
 
             if (byLevel.Count != 0)
             {
-                TreeNode levels = _tree.Nodes.Add("Levels");
-                foreach (KeyValuePair<string, List<string>> level in byLevel.OrderBy(o => o.Key))
+                //What in each level the user changed, by its edit history: reading the names of the composites takes a moment
+                List<LevelChanges> levels = new List<LevelChanges>();
+                using (BusyDialog busy = new BusyDialog("Reading what you've changed in your levels..."))
                 {
-                    TreeNode levelNode = levels.Nodes.Add(level.Key + "  -  " + DescribeLevel(level.Value));
-                    levelNode.Tag = level.Value;
-                    levelNode.ToolTipText = "Every changed file of the level goes in together:\n" + string.Join("\n", level.Value.Select(o => ShortName(o) + "  (" + Describe(o) + ")"));
+                    busy.Work = report =>
+                    {
+                        foreach (KeyValuePair<string, List<string>> level in byLevel.OrderBy(o => ModToolkit.LevelName(o.Key)))
+                        {
+                            report("Reading what you've changed in " + ModToolkit.LevelName(level.Key) + "...");
+                            levels.Add(ReadLevel(level.Key, level.Value));
+                        }
+                    };
+                    busy.ShowDialog(this);
                 }
-                levels.Expand();
+                AddLevelRows(levels);
             }
 
             List<ConfigChange> trees = configs.Where(o => o.Path == TreeDirectory).ToList();
@@ -373,7 +427,8 @@ namespace OpenCAGE.Popups
                 TreeNode otherRoot = _tree.Nodes.Add("Other files");
                 foreach (string file in other)
                 {
-                    TreeNode node = otherRoot.Nodes.Add(Capitalise(Modding.Merging.MergeConflict.Place(file)) + "  -  " + Describe(file));
+                    DateTime? edited = EditHistory.SharedFileEdited(ModServices.GameRoot, file);
+                    TreeNode node = otherRoot.Nodes.Add(Capitalise(Modding.Merging.MergeConflict.Place(file)) + "  -  " + Describe(file) + (edited.HasValue ? ", " + EditedText(edited.Value) : ""));
                     node.Tag = file;
                     node.ToolTipText = file;
                 }
@@ -386,13 +441,184 @@ namespace OpenCAGE.Popups
             }
             else
             {
-                //Most mods are everything the author changed: it all starts ticked
+                //Most mods are everything the author changed: it all starts ticked - except the rest of a level whose edit
+                //history says what in it the user changed: what they changed starts ticked, the rest of the level doesn't
                 foreach (TreeNode root in _tree.Nodes)
                     root.Checked = true;
+                _cascading = true;
+                foreach (KeyValuePair<LevelChanges, TreeNode> rest in _restNodes)
+                    if (rest.Key.HasHistory && !rest.Key.Assets.Any(o => o.WholeOnly))
+                        rest.Value.Checked = false;
+                _cascading = false;
             }
 
             _tree.EndUpdate();
             UpdateSummary();
+        }
+
+        /* The kinds of asset a mod can take out of a level on their own; the rest go with everything else in it */
+        private static readonly HashSet<CathodeLib.AssetModificationInfoTable.AssetKind> _partialKinds = new HashSet<CathodeLib.AssetModificationInfoTable.AssetKind>()
+        {
+            CathodeLib.AssetModificationInfoTable.AssetKind.TEXTURE,
+            CathodeLib.AssetModificationInfoTable.AssetKind.MODEL,
+            CathodeLib.AssetModificationInfoTable.AssetKind.MATERIAL,
+            CathodeLib.AssetModificationInfoTable.AssetKind.CHARACTER_ACCESSORIES,
+            CathodeLib.AssetModificationInfoTable.AssetKind.GALAXY,
+        };
+
+        /* A level's changes: whole where it can only go whole, else what its edit history says the user changed in it. Off the
+           UI thread; never throws (a level whose history can't be read goes whole) */
+        private static LevelChanges ReadLevel(string level, List<string> files)
+        {
+            LevelChanges changes = new LevelChanges() { Level = level, Files = files };
+            try
+            {
+                string folder = ModToolkit.LevelFolder(level);
+                changes.New = !ModServices.Manifest.Entries.Any(o => o.Path.StartsWith(folder));
+                //A level installed mods change holds their changes as well as the user's, and only its files tell them apart
+                changes.UnderMods = files.Any(o => ModServices.Installer.TryGetOwnVersion(o, out _))
+                    || ModServices.State.Composition.Keys.Any(o => ModInstaller.LevelUnitOf(o) == level);
+                changes.Built = files.Any(ModLevelMerger.IsBuildOutput);
+                if (changes.Whole)
+                    return changes;
+                changes.LooseFiles = files.Where(o => o.Contains("/TEXT/")).ToList();
+
+                //A Nostromo level keeps its scripts (and their history) in its _PATCH folder
+                string commandsPath = ModToolkit.Denormalise(ModServices.GameRoot, ModToolkit.LevelFolder(level + "_PATCH") + "WORLD/COMMANDS.PAK");
+                if (!File.Exists(commandsPath))
+                    commandsPath = ModToolkit.Denormalise(ModServices.GameRoot, folder + "WORLD/COMMANDS.PAK");
+                if (!File.Exists(commandsPath))
+                    return changes;
+                CathodeLib.CompositeModificationInfoTable composites = CathodeLib.CustomTable.ReadTable(commandsPath, CATHODE.Scripting.Internal.CustomTableType.COMPOSITE_MODIFICATION_INFO) as CathodeLib.CompositeModificationInfoTable;
+                CathodeLib.AssetModificationInfoTable assets = CathodeLib.CustomTable.ReadTable(commandsPath, CATHODE.Scripting.Internal.CustomTableType.ASSET_MODIFICATION_INFO) as CathodeLib.AssetModificationInfoTable;
+                if (composites != null && composites.modification_info.Count != 0)
+                {
+                    //For their names: the scripts alone, the level's tables their resources point into left empty
+                    string none = Path.Combine(Path.GetTempPath(), "OpenCAGE-no-such-file");
+                    CATHODE.Commands commands = new CATHODE.Commands(commandsPath, new CATHODE.EnvironmentAnimations(none, null), new CATHODE.CollisionMaps(none, null, null), new CATHODE.RenderableElements(none, null, null));
+                    foreach (CathodeLib.CompositeModificationInfoTable.ModificationInfo info in composites.modification_info)
+                        changes.Composites.Add(new CompositeRow() { Level = changes, Id = info.composite_id, Name = commands.GetComposite(info.composite_id)?.name, Edited = EditHistory.ToLocal(info.modification_date) });
+                }
+                if (assets != null)
+                    foreach (CathodeLib.AssetModificationInfoTable.ModificationInfo info in assets.modification_info)
+                        changes.Assets.Add(new AssetRow() { Level = changes, Kind = info.kind, Name = info.name, Edited = EditHistory.ToLocal(info.modification_date), WholeOnly = !_partialKinds.Contains(info.kind) });
+            }
+            catch
+            {
+                changes.Composites.Clear();
+                changes.Assets.Clear();
+            }
+            return changes;
+        }
+
+        /* Each level's "everything else" row, and the rows of the parts of it */
+        private readonly Dictionary<LevelChanges, TreeNode> _restNodes = new Dictionary<LevelChanges, TreeNode>();
+        private readonly Dictionary<LevelChanges, List<TreeNode>> _partNodes = new Dictionary<LevelChanges, List<TreeNode>>();
+
+        /* What the user changed in their levels: the composites and assets they edited (newest first; a composite changed in
+           several levels is one row, ticking it in each), then each level - a new one whole, else its other changes */
+        private void AddLevelRows(List<LevelChanges> levels)
+        {
+            _restNodes.Clear();
+            _partNodes.Clear();
+
+            List<CompositeRow> composites = levels.SelectMany(o => o.Composites).ToList();
+            if (composites.Count != 0)
+            {
+                TreeNode root = _tree.Nodes.Add("Scripts you've changed");
+                foreach (IGrouping<CATHODE.Scripting.ShortGuid, CompositeRow> group in composites.GroupBy(o => o.Id).OrderByDescending(g => g.Max(o => o.Edited)))
+                {
+                    List<CompositeRow> rows = group.OrderByDescending(o => o.Edited).ToList();
+                    string path = rows.Select(o => o.Name).FirstOrDefault(o => o != null);
+                    string title = path == null ? "A composite you deleted" : CompositeLeaf(path);
+                    TreeNode node = root.Nodes.Add(title + "  -  " + (rows.Count == 1 ? LevelTitle(rows[0].Level) + ", " + EditedText(rows[0].Edited) : rows.Count + " levels, last " + EditedText(rows[0].Edited)));
+                    node.ToolTipText = path ?? "";
+                    if (rows.Count == 1)
+                        AddPart(node, rows[0], rows[0].Level);
+                    else
+                        foreach (CompositeRow row in rows)
+                            AddPart(node.Nodes.Add(LevelTitle(row.Level) + ", " + EditedText(row.Edited)), row, row.Level);
+                }
+                root.Expand();
+            }
+
+            List<AssetRow> assets = levels.SelectMany(o => o.Assets).OrderByDescending(o => o.Edited).ToList();
+            if (assets.Count != 0)
+            {
+                TreeNode root = _tree.Nodes.Add("Models, textures and materials you've changed");
+                foreach (AssetRow asset in assets)
+                {
+                    TreeNode node = root.Nodes.Add(AssetTitle(asset) + "  -  " + LevelTitle(asset.Level) + ", " + EditedText(asset.Edited)
+                        + (asset.WholeOnly ? " (goes in with everything else in the level)" : ""));
+                    AddPart(node, asset, asset.Level);
+                }
+                root.Expand();
+            }
+
+            TreeNode levelsRoot = _tree.Nodes.Add("Levels");
+            foreach (LevelChanges level in levels)
+            {
+                string count = DescribeLevel(level.Files);
+                if (level.Whole || (!level.HasHistory && level.LooseFiles.Count == 0))
+                {
+                    string what = level.New ? "a new level (" + level.Files.Count + " file" + (level.Files.Count == 1 ? "" : "s") + ")"
+                        : level.UnderMods ? "your own version of it, whole (mods you've installed change it too): " + count
+                        : "changed before OpenCAGE kept a history of edits, so the whole level as it is now: " + count;
+                    TreeNode whole = levelsRoot.Nodes.Add(LevelTitle(level) + "  -  " + what);
+                    whole.ToolTipText = "Every changed file of the level goes in together:\n" + string.Join("\n", level.Files.Select(o => ShortName(o) + "  (" + Describe(o) + ")"));
+                    whole.Tag = new RestRow() { Level = level };
+                    _restNodes[level] = whole;
+                    continue;
+                }
+                TreeNode levelNode = levelsRoot.Nodes.Add(LevelTitle(level));
+                foreach (string loose in level.LooseFiles)
+                {
+                    DateTime? edited = EditHistory.SharedFileEdited(ModServices.GameRoot, loose);
+                    AddPart(levelNode.Nodes.Add("Text: " + ShortName(loose) + (edited.HasValue ? ", " + EditedText(edited.Value) : "")), new LooseRow() { Level = level, Path = loose }, level);
+                }
+                TreeNode rest = levelNode.Nodes.Add(level.HasHistory ? "Everything else you've changed in it (the whole level)" : "Everything else, from before OpenCAGE kept a history of edits (the whole level)");
+                rest.ToolTipText = "Ticked, the whole level goes in as it is now - every change in it, listed or not: " + count + "\n" + string.Join("\n", level.Files.Select(o => ShortName(o) + "  (" + Describe(o) + ")"));
+                rest.Tag = new RestRow() { Level = level };
+                _restNodes[level] = rest;
+                levelNode.Expand();
+            }
+            levelsRoot.Expand();
+        }
+
+        private void AddPart(TreeNode node, object row, LevelChanges level)
+        {
+            node.Tag = row;
+            if (!_partNodes.TryGetValue(level, out List<TreeNode> nodes))
+                _partNodes[level] = nodes = new List<TreeNode>();
+            nodes.Add(node);
+        }
+
+        private static string LevelTitle(LevelChanges level) => ModToolkit.LevelName(level.Level);
+
+        private static string CompositeLeaf(string path)
+        {
+            string name = path.Replace('/', '\\').TrimEnd('\\');
+            int slash = name.LastIndexOf('\\');
+            return slash < 0 ? name : name.Substring(slash + 1) + " (" + name.Substring(0, slash) + ")";
+        }
+
+        private static string AssetTitle(AssetRow asset)
+        {
+            switch (asset.Kind)
+            {
+                case CathodeLib.AssetModificationInfoTable.AssetKind.TEXTURE: return "Texture " + asset.Name;
+                case CathodeLib.AssetModificationInfoTable.AssetKind.MODEL: return "Model " + asset.Name;
+                case CathodeLib.AssetModificationInfoTable.AssetKind.MATERIAL: return "Material " + asset.Name;
+                case CathodeLib.AssetModificationInfoTable.AssetKind.MATERIAL_MAPPING: return "Material mapping " + asset.Name;
+                case CathodeLib.AssetModificationInfoTable.AssetKind.COLLISION: return "Collision " + asset.Name;
+                case CathodeLib.AssetModificationInfoTable.AssetKind.PHYSICS_SYSTEM: return "Physics " + asset.Name;
+                default: return Capitalise(asset.Name);
+            }
+        }
+
+        private static string EditedText(DateTime when)
+        {
+            return "edited " + when.ToString(when.Year == DateTime.Now.Year ? "d MMM HH:mm" : "d MMM yyyy");
         }
 
         private static string DescribeOp(BmlPatchOp op)
@@ -436,12 +662,11 @@ namespace OpenCAGE.Popups
             catch { return 0; }
         }
 
+        /* A level's file by its place in the level folder */
         private static string ShortName(string normalisedPath)
         {
-            int at = normalisedPath.IndexOf("/PRODUCTION/");
-            if (at < 0) return normalisedPath;
-            int levelSlash = normalisedPath.IndexOf('/', at + "/PRODUCTION/".Length);
-            return levelSlash < 0 ? normalisedPath : normalisedPath.Substring(levelSlash + 1);
+            string level = ModToolkit.LevelOf(normalisedPath);
+            return level == null ? normalisedPath : normalisedPath.Substring(ModToolkit.LevelFolder(level).Length);
         }
 
         private bool _cascading;
@@ -454,8 +679,61 @@ namespace OpenCAGE.Popups
             for (TreeNode parent = e.Node.Parent; parent != null; parent = parent.Parent)
                 if (e.Node.Checked && !parent.Checked)
                     parent.Checked = true;
+
+            /* A level's "everything else" is the whole level as it is now: ticked, every row of the level is in with it;
+               any row of it taken out takes the whole level out - just what's ticked goes. A change that can't be taken
+               out of its level on its own brings the whole level. */
+            foreach (TreeNode node in new[] { e.Node }.Concat(AllNodes(e.Node.Nodes)).ToList())
+            {
+                bool wholeOnly = node.Tag is AssetRow asset && asset.WholeOnly;
+                if ((node.Tag is RestRow || wholeOnly) && node.Checked)
+                    SetLevel(LevelOfPart(node.Tag) ?? ((RestRow)node.Tag).Level, true);
+                else if (!node.Checked && (LevelOfPart(node.Tag) ?? (node.Tag as RestRow)?.Level) is LevelChanges level)
+                    NotWhole(level);
+            }
             _cascading = false;
             UpdateSummary();
+        }
+
+        private static LevelChanges LevelOfPart(object tag)
+        {
+            switch (tag)
+            {
+                case CompositeRow composite: return composite.Level;
+                case AssetRow asset: return asset.Level;
+                case LooseRow loose: return loose.Level;
+                default: return null;
+            }
+        }
+
+        /* The level no longer goes whole: its "everything else" unticked, and with it what can only go with the whole level */
+        private void NotWhole(LevelChanges level)
+        {
+            if (_restNodes.TryGetValue(level, out TreeNode rest))
+                Check(rest, false);
+            if (_partNodes.TryGetValue(level, out List<TreeNode> parts))
+                foreach (TreeNode part in parts)
+                    if (part.Tag is AssetRow asset && asset.WholeOnly)
+                        Check(part, false);
+        }
+
+        /* Tick (or untick) a level's every row, its "everything else" included */
+        private void SetLevel(LevelChanges level, bool value)
+        {
+            if (_restNodes.TryGetValue(level, out TreeNode rest))
+                Check(rest, value);
+            if (_partNodes.TryGetValue(level, out List<TreeNode> parts))
+                foreach (TreeNode part in parts)
+                    Check(part, value);
+        }
+
+        private static void Check(TreeNode node, bool value)
+        {
+            node.Checked = value;
+            if (value)
+                for (TreeNode parent = node.Parent; parent != null; parent = parent.Parent)
+                    if (!parent.Checked)
+                        parent.Checked = true;
         }
 
         private void SetChildren(TreeNode node, bool value)
@@ -471,13 +749,18 @@ namespace OpenCAGE.Popups
         {
             List<string> files = SelectedFiles();
             List<KeyValuePair<ConfigChange, List<BmlPatchOp>>> configs = SelectedConfigs();
+            Dictionary<LevelChanges, LevelPart> parts = SelectedParts();
             //What's ticked, counted the way the list shows it
-            int levelCount = AllNodes(_tree.Nodes).Count(o => o.Checked && o.Tag is List<string>);
+            int levelCount = AllNodes(_tree.Nodes).Count(o => o.Checked && o.Tag is RestRow);
+            int compositeCount = parts.Values.Sum(o => o.Composites.Count);
+            int assetCount = parts.Values.Sum(o => o.Textures.Count + o.Models.Count + o.Materials.Count + o.StandaloneData.Count + o.LooseFiles.Count);
             int settingCount = configs.Where(o => o.Key.Path != TreeDirectory).Sum(o => o.Value.Count);
             int treeCount = AllNodes(_tree.Nodes).Count(o => o.Checked && o.Tag is OpGroup);
             int otherCount = AllNodes(_tree.Nodes).Count(o => o.Checked && o.Tag is string);
             List<string> counts = new List<string>();
-            if (levelCount != 0) counts.Add(levelCount + " level" + (levelCount == 1 ? "" : "s"));
+            if (compositeCount != 0) counts.Add(compositeCount + " composite" + (compositeCount == 1 ? "" : "s"));
+            if (assetCount != 0) counts.Add(assetCount + " other level change" + (assetCount == 1 ? "" : "s"));
+            if (levelCount != 0) counts.Add(levelCount + " whole level" + (levelCount == 1 ? "" : "s"));
             if (settingCount != 0) counts.Add(settingCount + " setting" + (settingCount == 1 ? "" : "s"));
             if (treeCount != 0) counts.Add(treeCount + " behaviour tree" + (treeCount == 1 ? "" : "s"));
             if (otherCount != 0) counts.Add(otherCount + " other file" + (otherCount == 1 ? "" : "s"));
@@ -491,6 +774,9 @@ namespace OpenCAGE.Popups
                 {
                     ModExportBuilder preview = new ModExportBuilder(ModServices.GameRoot, ModServices.Manifest, ModServices.Cache, ModServices.Installer);
                     preview.AddFiles(files);
+                    //Part of a level is said as a change to the level, as the whole of it is
+                    foreach (LevelChanges level in parts.Keys)
+                        preview.AddFiles(level.Files.Where(o => o.EndsWith("/WORLD/COMMANDS.PAK")));
                     foreach (KeyValuePair<ConfigChange, List<BmlPatchOp>> config in configs)
                         preview.AddConfigPatch(config.Key.Path, config.Value, config.Key.VanillaBytes);
                     //Said by OpenCAGE, not written by the author, even with the box focused
@@ -515,6 +801,7 @@ namespace OpenCAGE.Popups
         #endregion
 
         #region SELECTION
+        /* The files that go in as they are: the other files ticked, and every file of each level going in whole */
         private List<string> SelectedFiles()
         {
             List<string> files = new List<string>();
@@ -522,9 +809,44 @@ namespace OpenCAGE.Popups
             {
                 if (!node.Checked) continue;
                 if (node.Tag is string file) files.Add(file);
-                else if (node.Tag is List<string> level) files.AddRange(level);
+                else if (node.Tag is RestRow rest) files.AddRange(rest.Level.Files);
             }
             return files.Distinct().ToList();
+        }
+
+        /* Each level only part of which goes in (its "everything else" unticked), and that part, from its ticked rows */
+        private Dictionary<LevelChanges, LevelPart> SelectedParts()
+        {
+            Dictionary<LevelChanges, LevelPart> parts = new Dictionary<LevelChanges, LevelPart>();
+            foreach (TreeNode node in AllNodes(_tree.Nodes))
+            {
+                LevelChanges level = LevelOfPart(node.Tag);
+                if (!node.Checked || level == null || (_restNodes.TryGetValue(level, out TreeNode rest) && rest.Checked))
+                    continue;
+                if (!parts.TryGetValue(level, out LevelPart part))
+                    parts[level] = part = new LevelPart() { Build = level.Built };
+                switch (node.Tag)
+                {
+                    case CompositeRow composite:
+                        part.Composites.Add(composite.Id);
+                        break;
+                    case LooseRow loose:
+                        part.LooseFiles.Add(loose.Path);
+                        break;
+                    case AssetRow asset:
+                        switch (asset.Kind)
+                        {
+                            case CathodeLib.AssetModificationInfoTable.AssetKind.TEXTURE: part.Textures.Add(asset.Name); break;
+                            case CathodeLib.AssetModificationInfoTable.AssetKind.MODEL: part.Models.Add(asset.Name); break;
+                            case CathodeLib.AssetModificationInfoTable.AssetKind.MATERIAL: part.Materials.Add(asset.Name); break;
+                            case CathodeLib.AssetModificationInfoTable.AssetKind.CHARACTER_ACCESSORIES:
+                            case CathodeLib.AssetModificationInfoTable.AssetKind.GALAXY: part.StandaloneData.Add(asset.Name); break;
+                            //(The rest only go with the whole level: ticked, so is its "everything else")
+                        }
+                        break;
+                }
+            }
+            return parts;
         }
 
         private List<KeyValuePair<ConfigChange, List<BmlPatchOp>>> SelectedConfigs()
@@ -564,7 +886,8 @@ namespace OpenCAGE.Popups
         {
             List<string> files = SelectedFiles();
             List<KeyValuePair<ConfigChange, List<BmlPatchOp>>> configs = SelectedConfigs();
-            if (files.Count == 0 && configs.Count == 0)
+            Dictionary<LevelChanges, LevelPart> parts = SelectedParts();
+            if (files.Count == 0 && configs.Count == 0 && parts.Count == 0)
             {
                 MessageBox.Show("Tick the changes to include first.", "Nothing selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
@@ -603,11 +926,14 @@ namespace OpenCAGE.Popups
 
             ExportResult result = null;
             Exception error = null;
+            List<string> notes = new List<string>();
             using (BusyDialog busy = new BusyDialog("Building the package..."))
             {
                 System.Threading.Thread examining = _examiningAnimations;
                 busy.Work = report =>
                 {
+                    //Each level only part of which goes in is built as that part, in a folder of its own
+                    List<string> partFolders = new List<string>();
                     try
                     {
                         //What an animation PAK changes is being worked out already: the package's summary uses that rather than doing it again
@@ -624,11 +950,30 @@ namespace OpenCAGE.Popups
                         builder.Info.OpenCageVersion = Singleton.Version;
                         builder.Preview = _preview;
                         builder.AddFiles(files);
+                        ModLevelMerger merger = ModServices.Installer.LevelMerger as ModLevelMerger ?? new ModLevelMerger();
+                        foreach (KeyValuePair<LevelChanges, LevelPart> part in parts.OrderBy(o => o.Key.Level))
+                        {
+                            string level = part.Key.Level;
+                            string folder = merger.Extract(ModServices.GameRoot, level, root => ModServices.Installer.WriteOriginalLevel(level, root), part.Value, report, notes);
+                            if (folder == null)
+                                continue;
+                            partFolders.Add(folder);
+                            builder.AddLevelPart(folder, level);
+                        }
+                        if (files.Count == 0 && configs.Count == 0 && partFolders.Count == 0)
+                            throw new Exception("nothing you ticked differs from the game as it shipped, so there's nothing to put in a mod.");
                         foreach (KeyValuePair<ConfigChange, List<BmlPatchOp>> config in configs)
                             builder.AddConfigPatch(config.Key.Path, config.Value, config.Key.VanillaBytes);
+                        report("Writing the package...");
                         result = builder.Write(output);
+                        result.Warnings.InsertRange(0, notes);
                     }
                     catch (Exception e) { error = e; }
+                    finally
+                    {
+                        foreach (string folder in partFolders)
+                            try { Directory.Delete(folder, true); } catch { }
+                    }
                 };
                 busy.ShowDialog(this);
             }

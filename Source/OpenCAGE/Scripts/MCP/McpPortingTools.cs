@@ -610,6 +610,7 @@ namespace OpenCAGE.MCP
                             Singleton.OnCompositeAdded?.Invoke(copy);
                             FlowgraphLayoutManager.ImportLayouts(copy, FlowgraphLayoutManager.GetLayoutsForPort(original, sourceLayouts, FlowgraphLayoutManager.BundledLevelName(sourceCommands, level), sourceCommands));
                             ParameterModificationTracker.ImportCompositeRows(copy.shortGUID, sourceModifications, sourceDefaults);
+                            EditHistory.CompositesChanged(destination.Commands, new[] { copy });
                         };
                         foreach (Composite root in roots)
                         {

@@ -73,7 +73,7 @@ namespace OpenCAGE.Undo
     }
 
     /// <summary>Nodes dragged (or arranged) to new positions.</summary>
-    public sealed class NodeMoveEdit : IEdit
+    public sealed class NodeMoveEdit : IEdit, IChangesComposites
     {
         public sealed class Movement
         {
@@ -88,6 +88,8 @@ namespace OpenCAGE.Undo
 
         public string Label { get; }
         public ShortGuid CompositeId => _composite;
+        //Where nodes sit on a page, not what the scripts say
+        public IEnumerable<ShortGuid> ChangedComposites => new ShortGuid[0];
         public ShortGuid EntityId => ShortGuid.Invalid;
 
         public NodeMoveEdit(Composite composite, string page, List<Movement> moves, string label = null)
