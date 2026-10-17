@@ -43,6 +43,7 @@ namespace OpenCAGE
             this.toolStripSeparator5 = new System.Windows.Forms.ToolStripSeparator();
             this.findReferencesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.goToNextNodeInFlowgraphToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.showConnectedLinksToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.triggerSequenceSeparator = new System.Windows.Forms.ToolStripSeparator();
             this.addSelectedToTriggerSequenceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.removeSelectedFromTriggerSequenceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -87,6 +88,7 @@ namespace OpenCAGE
             this.toolStripSeparator5,
             this.findReferencesToolStripMenuItem,
             this.goToNextNodeInFlowgraphToolStripMenuItem,
+            this.showConnectedLinksToolStripMenuItem,
             this.triggerSequenceSeparator,
             this.addSelectedToTriggerSequenceToolStripMenuItem,
             this.removeSelectedFromTriggerSequenceToolStripMenuItem,
@@ -237,7 +239,15 @@ namespace OpenCAGE
             this.goToNextNodeInFlowgraphToolStripMenuItem.ToolTipText = "Select this to jump to the next node for this entity within the current flowgraph" +
     ".";
             this.goToNextNodeInFlowgraphToolStripMenuItem.Click += new System.EventHandler(this.goToNextNodeInFlowgraphToolStripMenuItem_Click);
-            // 
+            //
+            // showConnectedLinksToolStripMenuItem
+            //
+            this.showConnectedLinksToolStripMenuItem.Name = "showConnectedLinksToolStripMenuItem";
+            this.showConnectedLinksToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.showConnectedLinksToolStripMenuItem.Text = "Show Connected Links";
+            this.showConnectedLinksToolStripMenuItem.ToolTipText = "Lists every link in and out of this node, and jumps to the node at the other end of one.";
+            this.showConnectedLinksToolStripMenuItem.Click += new System.EventHandler(this.showConnectedLinksToolStripMenuItem_Click);
+            //
             // triggerSequenceSeparator
             // 
             this.triggerSequenceSeparator.Name = "triggerSequenceSeparator";
@@ -522,6 +532,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem addNodeForSelectedEntityToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem deleteLinkToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem goToNextNodeInFlowgraphToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem showConnectedLinksToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator triggerSequenceSeparator;
         private System.Windows.Forms.ToolStripMenuItem addSelectedToTriggerSequenceToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem removeSelectedFromTriggerSequenceToolStripMenuItem;

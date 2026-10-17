@@ -893,6 +893,12 @@
     <Compile Include="Popups\SelectDestinationPin.Designer.cs">
       <DependentUpon>SelectDestinationPin.cs</DependentUpon>
     </Compile>
+    <Compile Include="Popups\ShowConnectedLinks.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\ShowConnectedLinks.Designer.cs">
+      <DependentUpon>ShowConnectedLinks.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\ManageEntityPins.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -1709,6 +1715,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\SelectDestinationPin.resx">
       <DependentUpon>SelectDestinationPin.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\ShowConnectedLinks.resx">
+      <DependentUpon>ShowConnectedLinks.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\ManageEntityPins.resx">
       <DependentUpon>ManageEntityPins.cs</DependentUpon>

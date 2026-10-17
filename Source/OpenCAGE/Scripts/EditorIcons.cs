@@ -155,6 +155,9 @@ namespace OpenCAGE
         EntitySpawner,
         EntityMetrics,
         EntityHighlight,
+
+        //Commands made after the rest (appended, so the strips keep their order)
+        ConnectedLinks,
     }
 
     /// <summary>

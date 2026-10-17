@@ -62,6 +62,7 @@ namespace OpenCAGE
             EditorIcons.Bind(createInstanceOfCompositeToolStripMenuItem, EditorIcon.CompositeInstance);
             EditorIcons.Bind(createProxyToolStripMenuItem, EditorIcon.Proxy);
             EditorIcons.Bind(createAliasToolStripMenuItem1, EditorIcon.Alias);
+            EditorIcons.Bind(showConnectedLinksToolStripMenuItem, EditorIcon.ConnectedLinks);
             this.VisibleChanged += Flowgraph_VisibleChanged;
             this.FormClosed += Flowgraph_FormClosed;
 
@@ -1175,6 +1176,7 @@ namespace OpenCAGE
             toolStripSeparator5.Visible = node != null && hoveredPin == null;
             findReferencesToolStripMenuItem.Visible = node != null && hoveredPin == null;
             goToNextNodeInFlowgraphToolStripMenuItem.Visible = node != null && hoveredPin == null;
+            showConnectedLinksToolStripMenuItem.Visible = node != null && hoveredPin == null;
 
             if (node != null && hoveredPin == null && !multipleNodes)
                 goToNextNodeInFlowgraphToolStripMenuItem.Enabled = HasMultipleNodesForEntity(node.Entity);
@@ -2138,6 +2140,48 @@ namespace OpenCAGE
                 if (node == startNode)
                     break;
             }
+        }
+
+        /* Show Connected Links: a window listing the clicked node's links, kept up to date as links are made and broken,
+           whose Go To brings this page forward and selects the node at the other end of one. One at a time: showing another
+           node's replaces it. It goes with this page (see ShowConnectedLinks.CloseWith) */
+        ShowConnectedLinks _connectedLinksDialog = null;
+        private void showConnectedLinksToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            STNode node = stNodeEditor1.GetHoveredNode();
+            if (node == null || node.Entity == null)
+                return;
+
+            if (_connectedLinksDialog != null && !_connectedLinksDialog.IsDisposed)
+                _connectedLinksDialog.Close();
+
+            _connectedLinksDialog = new ShowConnectedLinks(this, node);
+            _connectedLinksDialog.Show();
+        }
+
+        /// <summary>Bring this page forward with just the given node of it selected, and the canvas moved onto it - its entity
+        /// shown in the inspector, as clicking on it would.</summary>
+        public void GoToNode(STNode node)
+        {
+            if (node == null || node.Owner != stNodeEditor1)
+                return;
+
+            Show();
+            _applyingEntitySelection = true;
+            try
+            {
+                DeselectAllNodes();
+            }
+            finally
+            {
+                _applyingEntitySelection = false;
+            }
+            SelectNode(node);
+
+            //Selecting a node from code raises nothing, so it is announced here as a click on it is: the inspector loads its
+            //entity, without the rest of that entity's nodes on this page being selected along with it
+            Owner_SelectedChanged(stNodeEditor1, EventArgs.Empty);
+            stNodeEditor1.Invalidate();
         }
 
         SetPinDelay _pinDelayDialog = null;
