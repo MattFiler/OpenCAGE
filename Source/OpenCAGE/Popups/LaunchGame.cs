@@ -48,8 +48,14 @@ namespace OpenCAGE
         private static string Beside(string relative) => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, relative);
 
         /* The runtime utils ASI (the scripting helpers, Possess Characters and Live Link) supports the Steam, GOG and Epic Games
-           Store builds of the game (see OpenCAGE.RuntimeUtils/GameAddresses.h); Cinematic Tools only the Steam one */
+           Store builds of the game (see OpenCAGE.RuntimeUtils/GameAddresses.h) */
         internal static bool RuntimeUtilsSupports(PatchManager.Platform platform)
+        {
+            return platform == PatchManager.Platform.STEAM || platform == PatchManager.Platform.GOG || platform == PatchManager.Platform.EPIC_GAMES_STORE;
+        }
+
+        /* Cinematic Tools support the same three (their offsets for each are in the CinematicTools dependency's Util/Offsets.cpp) */
+        internal static bool CinematicToolsSupports(PatchManager.Platform platform)
         {
             return platform == PatchManager.Platform.STEAM || platform == PatchManager.Platform.GOG || platform == PatchManager.Platform.EPIC_GAMES_STORE;
         }
@@ -62,7 +68,7 @@ namespace OpenCAGE
 
         internal static bool CinematicToolsAvailable()
         {
-            return Singleton.Platform == PatchManager.Platform.STEAM && File.Exists(Beside(CinematicToolsDll)) && File.Exists(Beside(CinematicToolsInjector));
+            return CinematicToolsSupports(Singleton.Platform) && File.Exists(Beside(CinematicToolsDll)) && File.Exists(Beside(CinematicToolsInjector));
         }
 
         //Every scripting helper's on/off setting (the Scripting Helpers box)
@@ -361,9 +367,9 @@ namespace OpenCAGE
                 if (cinematicToolsProblem != null)
                     MessageBox.Show(cinematicToolsProblem, caption, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
-            //Ticked on a Steam install whose Cinematic Tools files have gone (antivirus often removes the injector): said, as
-            //the game runs the scripting helpers instead
-            else if (SettingsManager.GetBool(Settings.CinematicTools) && Singleton.Platform == PatchManager.Platform.STEAM)
+            //Ticked on an install they support whose Cinematic Tools files have gone (antivirus often removes the injector):
+            //said, as the game runs the scripting helpers instead
+            else if (SettingsManager.GetBool(Settings.CinematicTools) && CinematicToolsSupports(Singleton.Platform))
             {
                 MessageBox.Show("Enable Cinematic Tools is ticked, but their files are missing from:\n" + Path.GetFullPath(Beside("cinematictools")) +
                     "\n\nThe game was launched with the scripting helpers instead. Antivirus software may have removed CinematicTools.exe: allow or exclude it, or reinstall/update OpenCAGE to restore it.",

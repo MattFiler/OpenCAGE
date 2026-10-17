@@ -1641,7 +1641,7 @@ namespace OpenCAGE.MCP
                 if (!global::OpenCAGE.LaunchGame.CinematicToolsAvailable())
                 {
                     result["cinematic_tools"] = "not available";
-                    call.Note("Cinematic Tools are switched on in launch_options but only work with the Steam build and a complete OpenCAGE install; they were not started.");
+                    call.Note("Cinematic Tools are switched on in launch_options but only work with the Steam, GOG and Epic Games Store builds and a complete OpenCAGE install; they were not started.");
                 }
                 else
                 {
