@@ -611,9 +611,44 @@ namespace OpenCAGE
             }
             if (MessageBox.Show("Are you sure you want to delete '" + cs2.Name + "'?", "About to delete...", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
+
+            /* Its materials can go with it, and their textures with them - but only the ones nothing
+             * else is left using: a save writes anything still pointing at a removed asset as -1. */
+            List<Materials.Material> materials = AssetUsage.MaterialsOnlyUsedBy(Content.Level, cs2, out int sharedMaterials);
+            List<Textures.TEX4> textures = new List<Textures.TEX4>();
+            bool deleteMaterials = materials.Count != 0 && MessageBox.Show(
+                "Also delete the " + (materials.Count == 1 ? "material" : materials.Count + " materials") + " only '" + cs2.Name + "' uses?\n\n"
+                + AssetUsage.ListNames(materials.Select(o => o.Name))
+                + (sharedMaterials == 0 ? "" : "\n\n" + sharedMaterials + (sharedMaterials == 1 ? " other material it uses is" : " other materials it uses are") + " used elsewhere too, and will be kept."),
+                "Delete associated materials?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
+            if (deleteMaterials)
+            {
+                textures = AssetUsage.TexturesOnlyUsedBy(Content.Level, materials, out int sharedTextures);
+                if (textures.Count != 0 && MessageBox.Show(
+                        "Also delete the " + (textures.Count == 1 ? "texture" : textures.Count + " textures") + " only " + (materials.Count == 1 ? "that material uses" : "those materials use") + "?\n\n"
+                        + AssetUsage.ListNames(textures.Select(o => o.Name))
+                        + (sharedTextures == 0 ? "" : "\n\n" + sharedTextures + (sharedTextures == 1 ? " other texture is" : " other textures are") + " used elsewhere too, and will be kept."),
+                        "Delete associated textures?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                    textures.Clear();
+            }
+
             EditHistory.AssetChanged(Content.Level, AssetModificationInfoTable.AssetKind.MODEL, cs2.Name);
             Content.Level.Models.Entries.Remove(cs2);
+            if (deleteMaterials)
+            {
+                foreach (Materials.Material material in materials)
+                    EditHistory.AssetChanged(Content.Level, AssetModificationInfoTable.AssetKind.MATERIAL, material.Name);
+                AssetUsage.RemoveByReference(Content.Level.Materials.Entries, materials);
+            }
+            foreach (Textures.TEX4 texture in textures)
+                EditHistory.AssetChanged(Content.Level, AssetModificationInfoTable.AssetKind.TEXTURE, texture.Name);
+            AssetUsage.RemoveByReference(Content.Level.Textures.Entries, textures);
+
+            //The viewport draws from its own copy of the tables, and the preview from the model itself
+            Singleton.OnResourceModified?.Invoke();
             RebuildModelFileTree(filter: modelSearchTextBox.Text);
+            ClearModelPreview();
+            UpdateModelToolsState();
         }
 
         private void editGeometryBtn_Click(object sender, EventArgs e)
@@ -628,7 +663,9 @@ namespace OpenCAGE
             editor.Show(this);
         }
 
-        private void FileTree_AfterSelect(object sender, TreeViewEventArgs e)
+        /* Nothing selected: no submeshes listed, nothing drawn. A tree rebuild drops the selection
+         * without raising AfterSelect, so whatever was showing has to be taken down by hand. */
+        private void ClearModelPreview()
         {
             ClearSubmeshCheckboxes();
             selectModelBtn.Enabled = false;
@@ -636,6 +673,11 @@ namespace OpenCAGE
             modelPreviewArea.Text = "";
             modelViewer.ShowModel(new List<GUI_ModelViewer.Model>());
             ResetRenderFlagCheckboxes();
+        }
+
+        private void FileTree_AfterSelect(object sender, TreeViewEventArgs e)
+        {
+            ClearModelPreview();
 
             try
             {

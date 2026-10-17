@@ -36,19 +36,22 @@ namespace OpenCAGE.UnityConnection
         private static int _snapshotSequence;
 
         //What the viewer has, keyed the way the viewer matches entries: textures and models by name,
-        //materials and shaders by the object (those two are only ever appended to)
+        //materials and shaders by the object (shaders are only ever appended to; a material can also be
+        //deleted, and since the viewer matches them by position it is told which positions went)
         private static LevelContent _baselineContent;
         private static Dictionary<string, ulong> _textureFingerprints = new Dictionary<string, ulong>(StringComparer.OrdinalIgnoreCase);
         private static Dictionary<string, ulong> _modelFingerprints = new Dictionary<string, ulong>();
         private static Dictionary<Materials.Material, ulong> _materialFingerprints = NewMaterialFingerprints();
         private static Dictionary<Shaders.Shader, ulong> _shaderFingerprints = NewShaderFingerprints();
         private static ulong _galaxyFingerprint;
+        private static List<Materials.Material> _materialOrder = new List<Materials.Material>();
         //What a viewer that reads the level from disk has: the fingerprints of the level as loaded or last saved
         private static Dictionary<string, ulong> _diskTextureFingerprints = _textureFingerprints;
         private static Dictionary<string, ulong> _diskModelFingerprints = _modelFingerprints;
         private static Dictionary<Materials.Material, ulong> _diskMaterialFingerprints = _materialFingerprints;
         private static Dictionary<Shaders.Shader, ulong> _diskShaderFingerprints = _shaderFingerprints;
         private static ulong _diskGalaxyFingerprint;
+        private static List<Materials.Material> _diskMaterialOrder = _materialOrder;
 
         public static string ScratchRoot => Path.Combine(Path.GetTempPath(), "OpenCAGE", "ViewportSync");
 
@@ -104,6 +107,7 @@ namespace OpenCAGE.UnityConnection
             _materialFingerprints = _diskMaterialFingerprints;
             _shaderFingerprints = _diskShaderFingerprints;
             _galaxyFingerprint = _diskGalaxyFingerprint;
+            _materialOrder = _diskMaterialOrder;
         }
 
         public static void Initialise()
@@ -184,12 +188,14 @@ namespace OpenCAGE.UnityConnection
             _materialFingerprints = FingerprintMaterials(level?.Materials);
             _shaderFingerprints = FingerprintShaders(level?.Shaders);
             _galaxyFingerprint = FingerprintGalaxy(level?.GalaxyItems);
+            _materialOrder = level?.Materials?.Entries != null ? new List<Materials.Material>(level.Materials.Entries) : new List<Materials.Material>();
             //Loaded or just saved: this is also what a viewer that reads the level from disk from now on has
             _diskTextureFingerprints = _textureFingerprints;
             _diskModelFingerprints = _modelFingerprints;
             _diskMaterialFingerprints = _materialFingerprints;
             _diskShaderFingerprints = _shaderFingerprints;
             _diskGalaxyFingerprint = _galaxyFingerprint;
+            _diskMaterialOrder = _materialOrder;
 
             if (deleteScratch && level != null)
                 TryDeleteDirectory(LevelScratchFolder(level));
@@ -335,6 +341,8 @@ namespace OpenCAGE.UnityConnection
 
             //A material's texture and shader indexes only mean anything against the tables it was written with
             bool writeMaterials = materialsChanged || texturesChanged || shadersChanged;
+            if (writeMaterials)
+                packet.resource_removed_materials = RemovedPositions(_materialOrder, level.Materials.Entries);
             bool wroteTextures = texturesChanged && TryWrite(level.Textures, folder, out packet.resource_sync_textures);
             bool wroteShaders = shadersChanged && TryWrite(level.Shaders, folder, out packet.resource_sync_shaders);
             bool wroteMaterials = writeMaterials && TryWrite(level.Materials, folder, out packet.resource_sync_materials);
@@ -361,6 +369,8 @@ namespace OpenCAGE.UnityConnection
             _materialFingerprints = materials;
             _shaderFingerprints = shaders;
             _galaxyFingerprint = galaxy;
+            if (wroteMaterials)
+                _materialOrder = new List<Materials.Material>(level.Materials.Entries);
 
             Debug.Log("ResourceSync", "Sent snapshot " + _snapshotSequence
                 + (wroteTextures ? " textures(" + changedTextures.Count + " replaced)" : "")
@@ -417,6 +427,18 @@ namespace OpenCAGE.UnityConnection
         /* Which entries of a table differ from the baseline. An entry that is in one but not the other
            counts as a difference without being listed: the viewer finds additions and removals for
            itself, what it cannot see is an existing entry whose binary was swapped for another. */
+        /* The positions, in the table the viewer has, of entries no longer in the level. By object: a
+           Material compares by value, and a twin left behind is not the one that was deleted. */
+        private static List<int> RemovedPositions<T>(List<T> viewerHas, List<T> current) where T : class
+        {
+            HashSet<T> still = new HashSet<T>(current, ReferenceComparer<T>.Instance);
+            List<int> removed = new List<int>();
+            for (int i = 0; i < viewerHas.Count; i++)
+                if (!still.Contains(viewerHas[i]))
+                    removed.Add(i);
+            return removed;
+        }
+
         private static bool Differs<TKey>(Dictionary<TKey, ulong> baseline, Dictionary<TKey, ulong> current, out List<TKey> changed)
         {
             changed = new List<TKey>();

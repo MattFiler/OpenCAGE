@@ -960,6 +960,7 @@
     <Compile Include="Scripts\Audio\SoundPreviewLibrary.cs" />
     <Compile Include="Scripts\Audio\VorbisNative.cs" />
     <Compile Include="Scripts\AssetName.cs" />
+    <Compile Include="Scripts\AssetUsage.cs" />
     <Compile Include="Popups\UserControls\AssetNameBox.cs">
       <SubType>Component</SubType>
     </Compile>

@@ -1184,6 +1184,50 @@ namespace OpenCAGE
             }
         }
 
+        /* Only a material nothing draws with can go - a save writes anything still pointing at a
+         * removed one as -1 - so what does use it is named, to be pointed elsewhere first. Its
+         * textures can go with it, again only those nothing else is left using. */
+        private void deleteMaterial_Click(object sender, EventArgs e)
+        {
+            if (materialList.SelectedItems.Count == 0)
+                return;
+
+            Materials.Material material = materialList.SelectedItems[0].Tag as Materials.Material;
+            if (material == null)
+                return;
+
+            string name = Content.Level.Materials.GetMaterialName(material);
+            List<string> uses = AssetUsage.FindMaterialReferences(Content.Level).Describe(material);
+            if (uses.Count != 0)
+            {
+                System.Windows.Forms.MessageBox.Show("'" + name + "' can't be deleted while it is still used by:\n\n"
+                    + string.Join("\n", uses.Select(o => "    " + o)) + "\n\nPoint those at another material first.",
+                    "Material in use", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if (System.Windows.Forms.MessageBox.Show("Are you sure you want to delete '" + name + "'?", "About to delete...",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+
+            List<Materials.Material> deleting = new List<Materials.Material> { material };
+            List<Textures.TEX4> textures = AssetUsage.TexturesOnlyUsedBy(Content.Level, deleting, out int sharedTextures);
+            if (textures.Count != 0 && System.Windows.Forms.MessageBox.Show(
+                    "Also delete the " + (textures.Count == 1 ? "texture" : textures.Count + " textures") + " only this material uses?\n\n"
+                    + AssetUsage.ListNames(textures.Select(o => o.Name))
+                    + (sharedTextures == 0 ? "" : "\n\n" + sharedTextures + (sharedTextures == 1 ? " other texture it uses is" : " other textures it uses are") + " used elsewhere too, and will be kept."),
+                    "Delete associated textures?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                textures.Clear();
+
+            EditHistory.AssetChanged(Content.Level, AssetKind.MATERIAL, material.Name);
+            AssetUsage.RemoveByReference(Content.Level.Materials.Entries, deleting);
+            foreach (Textures.TEX4 texture in textures)
+                EditHistory.AssetChanged(Content.Level, AssetKind.TEXTURE, texture.Name);
+            AssetUsage.RemoveByReference(Content.Level.Textures.Entries, textures);
+
+            Singleton.OnResourceModified?.Invoke();
+            PopulateUI(null, materialSearchTextBox.Text);
+        }
+
         private void duplicateMaterial_Click(object sender, EventArgs e)
         {
             if (materialList.SelectedItems.Count == 0)
