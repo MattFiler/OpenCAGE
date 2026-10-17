@@ -21,7 +21,8 @@ using LIVE_TRACE::kMaxRecords;
 using LIVE_TRACE::kMaxWatches;
 
 /*
-	Addresses are RVAs in the Steam retail AI.exe. See LIVE_TRACE.h for what is traced and how.
+	Addresses are RVAs in the Steam retail AI.exe (the GOG and Epic Games Store builds' are looked up from them: see
+	GameAddresses.h). See LIVE_TRACE.h for what is traced and how.
 */
 namespace
 {

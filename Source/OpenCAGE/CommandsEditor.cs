@@ -230,7 +230,7 @@ namespace OpenCAGE
                     break;
             }
 
-            //The Live Link menu beside it: only there while the game is running, and only the Steam build has the live link
+            //The Live Link menu beside it: only there while the game is running, and only builds the runtime utils support have the live link
             StartLiveLinkMenuWatch();
 
             //This option is dependent on external tools, so disable if they don't exist
@@ -2644,9 +2644,9 @@ namespace OpenCAGE
         }
 
         /* The Live Link button's setting is one for every install (the settings file sits beside OpenCAGE.exe), but only the
-           Steam build serves the live link, and only there is there a button to switch it off: anywhere else it counts as off,
-           without being written, so the Steam install keeps it */
-        private static bool LiveLinkWanted => Singleton.Platform == PatchManager.Platform.STEAM && SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
+           builds the runtime utils support (Steam, GOG, Epic Games Store) serve the live link, and only there is there a button
+           to switch it off: anywhere else it counts as off, without being written, so those installs keep it */
+        private static bool LiveLinkWanted => LaunchGame.RuntimeUtilsSupports(Singleton.Platform) && SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
 
         [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
         private static extern IntPtr OpenProcess(uint access, bool inherit, int pid);
@@ -2770,9 +2770,9 @@ namespace OpenCAGE
         }
 
         /* The Live Link menu, beside Launch Game: there only while the game is running and serves Live Link, and only for
-           the Steam build (the runtime utils, which serve it, support no other) - never for a game launched with Cinematic
-           Tools, which have its camera instead. The game is looked for every couple of seconds, off the UI thread, and again
-           whenever it is launched. */
+           the builds the runtime utils (which serve it) support - never for a game launched with Cinematic Tools, which have
+           its camera instead. The game is looked for every couple of seconds, off the UI thread, and again whenever it is
+           launched. */
         private System.Windows.Forms.Timer _liveLinkMenuWatch;
         private bool _liveLinkMenuLooking = false;
         private bool _gameServesLiveLink = false;
@@ -2780,7 +2780,7 @@ namespace OpenCAGE
 
         private void StartLiveLinkMenuWatch()
         {
-            if (Singleton.Platform != PatchManager.Platform.STEAM || _liveLinkMenuWatch != null)
+            if (!LaunchGame.RuntimeUtilsSupports(Singleton.Platform) || _liveLinkMenuWatch != null)
                 return;
             _liveLinkMenuWatch = new System.Windows.Forms.Timer() { Interval = 2000 };
             _liveLinkMenuWatch.Tick += (s, e) => RefreshLiveLinkMenu();
@@ -2790,7 +2790,7 @@ namespace OpenCAGE
         /// <summary>Look for the game again, and show the Live Link menu (or not) to match. UI thread.</summary>
         private async void RefreshLiveLinkMenu()
         {
-            if (_liveLinkMenuLooking || IsDisposed || Singleton.Platform != PatchManager.Platform.STEAM)
+            if (_liveLinkMenuLooking || IsDisposed || !LaunchGame.RuntimeUtilsSupports(Singleton.Platform))
                 return;
             _liveLinkMenuLooking = true;
             try
@@ -2828,7 +2828,7 @@ namespace OpenCAGE
             bool connected = RuntimeUtilsConnection.Send.Connected;
             bool wanted = SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
             //A game launched without Live Link has nothing to connect to, and one with Cinematic Tools gave its camera to them: no button for either
-            liveLinkBtn.Visible = Singleton.Platform == PatchManager.Platform.STEAM && !_gameRunsCinematicTools && (_gameServesLiveLink || connected);
+            liveLinkBtn.Visible = LaunchGame.RuntimeUtilsSupports(Singleton.Platform) && !_gameRunsCinematicTools && (_gameServesLiveLink || connected);
             liveLinkBtn.Checked = wanted;
             liveLinkBtn.ToolTipText = connected ? "Connected to the game: script edits reach it as they are made, entity methods can be triggered from the Entity Inspector or a method pin's right-click menu, and the viewport's Live Link Camera menu is there. Click to disconnect."
                 : wanted ? "Waiting for the game to serve Live Link (it opens it a moment after starting). Click to stop connecting."

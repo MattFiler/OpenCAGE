@@ -102,6 +102,15 @@ bool Menu::IsInitialised()
     return g_swapChain != nullptr;
 }
 
+bool Menu::UsePresentingSwapChain(IDXGISwapChain* pSwapChain)
+{
+    // The first swap chain made in the process needn't be the game's: the Epic Games Store build's online services make
+    // one of their own as the game starts, and let it go, so the overlay is set up on the one frames are presented with
+    if (!g_menuInitialised)
+        g_swapChain = pSwapChain;
+    return pSwapChain == g_swapChain;
+}
+
 void Menu::DrawMenu() {
     if (!g_menuInitialised) {
         if (FAILED(GetDeviceAndContextFromSwapChain(g_swapChain, &g_device, &g_context))) {
@@ -133,28 +142,12 @@ void Menu::DrawMenu() {
         ImGui_ImplWin32_Init(g_hWindow);
         ImGui_ImplDX11_Init(g_device, g_context);
 
-        ID3D11Texture2D* pBackBuffer = nullptr;
-        if (FAILED(g_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<LPVOID*>(&pBackBuffer))))
+        if (!CreateRenderTarget())
         {
             DebugBreak();
             return;
         }
 
-        // Ensure the back buffer is not 0 or null.
-        if (pBackBuffer) {
-            if (FAILED(g_device->CreateRenderTargetView(pBackBuffer, nullptr, &g_renderTargetView)))
-            {
-                DebugBreak();
-                return;
-            }
-        }
-        else {
-            DebugBreak();
-        	return;
-        }
-
-        pBackBuffer->Release();
-    	
         g_menuInitialised = true;
     }
 
@@ -219,8 +212,31 @@ void Menu::DrawMenu() {
     ImGui::EndFrame();
 
     ImGui::Render();
+    // Let go of when the game resized its back buffers (a new resolution): made again on the new one
+    if (!g_renderTargetView && !CreateRenderTarget())
+        return;
     g_context->OMSetRenderTargets(1, &g_renderTargetView, nullptr);
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+}
+
+bool Menu::CreateRenderTarget()
+{
+    ID3D11Texture2D* pBackBuffer = nullptr;
+    if (FAILED(g_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<LPVOID*>(&pBackBuffer))) || !pBackBuffer)
+        return false;
+    const bool made = SUCCEEDED(g_device->CreateRenderTargetView(pBackBuffer, nullptr, &g_renderTargetView));
+    pBackBuffer->Release();
+    return made;
+}
+
+void Menu::ReleaseRenderTarget(IDXGISwapChain* pSwapChain)
+{
+    // The swap chain can only resize its back buffers once nothing else holds them: the overlay's view of the first one
+    // goes first (a change of resolution failed, leaving the picture the wrong size, while it was held)
+    if (pSwapChain != g_swapChain || !g_renderTargetView)
+        return;
+    g_renderTargetView->Release();
+    g_renderTargetView = nullptr;
 }
 
 bool Menu::LoadLevel(std::string name) {

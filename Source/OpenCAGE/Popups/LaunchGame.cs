@@ -47,10 +47,17 @@ namespace OpenCAGE
         internal const string RuntimeUtilsFolder = "runtimeutils";
         private static string Beside(string relative) => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, relative);
 
-        /* The scripting helpers are the runtime utils ASI, which only supports the Steam build */
+        /* The runtime utils ASI (the scripting helpers, Possess Characters and Live Link) supports the Steam, GOG and Epic Games
+           Store builds of the game (see OpenCAGE.RuntimeUtils/GameAddresses.h); Cinematic Tools only the Steam one */
+        internal static bool RuntimeUtilsSupports(PatchManager.Platform platform)
+        {
+            return platform == PatchManager.Platform.STEAM || platform == PatchManager.Platform.GOG || platform == PatchManager.Platform.EPIC_GAMES_STORE;
+        }
+
+        /* The scripting helpers are the runtime utils ASI */
         internal static bool ScriptingHelpersAvailable()
         {
-            return Singleton.Platform == PatchManager.Platform.STEAM && Directory.Exists(Beside(RuntimeUtilsFolder));
+            return RuntimeUtilsSupports(Singleton.Platform) && Directory.Exists(Beside(RuntimeUtilsFolder));
         }
 
         internal static bool CinematicToolsAvailable()
@@ -134,7 +141,7 @@ namespace OpenCAGE
             enableCinematicTools.Enabled = CinematicToolsAvailable();
             _scriptingHelpersAvailable = ScriptingHelpersAvailable();
             UpdateScriptingHelpersEnabled();
-            //Possess Characters runs in the runtime utils ASI too (Steam only), but is not one of the scripting helpers
+            //Possess Characters runs in the runtime utils ASI too, but is not one of the scripting helpers
             enablePossess.Enabled = _scriptingHelpersAvailable;
             possessKey.Enabled = _scriptingHelpersAvailable && enablePossess.Checked;
 

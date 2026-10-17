@@ -10,9 +10,9 @@
 #include <imgui.h>
 
 /*
-	For the Steam retail AI.exe (the cursor routine is at VA 0x00A109A0: it reads its one argument as a byte, clips the
-	cursor to the single pixel in the middle of the window when it is set and frees it when it isn't, and keeps it on
-	the mouse).
+	For the retail AI.exe (in the Steam build the cursor routine is at VA 0x00A109A0: it reads its one argument as a
+	byte, clips the cursor to the single pixel in the middle of the window when it is set and frees it when it isn't,
+	and keeps it on the mouse).
 */
 namespace
 {

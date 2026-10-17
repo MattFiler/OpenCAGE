@@ -50,6 +50,18 @@ typedef HRESULT(WINAPI* tD3D11Present)(
 // The original D3D11 frame presentation, hooked so the overlay draws on every frame.
 tD3D11Present d3d11Present = nullptr;
 
+typedef HRESULT(WINAPI* tDXGIResizeBuffers)(
+    IDXGISwapChain* swapChain,
+    UINT            BufferCount,
+    UINT            Width,
+    UINT            Height,
+    DXGI_FORMAT     NewFormat,
+    UINT            SwapChainFlags
+);
+
+// The original resize of the swap chain's back buffers (a change of resolution), hooked so the overlay lets go of them first.
+tDXGIResizeBuffers dxgiResizeBuffers = nullptr;
+
 // This will work for now, but I need to write a replacement that will restore the original call bytes, we just overwrite them.
 void hookFunctionCall(int offset, void* replacementFunction)
 {
@@ -81,13 +93,26 @@ HRESULT WINAPI hD3D11Present(
     UINT        SyncInterval,
     UINT        Flags
 ) {
-    Menu::DrawMenu();
+    if (Menu::UsePresentingSwapChain(swapChain))
+        Menu::DrawMenu();
 
     // Live link screenshots and level loads, after the overlay so a screenshot shows it.
     if (Config::Get().liveLink)
         LIVE_LINK_SERVER::ProcessRenderRequests(swapChain);
 
     return d3d11Present(swapChain, SyncInterval, Flags);
+}
+
+HRESULT WINAPI hDXGIResizeBuffers(
+    IDXGISwapChain* swapChain,
+    UINT            BufferCount,
+    UINT            Width,
+    UINT            Height,
+    DXGI_FORMAT     NewFormat,
+    UINT            SwapChainFlags
+) {
+    Menu::ReleaseRenderTarget(swapChain);
+    return dxgiResizeBuffers(swapChain, BufferCount, Width, Height, NewFormat, SwapChainFlags);
 }
 
 HRESULT WINAPI hD3D11CreateDeviceAndSwapChain(
@@ -131,10 +156,13 @@ HRESULT WINAPI hD3D11CreateDeviceAndSwapChain(
 
             void** pVMTPresent = *reinterpret_cast<void***>(*ppSwapChain);
 
-        	// Keep the original frame presentation, slot 8 of the swap chain's virtual table.
+        	// Keep the original frame presentation, slot 8 of the swap chain's virtual table, and the resize of its back
+            // buffers, slot 13.
             d3d11Present = static_cast<tD3D11Present>(pVMTPresent[8]);
+            dxgiResizeBuffers = static_cast<tDXGIResizeBuffers>(pVMTPresent[13]);
 
             DEVTOOLS_DETOURS_ATTACH(d3d11Present, hD3D11Present);
+            DEVTOOLS_DETOURS_ATTACH(dxgiResizeBuffers, hDXGIResizeBuffers);
 
             const auto result = DetourTransactionCommit();
 		}
@@ -161,6 +189,8 @@ static void AttachHooks(bool attach)
         hook(d3d11CreateDeviceAndSwapChain, hD3D11CreateDeviceAndSwapChain);
         if (!attach && d3d11Present)
             hook(d3d11Present, hD3D11Present);
+        if (!attach && dxgiResizeBuffers)
+            hook(dxgiResizeBuffers, hDXGIResizeBuffers);
     }
 
     // Level manager hooks: capture the level manager so the hot reload key can restart the current level, and the
@@ -254,6 +284,15 @@ BOOL APIENTRY DllMain( HMODULE /*hModule*/,
 
     if (ul_reason_for_call == DLL_PROCESS_ATTACH)
     {
+        // Which store's AI.exe this is: every address the hooks use is the Steam build's, looked up for the GOG and Epic
+        // Games Store builds. Another build (an update, another store) would get the wrong ones, so it gets nothing.
+        DevTools::Log("AI.exe build: %s", DevTools::BuildName());
+        if (DevTools::Build() == DevTools::GameBuild::Unknown)
+        {
+            MessageBox(NULL, L"Warning - this AI.exe is not a build the OpenCAGE runtime utils know (they support the Steam, GOG and Epic Games Store releases of Alien: Isolation), so they are switched off for this run.", L"AlienIsolation.DevTools", MB_ICONWARNING);
+            return TRUE;
+        }
+
         const Config::Settings& config = Config::Get();
         ZONE_LOADER::SetForced(ZONE_LOADER::Source::Config, config.loadAllZones);
         FRAME_CAP::SetLimit(config.capFps);
@@ -324,6 +363,10 @@ BOOL APIENTRY DllMain( HMODULE /*hModule*/,
     }
     else if (ul_reason_for_call == DLL_PROCESS_DETACH)
     {
+        // Nothing was hooked in a build these don't know
+        if (DevTools::Build() == DevTools::GameBuild::Unknown)
+            return TRUE;
+
         if (Config::Get().liveLink)
             LIVE_LINK_SERVER::Stop();
 

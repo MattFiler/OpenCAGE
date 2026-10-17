@@ -102,6 +102,7 @@
     <ClInclude Include="DEBUG_MARKER.h" />
     <ClInclude Include="DEBUG_TEXT.h" />
     <ClInclude Include="DevTools.h" />
+    <ClInclude Include="GameAddresses.h" />
     <ClInclude Include="GameFlow.h" />
     <ClInclude Include="GAME_LEVEL_MANAGER.h" />
     <ClInclude Include="LIVE_ANIMATION.h" />

@@ -73,7 +73,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
 
         //Whether a connect may go ahead: asked again under the lock, so one that was queued behind a Stop (the option
         //switched off meanwhile) does not connect after it
-        private static bool Wanted => Singleton.Platform == CathodeLib.PatchManager.Platform.STEAM && SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
+        private static bool Wanted => LaunchGame.RuntimeUtilsSupports(Singleton.Platform) && SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
 
         private static void StopLocked()
         {

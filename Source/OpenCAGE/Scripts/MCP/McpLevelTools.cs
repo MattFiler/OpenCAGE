@@ -243,7 +243,7 @@ namespace OpenCAGE.MCP
             new LaunchOption() { Arg = "debug_position_marker", Key = Settings.ScriptingHelpersDebugPositionMarker, Kind = KindHelper, Description = "Scripting helper: DebugPositionMarker entities draw axes in the world." },
             new LaunchOption() { Arg = "live_link", Key = Settings.ScriptingHelpersLiveLink, Kind = KindHelper, Description = "Scripting helper (Enable Live Link): the game serves Live Link, and OpenCAGE connects to it by itself once the game is up (runtime_utils) - script edits reach the running level without a reload, entity methods can be called, and the viewport's camera and the game's can follow each other (set_viewport_view live_link_camera). Off while cinematic_tools is on." },
             new LaunchOption() { Arg = "cinematic_tools", Key = Settings.CinematicTools, Kind = KindHelper, Description = "Start Cinematic Tools (free camera) with the game. Steam only. They and the scripting helpers are one or the other: while this is on, every scripting helper (live_link among them) is off at launch, its setting kept." },
-            new LaunchOption() { Arg = "possess_characters", Key = Settings.PossessCharacters, Kind = KindHelper, Description = "Possess Characters (Steam only): in game, possess_key opens a menu of the characters the game runs (the one in view first, then the nearest); picking one takes control of it - W/A/S/D move it relative to the camera, Shift faster, Ctrl slower, C crouches, the mouse turns the camera behind it and its wheel moves the camera closer or further (1.5 to 10 m). A launch option, not a scripting helper: cinematic_tools does not switch it off." },
+            new LaunchOption() { Arg = "possess_characters", Key = Settings.PossessCharacters, Kind = KindHelper, Description = "Possess Characters: in game, possess_key opens a menu of the characters the game runs (the one in view first, then the nearest); picking one takes control of it - W/A/S/D move it relative to the camera, Shift faster, Ctrl slower, C crouches, the mouse turns the camera behind it and its wheel moves the camera closer or further (1.5 to 10 m). A launch option, not a scripting helper: cinematic_tools does not switch it off." },
             new LaunchOption() { Arg = "no_ui", Key = Settings.HudDisabled, Kind = KindPatch, Patch = PatchManager.PatchNoUIFlag, Description = "AI.exe patch: no HUD or menus (clean screenshots)." },
             new LaunchOption() { Arg = "skip_frontend", Key = Settings.SkipFrontend, Kind = KindPatch, Patch = PatchManager.PatchSkipFrontendFlag, Description = "AI.exe patch: skip the frontend (returning to the menu then misbehaves)." },
             new LaunchOption() { Arg = "ui_memory_overlay", Key = Settings.UiEnabledUiPerf, Kind = KindPatch, Patch = PatchManager.PatchUIPerfFlag, Description = "AI.exe patch: the UI memory overlay." },
@@ -396,7 +396,7 @@ namespace OpenCAGE.MCP
             if (asked.Any(o => (o.Key.Arg == "cinematic_tools" && o.Value && !global::OpenCAGE.LaunchGame.CinematicToolsAvailable())))
                 call.Note("Cinematic Tools only work with the Steam build and a complete OpenCAGE install: the setting is kept, but launch_game will not start them here.");
             if ((helpers.Any(o => o.Key.Arg != "cinematic_tools" && o.Value) || keyChanges.Count != 0) && !global::OpenCAGE.LaunchGame.ScriptingHelpersAvailable())
-                call.Note("The scripting helpers (and Possess Characters) only work with the Steam build (and OpenCAGE's runtimeutils folder): the settings are kept, but launch_game will not install them here.");
+                call.Note("The scripting helpers (and Possess Characters) only work with the Steam, GOG and Epic Games Store builds (and OpenCAGE's runtimeutils folder): the settings are kept, but launch_game will not install them here.");
 
             JArray changes = new JArray();
             foreach (var change in helpers) changes.Add(new JObject() { ["option"] = change.Key.Arg, ["to"] = change.Value, ["writes"] = "OpenCAGE settings (applied at launch_game)" });
@@ -828,8 +828,8 @@ namespace OpenCAGE.MCP
                 case "disconnect":
                     {
                         bool connect = action == "connect";
-                        if (connect && Singleton.Platform != PatchManager.Platform.STEAM)
-                            throw new McpError("Live Link needs the Steam version of the game (the runtime utils that serve it support no other); this install is " + Singleton.Platform + ".");
+                        if (connect && !global::OpenCAGE.LaunchGame.RuntimeUtilsSupports(Singleton.Platform))
+                            throw new McpError("Live Link needs the Steam, GOG or Epic Games Store version of the game (the runtime utils that serve it support no other); this install is " + Singleton.Platform + ".");
                         if (connect && CommandsEditor.GameRunning() && global::OpenCAGE.LaunchGame.CinematicToolsLaunched())
                             throw new McpError("The running game was launched with Cinematic Tools, which have its camera: it serves no Live Link (the two are one or the other). launch_game again with launch_options cinematic_tools: false and live_link: true.");
                         McpEditor.UI(() =>
@@ -879,6 +879,9 @@ namespace OpenCAGE.MCP
                         result["animation_drive"] = AnimationDriveState();
                         //Whether the game is gathering script activity for OpenCAGE (the composite display's Show Activity: runtime_utils activity)
                         result["activity_tracing"] = status.Trace;
+                        //Which store's AI.exe the game is
+                        if (status.Build != null)
+                            result["game_build"] = status.Build;
                         return result;
                     }
                 case "animate":

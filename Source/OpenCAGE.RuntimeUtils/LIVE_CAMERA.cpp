@@ -17,7 +17,8 @@
 #include <string>
 
 /*
-	Layouts are for the Steam retail AI.exe, and what the hooked camera hand-over does is from it (VA 0x00432300).
+	Layouts and addresses are from the Steam retail AI.exe, and what the hooked camera hand-over does is from it (VA
+	0x00432300). The GOG and Epic Games Store builds lay things out the same, at addresses looked up from these.
 */
 namespace
 {

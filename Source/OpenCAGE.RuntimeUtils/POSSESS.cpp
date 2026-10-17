@@ -19,11 +19,12 @@
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 /*
-	Layouts are for the Steam retail AI.exe. The move-in-direction order is filled in as CA's debug behaviour that moves a
-	character with the gamepad fills it in (VA 0x0040E580): created on the character's order layer, queued in place of
-	whatever was queued, then given a heading, a quarter turn and a distance ahead, flagged as changed - and the speed set
-	on the character's locomotion. That behaviour only runs under a debug camera retail never turns on. The crouch order
-	is filled in as the scripted idle command fills it in (VA 0x006853B8): the stance it wants, then queued.
+	Layouts are the Steam retail AI.exe's (the GOG and Epic Games Store builds' are the same, and addresses in the Steam
+	build here). The move-in-direction order is filled in as CA's debug behaviour that moves a character with the gamepad
+	fills it in (VA 0x0040E580): created on the character's order layer, queued in place of whatever was queued, then
+	given a heading, a quarter turn and a distance ahead, flagged as changed - and the speed set on the character's
+	locomotion. That behaviour only runs under a debug camera retail never turns on. The crouch order is filled in as the
+	scripted idle command fills it in (VA 0x006853B8): the stance it wants, then queued.
 */
 namespace
 {

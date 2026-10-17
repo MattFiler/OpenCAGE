@@ -1514,7 +1514,7 @@ namespace OpenCAGE.MCP
             if (liveLinkWait && global::OpenCAGE.LaunchGame.CinematicToolsChosen())
                 throw new McpError(McpErrorCodes.Refused, "wait_for '" + waitFor + "' needs Live Link, which is off while Cinematic Tools are on (launch_options cinematic_tools): Cinematic Tools and the scripting helpers are one or the other, as both take over the game's camera. Set launch_options cinematic_tools: false, or wait_for 'process'. Nothing was launched.");
             if (liveLinkWait && !(SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink) && global::OpenCAGE.LaunchGame.ScriptingHelpersAvailable()))
-                throw new McpError(McpErrorCodes.Refused, "wait_for '" + waitFor + "' needs Live Link, which the game serves only when launched with launch_options live_link: true (Steam build). Turn it on with launch_options, or wait_for 'process'. Nothing was launched.");
+                throw new McpError(McpErrorCodes.Refused, "wait_for '" + waitFor + "' needs Live Link, which the game serves only when launched with launch_options live_link: true. Turn it on with launch_options, or wait_for 'process'. Nothing was launched.");
 
             //Launching patches AI.exe and the level list packages, which a save (its release-build tail) and a level
             //creation or restore also write: never alongside one of those
@@ -1605,7 +1605,7 @@ namespace OpenCAGE.MCP
                 call.Note("These launch_options AI.exe patches could not be written this time, so the game runs without them as set: " + string.Join(", ", optional) + ".");
             PatchManager.UpdateLevelListInPackages(platform, Singleton.PathToAI);
             //Live Link connects by itself once the game is up when Connect to Game is on: waiting through it needs that
-            if (liveLinkWait && !SettingsManager.GetBool(Settings.RuntimeUtilsOpt) && platform == PatchManager.Platform.STEAM)
+            if (liveLinkWait && !SettingsManager.GetBool(Settings.RuntimeUtilsOpt) && global::OpenCAGE.LaunchGame.RuntimeUtilsSupports(platform))
             {
                 McpEditor.UI(() =>
                 {
@@ -1735,7 +1735,7 @@ namespace OpenCAGE.MCP
             wait["done"] = done;
             if (!done)
                 call.Note("The game had reached '" + reached + "' after " + (int)timeout.TotalSeconds + " s, not '" + waitFor + "'" +
-                    (reached == "nothing" ? " (AI.exe never started: is Steam running and signed in?)" : reached == "process" ? " (Live Link did not answer yet, or the level is still loading)" : " (its scripts are paused: the frontend, a loading screen or the pause menu)") +
+                    (reached == "nothing" ? (Singleton.Platform == PatchManager.Platform.STEAM ? " (AI.exe never started: is Steam running and signed in?)" : " (AI.exe never started)") : reached == "process" ? " (Live Link did not answer yet, or the level is still loading)" : " (its scripts are paused: the frontend, a loading screen or the pause menu)") +
                     ". get_editor_state's game block and runtime_utils game_status show how it gets on.");
             return wait;
         }

@@ -26,7 +26,8 @@
 using namespace LIVE_LINK;
 
 /*
-	Addresses are RVAs in the Steam retail AI.exe. Calling conventions follow what the game's own call
+	Addresses are RVAs in the Steam retail AI.exe (the GOG and Epic Games Store builds' are looked up from them: see
+	GameAddresses.h). Calling conventions follow what the game's own call
 	sites do: a class returned by value comes back through a hidden pointer passed first, and a counted pointer passed by
 	value is an allocation the callee releases.
 */
@@ -2829,10 +2830,12 @@ Result LIVE_LINK::Status()
 	const std::string animation = std::string("\nanimation=") + (LIVE_ANIMATION::Driving() ? "1" : "0");
 	// Whether this connection has script activity traced (the TRACE command, gathered by the hooks in LIVE_TRACE.cpp)
 	const std::string trace = std::string("\ntrace=") + (LIVE_TRACE::Tracing() ? "1" : "0");
+	// Which store's AI.exe the game is (Steam, GOG or Epic Games Store)
+	const std::string build = std::string("\nbuild=") + DevTools::BuildName();
 	if (!LevelRunning())
 	{
 		result.ok = true;
-		result.message = "running=0" + cameraSync + animation + trace;
+		result.message = "running=0" + cameraSync + animation + trace + build;
 		return result;
 	}
 	const uint32_t rootGuid = *reinterpret_cast<uint32_t*>(manager + kManagerRootGuid);
@@ -2851,6 +2854,6 @@ Result LIVE_LINK::Status()
 	CameraReading camera;
 	if (Guarded("reading the camera", ReadCameraBody, &camera) && camera.ok)
 		result.message += "\ncamera=" + Triple(camera.position) + "\ncamera_forward=" + Triple(camera.forward) + "\ncamera_up=" + Triple(camera.up);
-	result.message += cameraSync + animation + trace;
+	result.message += cameraSync + animation + trace + build;
 	return result;
 }

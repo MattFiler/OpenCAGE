@@ -199,6 +199,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
                     case "loading_reason": status.LoadingReason = value; break;
                     case "animation": status.Animation = value == "1"; break;
                     case "trace": status.Trace = value == "1"; break;
+                    case "build": status.Build = value; break;
                 }
             }
             return status;
@@ -234,6 +235,8 @@ namespace OpenCAGE.RuntimeUtilsConnection
             public bool Animation;
             /// <summary>Whether the game is gathering script activity for this connection (TRACE; LiveLinkTrace).</summary>
             public bool Trace;
+            /// <summary>Which store's AI.exe the game is ("Steam", "GOG" or "Epic Games Store"): null from an ASI too old to say.</summary>
+            public string Build;
 
             /// <summary>Whether the game is running the level these commands are from.</summary>
             public bool IsRunning(Commands commands)

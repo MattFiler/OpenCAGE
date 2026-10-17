@@ -176,6 +176,9 @@
     <ClInclude Include="DevTools.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GameAddresses.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="Menu.h">
       <Filter>Header Files</Filter>
     </ClInclude>

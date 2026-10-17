@@ -1,4 +1,6 @@
 #include "DevTools.h"
+#include "GameAddresses.h"
+#include <algorithm>
 #include <cstdint>
 #include <cstdarg>
 #include <cstring>
@@ -19,6 +21,62 @@ uintptr_t GameProcess::GetBaseAddress()
 	}
 
 	return m_game_imageBaseAddress;
+}
+
+GameBuild DevTools::Build()
+{
+	static const GameBuild build = []
+	{
+		const uintptr_t base = GameProcess::GetBaseAddress();
+		const IMAGE_DOS_HEADER* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
+		const IMAGE_NT_HEADERS* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
+		const DWORD stamp = nt->FileHeader.TimeDateStamp;
+		const DWORD size = nt->OptionalHeader.SizeOfImage;
+		if (stamp == 0x54E3199D && size == 0x01F81000)
+			return GameBuild::Steam;
+		if (stamp == 0x62952F34 && size == 0x01F9D000)
+			return GameBuild::GOG;
+		if (stamp == 0x5FD25676 && size == 0x01F9F000)
+			return GameBuild::Epic;
+		return GameBuild::Unknown;
+	}();
+	return build;
+}
+
+const char* DevTools::BuildName()
+{
+	switch (Build())
+	{
+	case GameBuild::Steam: return "Steam";
+	case GameBuild::GOG: return "GOG";
+	case GameBuild::Epic: return "Epic Games Store";
+	default: return "unknown";
+	}
+}
+
+uintptr_t DevTools::BuildOffset(uintptr_t steamOffset)
+{
+	const GameBuild build = Build();
+	if (build == GameBuild::Steam)
+		return steamOffset;
+	if (build != GameBuild::GOG && build != GameBuild::Epic)
+		return 0;
+
+	const GameAddresses::Row* begin = std::begin(GameAddresses::kRows);
+	const GameAddresses::Row* end = std::end(GameAddresses::kRows);
+	const GameAddresses::Row* row = std::lower_bound(begin, end, steamOffset, [](const GameAddresses::Row& r, uintptr_t offset) { return r.steam < offset; });
+	if (row != end && row->steam == steamOffset)
+		return build == GameBuild::GOG ? row->gog : row->epic;
+
+	//Every address the code uses has a row: one without is a row forgotten when the address was added
+	Log("No address in the %s build for the Steam build's 0x%08X: add it to GameAddresses.h", BuildName(), static_cast<unsigned>(steamOffset));
+	return 0;
+}
+
+uintptr_t DevTools::GameAddress(uintptr_t steamOffset)
+{
+	const uintptr_t offset = BuildOffset(steamOffset);
+	return offset ? GameProcess::GetBaseAddress() + offset : 0;
 }
 
 bool DevTools::EnableEntity(uintptr_t slotOffset)
