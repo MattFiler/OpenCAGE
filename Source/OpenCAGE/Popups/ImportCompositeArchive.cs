@@ -94,8 +94,11 @@ namespace OpenCAGE
                 else
                     warnings.Add("Exported from a " + from + " install, which does not share level files with this " + here + " install - the import may not work.");
             }
-            if (!string.IsNullOrEmpty(_manifest.OpenCAGEVersion) && _manifest.OpenCAGEVersion != Singleton.Version)
-                warnings.Add("Exported by OpenCAGE " + _manifest.OpenCAGEVersion + " (this is " + Singleton.Version + ").");
+            //Which OpenCAGE exported it says nothing on its own (More info shows it): only a format flagged as not importing
+            //exactly is warned about
+            string caveat = CompositeArchive.FormatCaveat(_manifest.FormatVersion);
+            if (caveat != null)
+                warnings.Add(caveat);
 
             warningLabel.Text = string.Join("\n", warnings);
             warningLabel.Visible = _showWarning = warnings.Count != 0;

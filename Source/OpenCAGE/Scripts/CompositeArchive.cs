@@ -54,6 +54,18 @@ namespace OpenCAGE
         /// <summary>Bumped when the container or manifest changes shape in a way an older reader cannot take.</summary>
         public const int FormatVersion = 1;
 
+        /* Package formats this build imports, but not exactly as they were exported, with why: said as a warning when one is
+           imported. Empty, as every format so far imports as it was exported - add one when a change leaves older packages
+           readable but not faithful (a format newer than FormatVersion is refused outright). Which OpenCAGE wrote a package
+           says nothing on its own. */
+        private static readonly Dictionary<int, string> _formatCaveats = new Dictionary<int, string>();
+
+        /// <summary>Why a package of this format may not import exactly as it was exported, or null when it will.</summary>
+        public static string FormatCaveat(int formatVersion)
+        {
+            return _formatCaveats.TryGetValue(formatVersion, out string why) ? why : null;
+        }
+
         private const string Magic = "CATHODE\u0001";
         private const string ScratchLevelName = "CATHODE_ARCHIVE";
         private const int MaxEntryPathLength = 512;

@@ -1864,6 +1864,17 @@ namespace OpenCAGE.MCP
             foreach (string path in changed)
             {
                 string level = UnderEnv(path) ? "" : null;
+                //Each exported level's block of LEVEL_TEXT_DATABASES.XML goes with it (ModExportBuilder): only blocks no exported
+                //level brings are left out, unless the whole file is asked for
+                if (path == Modding.LevelTextBlocks.Path && (levels.Count != 0 || files.Count != 0) && !files.Contains(path) && !SharedWanted(path))
+                {
+                    List<string> changedBlocks = Modding.LevelTextBlocks.Changed(Modding.VanillaConfigs.GetBest(path), Modding.ModExportBuilder.UsersVersion(Modding.ModServices.GameRoot, installer, path));
+                    HashSet<string> exported = new HashSet<string>(levels.Select(Modding.LevelTextBlocks.BlockOf), StringComparer.OrdinalIgnoreCase);
+                    List<string> loose = changedBlocks?.Where(o => !exported.Contains(o)).ToList();
+                    if (loose == null || loose.Count != 0)
+                        leftOut.Add(path + (loose == null ? "" : " (the text databases loaded by " + Modding.LevelTextBlocks.Describe(loose) + ")"));
+                    continue;
+                }
                 if (levels.Count != 0 || files.Count != 0)
                 {
                     bool wanted = InLevels(path) || files.Contains(path) || SharedWanted(path);
@@ -1941,6 +1952,8 @@ namespace OpenCAGE.MCP
                     builder.AddFiles(chosenFiles);
                     foreach (var config in chosenConfigs)
                         builder.AddConfigPatch(config.Key, config.Value.Key, config.Value.Value);
+                    //Each level's list of text databases goes with it
+                    builder.LevelTextOriginal = Modding.VanillaConfigs.GetBest(Modding.LevelTextBlocks.Path);
                     Directory.CreateDirectory(Path.GetDirectoryName(output));
                     written = builder.Write(output);
                 }

@@ -818,8 +818,9 @@ namespace OpenCAGE.MCP
                 else
                     warnings.Add("Exported from a " + from + " install, which does not share level files with this " + here + " install - the import may not work.");
             }
-            if (!string.IsNullOrEmpty(manifest.OpenCAGEVersion) && manifest.OpenCAGEVersion != Singleton.Version)
-                warnings.Add("Exported by OpenCAGE " + manifest.OpenCAGEVersion + " (this is " + Singleton.Version + ").");
+            string caveat = CompositeArchive.FormatCaveat(manifest.FormatVersion);
+            if (caveat != null)
+                warnings.Add(caveat);
 
             HashSet<uint> here_ = McpEditor.UI(() =>
             {

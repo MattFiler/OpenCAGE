@@ -79,6 +79,13 @@ namespace OpenCAGE.Popups
             public LevelChanges Level;
         }
 
+        /* Blocks of DATA/LEVEL_TEXT_DATABASES.XML no level in the list brings with it (a level's own block goes with the level):
+           the globals block, or a level whose own files are as shipped */
+        private class LevelTextRow
+        {
+            public List<string> Blocks;
+        }
+
         private const string TreeDirectory = "DATA/BINARY_BEHAVIOR/_DIRECTORY_CONTENTS.BML";
 
         /* What a level's changed files say about what changed in it, in words */
@@ -411,9 +418,17 @@ namespace OpenCAGE.Popups
             Dictionary<string, List<string>> byLevel = new Dictionary<string, List<string>>();
             List<ConfigChange> configs = new List<ConfigChange>();
             List<string> other = new List<string>();
+            bool levelTextChanged = false;
 
             foreach (string path in changed.OrderBy(o => o))
             {
+                //Goes in block by block, each level's with the level (below)
+                if (path == LevelTextBlocks.Path)
+                {
+                    levelTextChanged = true;
+                    continue;
+                }
+
                 string level = ModInstaller.LevelUnitOf(path);
                 if (level != null)
                 {
@@ -492,7 +507,22 @@ namespace OpenCAGE.Popups
                 treeRoot.Expand();
             }
 
-            if (other.Count != 0)
+            //Which text databases each level loads goes in with the level (ModExportBuilder), so only the blocks no level here
+            //brings are a choice of their own. Without the shipped file to tell blocks apart, the whole file is, as before.
+            List<string> looseLevelText = new List<string>();
+            if (levelTextChanged)
+            {
+                List<string> changedBlocks = LevelTextBlocks.Changed(VanillaConfigs.GetBest(LevelTextBlocks.Path), ModExportBuilder.UsersVersion(ModServices.GameRoot, ModServices.Installer, LevelTextBlocks.Path));
+                if (changedBlocks == null)
+                    other.Add(LevelTextBlocks.Path);
+                else
+                {
+                    HashSet<string> withLevels = new HashSet<string>(byLevel.Keys.Select(LevelTextBlocks.BlockOf), StringComparer.OrdinalIgnoreCase);
+                    looseLevelText = changedBlocks.Where(o => !withLevels.Contains(o)).ToList();
+                }
+            }
+
+            if (other.Count != 0 || looseLevelText.Count != 0)
             {
                 //What changed inside the game's archives (UI.PAK, ANIMATION.PAK...), change by change: reading them takes a moment
                 Dictionary<string, List<PakPart>> archives = ReadArchives(other);
@@ -505,6 +535,12 @@ namespace OpenCAGE.Popups
                     node.ToolTipText = file;
                     if (archives.TryGetValue(file, out List<PakPart> parts))
                         AddArchiveParts(node, parts);
+                }
+                if (looseLevelText.Count != 0)
+                {
+                    TreeNode node = otherRoot.Nodes.Add("The text databases loaded by " + LevelTextBlocks.Describe(looseLevelText));
+                    node.Tag = new LevelTextRow() { Blocks = looseLevelText };
+                    node.ToolTipText = LevelTextBlocks.Path + "\nA level in your mod brings its own list with it.";
                 }
                 otherRoot.Expand();
             }
@@ -968,7 +1004,8 @@ namespace OpenCAGE.Popups
             int assetCount = parts.Values.Sum(o => o.Textures.Count + o.Models.Count + o.Materials.Count + o.StandaloneData.Count + o.LooseFiles.Count);
             int settingCount = configs.Where(o => o.Key.Path != TreeDirectory).Sum(o => o.Value.Count);
             int treeCount = AllNodes(_tree.Nodes).Count(o => o.Checked && o.Tag is OpGroup);
-            int otherCount = AllNodes(_tree.Nodes).Count(o => o.Checked && o.Tag is string);
+            int otherCount = AllNodes(_tree.Nodes).Count(o => o.Checked && (o.Tag is string || o.Tag is LevelTextRow));
+            List<string> levelText = SelectedLevelText();
             Dictionary<string, List<PakPart>> archiveParts = SelectedArchiveParts();
             List<string> counts = new List<string>();
             if (compositeCount != 0) counts.Add(compositeCount + " composite" + (compositeCount == 1 ? "" : "s"));
@@ -996,6 +1033,7 @@ namespace OpenCAGE.Popups
                         preview.AddFiles(level.Files.Where(o => o.EndsWith("/WORLD/COMMANDS.PAK")));
                     foreach (KeyValuePair<ConfigChange, List<BmlPatchOp>> config in configs)
                         preview.AddConfigPatch(config.Key.Path, config.Value, config.Key.VanillaBytes);
+                    preview.AddLevelTextBlocks(levelText);
                     //Said by OpenCAGE, not written by the author, even with the box focused
                     _summarising = true;
                     try { _changes.Text = preview.Summarise(); }
@@ -1029,6 +1067,12 @@ namespace OpenCAGE.Popups
                 else if (node.Tag is RestRow rest) files.AddRange(rest.Level.Files);
             }
             return files.Distinct().ToList();
+        }
+
+        /* The blocks of DATA/LEVEL_TEXT_DATABASES.XML ticked besides the levels' own */
+        private List<string> SelectedLevelText()
+        {
+            return AllNodes(_tree.Nodes).Where(o => o.Checked && o.Tag is LevelTextRow).SelectMany(o => ((LevelTextRow)o.Tag).Blocks).ToList();
         }
 
         /* Each archive only some of whose changes are ticked, and those changes (all ticked, it's one of the files going in) */
@@ -1120,7 +1164,8 @@ namespace OpenCAGE.Popups
             List<KeyValuePair<ConfigChange, List<BmlPatchOp>>> configs = SelectedConfigs();
             Dictionary<LevelChanges, LevelPart> parts = SelectedParts();
             Dictionary<string, List<PakPart>> archiveParts = SelectedArchiveParts();
-            if (files.Count == 0 && configs.Count == 0 && parts.Count == 0 && archiveParts.Count == 0)
+            List<string> levelText = SelectedLevelText();
+            if (files.Count == 0 && configs.Count == 0 && parts.Count == 0 && archiveParts.Count == 0 && levelText.Count == 0)
             {
                 MessageBox.Show("Tick the changes to include first.", "Nothing selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
@@ -1195,10 +1240,13 @@ namespace OpenCAGE.Popups
                             partFolders.Add(folder);
                             builder.AddLevelPart(folder, level);
                         }
-                        if (files.Count == 0 && configs.Count == 0 && partFolders.Count == 0 && archiveParts.Count == 0)
+                        if (files.Count == 0 && configs.Count == 0 && partFolders.Count == 0 && archiveParts.Count == 0 && levelText.Count == 0)
                             throw new Exception("nothing you ticked differs from the game as it shipped, so there's nothing to put in a mod.");
                         foreach (KeyValuePair<ConfigChange, List<BmlPatchOp>> config in configs)
                             builder.AddConfigPatch(config.Key.Path, config.Value, config.Key.VanillaBytes);
+                        //Each level's list of text databases goes with it; any other lists ticked besides
+                        builder.LevelTextOriginal = VanillaConfigs.GetBest(LevelTextBlocks.Path);
+                        builder.AddLevelTextBlocks(levelText);
                         report("Writing the package...");
                         result = builder.Write(output);
                         result.Warnings.InsertRange(0, notes);

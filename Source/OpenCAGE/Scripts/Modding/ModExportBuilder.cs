@@ -295,6 +295,58 @@ namespace OpenCAGE.Modding
                 _ownVersions.Add(ModToolkit.Normalise(normalisedPath));
         }
 
+        /* Blocks of DATA/LEVEL_TEXT_DATABASES.XML to carry besides the included levels' own (see AddLevelTextBlocks) */
+        private readonly List<string> _levelTextBlocks = new List<string>();
+        /* Whether that file goes in built from blocks (BuildLevelText) rather than whole */
+        private bool _levelTextBuilt;
+
+        /// <summary>
+        /// DATA/LEVEL_TEXT_DATABASES.XML as the game shipped it, for when no original of it is kept: the editor's own copy.
+        /// </summary>
+        public byte[] LevelTextOriginal;
+
+        /// <summary>
+        /// Include blocks of DATA/LEVEL_TEXT_DATABASES.XML as the user has them that no level in the mod brings: the "globals"
+        /// block, or that of a level whose own files are as the game shipped them. A level in the mod brings its own anyway.
+        /// </summary>
+        public void AddLevelTextBlocks(IEnumerable<string> blocks)
+        {
+            foreach (string block in blocks)
+                if (!_levelTextBlocks.Contains(block, StringComparer.OrdinalIgnoreCase))
+                    _levelTextBlocks.Add(block);
+        }
+
+        /* Which text databases a level loads goes in with the level: DATA/LEVEL_TEXT_DATABASES.XML as it shipped, with the
+           blocks of the levels in the mod (and any chosen besides) as the user has them - so blocks for the user's other levels
+           stay out, and another mod's blocks merge with these. Unless the whole file was chosen. */
+        private void BuildLevelText()
+        {
+            string path = LevelTextBlocks.Path;
+            if (_files.Contains(path) || _deleted.Contains(path))
+                return;
+            List<string> blocks = _files.Concat(_parts.Keys).Concat(_configs.Keys).Concat(_deleted)
+                .Select(ModInstaller.LevelUnitOf).Where(o => o != null).Distinct().Select(LevelTextBlocks.BlockOf)
+                .Concat(_levelTextBlocks).ToList();
+            if (blocks.Count == 0)
+                return;
+            byte[] original = OriginalBytes(path) ?? LevelTextOriginal;
+            if (original == null)
+            {
+                //Blocks can't be told apart without the original: the whole file, as the user has it
+                Include(path);
+                return;
+            }
+            byte[] current = UsersVersion(_gameRoot, _installer, path, AsOnDisk);
+            byte[] built = current == null ? null : LevelTextBlocks.WithBlocks(original, current, blocks);
+            if (built == null)
+                return;
+            _content[path] = built;
+            _files.Add(path);
+            _levelTextBuilt = true;
+            if (!AsOnDisk && _installer != null && _installer.TryGetOwnVersion(path, out _))
+                _ownVersions.Add(path);
+        }
+
         /// <summary>A picture to show for the mod in the Mod Manager (PNG bytes), or null.</summary>
         public byte[] Preview;
 
@@ -304,6 +356,7 @@ namespace OpenCAGE.Modding
             ModPackageWriter writer = new ModPackageWriter(Info);
             writer.SetPreview(Preview);
             BuildParts();
+            BuildLevelText();
             if (string.IsNullOrWhiteSpace(Info.Summary))
             {
                 //Files kept as they are on disk under installed mods hold the mods' changes too: not only layouts, as good as always
@@ -374,7 +427,10 @@ namespace OpenCAGE.Modding
                 if (added != 0) trees.Add("adds " + added + " new " + (changed != 0 ? "one" : "behaviour tree") + (added == 1 ? "" : "s"));
                 parts.Add(string.Join(" and ", trees));
             }
-            List<string> others = all.Where(o => ModInstaller.LevelUnitOf(o) == null && !_configs.ContainsKey(o)).ToList();
+            //Which text databases levels load: the levels' own blocks are part of the levels, others said as what they're for
+            if (_levelTextBlocks.Count != 0)
+                parts.Add("changes the text databases loaded by " + LevelTextBlocks.Describe(_levelTextBlocks));
+            List<string> others = all.Where(o => ModInstaller.LevelUnitOf(o) == null && !_configs.ContainsKey(o) && !(_levelTextBuilt && o == LevelTextBlocks.Path)).ToList();
             if (others.Any(o => o.StartsWith("DATA/BINARY_BEHAVIOR/"))) parts.Add("changes AI behaviour trees");
             if (others.Any(o => o.StartsWith("DATA/TEXT/"))) parts.Add("changes in-game text");
             if (others.Any(o => o.StartsWith("DATA/SOUND/"))) parts.Add("changes sounds");
@@ -584,6 +640,146 @@ namespace OpenCAGE.Modding
             if (bytes >= 1024 * 1024) return (bytes / (1024.0 * 1024.0)).ToString("0.0") + " MB";
             if (bytes >= 1024) return (bytes / 1024.0).ToString("0.0") + " KB";
             return bytes + " B";
+        }
+    }
+
+    /// <summary>
+    /// DATA/LEVEL_TEXT_DATABASES.XML: which of DATA/TEXT's databases each level loads - a block per level, named by the last
+    /// part of the level's name, and a "globals" block every level loads. A level's block is part of the level as a mod
+    /// carries it (see ModExportBuilder). Shared by the exporter UI, the MCP and tests.
+    /// </summary>
+    public static class LevelTextBlocks
+    {
+        public const string Path = "DATA/LEVEL_TEXT_DATABASES.XML";
+
+        /// <summary>The block every level loads.</summary>
+        public const string Globals = "globals";
+
+        /// <summary>The block a level is listed in: the last part of its name ("BSP_TORRENS" for PRODUCTION/BSP_TORRENS - the file spells it its own way, matched either way).</summary>
+        public static string BlockOf(string level) => ModToolkit.LevelName(level);
+
+        /// <summary>Blocks in words: "every level" for the globals block, else the level's name.</summary>
+        public static string Describe(IEnumerable<string> blocks)
+        {
+            return string.Join(", ", blocks.Select(o => string.Equals(o, Globals, StringComparison.OrdinalIgnoreCase) ? "every level" : o));
+        }
+
+        /// <summary>
+        /// The blocks that differ between two versions of the file - added, taken out, or naming other databases - as the
+        /// second spells them (else the first). Null when either is missing or can't be read.
+        /// </summary>
+        public static List<string> Changed(byte[] original, byte[] current)
+        {
+            Dictionary<string, XmlElement> was = Blocks(original), now = Blocks(current);
+            if (was == null || now == null)
+                return null;
+            List<string> changed = new List<string>();
+            foreach (string name in now.Keys.Concat(was.Keys.Where(o => !now.ContainsKey(o))))
+            {
+                was.TryGetValue(name, out XmlElement a);
+                now.TryGetValue(name, out XmlElement b);
+                if (Content(a) != Content(b))
+                    changed.Add((b ?? a).GetAttribute("name"));
+            }
+            return changed;
+        }
+
+        /// <summary>
+        /// The original file with the named blocks as the current one has them - each added, replaced or taken out - and the
+        /// rest as it was. Null when that leaves the original as it is, or either can't be read.
+        /// </summary>
+        public static byte[] WithBlocks(byte[] original, byte[] current, IEnumerable<string> blocks)
+        {
+            XmlDocument result, mine;
+            Encoding encoding;
+            bool declared;
+            try
+            {
+                result = Merging.FileMerger.ReadXml(original, out encoding, out declared);
+                mine = Merging.FileMerger.ReadXml(current, out _, out _);
+            }
+            catch (XmlException)
+            {
+                return null;
+            }
+            XmlElement root = result.DocumentElement, theirs = mine.DocumentElement;
+            if (root == null || theirs == null || root.Name != theirs.Name)
+                return null;
+
+            bool changed = false;
+            foreach (string name in blocks.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                XmlElement was = Find(root, name), now = Find(theirs, name);
+                if (Content(was) == Content(now))
+                    continue;
+                changed = true;
+                if (now == null)
+                {
+                    //Taken out, with the line it was on
+                    if (was.PreviousSibling is XmlWhitespace line)
+                        root.RemoveChild(line);
+                    root.RemoveChild(was);
+                }
+                else if (was != null)
+                    root.ReplaceChild(result.ImportNode(now, true), was);
+                else
+                {
+                    //Added after the last block, on a line of its own like the others
+                    XmlElement last = root.ChildNodes.OfType<XmlElement>().LastOrDefault();
+                    XmlNode added = result.ImportNode(now, true);
+                    XmlNode line = result.CreateWhitespace(last?.PreviousSibling is XmlWhitespace before ? before.Value : "\r\n\t");
+                    if (last != null)
+                    {
+                        root.InsertAfter(added, last);
+                        root.InsertAfter(line, last);
+                    }
+                    else
+                    {
+                        root.PrependChild(added);
+                        root.PrependChild(line);
+                    }
+                }
+            }
+            return changed ? Merging.FileMerger.WriteXml(result, encoding, declared) : null;
+        }
+
+        /* A block as what it says, whatever its layout: its attributes and each database it names */
+        private static string Content(XmlElement block)
+        {
+            if (block == null)
+                return null;
+            StringBuilder content = new StringBuilder();
+            foreach (XmlAttribute attribute in block.Attributes)
+                content.Append(attribute.Name).Append('=').Append(attribute.Value).Append('\n');
+            foreach (XmlElement child in block.ChildNodes.OfType<XmlElement>())
+                content.Append(child.OuterXml).Append('\n');
+            return content.ToString();
+        }
+
+        private static XmlElement Find(XmlElement root, string name)
+        {
+            return root.ChildNodes.OfType<XmlElement>().FirstOrDefault(o => o.Name == "level" && string.Equals(o.GetAttribute("name"), name, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static Dictionary<string, XmlElement> Blocks(byte[] bytes)
+        {
+            if (bytes == null)
+                return null;
+            try
+            {
+                XmlElement root = Merging.FileMerger.ReadXml(bytes, out _, out _).DocumentElement;
+                if (root == null)
+                    return null;
+                Dictionary<string, XmlElement> blocks = new Dictionary<string, XmlElement>(StringComparer.OrdinalIgnoreCase);
+                foreach (XmlElement block in root.ChildNodes.OfType<XmlElement>().Where(o => o.Name == "level"))
+                    if (!blocks.ContainsKey(block.GetAttribute("name")))
+                        blocks[block.GetAttribute("name")] = block;
+                return blocks;
+            }
+            catch (XmlException)
+            {
+                return null;
+            }
         }
     }
 
