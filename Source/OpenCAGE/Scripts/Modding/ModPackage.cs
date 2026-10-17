@@ -41,9 +41,20 @@ namespace OpenCAGE.Modding
 
     public class ModPackageInfo
     {
-        public const int CurrentFormat = 2;
+        /* 3: a replacement mod ("installs": "replace") - an OpenCAGE before them would combine it with other mods. A
+           combinable one is still written as 2, which every OpenCAGE with mods reads. */
+        public const int CurrentFormat = 3;
+        public const int CombinableFormat = 2;
+
+        /// <summary>A combinable mod: combined with other mods (and the player's own changes) that change the same levels and files.</summary>
+        public const string InstallsCombine = "combine";
+        /// <summary>A replacement mod: installed exactly as it was made - whole levels and files, nothing rebuilt - so no other mod can change what it changes while it's on.</summary>
+        public const string InstallsReplace = "replace";
 
         [JsonProperty("format")] public int Format = CurrentFormat;
+        /* How it installs: InstallsCombine (packages from before there was a choice say nothing: that) or InstallsReplace */
+        [JsonProperty("installs")] public string Installs = InstallsCombine;
+        [JsonIgnore] public bool Replaces => Installs == InstallsReplace;
         /* What the mod changes, in words, written by the exporter: shown in the Mod Manager before installing */
         [JsonProperty("summary")] public string Summary;
         /* A picture for the Mod Manager (PNG payload name), or null */
@@ -193,6 +204,9 @@ namespace OpenCAGE.Modding
             //back entirely in memory at install
             CATHODE.PAK2 pak = new CATHODE.PAK2(new byte[0]);
             pak.Entries.Clear();
+            //A combinable mod in the format every OpenCAGE with mods reads; a replacement one in the format only those that keep
+            //it apart do, so an older one refuses it rather than combining it
+            _info.Format = _info.Replaces ? ModPackageInfo.CurrentFormat : ModPackageInfo.CombinableFormat;
             pak.Entries.Add(new CATHODE.PAK2.File()
             {
                 Filename = "manifest.json",

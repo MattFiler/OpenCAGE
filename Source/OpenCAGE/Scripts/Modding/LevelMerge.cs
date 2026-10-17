@@ -224,8 +224,19 @@ namespace OpenCAGE.Modding
                 merged.Absorb(EditorTables.Read(user.Commands.Filepath), "your changes", merger.ChangedComposites, VanillaPages == null ? null : (Func<ShortGuid, List<FlowgraphMeta>>)(id => VanillaPages(original.Commands.GetComposite(id), level)));
                 merged.Finalise(dest.Commands, merger.ChangedComposites, result);
                 List<string> mergeNotes = merger.Notes.Concat(result.Warnings).ToList();
-                //Rebuilt only for what a build makes something of: scripts, models, materials (not textures or the level's data)
-                bool build = part.Build && (merger.ChangedComposites.Count != 0 || merger.TakenAssets.Any(o => o.StartsWith("model ") || o.StartsWith("material ")));
+                //Rebuilt only for what a build makes something of, as the user's level was: the chosen composites' placed content
+                //(models, lights, collision, navigation...: as the editor judges a Save & Build needed - a logic change is a plain
+                //save), and models and materials (not textures or the level's data)
+                string buildReason = null;
+                if (part.Build)
+                {
+                    buildReason = BuildFingerprint.NeedsBuild(original.Commands, dest.Commands, merger.ChangedComposites.Keys);
+                    if (buildReason == null && merger.TakenAssets.Any(o => o.StartsWith("model ") || o.StartsWith("material ")))
+                        buildReason = "models or materials you chose changed";
+                }
+                bool build = buildReason != null;
+                if (build)
+                    mergeNotes.Add("built for the mod (navigation, collision, lighting), as what you chose changes what a build makes - " + buildReason + ".");
                 //Only the copy being saved is needed from here: a build wants the memory the others hold
                 merger = null;
                 user = null;

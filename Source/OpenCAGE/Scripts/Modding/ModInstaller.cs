@@ -42,6 +42,13 @@ namespace OpenCAGE.Modding
         public List<string> EditedFiles = new List<string>();
         /// <summary>Files with the user's own changes that mods will be combined with.</summary>
         public List<string> OwnChanges = new List<string>();
+        /// <summary>Files with the user's own changes a replacement mod replaces: set aside while it's on, back when it's off.</summary>
+        public List<string> OwnSetAside = new List<string>();
+        /// <summary>
+        /// Mods that can't be on together, in words: a replacement mod and another changing the same level or file. Each is in
+        /// <see cref="Problems"/> too (applying refuses).
+        /// </summary>
+        public List<ReplacementClash> Clashes = new List<ReplacementClash>();
         /// <summary>Of <see cref="CombinedLevels"/>, those already combined from exactly these versions and still as they were left: applying leaves them be.</summary>
         public List<string> UnchangedLevels = new List<string>();
         /// <summary>
@@ -49,6 +56,20 @@ namespace OpenCAGE.Modding
         /// a level they change. Some may be left as they are - this is for being ready, not for what changed.
         /// </summary>
         public HashSet<string> MayChange = new HashSet<string>();
+    }
+
+    /// <summary>A replacement mod and the others changing something it replaces - which can't be on with it.</summary>
+    public class ReplacementClash
+    {
+        public string Replacing;
+        public List<string> Others = new List<string>();
+        /// <summary>What they share, in words: "the level SCI_HUB", "the alien's settings (DEFAULT.BML)".</summary>
+        public string What;
+
+        public string Describe()
+        {
+            return "'" + Replacing + "' replaces " + What + ", which " + string.Join(" and ", Others.Select(o => "'" + o + "'")) + (Others.Count == 1 ? " also changes" : " also change");
+        }
     }
 
     /// <summary>What to do with files installed mods had changed that have been changed again since they were applied.</summary>
@@ -162,6 +183,7 @@ namespace OpenCAGE.Modding
                 record.Version = package.Info.Version;
                 record.Author = package.Info.Author;
                 record.Description = package.Info.Description;
+                record.Installs = package.Info.Installs;
                 record.PackageFileName = libraryFileName;
                 _state.Save();
                 return record;
@@ -225,6 +247,41 @@ namespace OpenCAGE.Modding
             public ModState.InstalledMod Mod;
             public ModPackage Package;
             public ModPackageEntry Entry;
+            /* A replacement mod's: installed exactly as it ships, never combined (its package says so) */
+            public bool Replaces => Package.Info.Replaces;
+        }
+
+        /* A replacement mod is installed exactly as it was made, so nothing it changes can be shared: another mod changing the
+           same file, or the same level, can't be on with it. Each level's block of the text database list is combined on its
+           own, as part of its level. */
+        private static List<ReplacementClash> ReplacementClashes(Plan plan)
+        {
+            List<ReplacementClash> clashes = new List<ReplacementClash>();
+            void Check(string what, IEnumerable<Planned> planned)
+            {
+                List<Planned> mods = planned.GroupBy(o => o.Mod).Select(o => o.First()).ToList();
+                Planned replacing = mods.FirstOrDefault(o => o.Replaces);
+                if (mods.Count < 2 || replacing == null)
+                    return;
+                ReplacementClash clash = new ReplacementClash() { Replacing = replacing.Mod.Name, What = what };
+                clash.Others.AddRange(mods.Where(o => o != replacing).Select(o => o.Mod.Name));
+                clashes.Add(clash);
+            }
+            foreach (KeyValuePair<string, List<Planned>> file in plan.Files.OrderBy(o => o.Key))
+                if (file.Key != LevelTextBlocks.Path)
+                    Check(MergeConflict.Place(file.Key), file.Value);
+            foreach (KeyValuePair<string, List<List<Planned>>> level in plan.Levels.OrderBy(o => o.Key))
+                Check("the level " + ModToolkit.LevelName(level.Key), level.Value.Select(o => o[0]));
+            return clashes;
+        }
+
+        /// <summary>Why mods that clash with a replacement mod can't be applied together, in words.</summary>
+        public static string ClashesText(List<ReplacementClash> clashes)
+        {
+            return "These mods can't be on at the same time. A replacement mod is installed exactly as it was made, so no other mod can change what it changes:\n  "
+                + string.Join("\n  ", clashes.Take(10).Select(o => o.Describe()))
+                + (clashes.Count > 10 ? "\n  ...and " + (clashes.Count - 10) + " more" : "")
+                + "\n\nTurn one of each off.";
         }
 
         private class Plan
@@ -388,6 +445,9 @@ namespace OpenCAGE.Modding
                 Plan plan = BuildPlan(mods, packages);
                 analysis.MayChange = MayChange(plan);
                 analysis.EditedFiles = EditedSinceApplied();
+                analysis.Clashes = ReplacementClashes(plan);
+                if (analysis.Clashes.Count != 0)
+                    analysis.Problems.Add(ClashesText(analysis.Clashes));
 
                 //The user's own versions, as they'll be when applying starts: what's recorded, updated by what's on disk now
                 Dictionary<string, string> own = new Dictionary<string, string>(_state.Own);
@@ -410,6 +470,13 @@ namespace OpenCAGE.Modding
                 foreach (KeyValuePair<string, List<Planned>> file in plan.Files)
                 {
                     bool hasOwn = own.ContainsKey(file.Key);
+                    //A replacement mod's file goes in exactly as it ships (shared, it's a clash): the user's own version waits.
+                    //The text database list is combined block by block, whoever changes it
+                    if (file.Value.Any(o => o.Replaces) && file.Key != LevelTextBlocks.Path)
+                    {
+                        if (hasOwn) analysis.OwnSetAside.Add(file.Key);
+                        continue;
+                    }
                     if (hasOwn) analysis.OwnChanges.Add(file.Key);
                     if (file.Value.Count + (hasOwn ? 1 : 0) < 2) continue;
                     try
@@ -443,8 +510,12 @@ namespace OpenCAGE.Modding
                         continue;
                     }
                     List<string> ownFiles = LevelFiles(level.Key).Where(own.ContainsKey).ToList();
-                    analysis.OwnChanges.AddRange(ownFiles);
-                    if (level.Value.Count > 1 || ownFiles.Count != 0)
+                    bool replaced = level.Value.Any(o => o[0].Replaces);
+                    if (replaced)
+                        analysis.OwnSetAside.AddRange(ownFiles);
+                    else
+                        analysis.OwnChanges.AddRange(ownFiles);
+                    if (!replaced && (level.Value.Count > 1 || ownFiles.Count != 0))
                     {
                         analysis.CombinedLevels.Add(level.Key);
                         if (_state.LevelSignatures.TryGetValue(level.Key, out string last) && last == LevelSignature(level.Key, level.Value, ownFiles.Count != 0, false)
@@ -1330,6 +1401,12 @@ namespace OpenCAGE.Modding
 
             progress("Working out what changes...");
             Plan plan = BuildPlan(desired, packages);
+            List<ReplacementClash> clashes = ReplacementClashes(plan);
+            if (clashes.Count != 0)
+            {
+                result.Error = ClashesText(clashes);
+                return result;
+            }
 
             //Everything the last apply wrote, plus everything this one will
             HashSet<string> affected = new HashSet<string>(_state.Composition.Keys);
@@ -1486,7 +1563,13 @@ namespace OpenCAGE.Modding
                     if (keptFiles.Contains(file.Key))
                         continue;
                     progress("Installing " + Path.GetFileName(file.Key) + " (" + done + " of " + plan.Files.Count + ")...");
-                    ComposeFile(file.Key, file.Value, result);
+                    //A replacement mod's file goes in exactly as it ships: the user's own version of it waits until it's turned off.
+                    //Not the text database list: each level's block of it is its level's, combined with every other mod's and the
+                    //user's own blocks however the mods install
+                    bool replaced = file.Value.Count == 1 && file.Value[0].Replaces && file.Key != LevelTextBlocks.Path;
+                    if (replaced && _state.Own.ContainsKey(file.Key))
+                        result.Warnings.Add("Your own changes to " + MergeConflict.Place(file.Key) + " are set aside while '" + file.Value[0].Mod.Name + "' replaces it - they come back when it's turned off.");
+                    ComposeFile(file.Key, file.Value, result, !replaced);
                     _state.Composition[file.Key].Signature = fileSignatures[file.Key];
                 }
                 _sources?.Clear();
@@ -1500,7 +1583,12 @@ namespace OpenCAGE.Modding
                         continue;
                     }
                     _state.LevelSignatures[level.Key] = levelSignatures[level.Key];
-                    bool withOwn = ownLevels.Contains(level.Key);
+                    //A replacement mod's level goes in exactly as it ships, over the level as it shipped: the user's own changes
+                    //to it wait until it's turned off
+                    bool replaced = level.Value.Count == 1 && level.Value[0][0].Replaces;
+                    if (replaced && ownLevels.Contains(level.Key))
+                        result.Warnings.Add("Your own changes to " + ModToolkit.LevelName(level.Key) + " are set aside while '" + level.Value[0][0].Mod.Name + "' replaces it - they come back when it's turned off.");
+                    bool withOwn = ownLevels.Contains(level.Key) && !replaced;
                     if (wholeLevels.Contains(level.Key))
                     {
                         progress("Installing " + ModToolkit.LevelName(level.Key) + "...");
@@ -1516,7 +1604,7 @@ namespace OpenCAGE.Modding
                     {
                         progress("Installing " + ModToolkit.LevelName(level.Key) + "...");
                         foreach (Planned planned in level.Value[0])
-                            ComposeFile(ModToolkit.Normalise(planned.Entry.Target), new List<Planned>() { planned }, result);
+                            ComposeFile(ModToolkit.Normalise(planned.Entry.Target), new List<Planned>() { planned }, result, !replaced);
                     }
                     else
                     {

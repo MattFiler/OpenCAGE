@@ -230,6 +230,19 @@ namespace OpenCAGE.Modding
             AnimTreeLayouts lo = null, lc = null;
             if (layoutsName != null && AnimTreeLayoutsMerge.TryRead(o.Content(layoutsName), out lo) && AnimTreeLayoutsMerge.TryRead(c.Content(layoutsName), out lc))
             {
+                //A tree the original has is laid out there too - automatically, as the game's own file holds none of OpenCAGE's
+                //layouts - so a layout given to it is a changed one, not a new one
+                Dictionary<uint, Dictionary<uint, (AnimationTree, byte[])>> originalTrees = new Dictionary<uint, Dictionary<uint, (AnimationTree, byte[])>>();
+                bool OriginalHas(uint setHash, uint treeHash)
+                {
+                    if (!originalTrees.TryGetValue(setHash, out var trees))
+                    {
+                        string set = before.Keys.FirstOrDefault(n => AnimationPakMerge.IsTreeSet(n) && SetHashOf(n) == setHash);
+                        originalTrees[setHash] = trees = set == null ? null : AnimationPakMerge.Trees(o.Content(set), o.Debug, set);
+                    }
+                    return trees != null && trees.ContainsKey(treeHash);
+                }
+
                 foreach ((uint setHash, uint treeHash) in lo.Trees.Concat(lc.Trees).Where(t => t != null).Select(t => (t.SetHash, t.TreeHash)).Distinct())
                 {
                     AnimTreeLayouts.TreeLayout was = lo.Find(setHash, treeHash), now = lc.Find(setHash, treeHash);
@@ -242,7 +255,7 @@ namespace OpenCAGE.Modding
                         tree.Apply += b => PutLayout(b, layoutsName, setHash, treeHash);
                     }
                     else
-                        parts.Add(LayoutPart(file, layoutsName, setHash, treeHash, now ?? was, now == null ? "removed" : was == null ? "new" : "changed"));
+                        parts.Add(LayoutPart(file, layoutsName, setHash, treeHash, now ?? was, OriginalHas(setHash, treeHash) ? "changed" : now == null ? "removed" : was == null ? "new" : "changed"));
                 }
                 //Where each tree's canvas was left isn't worth a choice: with nothing else, nothing's offered
                 handled.Add(layoutsName);

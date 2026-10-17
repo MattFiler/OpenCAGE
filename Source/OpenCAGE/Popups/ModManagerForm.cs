@@ -95,6 +95,7 @@ namespace OpenCAGE.Popups
             _modList.Columns.Add("Mod", 230);
             _modList.Columns.Add("Version", 64);
             _modList.Columns.Add("Author", 110);
+            _modList.Columns.Add("Type", 90);
             _modList.Columns.Add("Status", 140);
             _modList.SelectedIndexChanged += (s, e) => ShowDetails();
             _modList.ItemChecked += (s, e) => { if (!_refreshingList) { UpdatePending(); ShowDetails(); } };
@@ -367,6 +368,7 @@ namespace OpenCAGE.Popups
                     ListViewItem item = new ListViewItem(mod.Name ?? mod.Id) { Tag = mod, Checked = mod.Enabled };
                     item.SubItems.Add(mod.Version ?? "");
                     item.SubItems.Add(mod.Author ?? "");
+                    item.SubItems.Add(mod.Replaces ? "Replacement" : "Combinable");
                     item.SubItems.Add("");
                     _modList.Items.Add(item);
                     if (mod.Id == selectedId) item.Selected = true;
@@ -410,7 +412,7 @@ namespace OpenCAGE.Popups
                 else if (!item.Checked) status = "";
                 else if (mod.Applied.Keys.Any(o => _stale.Contains(o))) status = "Needs repair";
                 else status = "Installed";
-                item.SubItems[3].Text = status;
+                item.SubItems[4].Text = status;
             }
             List<string> desired = DesiredEnabledIds();
             List<string> current = state.ModsInPriorityOrder().Where(o => o.Enabled).Select(o => o.Id).ToList();
@@ -457,6 +459,10 @@ namespace OpenCAGE.Popups
                 if (!string.IsNullOrWhiteSpace(mod.Description)) { lines.Add(mod.Description.Trim()); lines.Add(""); }
                 lines.Add("What it changes:");
                 lines.Add("  " + (string.IsNullOrWhiteSpace(package.Info.Summary) ? DescribeEntries(package) : package.Info.Summary));
+                lines.Add("");
+                lines.Add(package.Info.Replaces
+                    ? "A replacement mod: it installs exactly as it was made, with nothing rebuilt, and no other mod can change the same levels or files while it's on."
+                    : "A combinable mod: it's combined with any other mods (and your own changes) that change the same levels and files.");
 
                 //What it clashes with among the ticked mods (and itself, if it isn't ticked)
                 List<string> ids = DesiredEnabledIds();
@@ -464,6 +470,16 @@ namespace OpenCAGE.Popups
                 if (ids.Count > 1)
                 {
                     ModAnalysis analysis = ModServices.Installer.Analyze(ids);
+                    List<ReplacementClash> clashes = analysis.Clashes.Where(o => o.Replacing == mod.Name || o.Others.Contains(mod.Name)).ToList();
+                    if (clashes.Count != 0)
+                    {
+                        lines.Add("");
+                        lines.Add("Can't be on at the same time as other ticked mods - untick one of each:");
+                        foreach (ReplacementClash clash in clashes.Take(12))
+                            lines.Add("  • " + clash.Describe());
+                        if (clashes.Count > 12)
+                            lines.Add("  ...and " + (clashes.Count - 12) + " more");
+                    }
                     List<MergeConflict> conflicts = analysis.Conflicts.Where(o => o.Kept == mod.Name || o.Lost == mod.Name).ToList();
                     List<string> shared = analysis.CombinedLevels.Where(level => SharesLevel(level, mod, ids)).ToList();
                     if (shared.Count != 0)
@@ -666,9 +682,16 @@ namespace OpenCAGE.Popups
                 List<MergeConflict> conflicts = analysis.Conflicts;
                 //Only the levels that will be put together again: one already combined from these very mods is left as it is
                 List<string> combinedLevels = analysis.CombinedLevels.Except(analysis.UnchangedLevels).ToList();
-                if (conflicts.Count != 0 || combinedLevels.Count != 0 || analysis.OwnChanges.Count != 0)
+                if (conflicts.Count != 0 || combinedLevels.Count != 0 || analysis.OwnChanges.Count != 0 || analysis.OwnSetAside.Count != 0)
                 {
                     List<string> lines = new List<string>();
+                    if (analysis.OwnSetAside.Count != 0)
+                    {
+                        lines.Add("You've changed some of these yourself, but a replacement mod replaces them whole. Your changes are set aside while it's on, and come back when it's turned off:");
+                        foreach (string what in Friendly(analysis.OwnSetAside).Take(12))
+                            lines.Add("  • " + what);
+                        lines.Add("");
+                    }
                     if (analysis.OwnChanges.Count != 0)
                     {
                         lines.Add("You've changed some of these files yourself. Your changes are kept, and the mods are combined with them (where both change the very same thing, the mod is used while it's installed):");

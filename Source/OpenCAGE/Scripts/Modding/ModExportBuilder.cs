@@ -353,6 +353,18 @@ namespace OpenCAGE.Modding
         public ExportResult Write(string outputPath)
         {
             ExportResult result = new ExportResult();
+            //A replacement mod carries each thing it changes whole, as the user has it: settings files rather than their values,
+            //archives rather than their changes, levels rather than parts of them
+            if (Info.Replaces)
+            {
+                if (_sources.Count != 0)
+                    throw new InvalidOperationException("A replacement mod carries whole levels, not parts of them.");
+                foreach (string path in _configs.Keys.Concat(_parts.Keys).ToList())
+                    AddFile(path);
+                _configs.Clear();
+                _configVanilla.Clear();
+                _parts.Clear();
+            }
             ModPackageWriter writer = new ModPackageWriter(Info);
             writer.SetPreview(Preview);
             BuildParts();
@@ -446,7 +458,11 @@ namespace OpenCAGE.Modding
             }
             else if (animationPaks.Count != 0)
                 parts.Add("changes animations");
-            int rest = others.Count(o => !o.StartsWith("DATA/BINARY_BEHAVIOR/") && !o.StartsWith("DATA/TEXT/") && !o.StartsWith("DATA/SOUND/") && !IsInterface(o) && !IsAnimationPak(o));
+            //Settings files carried whole (a replacement mod's), by what they're for
+            List<string> wholeSettings = others.Where(o => o.EndsWith(".BML") && !o.StartsWith("DATA/BINARY_BEHAVIOR/")).ToList();
+            if (wholeSettings.Count != 0)
+                parts.Add("changes the settings for " + string.Join(", ", wholeSettings.Select(FriendlyConfigName).Distinct()));
+            int rest = others.Count(o => !o.StartsWith("DATA/BINARY_BEHAVIOR/") && !o.StartsWith("DATA/TEXT/") && !o.StartsWith("DATA/SOUND/") && !IsInterface(o) && !IsAnimationPak(o) && !wholeSettings.Contains(o));
             if (rest != 0) parts.Add("changes " + rest + " other game file" + (rest == 1 ? "" : "s"));
             if (parts.Count == 0) return "";
             string text = string.Join("; ", parts) + ".";

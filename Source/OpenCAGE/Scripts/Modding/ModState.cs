@@ -34,6 +34,9 @@ namespace OpenCAGE.Modding
             [JsonProperty("enabled")] public bool Enabled;
             [JsonProperty("priority")] public int Priority;
             [JsonProperty("package")] public string PackageFileName;
+            /* How its package says it installs (ModPackageInfo.Installs): null for one added before there was a choice, which combines */
+            [JsonProperty("installs")] public string Installs;
+            [JsonIgnore] public bool Replaces => Installs == ModPackageInfo.InstallsReplace;
             /* PATH -> sha256 hex of the bytes this mod's application last put there (only the paths
              * where this mod was the final writer). Empty when the mod isn't currently applied. */
             [JsonProperty("applied")] public Dictionary<string, string> Applied = new Dictionary<string, string>();

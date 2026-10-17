@@ -132,7 +132,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "mods",
                 Title = "Mod manager",
-                Description = "The mod manager: list the library, import an .omp package, remove one, apply (the enabled mods, in priority order, restoring everything else to how it is without mods - mods changing the same file are combined: configs and behaviour trees value by value, text string by string, PAKs entry by entry, a level entity by entity and then rebuilt; where two change the same thing the later wins and it's reported. The user's own changes to files no mod had changed are the starting point mods are combined onto, and come back when the mods are removed), repair, recover an interrupted apply, or export changed files as an .omp (a release for the mod manager; export_composite_package's .ocp is composites to import into a level instead). Game files are rewritten at once; not undoable. dry_run reports the clashes first, and files changed since the mods were installed (which apply refuses to replace until told keep or discard). Afterwards OpenCAGE loads again whatever it has open that changed - the open level, the animations, the global textures and text (listed as reloaded); apply, repair and recover refuse while the open level or the animations have changes not saved in files they may change, unless discard_unsaved.",
+                Description = "The mod manager: list the library, import an .omp package, remove one, apply (the enabled mods, in priority order, restoring everything else to how it is without mods - mods changing the same file are combined: configs and behaviour trees value by value, text string by string, PAKs entry by entry, a level entity by entity and then rebuilt; where two change the same thing the later wins and it's reported. The user's own changes to files no mod had changed are the starting point mods are combined onto, and come back when the mods are removed. A replacement mod (export installs: replace) is never combined: it goes in exactly as made, setting the user's own changes to what it changes aside until it's off, and apply refuses to have it on with any other mod changing the same level or file), repair, recover an interrupted apply, or export changed files as an .omp (a release for the mod manager; export_composite_package's .ocp is composites to import into a level instead). Game files are rewritten at once; not undoable. dry_run reports the clashes first, and files changed since the mods were installed (which apply refuses to replace until told keep or discard). Afterwards OpenCAGE loads again whatever it has open that changed - the open level, the animations, the global textures and text (listed as reloaded); apply, repair and recover refuse while the open level or the animations have changes not saved in files they may change, unless discard_unsaved.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("action", "list (default), import, remove, apply, repair, recover, or export.", options: new[] { "list", "import", "remove", "apply", "repair", "recover", "export" }),
                     McpSchema.String("path", "import: the .omp package; export: where to write it. An absolute path."),
@@ -145,6 +145,7 @@ namespace OpenCAGE.MCP
                     McpSchema.String("author", "export: its author."),
                     McpSchema.String("version", "export: its version (default 1.0)."),
                     McpSchema.String("description", "export: its description."),
+                    McpSchema.String("installs", "export: how it installs - combine (default: combined with other mods and the player's own changes to the same levels and files) or replace (a replacement mod: installed exactly as made - whole levels, whole config files, nothing rebuilt - and apply refuses to have it on with any other mod changing the same level or file).", options: new[] { "combine", "replace" }),
                     McpSchema.Strings("levels", "export: only changed files of these levels (as list_levels names them; custom levels and a Nostromo level's _PATCH folder included)."),
                     McpSchema.Strings("files", "export: only these changed files, as game-relative paths (e.g. DATA/ENV/PRODUCTION/X/WORLD/COMMANDS.PAK)."),
                     McpSchema.Strings("include_shared", "export with levels/files: also changed files every level shares - text (DATA/TEXT), configs, ui (UI.PAK), animation (ANIMATION.PAK, which holds its tree layouts too), all, or game-relative paths."),
@@ -1665,7 +1666,7 @@ namespace OpenCAGE.MCP
                         if (dryRun)
                         {
                             Modding.ModPackage package = Modding.ModPackage.Read(path);
-                            return new JObject() { ["dry_run"] = true, ["id"] = package.Info.Id, ["name"] = package.Info.Name, ["version"] = package.Info.Version, ["entries"] = package.Info.Entries.Count, ["levels"] = new JArray(package.Info.Levels) };
+                            return new JObject() { ["dry_run"] = true, ["id"] = package.Info.Id, ["name"] = package.Info.Name, ["version"] = package.Info.Version, ["installs"] = package.Info.Installs, ["entries"] = package.Info.Entries.Count, ["levels"] = new JArray(package.Info.Levels) };
                         }
                         Modding.ModState.InstalledMod mod;
                         try { mod = installer.ImportPackage(path); }
@@ -1800,7 +1801,7 @@ namespace OpenCAGE.MCP
                 else if (mod.Applied.Count == 0) status = "enabled, not applied";
                 else if (mod.Applied.Keys.Any(o => stale.Contains(o))) status = "needs repair";
                 else status = "active";
-                list.Add(new JObject() { ["id"] = mod.Id, ["name"] = mod.Name, ["version"] = mod.Version, ["author"] = mod.Author, ["enabled"] = mod.Enabled, ["priority"] = mod.Priority, ["status"] = status, ["files_applied"] = mod.Applied.Count });
+                list.Add(new JObject() { ["id"] = mod.Id, ["name"] = mod.Name, ["version"] = mod.Version, ["author"] = mod.Author, ["installs"] = mod.Replaces ? Modding.ModPackageInfo.InstallsReplace : Modding.ModPackageInfo.InstallsCombine, ["enabled"] = mod.Enabled, ["priority"] = mod.Priority, ["status"] = status, ["files_applied"] = mod.Applied.Count });
             }
             return new JObject()
             {
@@ -1824,6 +1825,9 @@ namespace OpenCAGE.MCP
             }
             if (output != null && !output.EndsWith(ModdingExtension, StringComparison.OrdinalIgnoreCase))
                 throw new McpError("'path' must end with " + ModdingExtension + ".");
+            string installs = (call.Str("installs") ?? Modding.ModPackageInfo.InstallsCombine).Trim().ToLowerInvariant();
+            if (installs != Modding.ModPackageInfo.InstallsCombine && installs != Modding.ModPackageInfo.InstallsReplace)
+                throw McpError.Invalid("'installs' is combine or replace (got '" + installs + "').");
 
             Modding.ScanResult scan;
             using (McpEditorTools.Heartbeat(call, "Scanning the install against the vanilla manifest"))
@@ -1948,6 +1952,8 @@ namespace OpenCAGE.MCP
                     builder.Info.Author = (call.Str("author") ?? "").Trim();
                     builder.Info.Version = (call.Str("version") ?? "1.0").Trim();
                     builder.Info.Description = call.Str("description") ?? "";
+                    //A replacement mod carries config files whole rather than their values (ModExportBuilder.Write)
+                    builder.Info.Installs = installs;
                     builder.Info.OpenCageVersion = Singleton.Version;
                     builder.AddFiles(chosenFiles);
                     foreach (var config in chosenConfigs)

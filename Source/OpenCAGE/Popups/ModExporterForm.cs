@@ -123,6 +123,8 @@ namespace OpenCAGE.Popups
 
         private TreeView _tree;
         private ComboBox _updates;
+        private ComboBox _installs;
+        private Label _installsInfo;
         private TextBox _name;
         private TextBox _author;
         private TextBox _version;
@@ -200,6 +202,16 @@ namespace OpenCAGE.Popups
             tips.SetToolTip(saveAs, saveAsTip);
             tips.SetToolTip(_updates, saveAsTip);
             FormClosed += (s, e) => tips.Dispose();
+            meta.Controls.Add(new Label() { Text = "How it installs", AutoSize = true, Margin = new Padding(0, 8, 0, 0) });
+            _installs = new ComboBox() { Dock = DockStyle.Top, DropDownStyle = ComboBoxStyle.DropDownList };
+            _installs.Items.Add("Combines with other mods");
+            _installs.Items.Add("Replaces what it changes");
+            _installs.SelectedIndex = 0;
+            _installsInfo = new Label() { Dock = DockStyle.Top, AutoSize = true, MaximumSize = new Size(360, 0), Margin = new Padding(0, 2, 0, 0) };
+            _installs.SelectedIndexChanged += (s, e) => InstallsChanged();
+            meta.Controls.Add(_installs);
+            meta.Controls.Add(_installsInfo);
+            DescribeInstalls();
             meta.Controls.Add(new Label() { Text = "Mod name", AutoSize = true, Margin = new Padding(0, 8, 0, 0) });
             _name = new TextBox() { Dock = DockStyle.Top };
             meta.Controls.Add(_name);
@@ -227,7 +239,7 @@ namespace OpenCAGE.Popups
             _picture = new PictureBox() { Dock = DockStyle.Top, Height = 120, SizeMode = PictureBoxSizeMode.Zoom };
             meta.Controls.Add(_picture);
             meta.RowStyles.Clear();
-            for (int i = 0; i < 9; i++) meta.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            for (int i = 0; i < 12; i++) meta.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             meta.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             for (int i = 0; i < 6; i++) meta.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
@@ -289,6 +301,8 @@ namespace OpenCAGE.Popups
             _author.Text = _updating.Author ?? "";
             _description.Text = _updating.Description ?? "";
             _version.Text = NextVersion(_updating.Version);
+            //A new version installs as the old one did, unless the author says otherwise
+            _installs.SelectedIndex = _updating.Replaces ? 1 : 0;
             byte[] png = null;
             try { png = ModServices.Installer.OpenPackage(_updating).ReadPreview(); }
             catch { }
@@ -320,6 +334,27 @@ namespace OpenCAGE.Popups
             _ownPreview = null;
             _filledDetails = null;
             _filledPreview = null;
+        }
+
+        /* A replacement mod: installed exactly as it's made, every level and file it changes whole - and no other mod can change
+           them while it's on */
+        private bool Replaces => _installs != null && _installs.SelectedIndex == 1;
+
+        private void InstallsChanged()
+        {
+            DescribeInstalls();
+            //Each thing it changes goes in whole: anything part of which is ticked is ticked all through
+            if (Replaces)
+                MakeUnitsWhole();
+            else
+                UpdateSummary();
+        }
+
+        private void DescribeInstalls()
+        {
+            _installsInfo.Text = Replaces
+                ? "Installs exactly as you made it, with nothing rebuilt: each level and file it changes goes in whole, as you have it. No other mod can change the same levels or files while it's on."
+                : "Combined with other mods (and players' own changes) that change the same levels and files. Only what you tick goes in; a level other mods change too is combined with theirs when they're installed together, which can take a while.";
         }
 
         private void ClearPicture()
@@ -942,6 +977,63 @@ namespace OpenCAGE.Popups
                 else if (!node.Checked && (LevelOfPart(node.Tag) ?? (node.Tag as RestRow)?.Level) is LevelChanges level)
                     NotWhole(level);
             }
+            if (Replaces)
+                WholeUnits(e.Node);
+            _cascading = false;
+            RefreshTicks();
+            UpdateSummary();
+        }
+
+        /* A replacement mod carries each thing it changes whole: ticking (or unticking) any of a level, a settings file, the
+           behaviour trees or an archive does all of it */
+        private void WholeUnits(TreeNode changed)
+        {
+            foreach (TreeNode node in new[] { changed }.Concat(AllNodes(changed.Nodes)).ToList())
+            {
+                if ((LevelOfPart(node.Tag) ?? (node.Tag as RestRow)?.Level) is LevelChanges level)
+                {
+                    SetLevel(level, node.Checked);
+                    continue;
+                }
+                TreeNode unit = UnitOf(node);
+                if (unit != null)
+                {
+                    Check(unit, node.Checked);
+                    SetChildren(unit, node.Checked);
+                }
+            }
+        }
+
+        /* The row standing for the whole thing another is part of: a settings file, the behaviour trees (one file), a file with
+           its changes under it (an archive) - or null for none */
+        private static TreeNode UnitOf(TreeNode node)
+        {
+            for (TreeNode at = node; at != null; at = at.Parent)
+            {
+                if (at.Tag is ConfigChange || at.Tag is string) return at;
+                if (at.Tag is OpGroup) return at.Parent;
+            }
+            return null;
+        }
+
+        /* Choosing a replacement mod: anything part of which is ticked goes in whole */
+        private void MakeUnitsWhole()
+        {
+            _cascading = true;
+            foreach (LevelChanges level in _restNodes.Keys.Concat(_partNodes.Keys).Distinct().ToList())
+            {
+                bool any = (_restNodes.TryGetValue(level, out TreeNode rest) && rest.Checked) || (_partNodes.TryGetValue(level, out List<TreeNode> parts) && parts.Any(o => o.Checked));
+                if (any)
+                    SetLevel(level, true);
+            }
+            foreach (TreeNode unit in AllNodes(_tree.Nodes).Select(UnitOf).Where(o => o != null).Distinct().ToList())
+            {
+                if (unit.Checked || AllNodes(unit.Nodes).Any(o => o.Checked))
+                {
+                    Check(unit, true);
+                    SetChildren(unit, true);
+                }
+            }
             _cascading = false;
             RefreshTicks();
             UpdateSummary();
@@ -1008,6 +1100,19 @@ namespace OpenCAGE.Popups
             List<string> levelText = SelectedLevelText();
             Dictionary<string, List<PakPart>> archiveParts = SelectedArchiveParts();
             List<string> counts = new List<string>();
+            if (Replaces)
+            {
+                //A replacement mod's: each thing whole
+                int wholeLevels = files.Select(ModInstaller.LevelUnitOf).Where(o => o != null).Distinct().Count();
+                int settingsFiles = files.Count(o => ModInstaller.LevelUnitOf(o) == null && o.EndsWith(".BML") && o != TreeDirectory);
+                int otherFiles = files.Count(o => ModInstaller.LevelUnitOf(o) == null && !(o.EndsWith(".BML") && o != TreeDirectory) && o != TreeDirectory);
+                if (wholeLevels != 0) counts.Add(wholeLevels + " whole level" + (wholeLevels == 1 ? "" : "s"));
+                if (settingsFiles != 0) counts.Add(settingsFiles + " settings file" + (settingsFiles == 1 ? "" : "s"));
+                if (files.Contains(TreeDirectory)) counts.Add("the behaviour trees");
+                if (otherFiles + levelText.Count != 0) counts.Add((otherFiles + (levelText.Count != 0 ? 1 : 0)) + " other file" + (otherFiles + (levelText.Count != 0 ? 1 : 0) == 1 ? "" : "s"));
+                compositeCount = assetCount = levelCount = settingCount = treeCount = otherCount = 0;
+                archiveParts.Clear();
+            }
             if (compositeCount != 0) counts.Add(compositeCount + " composite" + (compositeCount == 1 ? "" : "s"));
             if (assetCount != 0) counts.Add(assetCount + " other level change" + (assetCount == 1 ? "" : "s"));
             if (levelCount != 0) counts.Add(levelCount + " whole level" + (levelCount == 1 ? "" : "s"));
@@ -1025,6 +1130,7 @@ namespace OpenCAGE.Popups
                 try
                 {
                     ModExportBuilder preview = new ModExportBuilder(ModServices.GameRoot, ModServices.Manifest, ModServices.Cache, ModServices.Installer);
+                    preview.Info.Installs = Replaces ? ModPackageInfo.InstallsReplace : ModPackageInfo.InstallsCombine;
                     preview.AddFiles(files);
                     foreach (KeyValuePair<string, List<PakPart>> archive in archiveParts)
                         preview.AddParts(archive.Key, archive.Value);
@@ -1062,6 +1168,19 @@ namespace OpenCAGE.Popups
             List<string> files = new List<string>();
             foreach (TreeNode node in AllNodes(_tree.Nodes))
             {
+                //A replacement mod's: each thing any of which is ticked, whole - a level's every file, a settings file as the
+                //user has it, the behaviour trees' file, an archive
+                if (Replaces)
+                {
+                    bool any = node.Checked || AllNodes(node.Nodes).Any(o => o.Checked);
+                    if (!any) continue;
+                    if (node.Tag is string whole) files.Add(whole);
+                    else if (node.Tag is RestRow wholeLevel) files.AddRange(wholeLevel.Level.Files);
+                    else if (LevelOfPart(node.Tag) is LevelChanges partLevel) files.AddRange(partLevel.Files);
+                    else if (node.Tag is ConfigChange config) files.Add(config.Path);
+                    else if (node.Tag is OpGroup group) files.Add(group.Config.Path);
+                    continue;
+                }
                 if (!node.Checked) continue;
                 if (node.Tag is string file) files.Add(file);
                 else if (node.Tag is RestRow rest) files.AddRange(rest.Level.Files);
@@ -1079,6 +1198,9 @@ namespace OpenCAGE.Popups
         private Dictionary<string, List<PakPart>> SelectedArchiveParts()
         {
             Dictionary<string, List<PakPart>> chosen = new Dictionary<string, List<PakPart>>();
+            //(A replacement mod carries archives whole: SelectedFiles)
+            if (Replaces)
+                return chosen;
             foreach (TreeNode node in AllNodes(_tree.Nodes))
             {
                 if (!(node.Tag is string file) || node.Checked || node.Nodes.Count == 0)
@@ -1094,6 +1216,9 @@ namespace OpenCAGE.Popups
         private Dictionary<LevelChanges, LevelPart> SelectedParts()
         {
             Dictionary<LevelChanges, LevelPart> parts = new Dictionary<LevelChanges, LevelPart>();
+            //(A replacement mod carries levels whole: SelectedFiles)
+            if (Replaces)
+                return parts;
             foreach (TreeNode node in AllNodes(_tree.Nodes))
             {
                 LevelChanges level = LevelOfPart(node.Tag);
@@ -1127,6 +1252,9 @@ namespace OpenCAGE.Popups
 
         private List<KeyValuePair<ConfigChange, List<BmlPatchOp>>> SelectedConfigs()
         {
+            //(A replacement mod carries settings files whole: SelectedFiles)
+            if (Replaces)
+                return new List<KeyValuePair<ConfigChange, List<BmlPatchOp>>>();
             Dictionary<ConfigChange, List<BmlPatchOp>> chosen = new Dictionary<ConfigChange, List<BmlPatchOp>>();
             void Choose(ConfigChange config, IEnumerable<BmlPatchOp> ops)
             {
@@ -1165,6 +1293,7 @@ namespace OpenCAGE.Popups
             Dictionary<LevelChanges, LevelPart> parts = SelectedParts();
             Dictionary<string, List<PakPart>> archiveParts = SelectedArchiveParts();
             List<string> levelText = SelectedLevelText();
+            bool replaces = Replaces;
             if (files.Count == 0 && configs.Count == 0 && parts.Count == 0 && archiveParts.Count == 0 && levelText.Count == 0)
             {
                 MessageBox.Show("Tick the changes to include first.", "Nothing selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -1226,6 +1355,7 @@ namespace OpenCAGE.Popups
                         //Left to the package to say unless the author wrote it: it can say for sure what an animation PAK changes
                         builder.Info.Summary = _changesEdited ? _changes.Text.Trim() : "";
                         builder.Info.OpenCageVersion = Singleton.Version;
+                        builder.Info.Installs = replaces ? ModPackageInfo.InstallsReplace : ModPackageInfo.InstallsCombine;
                         builder.Preview = _preview;
                         builder.AddFiles(files);
                         foreach (KeyValuePair<string, List<PakPart>> archive in archiveParts)
@@ -1269,7 +1399,8 @@ namespace OpenCAGE.Popups
             Steam.CountTowards(Steam.Achievements.TEN_MODS_CREATED);
 
             string message = "Your mod is saved as " + Path.GetFileName(output) + " (" + ModExportBuilder.PrettySize(result.PackageSize) + ").\n\n"
-                + "Share that file: anyone with OpenCAGE can add it to their Mod Manager (or just double-click it) and install it alongside their other mods."
+                + "Share that file: anyone with OpenCAGE can add it to their Mod Manager (or just double-click it) and install it "
+                + (replaces ? "exactly as you made it. It's a replacement mod, so no other mod can change the same levels or files while it's on." : "alongside their other mods.")
                 + (result.Warnings.Count != 0 ? "\n\n" + string.Join("\n", result.Warnings.Take(8).ToArray()) : "");
             MessageBox.Show(message, "Mod saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }

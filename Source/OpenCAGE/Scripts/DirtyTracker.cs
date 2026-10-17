@@ -126,20 +126,11 @@ namespace OpenCAGE
         private static readonly object _lock = new object();
         private static bool _hooked;
 
-        //The types the build (instancing and its bakers) reads from the script
-        private static readonly HashSet<ShortGuid> _builtTypes = BuiltTypes();
-        private static readonly ShortGuid _zone = new ShortGuid((uint)FunctionType.Zone);
-        private static readonly ShortGuid _triggerSequence = new ShortGuid((uint)FunctionType.TriggerSequence);
-
-        private sealed class Item
-        {
-            public long Hash;
-            public string Type;
-        }
-
         private static Commands _commands;
-        private static Dictionary<Composite, Dictionary<ShortGuid, Item>> _baseline = new Dictionary<Composite, Dictionary<ShortGuid, Item>>();
-        private static readonly Dictionary<Composite, bool> _carries = new Dictionary<Composite, bool>();
+        //What the build read from each composite at the last one (see BuildFingerprint)
+        private static Dictionary<Composite, Dictionary<ShortGuid, BuildFingerprint.Item>> _baseline = new Dictionary<Composite, Dictionary<ShortGuid, BuildFingerprint.Item>>();
+        //What's been worked out about the open level's composites
+        private static readonly BuildFingerprint.Cache _known = new BuildFingerprint.Cache();
         //Why a build is needed: per composite (taken back when it matches the baseline again), and others that stay
         private static readonly Dictionary<Composite, string> _changed = new Dictionary<Composite, string>();
         private static readonly Dictionary<string, string> _other = new Dictionary<string, string>();
@@ -212,9 +203,8 @@ namespace OpenCAGE
                 if (_commands == null || (closing != null && closing != _commands))
                     return;
                 _commands = null;
-                _baseline = new Dictionary<Composite, Dictionary<ShortGuid, Item>>();
-                _carries.Clear();
-                _builtPins.Clear();
+                _baseline = new Dictionary<Composite, Dictionary<ShortGuid, BuildFingerprint.Item>>();
+                _known.Clear();
                 _changed.Clear();
                 _other.Clear();
                 _pending.Clear();
@@ -242,7 +232,7 @@ namespace OpenCAGE
                     savedWithoutBuild = File.GetLastWriteTimeUtc(script) > File.GetLastWriteTimeUtc(radiosity).AddSeconds(60);
             }
             catch { }
-            Dictionary<Composite, Dictionary<ShortGuid, Item>> baseline = Fingerprint(commands);
+            Dictionary<Composite, Dictionary<ShortGuid, BuildFingerprint.Item>> baseline = Fingerprint(commands);
             lock (_lock)
             {
                 _commands = commands;
@@ -269,7 +259,7 @@ namespace OpenCAGE
         public static void Saved(LevelContent content, bool built, List<string> skipped)
         {
             Commands commands = content?.Level?.Commands;
-            Dictionary<Composite, Dictionary<ShortGuid, Item>> baseline = built ? Fingerprint(commands) : null;
+            Dictionary<Composite, Dictionary<ShortGuid, BuildFingerprint.Item>> baseline = built ? Fingerprint(commands) : null;
             lock (_lock)
             {
                 LastSavedUtc = DateTime.UtcNow;
@@ -284,162 +274,20 @@ namespace OpenCAGE
             }
         }
 
-        private static HashSet<ShortGuid> BuiltTypes()
+        private static Dictionary<Composite, Dictionary<ShortGuid, BuildFingerprint.Item>> Fingerprint(Commands commands)
         {
-            string[] names =
-            {
-                "ModelReference", "EnvironmentModelReference", "LightReference", "ParticleEmitterReference", "RibbonEmitterReference", "ProjectiveDecal",
-                "FogBox", "FogPlane", "FogSphere", "SimpleWater", "SimpleRefraction", "SurfaceEffectBox", "SurfaceEffectSphere", "ExclusiveMaster",
-                "CollisionBarrier", "PhysicsSystem", "RadiosityProxy", "RadiosityIsland", "Zone",
-                "NavMeshArea", "NavMeshBarrier", "NavMeshExclusionArea", "NavMeshReachabilitySeedPoint", "NavMeshWalkablePlatform",
-                "PathfindingAlienBackstageNode", "PathfindingManualNode", "PathfindingTeleportNode", "PathfindingWaitNode",
-                "CoverExclusionArea", "CoverLine", "SpottingExclusionArea", "JOB_Assault", "JOB_SpottingPosition",
-                "SoundBarrier", "SoundEnvironmentMarker", "SoundNetworkNode", "SoundLevelInitialiser",
-            };
-            HashSet<ShortGuid> types = new HashSet<ShortGuid>();
-            foreach (string name in names)
-                if (Enum.TryParse(name, out FunctionType type))
-                    types.Add(new ShortGuid((uint)type));
-            //Traversals become navmesh links
-            foreach (FunctionType type in Enum.GetValues(typeof(FunctionType)))
-                if (type.ToString().StartsWith("TRAV_", StringComparison.Ordinal))
-                    types.Add(new ShortGuid((uint)type));
-            return types;
-        }
-
-        private static Dictionary<Composite, Dictionary<ShortGuid, Item>> Fingerprint(Commands commands)
-        {
-            Dictionary<Composite, Dictionary<ShortGuid, Item>> all = new Dictionary<Composite, Dictionary<ShortGuid, Item>>();
+            Dictionary<Composite, Dictionary<ShortGuid, BuildFingerprint.Item>> all = new Dictionary<Composite, Dictionary<ShortGuid, BuildFingerprint.Item>>();
             if (commands?.Entries == null) return all;
             lock (_lock)
-            {
-                _carries.Clear();
-                _builtPins.Clear();
-            }
+                _known.Clear();
             try
             {
                 foreach (Composite composite in commands.Entries.ToList())
                     if (composite != null && !all.ContainsKey(composite))
-                        all[composite] = Fingerprint(commands, composite);
+                        all[composite] = BuildFingerprint.Of(commands, composite, _known);
             }
             catch (InvalidOperationException) { } //edited while it was read: what was read is kept
             return all;
-        }
-
-        /// <summary>The build-relevant entities of one composite: id -> a hash of what the build reads from it.</summary>
-        private static Dictionary<ShortGuid, Item> Fingerprint(Commands commands, Composite composite)
-        {
-            Dictionary<ShortGuid, Item> items = new Dictionary<ShortGuid, Item>();
-            bool zones = composite.functions.Any(o => o.function == _zone);
-            foreach (FunctionEntity function in composite.functions.ToList())
-            {
-                string type;
-                if (function.function.IsFunctionType)
-                {
-                    if (!_builtTypes.Contains(function.function) && !(zones && function.function == _triggerSequence)) continue;
-                    type = function.function.AsFunctionType.ToString();
-                }
-                else
-                {
-                    Composite instanced = commands.GetComposite(function.function);
-                    if (instanced == null || !Carries(commands, instanced)) continue;
-                    type = "instance of " + instanced.name;
-                }
-                long hash = function.function.GetHashCode();
-                //An instance's own parameters are mostly its pins - logic - unless a pin feeds what the build reads
-                hash = Mix(hash, function.function.IsFunctionType ? ParametersHash(function) : ParametersHash(function, BuiltPins(commands, commands.GetComposite(function.function))));
-                foreach (ResourceReference resource in function.resources)
-                    hash = Mix(hash, resource?.GetHashCode() ?? 0);
-                if (function.function == _zone || function.function == _triggerSequence)
-                    foreach (EntityConnector link in function.childLinks)
-                        hash = Mix(Mix(Mix(hash, link.thisParamID.GetHashCode()), link.linkedEntityID.GetHashCode()), link.linkedParamID.GetHashCode());
-                items[function.shortGUID] = new Item() { Hash = hash, Type = type };
-            }
-            //Aliases override what instances place (positions, models, flags)
-            foreach (AliasEntity alias in composite.aliases.ToList())
-            {
-                long hash = 31;
-                if (alias.alias?.path != null)
-                    foreach (ShortGuid step in alias.alias.path)
-                        hash = Mix(hash, step.GetHashCode());
-                hash = Mix(hash, ParametersHash(alias));
-                items[alias.shortGUID] = new Item() { Hash = hash, Type = "alias" };
-            }
-            return items;
-        }
-
-        private static long ParametersHash(Entity entity, HashSet<ShortGuid> only = null)
-        {
-            long hash = 17;
-            foreach (Parameter parameter in entity.parameters.ToList())
-            {
-                if (parameter == null || (only != null && !only.Contains(parameter.name))) continue;
-                hash = Mix(Mix(hash, parameter.name.GetHashCode()), parameter.content?.GetHashCode() ?? 0);
-            }
-            return hash;
-        }
-
-        //What an instance's placement is made of: where it is and the flags that keep its contents out of the game
-        private static readonly string[] _placementParameters = { "position", "deleted", "delete_me", "is_template", "is_shared", "delete_standard_collision", "delete_ballistic_collision" };
-        private static readonly Dictionary<Composite, HashSet<ShortGuid>> _builtPins = new Dictionary<Composite, HashSet<ShortGuid>>();
-
-        /// <summary>
-        /// The parameters of an instance of <paramref name="composite"/> the build reads: its placement, and the pins (variables)
-        /// the composite links straight into an entity of a built type, or into such a pin of an instance inside it.
-        /// </summary>
-        private static HashSet<ShortGuid> BuiltPins(Commands commands, Composite composite)
-        {
-            HashSet<ShortGuid> pins = new HashSet<ShortGuid>(_placementParameters.Select(o => ShortGuidUtils.Generate(o)));
-            if (composite == null) return pins;
-            lock (_lock)
-                if (_builtPins.TryGetValue(composite, out HashSet<ShortGuid> known))
-                    return known;
-            lock (_lock) _builtPins[composite] = pins; //placement only while it is worked out (a composite inside itself)
-            foreach (VariableEntity variable in composite.variables.ToList())
-            {
-                foreach (EntityConnector link in variable.childLinks)
-                {
-                    if (!(composite.GetEntityByID(link.linkedEntityID) is FunctionEntity target)) continue;
-                    bool feeds = target.function.IsFunctionType ? _builtTypes.Contains(target.function)
-                        : BuiltPins(commands, commands.GetComposite(target.function)).Contains(link.linkedParamID);
-                    if (feeds) { pins.Add(variable.name); break; }
-                }
-            }
-            return pins;
-        }
-
-        private static long Mix(long hash, long value) => unchecked(hash * 31 + value);
-
-        /// <summary>Whether a composite, or anything it places, holds content the build reads.</summary>
-        private static bool Carries(Commands commands, Composite composite)
-        {
-            lock (_lock)
-                if (_carries.TryGetValue(composite, out bool known))
-                    return known;
-            HashSet<Composite> seen = new HashSet<Composite>();
-            bool carries = Carries(commands, composite, seen);
-            lock (_lock)
-                _carries[composite] = carries;
-            return carries;
-        }
-
-        private static bool Carries(Commands commands, Composite composite, HashSet<Composite> seen)
-        {
-            if (!seen.Add(composite)) return false;
-            lock (_lock)
-                if (_carries.TryGetValue(composite, out bool known))
-                    return known;
-            foreach (FunctionEntity function in composite.functions)
-            {
-                if (function.function.IsFunctionType)
-                {
-                    if (_builtTypes.Contains(function.function)) return true;
-                    continue;
-                }
-                Composite instanced = commands.GetComposite(function.function);
-                if (instanced != null && Carries(commands, instanced, seen)) return true;
-            }
-            return false;
         }
 
         //Composites changed since they were last compared: compared when asked (an edit can fire many events, a drag one a frame)
@@ -471,7 +319,7 @@ namespace OpenCAGE
         private static void Compare(Composite composite)
         {
             Commands commands;
-            Dictionary<ShortGuid, Item> before;
+            Dictionary<ShortGuid, BuildFingerprint.Item> before;
             lock (_lock)
             {
                 commands = _commands;
@@ -480,8 +328,8 @@ namespace OpenCAGE
                 if (!commands.Entries.Contains(composite)) return;
                 _baseline.TryGetValue(composite, out before);
             }
-            Dictionary<ShortGuid, Item> now;
-            try { now = Fingerprint(commands, composite); }
+            Dictionary<ShortGuid, BuildFingerprint.Item> now;
+            try { now = BuildFingerprint.Of(commands, composite, _known); }
             catch (InvalidOperationException) { return; }
             lock (_lock)
             {
@@ -491,25 +339,10 @@ namespace OpenCAGE
                     _baseline[composite] = now;
                     return;
                 }
-                string reason = Describe(composite, before, now);
+                string reason = BuildFingerprint.Describe(composite, before, now);
                 if (reason == null) _changed.Remove(composite);
                 else _changed[composite] = reason;
             }
-        }
-
-        private static string Describe(Composite composite, Dictionary<ShortGuid, Item> before, Dictionary<ShortGuid, Item> now)
-        {
-            List<Item> added = now.Where(o => !before.ContainsKey(o.Key)).Select(o => o.Value).ToList();
-            List<Item> removed = before.Where(o => !now.ContainsKey(o.Key)).Select(o => o.Value).ToList();
-            List<Item> changed = now.Where(o => before.TryGetValue(o.Key, out Item old) && old.Hash != o.Value.Hash).Select(o => o.Value).ToList();
-            if (added.Count + removed.Count + changed.Count == 0)
-                return null;
-            List<string> parts = new List<string>();
-            if (added.Count != 0) parts.Add(added.Count + " added");
-            if (changed.Count != 0) parts.Add(changed.Count + " changed");
-            if (removed.Count != 0) parts.Add(removed.Count + " removed");
-            List<string> types = added.Concat(changed).Concat(removed).Select(o => o.Type).Distinct().Take(4).ToList();
-            return composite.name + ": " + string.Join(", ", parts) + " (" + string.Join(", ", types) + ")";
         }
 
         private static void Deleted(Composite composite)
@@ -518,7 +351,7 @@ namespace OpenCAGE
             {
                 if (_commands == null || composite == null) return;
                 _pending.Remove(composite);
-                if (_baseline.TryGetValue(composite, out Dictionary<ShortGuid, Item> before) && before.Count != 0)
+                if (_baseline.TryGetValue(composite, out Dictionary<ShortGuid, BuildFingerprint.Item> before) && before.Count != 0)
                     _changed[composite] = composite.name + ": deleted (it held placed content)";
             }
         }

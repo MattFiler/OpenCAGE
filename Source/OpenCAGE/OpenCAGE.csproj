@@ -1044,6 +1044,7 @@
     <Compile Include="Scripts\CompositePath.cs" />
     <Compile Include="Scripts\CloseReasons.cs" />
     <Compile Include="Scripts\DirectXTexUtility.cs" />
+    <Compile Include="Scripts\BuildFingerprint.cs" />
     <Compile Include="Scripts\DirtyTracker.cs" />
     <Compile Include="Scripts\EditHistory.cs" />
     <Compile Include="Scripts\EnumStringListViewItems.cs" />
