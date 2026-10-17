@@ -63,9 +63,10 @@ namespace OpenCAGE.AnimTrees
             Text = node.Name + " [" + node.Type.ToString() + "]";
 
             _proxy = new AnimationNodeProxy(this, node, _currentTree);
+            //Before the rows go in: the grid lays out its scrollbar for the row height it has when they arrive
+            ApplyRowHeight();
             propertyGrid.SelectedObject = _proxy;
             RecordBoldRows();
-            ApplyRowHeight();
             return true;
         }
 
@@ -320,8 +321,14 @@ namespace OpenCAGE.AnimTrees
                 if (_gridView == null)
                     return;
 
+                /* The grid only works out its scrollbar when its rows are set, so a height that changes under rows already
+                   showing has them laid out again (as the inspector's grid does) */
                 FieldInfo rowHeightField = _gridView.GetType().GetField("cachedRowHeight", BindingFlags.Instance | BindingFlags.NonPublic);
-                rowHeightField?.SetValue(_gridView, _gridView.Font.Height + 7);
+                int rowHeight = _gridView.Font.Height + 7;
+                if (rowHeightField == null || (int)rowHeightField.GetValue(_gridView) == rowHeight)
+                    return;
+                rowHeightField.SetValue(_gridView, rowHeight);
+                _gridView.GetType().GetMethod("SetConstants", BindingFlags.Instance | BindingFlags.Public)?.Invoke(_gridView, null);
                 _gridView.Invalidate();
             }
             catch { }

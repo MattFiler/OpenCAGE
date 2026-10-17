@@ -74,6 +74,9 @@ namespace OpenCAGE
 
             HookNumericScrolling();
             HookColourDoubleClick();
+            //A font change puts the grid's own (shorter) row height back
+            if (_gridView != null)
+                _gridView.FontChanged += (s, e) => ApplyRowHeight();
             GridTabNavigator.Attach(_grid);
             _grid.PropertyValueChanged += (s, e) => RepairAfterCommit();
             //An edit inside a transform row has just rebuilt its Position and Rotation rows: open them again once it settles
@@ -188,8 +191,9 @@ namespace OpenCAGE
             _tabs.Visible = multi;
             _suppressTabChange = false;
 
-            ApplyGroup(_groups.Count > 0 ? _groups[0] : null);
+            //Before the rows go in: the grid lays out its scrollbar for the row height it has when they arrive
             ApplyRowHeight();
+            ApplyGroup(_groups.Count > 0 ? _groups[0] : null);
         }
 
         public void ClearEntities()
@@ -673,9 +677,12 @@ namespace OpenCAGE
                 return;
             }
 
-            //Use the categorised view only when grouping data exists for this type
+            /* Use the categorised view only when grouping data exists for this type. Either way the grid sorts the rows by
+               name, ignoring case - within each category in the categorised view - rather than trusting the order the proxy
+               hands them over in. The categories keep the inheritance order ParameterGroupProvider gives them (the entity's
+               own type first), so the list as a whole is not one A-Z run: name sits under ScriptInterface near the bottom. */
             bool hasGroups = group.Proxies.Any(o => ParameterGroupProvider.HasGroups(o.Entity));
-            _grid.PropertySort = hasGroups ? PropertySort.Categorized : PropertySort.Alphabetical;
+            _grid.PropertySort = hasGroups ? PropertySort.CategorizedAlphabetical : PropertySort.Alphabetical;
             _holdTransformRows = true;
             try
             {
@@ -856,7 +863,10 @@ namespace OpenCAGE
             }
         }
 
-        /* Make the grid rows a little taller than the cramped default (font height + 2) */
+        /* Make the grid rows a little taller than the cramped default (font height + 2). The grid works out its scrollbar -
+           whether it shows, and how far it scrolls - from the row height it has when its rows are set, so the height goes in
+           before them, and rows already showing are laid out again for it. Set after, the first entity shown got a
+           scrollbar for the shorter rows: missing, or stopping short of the last rows. */
         private void ApplyRowHeight()
         {
             try
@@ -865,7 +875,11 @@ namespace OpenCAGE
                     return;
                 System.Reflection.FieldInfo rowHeightField = _gridView.GetType().GetField("cachedRowHeight",
                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-                rowHeightField?.SetValue(_gridView, _gridView.Font.Height + 7);
+                int rowHeight = _gridView.Font.Height + 7;
+                if (rowHeightField == null || (int)rowHeightField.GetValue(_gridView) == rowHeight)
+                    return;
+                rowHeightField.SetValue(_gridView, rowHeight);
+                _gridView.GetType().GetMethod("SetConstants", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)?.Invoke(_gridView, null);
                 _gridView.Invalidate();
             }
             catch { }
