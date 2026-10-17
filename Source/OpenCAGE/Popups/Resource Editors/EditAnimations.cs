@@ -38,6 +38,13 @@ namespace OpenCAGE
         /// <summary>Raised when the user picks something, with the value the parameter wants.</summary>
         public Action<string> OnPicked;
 
+        /// <summary>
+        /// Raised alongside <see cref="OnPicked"/> with both halves of the pick: the animation (the name
+        /// the set plays it by) and the set it was picked from. Picking a set gives the animation selected
+        /// in it, or null when none is.
+        /// </summary>
+        public Action<string, string> OnPickedInSet;
+
         private CathodeLib.Animation _animations;
         private CathodeLib.Animation.AnimationSet _set;
         private CathodeLib.Animation.AnimationContext _context;
@@ -651,6 +658,9 @@ namespace OpenCAGE
             previewBtn.Enabled = clip != null && clip.Playable;
             if (_picking == PickMode.Animation) pickBtn.Enabled = clip != null;
 
+            //picking a set with one of its animations selected hands that animation back too
+            if (_picking == PickMode.AnimationSet) pickBtn.Text = clip != null ? "Use Set + Animation" : "Use This Set";
+
             bool some = clipList.SelectedItems.Count > 1;
             exportBtn.Text = some ? "Export Selected..." : "Export All...";
             exportBtn.Enabled = clipList.Items.Count != 0;
@@ -720,7 +730,7 @@ namespace OpenCAGE
          * keeps the same clip name in several of them. */
         private void SelectStartingContext()
         {
-            if (string.IsNullOrEmpty(_startingAnimation) || _picking == PickMode.AnimationSet) return;
+            if (string.IsNullOrEmpty(_startingAnimation)) return;
 
             for (int i = 0; i < contextBox.Items.Count; i++)
             {
@@ -758,6 +768,7 @@ namespace OpenCAGE
             if (string.IsNullOrEmpty(value)) return;
 
             OnPicked?.Invoke(value);
+            OnPickedInSet?.Invoke(Selected()?.Name, _set?.Name);
             Close();
         }
         #endregion

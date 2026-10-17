@@ -709,10 +709,10 @@ namespace OpenCAGE
                 bool wholeSet = first.enumID == EnumStringType.ANIMATION_SET;
                 _animationPopup = new EditAnimations(
                     wholeSet ? EditAnimations.PickMode.AnimationSet : EditAnimations.PickMode.Animation,
-                    wholeSet ? (first.value ?? "") : AnimationSetOf(targets[0]),
-                    wholeSet ? null : first.value);
+                    wholeSet ? (first.value ?? "") : SiblingValue(targets[0], AnimationSetParameter),
+                    wholeSet ? SiblingValue(targets[0], AnimationParameter) : first.value);
                 _animationPopup.FormClosed += (s, e) => { if (ReferenceEquals(_animationPopup, s)) _animationPopup = null; };
-                _animationPopup.OnPicked += (str) => ApplyToTargets(targets, str);
+                _animationPopup.OnPickedInSet += (animation, set) => ApplyAnimationPick(targets, wholeSet, animation, set);
                 _animationPopup.Show();
             }
             else
@@ -728,11 +728,20 @@ namespace OpenCAGE
             return value;
         }
 
+        /* The pair every entity that plays an animation carries - CMD_PlayAnimation, CHR_PlaySecondaryAnimation,
+         * PlayEnvironmentAnimation and VariableAnimationInfo all name them this way */
+        private const string AnimationParameter = "Animation";
+        private const string AnimationSetParameter = "AnimationSet";
+
         /* An animation only means anything inside a set, and the entity being edited normally says
-         * which one on a sibling parameter - so open the browser on it. */
-        private static string AnimationSetOf(EnumStringParameterDescriptor target)
+         * which one on a sibling parameter - so open the browser on it. Read through the row, so an
+         * alias shows the value it inherits as well as one it overrides. */
+        private static string SiblingValue(EnumStringParameterDescriptor target, string sibling)
         {
-            Parameter parameter = target?.Proxy?.Entity?.GetParameter("AnimationSet");
+            if (target?.Proxy?.GetParameterDescriptor(sibling) is StringParameterDescriptor row)
+                return row.GetValue(target.Proxy) as string;
+
+            Parameter parameter = target?.Proxy?.Entity?.GetParameter(sibling);
             if (parameter?.content == null) return null;
 
             switch (parameter.content.dataType)
@@ -743,6 +752,33 @@ namespace OpenCAGE
                 default:
                     return null;
             }
+        }
+
+        /* The animation and its set go together: an animation only plays from a set that holds it. So
+         * picking an animation fills in the set it was picked from, and picking a set with one of its
+         * animations selected fills in that animation - one undo step for the pair. An entity without
+         * the other parameter just takes the one that was picked. */
+        private static void ApplyAnimationPick(List<EnumStringParameterDescriptor> targets, bool wholeSet, string animation, string set)
+        {
+            string picked = wholeSet ? set : animation;
+            string other = wholeSet ? animation : set;
+            if (string.IsNullOrEmpty(picked)) return;
+
+            //unnamed when only the one was set, so the step keeps the usual label for a single parameter
+            using (OpenCAGE.Undo.UndoStack.Current.BeginGroup(string.IsNullOrEmpty(other) ? null : "Set " + AnimationParameter + " and " + AnimationSetParameter))
+            {
+                foreach (EnumStringParameterDescriptor target in targets)
+                {
+                    target.SetValue(target.Proxy, picked);
+                    if (string.IsNullOrEmpty(other)) continue;
+
+                    EnumStringType otherType = wholeSet ? EnumStringType.ANIMATION : EnumStringType.ANIMATION_SET;
+                    if (target.Proxy.GetParameterDescriptor(wholeSet ? AnimationParameter : AnimationSetParameter) is EnumStringParameterDescriptor row
+                        && row.Parameter.content is cEnumString content && content.enumID == otherType)
+                        row.SetValue(target.Proxy, other);
+                }
+            }
+            ParameterGridPanel.Current?.RefreshValues();
         }
 
         private static void ApplyToTargets(List<EnumStringParameterDescriptor> targets, string value)
