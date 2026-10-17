@@ -42,6 +42,7 @@ namespace OpenCAGE
             EnsureBool(Settings.ScriptingHelpersDebugPositionMarker, false);
             EnsureScriptingHelpersLiveLink();
             EnsureCinematicToolsOrHelpers();
+            EnsureUiOptionKeys();
             EnsureBool(Settings.ShowGamePlatform, false);
             EnsureBool(Settings.ShowCameraPosition, false);
             EnsureBool(Settings.FocusOnSelected, false);
@@ -110,6 +111,30 @@ namespace OpenCAGE
             if (SettingsManager.GetBool(Settings.CinematicTools) && LaunchGame.HelperSettings.Any(o => SettingsManager.GetBool(o)))
                 SettingsManager.SetBool(Settings.CinematicTools, false);
             SettingsManager.SetBool(Settings.CinematicToolsOrHelpers, true);
+        }
+
+        /* The Launch Game UI options were kept under the movies' own names while ticking one wrote OpenCAGE's movie over the
+           game's in UI.PAK. They're the same choice the new way (UiMovieOverrides), so each old value moves onto its new key, once,
+           and the old key goes - an older OpenCAGE then shows the option off, which is true of UI.PAK once its menus are put back.
+           Putting them back is UiMovieOverrides.PutBackOldMenus: it goes by what's in UI.PAK, not by these, so it also catches a
+           UI.PAK an older OpenCAGE wrote with the option since turned off elsewhere. */
+        static void EnsureUiOptionKeys()
+        {
+            (string Legacy, string Key)[] keys =
+            {
+                (Settings.LegacyUiModPauseMenu, Settings.UiModPauseMenu),
+                (Settings.LegacyUiModLoadingScreen, Settings.UiModLoadingScreen),
+                (Settings.LegacyUiModNewFrontendMenu, Settings.UiModNewFrontendMenu),
+                (Settings.LegacyUiModGameOverMenu, Settings.UiModGameOverMenu),
+            };
+            foreach ((string legacy, string key) in keys)
+            {
+                if (!SettingsManager.IsSet(legacy))
+                    continue;
+                if (!SettingsManager.IsSet(key))
+                    SettingsManager.SetBool(key, SettingsManager.GetBool(legacy));
+                SettingsManager.Unset(legacy);
+            }
         }
 
         /* The Live Link Camera menu replaced the Sync Game Camera button: on was what is now "Sync viewport camera to game".

@@ -152,8 +152,22 @@ namespace OpenCAGE.Popups
 
         private void BuildLayout()
         {
-            _tree = new TreeView() { Dock = DockStyle.Fill, CheckBoxes = true, ShowNodeToolTips = true };
+            //Tick boxes drawn here rather than the tree's own, which have no "some of it" state: a level part of which goes in
+            //read as all of it
+            _tree = new TreeView() { Dock = DockStyle.Fill, CheckBoxes = false, ShowNodeToolTips = true, StateImageList = TickGlyphs() };
             _tree.AfterCheck += OnAfterCheck;
+            _tree.NodeMouseClick += (s, e) =>
+            {
+                if (e.Button == MouseButtons.Left && _tree.HitTest(e.Location).Location == TreeViewHitTestLocations.StateImage)
+                    Toggle(e.Node);
+            };
+            _tree.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode != Keys.Space || _tree.SelectedNode == null) return;
+                Toggle(_tree.SelectedNode);
+                e.Handled = e.SuppressKeyPress = true;
+            };
+            FormClosed += (s, e) => _tree.StateImageList?.Dispose();
             Label treeTip = new Label() { Dock = DockStyle.Top, Height = 36, Text = "Everything you've changed in the game is listed here. Untick anything that shouldn't go in the mod.", Padding = new Padding(2, 4, 2, 0) };
             if (ModServices.State?.Mods.Any(o => o.Enabled) == true)
                 { treeTip.Text += " Changes your installed mods made aren't listed - only your own work goes in."; treeTip.Height = 52; }
@@ -164,7 +178,8 @@ namespace OpenCAGE.Popups
             //Details on the right
             TableLayoutPanel meta = new TableLayoutPanel() { Dock = DockStyle.Fill, ColumnCount = 1, Padding = new Padding(8), AutoScroll = true };
             meta.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            meta.Controls.Add(new Label() { Text = "This is", AutoSize = true });
+            Label saveAs = new Label() { Text = "Save this as", AutoSize = true };
+            meta.Controls.Add(saveAs);
             _updates = new ComboBox() { Dock = DockStyle.Top, DropDownStyle = ComboBoxStyle.DropDownList };
             _updates.Items.Add("A new mod");
             foreach (ModState.InstalledMod mod in ModServices.State?.ModsInPriorityOrder() ?? new List<ModState.InstalledMod>())
@@ -172,6 +187,12 @@ namespace OpenCAGE.Popups
             _updates.SelectedIndex = 0;
             _updates.SelectedIndexChanged += (s, e) => ChooseUpdate();
             meta.Controls.Add(_updates);
+            ToolTip tips = new ToolTip() { AutoPopDelay = 15000 };
+            string saveAsTip = "A new version of a mod you've installed takes its place: anyone who installs this gets it instead of the old one, not as well as it.\n"
+                + "Its name, author, description and picture are filled in from the old one, and its version goes up by one.";
+            tips.SetToolTip(saveAs, saveAsTip);
+            tips.SetToolTip(_updates, saveAsTip);
+            FormClosed += (s, e) => tips.Dispose();
             meta.Controls.Add(new Label() { Text = "Mod name", AutoSize = true, Margin = new Padding(0, 8, 0, 0) });
             _name = new TextBox() { Dock = DockStyle.Top };
             meta.Controls.Add(_name);
@@ -192,7 +213,7 @@ namespace OpenCAGE.Popups
             Button choosePicture = new Button() { Text = "Picture...", AutoSize = true };
             choosePicture.Click += (s, e) => ChoosePicture();
             Button clearPicture = new Button() { Text = "No picture", AutoSize = true };
-            clearPicture.Click += (s, e) => { _preview = null; _picture.Image?.Dispose(); _picture.Image = null; };
+            clearPicture.Click += (s, e) => ClearPicture();
             pictureRow.Controls.Add(choosePicture);
             pictureRow.Controls.Add(clearPicture);
             meta.Controls.Add(pictureRow);
@@ -232,24 +253,73 @@ namespace OpenCAGE.Popups
             public override string ToString() { return "A new version of '" + Mod.Name + "'"; }
         }
 
+        /* What the details said before an installed mod's were filled in over them, and what was filled in. Going back to a new
+           mod puts back each detail that's still as it was filled in; one typed over since is the author's own, and stays. */
+        private string[] _ownDetails;
+        private byte[] _ownPreview;
+        private string[] _filledDetails;
+        private byte[] _filledPreview;
+
+        private TextBox[] DetailBoxes => new[] { _name, _author, _description, _version };
+
         /* A new version of a mod keeps its id (so it replaces the old one wherever it's installed) and suggests the next version number */
         private void ChooseUpdate()
         {
-            _updating = (_updates.SelectedItem as UpdateChoice)?.Mod;
+            ModState.InstalledMod chosen = (_updates.SelectedItem as UpdateChoice)?.Mod;
+            if (_updating == null && chosen != null)
+            {
+                _ownDetails = DetailBoxes.Select(o => o.Text).ToArray();
+                _ownPreview = _preview;
+            }
+            _updating = chosen;
             if (_updating == null)
+            {
+                RestoreOwnDetails();
                 return;
+            }
+
             _name.Text = _updating.Name ?? "";
             _author.Text = _updating.Author ?? "";
             _description.Text = _updating.Description ?? "";
             _version.Text = NextVersion(_updating.Version);
-            try
-            {
-                ModPackage package = ModServices.Installer.OpenPackage(_updating);
-                byte[] png = package.ReadPreview();
-                if (png != null)
-                    SetPicture(png);
-            }
+            byte[] png = null;
+            try { png = ModServices.Installer.OpenPackage(_updating).ReadPreview(); }
             catch { }
+            //Its own picture or none: not the one another mod chosen a moment ago left behind
+            if (png != null)
+                SetPicture(png);
+            else
+                ClearPicture();
+            _filledDetails = DetailBoxes.Select(o => o.Text).ToArray();
+            _filledPreview = _preview;
+        }
+
+        private void RestoreOwnDetails()
+        {
+            if (_ownDetails == null)
+                return;
+            TextBox[] boxes = DetailBoxes;
+            for (int i = 0; i < boxes.Length; i++)
+                if (_filledDetails == null || boxes[i].Text == _filledDetails[i])
+                    boxes[i].Text = _ownDetails[i];
+            if (ReferenceEquals(_preview, _filledPreview))
+            {
+                if (_ownPreview != null)
+                    SetPicture(_ownPreview);
+                else
+                    ClearPicture();
+            }
+            _ownDetails = null;
+            _ownPreview = null;
+            _filledDetails = null;
+            _filledPreview = null;
+        }
+
+        private void ClearPicture()
+        {
+            _preview = null;
+            _picture.Image?.Dispose();
+            _picture.Image = null;
         }
 
         private static string NextVersion(string version)
@@ -424,6 +494,8 @@ namespace OpenCAGE.Popups
 
             if (other.Count != 0)
             {
+                //What changed inside the game's archives (UI.PAK, ANIMATION.PAK...), change by change: reading them takes a moment
+                Dictionary<string, List<PakPart>> archives = ReadArchives(other);
                 TreeNode otherRoot = _tree.Nodes.Add("Other files");
                 foreach (string file in other)
                 {
@@ -431,6 +503,8 @@ namespace OpenCAGE.Popups
                     TreeNode node = otherRoot.Nodes.Add(Capitalise(Modding.Merging.MergeConflict.Place(file)) + "  -  " + Describe(file) + (edited.HasValue ? ", " + EditedText(edited.Value) : ""));
                     node.Tag = file;
                     node.ToolTipText = file;
+                    if (archives.TryGetValue(file, out List<PakPart> parts))
+                        AddArchiveParts(node, parts);
                 }
                 otherRoot.Expand();
             }
@@ -452,8 +526,95 @@ namespace OpenCAGE.Popups
                 _cascading = false;
             }
 
+            RefreshTicks();
             _tree.EndUpdate();
             UpdateSummary();
+        }
+
+        /* The changes inside each archive among the files (UI.PAK, ANIMATION.PAK...) that can be taken apart, against the
+           archive as it shipped; one that can't goes whole, as it always has */
+        private Dictionary<string, List<PakPart>> ReadArchives(List<string> files)
+        {
+            Dictionary<string, List<PakPart>> archives = new Dictionary<string, List<PakPart>>();
+            List<string> candidates = files.Where(o => !_deleted.Contains(o) && o.EndsWith(".PAK", StringComparison.OrdinalIgnoreCase) && StartsAsArchive(o)).ToList();
+            if (candidates.Count == 0 || ModServices.Installer == null)
+                return archives;
+            using (BusyDialog busy = new BusyDialog("Reading what you've changed inside the game's archives..."))
+            {
+                busy.Work = report =>
+                {
+                    foreach (string path in candidates)
+                    {
+                        report("Reading what you've changed in " + Modding.Merging.MergeConflict.Place(path) + "...");
+                        try
+                        {
+                            byte[] original = ModServices.Installer.VanillaBytes(path);
+                            byte[] current = original == null ? null : ModExportBuilder.UsersVersion(ModServices.GameRoot, ModServices.Installer, path);
+                            List<PakPart> parts = current == null ? null : PakParts.Find(path, original, current);
+                            if (parts != null && parts.Count != 0)
+                                archives[path] = parts;
+                        }
+                        catch
+                        {
+                            //(Out of memory, say): it goes whole
+                        }
+                    }
+                };
+                busy.ShowDialog(this);
+            }
+            GC.Collect();
+            return archives;
+        }
+
+        private static bool StartsAsArchive(string normalisedPath)
+        {
+            try
+            {
+                using (FileStream stream = File.OpenRead(ModToolkit.Denormalise(ModServices.GameRoot, normalisedPath)))
+                {
+                    byte[] magic = new byte[4];
+                    return stream.Read(magic, 0, 4) == 4 && PakParts.IsArchive(magic);
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /* An archive's changes as rows under it, grouped by kind. All ticked, the file goes whole; else just the ticked
+           changes go in, put into the file as it shipped. */
+        private static void AddArchiveParts(TreeNode node, List<PakPart> parts)
+        {
+            node.ToolTipText = node.Tag + "\nUntick changes inside it to put only the rest in your mod.";
+            string[] order = { PakParts.TreeGroup, PakParts.LayoutGroup, PakParts.ClipGroup, PakParts.BlendGroup, PakParts.OtherGroup };
+            foreach (IGrouping<string, PakPart> group in parts.GroupBy(o => o.Group ?? "").OrderBy(o => Array.IndexOf(order, o.Key)))
+            {
+                TreeNode parent = group.Key.Length == 0 ? node : node.Nodes.Add(group.Key + "  -  " + group.Count());
+                foreach (PakPart part in group.OrderBy(o => o.Title, StringComparer.OrdinalIgnoreCase))
+                {
+                    TreeNode row = parent.Nodes.Add(part.Title + "  -  " + part.Change + (part.Size > 0 ? ", " + ModExportBuilder.PrettySize(part.Size) : ""));
+                    row.Tag = part;
+                    if (part.Key.EndsWith("|layout"))
+                        row.ToolTipText = "Its layout in the Animation Tree Editor goes with it.";
+                    else if (part.Group == PakParts.ClipGroup)
+                        row.ToolTipText = "Its animation data and its entry in the game's clip index go with it.";
+                }
+            }
+        }
+
+        /* What a change inside an archive is, said once and more than once */
+        private static (string One, string Many) PartNoun(PakPart part)
+        {
+            switch (part.Group)
+            {
+                case PakParts.TreeGroup: return ("animation tree", "animation trees");
+                case PakParts.LayoutGroup: return ("animation tree layout", "animation tree layouts");
+                case PakParts.ClipGroup: return ("animation", "animations");
+                case PakParts.BlendGroup: return ("blend set change", "blend set changes");
+                case PakParts.OtherGroup: return ("other animation change", "other animation changes");
+            }
+            return part.File == "DATA/UI.PAK" || part.File == "DATA/GLOBAL/UI.PAK" ? ("interface file", "interface files") : ("file inside an archive", "files inside archives");
         }
 
         /* The kinds of asset a mod can take out of a level on their own; the rest go with everything else in it */
@@ -515,45 +676,13 @@ namespace OpenCAGE.Popups
         private readonly Dictionary<LevelChanges, TreeNode> _restNodes = new Dictionary<LevelChanges, TreeNode>();
         private readonly Dictionary<LevelChanges, List<TreeNode>> _partNodes = new Dictionary<LevelChanges, List<TreeNode>>();
 
-        /* What the user changed in their levels: the composites and assets they edited (newest first; a composite changed in
-           several levels is one row, ticking it in each), then each level - a new one whole, else its other changes */
+        /* What the user changed in their levels, level by level: a new one whole; else the scripts and assets its edit history
+           says they changed (newest first), its text, and the whole level as it is now - which also takes whatever the
+           history can't speak for, like changes made before OpenCAGE kept one */
         private void AddLevelRows(List<LevelChanges> levels)
         {
             _restNodes.Clear();
             _partNodes.Clear();
-
-            List<CompositeRow> composites = levels.SelectMany(o => o.Composites).ToList();
-            if (composites.Count != 0)
-            {
-                TreeNode root = _tree.Nodes.Add("Scripts you've changed");
-                foreach (IGrouping<CATHODE.Scripting.ShortGuid, CompositeRow> group in composites.GroupBy(o => o.Id).OrderByDescending(g => g.Max(o => o.Edited)))
-                {
-                    List<CompositeRow> rows = group.OrderByDescending(o => o.Edited).ToList();
-                    string path = rows.Select(o => o.Name).FirstOrDefault(o => o != null);
-                    string title = path == null ? "A composite you deleted" : CompositeLeaf(path);
-                    TreeNode node = root.Nodes.Add(title + "  -  " + (rows.Count == 1 ? LevelTitle(rows[0].Level) + ", " + EditedText(rows[0].Edited) : rows.Count + " levels, last " + EditedText(rows[0].Edited)));
-                    node.ToolTipText = path ?? "";
-                    if (rows.Count == 1)
-                        AddPart(node, rows[0], rows[0].Level);
-                    else
-                        foreach (CompositeRow row in rows)
-                            AddPart(node.Nodes.Add(LevelTitle(row.Level) + ", " + EditedText(row.Edited)), row, row.Level);
-                }
-                root.Expand();
-            }
-
-            List<AssetRow> assets = levels.SelectMany(o => o.Assets).OrderByDescending(o => o.Edited).ToList();
-            if (assets.Count != 0)
-            {
-                TreeNode root = _tree.Nodes.Add("Models, textures and materials you've changed");
-                foreach (AssetRow asset in assets)
-                {
-                    TreeNode node = root.Nodes.Add(AssetTitle(asset) + "  -  " + LevelTitle(asset.Level) + ", " + EditedText(asset.Edited)
-                        + (asset.WholeOnly ? " (goes in with everything else in the level)" : ""));
-                    AddPart(node, asset, asset.Level);
-                }
-                root.Expand();
-            }
 
             TreeNode levelsRoot = _tree.Nodes.Add("Levels");
             foreach (LevelChanges level in levels)
@@ -571,12 +700,22 @@ namespace OpenCAGE.Popups
                     continue;
                 }
                 TreeNode levelNode = levelsRoot.Nodes.Add(LevelTitle(level));
+                foreach (CompositeRow composite in level.Composites.OrderByDescending(o => o.Edited))
+                {
+                    TreeNode node = levelNode.Nodes.Add((composite.Name == null ? "A script you deleted" : "Script " + CompositeLeaf(composite.Name)) + "  -  " + EditedText(composite.Edited));
+                    node.ToolTipText = composite.Name ?? "";
+                    AddPart(node, composite, level);
+                }
+                foreach (AssetRow asset in level.Assets.OrderByDescending(o => o.Edited))
+                    AddPart(levelNode.Nodes.Add(AssetTitle(asset) + "  -  " + EditedText(asset.Edited) + (asset.WholeOnly ? " (only goes in with the whole level)" : "")), asset, level);
                 foreach (string loose in level.LooseFiles)
                 {
                     DateTime? edited = EditHistory.SharedFileEdited(ModServices.GameRoot, loose);
-                    AddPart(levelNode.Nodes.Add("Text: " + ShortName(loose) + (edited.HasValue ? ", " + EditedText(edited.Value) : "")), new LooseRow() { Level = level, Path = loose }, level);
+                    AddPart(levelNode.Nodes.Add("Text: " + ShortName(loose) + (edited.HasValue ? "  -  " + EditedText(edited.Value) : "")), new LooseRow() { Level = level, Path = loose }, level);
                 }
-                TreeNode rest = levelNode.Nodes.Add(level.HasHistory ? "Everything else you've changed in it (the whole level)" : "Everything else, from before OpenCAGE kept a history of edits (the whole level)");
+                TreeNode rest = levelNode.Nodes.Add(level.HasHistory
+                    ? "The whole level - every change in it, including any from before OpenCAGE kept a history"
+                    : "The whole level - every change in it, from before OpenCAGE kept a history");
                 rest.ToolTipText = "Ticked, the whole level goes in as it is now - every change in it, listed or not: " + count + "\n" + string.Join("\n", level.Files.Select(o => ShortName(o) + "  (" + Describe(o) + ")"));
                 rest.Tag = new RestRow() { Level = level };
                 _restNodes[level] = rest;
@@ -669,16 +808,92 @@ namespace OpenCAGE.Popups
             return level == null ? normalisedPath : normalisedPath.Substring(ModToolkit.LevelFolder(level).Length);
         }
 
+        private const int Unticked = 0, Ticked = 1, PartTicked = 2;
+
+        /* The three tick boxes, in the order the tree's own two take (a node's Checked shows the first or second) */
+        private static ImageList TickGlyphs()
+        {
+            bool dark = Theming.ThemeManager.IsDark;
+            Color fill = dark ? Theming.ThemeColours.Input : Color.White;
+            Color border = dark ? Theming.ThemeColours.BorderStrong : Color.FromArgb(118, 118, 118);
+            Color mark = dark ? Theming.ThemeColours.AccentHover : Theming.ThemeColours.Accent;
+            ImageList list = new ImageList() { ImageSize = new Size(16, 16), ColorDepth = ColorDepth.Depth32Bit };
+            for (int state = Unticked; state <= PartTicked; state++)
+            {
+                Bitmap glyph = new Bitmap(16, 16);
+                using (Graphics g = Graphics.FromImage(glyph))
+                using (SolidBrush back = new SolidBrush(fill))
+                using (Pen edge = new Pen(border))
+                using (Pen tick = new Pen(mark, 2))
+                using (SolidBrush bar = new SolidBrush(mark))
+                {
+                    g.Clear(Color.Transparent);
+                    Rectangle box = new Rectangle(2, 2, 12, 12);
+                    g.FillRectangle(back, box);
+                    g.DrawRectangle(edge, box);
+                    if (state == Ticked)
+                    {
+                        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                        g.DrawLines(tick, new[] { new Point(4, 8), new Point(7, 11), new Point(12, 5) });
+                    }
+                    else if (state == PartTicked)
+                        g.FillRectangle(bar, 5, 7, 7, 3);
+                }
+                list.Images.Add(glyph);
+            }
+            return list;
+        }
+
+        /* A click on a box: one that's empty or part-ticked ticks everything under it, a ticked one unticks it all */
+        private void Toggle(TreeNode node)
+        {
+            bool tick = node.StateImageIndex != Ticked;
+            _cascading = true;
+            node.Checked = !tick;
+            _cascading = false;
+            node.Checked = tick;
+        }
+
+        /* Each box as what's under it says: a row as it is, a group ticked when all of it is, part-ticked when some of it is.
+           A group's own Checked follows, so a click on it knows which way to go. */
+        private void RefreshTicks()
+        {
+            bool was = _cascading;
+            _cascading = true;
+            foreach (TreeNode node in _tree.Nodes)
+                RefreshTicks(node);
+            _cascading = was;
+        }
+
+        private int RefreshTicks(TreeNode node)
+        {
+            int state;
+            if (node.Nodes.Count == 0)
+                state = node.Checked ? Ticked : Unticked;
+            else
+            {
+                bool any = false, all = true;
+                foreach (TreeNode child in node.Nodes)
+                {
+                    int childState = RefreshTicks(child);
+                    if (childState != Unticked) any = true;
+                    if (childState != Ticked) all = false;
+                }
+                state = all ? Ticked : any ? PartTicked : Unticked;
+                if (node.Checked != (state == Ticked))
+                    node.Checked = state == Ticked;
+            }
+            if (node.StateImageIndex != state)
+                node.StateImageIndex = state;
+            return state;
+        }
+
         private bool _cascading;
         private void OnAfterCheck(object sender, TreeViewEventArgs e)
         {
             if (_cascading) return;
             _cascading = true;
             SetChildren(e.Node, e.Node.Checked);
-            //A checked child means the parent is (at least partially) in
-            for (TreeNode parent = e.Node.Parent; parent != null; parent = parent.Parent)
-                if (e.Node.Checked && !parent.Checked)
-                    parent.Checked = true;
 
             /* A level's "everything else" is the whole level as it is now: ticked, every row of the level is in with it;
                any row of it taken out takes the whole level out - just what's ticked goes. A change that can't be taken
@@ -692,6 +907,7 @@ namespace OpenCAGE.Popups
                     NotWhole(level);
             }
             _cascading = false;
+            RefreshTicks();
             UpdateSummary();
         }
 
@@ -730,10 +946,6 @@ namespace OpenCAGE.Popups
         private static void Check(TreeNode node, bool value)
         {
             node.Checked = value;
-            if (value)
-                for (TreeNode parent = node.Parent; parent != null; parent = parent.Parent)
-                    if (!parent.Checked)
-                        parent.Checked = true;
         }
 
         private void SetChildren(TreeNode node, bool value)
@@ -757,6 +969,7 @@ namespace OpenCAGE.Popups
             int settingCount = configs.Where(o => o.Key.Path != TreeDirectory).Sum(o => o.Value.Count);
             int treeCount = AllNodes(_tree.Nodes).Count(o => o.Checked && o.Tag is OpGroup);
             int otherCount = AllNodes(_tree.Nodes).Count(o => o.Checked && o.Tag is string);
+            Dictionary<string, List<PakPart>> archiveParts = SelectedArchiveParts();
             List<string> counts = new List<string>();
             if (compositeCount != 0) counts.Add(compositeCount + " composite" + (compositeCount == 1 ? "" : "s"));
             if (assetCount != 0) counts.Add(assetCount + " other level change" + (assetCount == 1 ? "" : "s"));
@@ -764,6 +977,8 @@ namespace OpenCAGE.Popups
             if (settingCount != 0) counts.Add(settingCount + " setting" + (settingCount == 1 ? "" : "s"));
             if (treeCount != 0) counts.Add(treeCount + " behaviour tree" + (treeCount == 1 ? "" : "s"));
             if (otherCount != 0) counts.Add(otherCount + " other file" + (otherCount == 1 ? "" : "s"));
+            foreach (IGrouping<(string One, string Many), PakPart> kind in archiveParts.Values.SelectMany(o => o).GroupBy(PartNoun))
+                counts.Add(kind.Count() + " " + (kind.Count() == 1 ? kind.Key.One : kind.Key.Many));
             _summary.Text = counts.Count == 0 ? "Nothing ticked yet." : "In your mod: " + string.Join(", ", counts) + ".";
             _exportButton.Enabled = counts.Count != 0;
 
@@ -774,6 +989,8 @@ namespace OpenCAGE.Popups
                 {
                     ModExportBuilder preview = new ModExportBuilder(ModServices.GameRoot, ModServices.Manifest, ModServices.Cache, ModServices.Installer);
                     preview.AddFiles(files);
+                    foreach (KeyValuePair<string, List<PakPart>> archive in archiveParts)
+                        preview.AddParts(archive.Key, archive.Value);
                     //Part of a level is said as a change to the level, as the whole of it is
                     foreach (LevelChanges level in parts.Keys)
                         preview.AddFiles(level.Files.Where(o => o.EndsWith("/WORLD/COMMANDS.PAK")));
@@ -812,6 +1029,21 @@ namespace OpenCAGE.Popups
                 else if (node.Tag is RestRow rest) files.AddRange(rest.Level.Files);
             }
             return files.Distinct().ToList();
+        }
+
+        /* Each archive only some of whose changes are ticked, and those changes (all ticked, it's one of the files going in) */
+        private Dictionary<string, List<PakPart>> SelectedArchiveParts()
+        {
+            Dictionary<string, List<PakPart>> chosen = new Dictionary<string, List<PakPart>>();
+            foreach (TreeNode node in AllNodes(_tree.Nodes))
+            {
+                if (!(node.Tag is string file) || node.Checked || node.Nodes.Count == 0)
+                    continue;
+                List<PakPart> parts = AllNodes(node.Nodes).Where(o => o.Checked && o.Tag is PakPart).Select(o => (PakPart)o.Tag).ToList();
+                if (parts.Count != 0)
+                    chosen[file] = parts;
+            }
+            return chosen;
         }
 
         /* Each level only part of which goes in (its "everything else" unticked), and that part, from its ticked rows */
@@ -887,7 +1119,8 @@ namespace OpenCAGE.Popups
             List<string> files = SelectedFiles();
             List<KeyValuePair<ConfigChange, List<BmlPatchOp>>> configs = SelectedConfigs();
             Dictionary<LevelChanges, LevelPart> parts = SelectedParts();
-            if (files.Count == 0 && configs.Count == 0 && parts.Count == 0)
+            Dictionary<string, List<PakPart>> archiveParts = SelectedArchiveParts();
+            if (files.Count == 0 && configs.Count == 0 && parts.Count == 0 && archiveParts.Count == 0)
             {
                 MessageBox.Show("Tick the changes to include first.", "Nothing selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
@@ -900,7 +1133,7 @@ namespace OpenCAGE.Popups
 
             //Work someone else's mod would be baked in? Say so before it ships. The sidecars that go with the files count too.
             List<string> overlaps = new List<string>();
-            List<string> shipped = files.SelectMany(o => new[] { o }.Concat(ModExportBuilder.SidecarsFor(o))).Distinct().ToList();
+            List<string> shipped = files.SelectMany(o => new[] { o }.Concat(ModExportBuilder.SidecarsFor(o))).Concat(archiveParts.Keys).Distinct().ToList();
             foreach (ModState.InstalledMod mod in ModServices.State.Mods.Where(o => o.Enabled))
                 foreach (string path in shipped)
                     if (mod.Applied.ContainsKey(path) && !ModServices.Installer.TryGetOwnVersion(path, out _))
@@ -950,6 +1183,8 @@ namespace OpenCAGE.Popups
                         builder.Info.OpenCageVersion = Singleton.Version;
                         builder.Preview = _preview;
                         builder.AddFiles(files);
+                        foreach (KeyValuePair<string, List<PakPart>> archive in archiveParts)
+                            builder.AddParts(archive.Key, archive.Value);
                         ModLevelMerger merger = ModServices.Installer.LevelMerger as ModLevelMerger ?? new ModLevelMerger();
                         foreach (KeyValuePair<LevelChanges, LevelPart> part in parts.OrderBy(o => o.Key.Level))
                         {
@@ -960,7 +1195,7 @@ namespace OpenCAGE.Popups
                             partFolders.Add(folder);
                             builder.AddLevelPart(folder, level);
                         }
-                        if (files.Count == 0 && configs.Count == 0 && partFolders.Count == 0)
+                        if (files.Count == 0 && configs.Count == 0 && partFolders.Count == 0 && archiveParts.Count == 0)
                             throw new Exception("nothing you ticked differs from the game as it shipped, so there's nothing to put in a mod.");
                         foreach (KeyValuePair<ConfigChange, List<BmlPatchOp>> config in configs)
                             builder.AddConfigPatch(config.Key.Path, config.Value, config.Key.VanillaBytes);

@@ -158,7 +158,7 @@ namespace OpenCAGE.Modding
             if (kept != null)
                 return kept;
             byte[] hash = _cache.Hash(normalisedPath);
-            return hash != null && _manifest.IsVanilla(normalisedPath, hash) ? File.ReadAllBytes(ModToolkit.Denormalise(_gameRoot, normalisedPath)) : null;
+            return hash != null && _manifest.IsVanilla(normalisedPath, hash) ? ModToolkit.ReadContent(_gameRoot, normalisedPath) : null;
         }
 
         /* A level's scripts as a mod carries them: without the edit history kept in them (when their owner changed what),
@@ -232,6 +232,54 @@ namespace OpenCAGE.Modding
                 AddFile(path);
         }
 
+        /* Archives only some of whose changes go in (see AddParts): the changes chosen */
+        private readonly Dictionary<string, List<PakPart>> _parts = new Dictionary<string, List<PakPart>>();
+
+        /// <summary>
+        /// Include some of the changes inside an archive game file (UI.PAK, ANIMATION.PAK...) - parts <see cref="PakParts.Find"/>
+        /// found in it: the mod carries the file as it shipped with only those changes put in. The file is built when the
+        /// package is written.
+        /// </summary>
+        public void AddParts(string normalisedPath, IEnumerable<PakPart> parts)
+        {
+            List<PakPart> chosen = parts.ToList();
+            if (chosen.Count == 0)
+                return;
+            _parts[normalisedPath] = chosen;
+            if (!AsOnDisk && _installer != null && _installer.TryGetOwnVersion(normalisedPath, out _))
+                _ownVersions.Add(normalisedPath);
+        }
+
+        /// <summary>
+        /// What a file is as the user made it, as a mod carries it whole: their own version where it's under installed mods
+        /// (unless <paramref name="asOnDisk"/>), else what's on disk without OpenCAGE's own content. Null when it's gone.
+        /// </summary>
+        public static byte[] UsersVersion(string gameRoot, ModInstaller installer, string normalisedPath, bool asOnDisk = false)
+        {
+            if (!asOnDisk && installer != null && installer.TryGetOwnVersion(normalisedPath, out byte[] own))
+                return own;
+            return File.Exists(ModToolkit.Denormalise(gameRoot, normalisedPath)) ? ModToolkit.ReadContent(gameRoot, normalisedPath) : null;
+        }
+
+        /* Each archive only some of whose changes go in, as the file it goes in as */
+        private void BuildParts()
+        {
+            foreach (KeyValuePair<string, List<PakPart>> archive in _parts.OrderBy(o => o.Key))
+            {
+                string path = archive.Key;
+                byte[] original = _installer?.VanillaBytes(path);
+                byte[] current = UsersVersion(_gameRoot, _installer, path, AsOnDisk);
+                byte[] built = original == null || current == null ? null : PakParts.Build(path, original, current, archive.Value);
+                if (built == null)
+                    throw new Exception("the changes you chose in " + path + " couldn't be put together on their own - include the whole file instead.");
+                if (built.AsSpan().SequenceEqual(original))
+                    continue;
+                _content[path] = built;
+                if (!_files.Contains(path))
+                    _files.Add(path);
+            }
+        }
+
         /// <summary>
         /// Include a config file as its changed values. Pass the ops the user selected (from
         /// DiffConfig) and the vanilla bytes they were diffed against.
@@ -255,6 +303,7 @@ namespace OpenCAGE.Modding
             ExportResult result = new ExportResult();
             ModPackageWriter writer = new ModPackageWriter(Info);
             writer.SetPreview(Preview);
+            BuildParts();
             if (string.IsNullOrWhiteSpace(Info.Summary))
             {
                 //Files kept as they are on disk under installed mods hold the mods' changes too: not only layouts, as good as always
@@ -272,7 +321,7 @@ namespace OpenCAGE.Modding
             foreach (string path in _files.OrderBy(o => o))
             {
                 byte[] content = _content.TryGetValue(path, out byte[] own) ? own
-                    : File.ReadAllBytes(_sources.TryGetValue(path, out string source) ? source : ModToolkit.Denormalise(_gameRoot, path));
+                    : _sources.TryGetValue(path, out string source) ? File.ReadAllBytes(source) : ModToolkit.ReadContent(_gameRoot, path);
                 AddContent(writer, result, path, WithoutEditHistory(path, content), _sources.ContainsKey(path) ? OriginalBytes(path) : (_installer == null ? null : _installer.VanillaBytes(path)));
             }
 
@@ -306,7 +355,7 @@ namespace OpenCAGE.Modding
         public string Summarise()
         {
             List<string> parts = new List<string>();
-            List<string> all = _files.Concat(_configs.Keys).Concat(_deleted).ToList();
+            List<string> all = _files.Concat(_parts.Keys).Concat(_configs.Keys).Concat(_deleted).Distinct().ToList();
             List<string> levels = all.Select(ModInstaller.LevelUnitOf).Where(o => o != null).Distinct().OrderBy(o => o).ToList();
             if (levels.Count != 0)
                 parts.Add("Changes the level" + (levels.Count == 1 ? " " : "s ") + string.Join(", ", levels.Select(ModToolkit.LevelName)));
@@ -364,7 +413,7 @@ namespace OpenCAGE.Modding
         /// </summary>
         public void ExamineAnimationPaks()
         {
-            foreach (string path in _files.Where(IsAnimationPak).ToList())
+            foreach (string path in _files.Where(IsAnimationPak).Where(o => !_parts.ContainsKey(o)).ToList())
             {
                 string key = ContentKey(path);
                 if (key == null)
@@ -392,6 +441,9 @@ namespace OpenCAGE.Modding
         /* What ExamineAnimationPaks found for a file as it is now, or null when it changes more than its layouts (or hasn't been looked at) */
         private int? LaidOutTreesKnown(string path)
         {
+            //Only some of its changes going in: they say
+            if (_parts.TryGetValue(path, out List<PakPart> parts))
+                return parts.All(o => o.Group == PakParts.LayoutGroup) ? parts.Count : (int?)null;
             string key = ContentKey(path);
             lock (_layoutChanges)
                 return key != null && _layoutChanges.TryGetValue(key, out int? trees) ? trees : null;

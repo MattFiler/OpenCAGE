@@ -302,29 +302,37 @@ namespace OpenCAGE.Popups
         {
             if (_scan == null)
                 return;
-            int modified = _scan.CountOf(FileStatus.Modified);
-            int missing = _scan.CountOf(FileStatus.Missing);
             _installAction.Visible = false;
-            if (modified == 0 && missing == 0)
-            {
-                _installState.Text = _stale.Count != 0
-                    ? "Some installed mod files have been changed or replaced since they were installed (a game update or a file check does this)."
-                    : "Your game files are in good shape.";
-                return;
-            }
             //Changes OpenCAGE has the originals of are safe: mods are combined with them. Ones it hasn't need keeping safe first.
             List<string> changed = _scan.WithStatus(FileStatus.Modified).Concat(_scan.WithStatus(FileStatus.Missing)).Where(o => !ModToolkit.IsRegenerated(o)).ToList();
             List<string> unsafeChanges = changed.Where(o => !ModServices.Installer.HasOriginal(o)).ToList();
             if (unsafeChanges.Count == 0)
             {
-                //Counted the way a person thinks of them: a level is one thing, however many files it has
-                List<string> ownLevels = changed.Select(ModInstaller.LevelUnitOf).Where(o => o != null).Distinct().OrderBy(o => o).ToList();
-                int ownFiles = changed.Count(o => ModInstaller.LevelUnitOf(o) == null);
+                /* What Create a Mod lists, counted the way a person thinks of it: a level is one thing however many files it
+                 * has. Files the game never shipped count too - a level made in OpenCAGE is nothing but those - but they have
+                 * no original to keep, so they're never what makes a change unsafe. */
+                List<string> added = _scan.WithStatus(FileStatus.Foreign).Where(o => !ModToolkit.IsRegenerated(o)).ToList();
+                List<string> yours = changed.Concat(added).Select(ModInstaller.LevelUnitOf).Where(o => o != null).Distinct().OrderBy(o => o).ToList();
+                List<string> newLevels = yours.Where(IsNewLevel).ToList();
+                List<string> ownLevels = yours.Except(newLevels).ToList();
+                int ownFiles = changed.Concat(added).Count(o => ModInstaller.LevelUnitOf(o) == null);
+                if (ownLevels.Count == 0 && ownFiles == 0 && newLevels.Count == 0)
+                {
+                    _installState.Text = _stale.Count != 0
+                        ? "Some installed mod files have been changed or replaced since they were installed (a game update or a file check does this)."
+                        : "Your game files are in good shape.";
+                    return;
+                }
+
                 List<string> what = new List<string>();
                 if (ownLevels.Count != 0) what.Add(ownLevels.Count <= 3 ? string.Join(", ", ownLevels.Select(ModToolkit.LevelName)) : ownLevels.Count + " levels");
                 if (ownFiles != 0) what.Add((ownLevels.Count != 0 ? ownFiles + " other" : ownFiles.ToString()) + " game file" + (ownFiles == 1 ? "" : "s"));
-                _installState.Text = changed.Count == 0 ? "Your game files are in good shape."
-                    : "You've changed " + string.Join(" and ", what) + " yourself. OpenCAGE keeps the originals, so mods are combined with your changes.";
+                List<string> did = new List<string>();
+                if (what.Count != 0) did.Add("changed " + string.Join(" and ", what));
+                if (newLevels.Count != 0) did.Add("made " + (newLevels.Count > 3 ? newLevels.Count + " new levels"
+                    : (newLevels.Count == 1 ? "the new level " : "the new levels ") + string.Join(", ", newLevels.Select(ModToolkit.LevelName))));
+                _installState.Text = "You've " + string.Join(what.Count > 1 ? ", and " : " and ", did) + " yourself."
+                    + (what.Count != 0 ? " OpenCAGE keeps the originals, so mods are combined with your changes." : "");
                 return;
             }
             List<string> levels = unsafeChanges.Select(ModToolkit.LevelOf).Where(o => o != null).Distinct().OrderBy(o => o).ToList();
@@ -332,6 +340,13 @@ namespace OpenCAGE.Popups
                 + (levels.Count > 0 ? " (in " + string.Join(", ", levels.Take(3).Select(ModToolkit.LevelName)) + (levels.Count > 3 ? " and more" : "") + ")" : "") + ". Mods can't be combined with those changes until it has one.";
             _installAction.Text = "Keep those changes safe...";
             _installAction.Visible = true;
+        }
+
+        /* A level the game doesn't ship anything of - one made in OpenCAGE - the same test Create a Mod uses */
+        private static bool IsNewLevel(string level)
+        {
+            string folder = ModToolkit.LevelFolder(level);
+            return !ModServices.Manifest.Entries.Any(o => o.Path.StartsWith(folder));
         }
         #endregion
 

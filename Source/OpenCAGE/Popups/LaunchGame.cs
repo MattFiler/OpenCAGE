@@ -292,8 +292,10 @@ namespace OpenCAGE
                 MessageBox.Show("Failed to set level loading values in AI.exe!\nIs the game already open?", "Failed to patch binary.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
             PatchManager.UpdateLevelListInPackages(Singleton.Platform, Singleton.PathToAI);
+            //The UI options as their settings say: checking the game's files puts the binary and UI.PAK back as shipped
+            UiMovieOverrides.Sync(Singleton.PathToAI);
 
-            //Start game process 
+            //Start game process
             if (Singleton.Platform == PatchManager.Platform.STEAM)
             {
                 Process.Start("steam://rungameid/214490");
@@ -746,51 +748,53 @@ namespace OpenCAGE
         }
 
         /* UI Modifications */
-        PAK2 uiPAK = null;
         private void UIMOD_DebugCheckpoints_CheckedChanged(object sender, EventArgs e)
         {
             if (_applyingExternalSettings) return;
-            UpdateUI("PAUSEMENU", UIMOD_DebugCheckpoints.Checked);
+            UpdateUI(Settings.UiModPauseMenu, UIMOD_DebugCheckpoints.Checked);
         }
         private void UIMOD_MapName_CheckedChanged(object sender, EventArgs e)
         {
             if (_applyingExternalSettings) return;
-            UpdateUI("LOADINGSCREEN", UIMOD_MapName.Checked);
+            UpdateUI(Settings.UiModLoadingScreen, UIMOD_MapName.Checked);
         }
         private void UIMOD_MapSelection_CheckedChanged(object sender, EventArgs e)
         {
             if (_applyingExternalSettings) return;
-            UpdateUI("NEWFRONTENDMENU", UIMOD_MapSelection.Checked);
+            UpdateUI(Settings.UiModNewFrontendMenu, UIMOD_MapSelection.Checked);
         }
         private void UIMOD_ReturnFrontend_CheckedChanged(object sender, EventArgs e)
         {
             if (_applyingExternalSettings) return;
-            UpdateUI("GAMEOVERMENU", UIMOD_ReturnFrontend.Checked);
+            UpdateUI(Settings.UiModGameOverMenu, UIMOD_ReturnFrontend.Checked);
         }
-        private void UpdateUI(string file, bool modded)
+        private void UpdateUI(string setting, bool modded)
         {
             if (_applyingExternalSettings) return;
-            if (uiPAK == null)
-                uiPAK = new PAK2(Singleton.PathToAI + "/DATA/UI.PAK");
-            ApplyUIMod(uiPAK, file, modded);
+            //Menus an older OpenCAGE wrote over the game's put back first (in the file and what the Mod Manager keeps of it), then
+            //UI.PAK read as it is now: launching syncs it too, so a copy read earlier could be out of date
+            UiMovieOverrides.PutBackOldMenus(Singleton.PathToAI);
+            PAK2 uiPAK = new PAK2(Singleton.PathToAI + "/DATA/UI.PAK");
+            string problem = ApplyUIMod(uiPAK, setting, modded);
+            if (problem != null)
+                MessageBox.Show("The option couldn't be " + (modded ? "turned on" : "turned off") + " completely: " + problem + ".\n\nIt will be tried again when the game is next launched from OpenCAGE.",
+                    "UI option", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
 
-        /* Swap one UI mod's movie (or the original) into UI.PAK, write it, and remember the choice */
-        internal static void ApplyUIMod(PAK2 uiPAK, string file, bool modded)
+        /* Put one UI option's movie in UI.PAK beside the game's own and point the game at it (or take it out and point the game
+           back - see UiMovieOverrides), write UI.PAK if that changed it, and remember the choice. Returns what went wrong, or null. */
+        internal static string ApplyUIMod(PAK2 uiPAK, string setting, bool modded)
         {
-            using (MemoryStream stream = new MemoryStream())
-            using (BinaryReader reader = new BinaryReader(stream))
+            UiMovieOverrides.Movie movie = UiMovieOverrides.Find(setting);
+            string problem = UiMovieOverrides.Apply(uiPAK, Singleton.PathToAI, movie, modded, out bool pakChanged);
+            if (pakChanged)
             {
-                GetResourceStream((modded) ? "UI_Mods/" + file + "_MOD.GFX" : "UI_Mods/" + file + ".GFX").CopyTo(stream);
-                reader.BaseStream.Position = 0;
-                PAK2.File pakFile = uiPAK.Entries.FirstOrDefault(o => o.Filename == "DATA/UI/" + file + ".GFX");
-                if (pakFile != null)
-                    pakFile.Content = reader.ReadBytes((int)reader.BaseStream.Length);
+                Modding.ModServices.CaptureBeforeWrite(uiPAK.Filepath, usersEdit: false);
+                if (!uiPAK.Save())
+                    problem = problem ?? "UI.PAK could not be written (is the game open?)";
             }
-
-            Modding.ModServices.CaptureBeforeWrite(uiPAK.Filepath);
-            uiPAK.Save();
-            SettingsManager.SetBool(Settings.UiMod(file), modded);
+            SettingsManager.SetBool(setting, modded);
+            return problem;
         }
         protected static Stream GetResourceStream(string resourcePath)
         {

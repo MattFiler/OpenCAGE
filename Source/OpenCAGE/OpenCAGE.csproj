@@ -961,6 +961,7 @@
     <Compile Include="Scripts\Audio\VorbisNative.cs" />
     <Compile Include="Scripts\AssetName.cs" />
     <Compile Include="Scripts\AssetUsage.cs" />
+    <Compile Include="Scripts\UiMovieOverrides.cs" />
     <Compile Include="Popups\UserControls\AssetNameBox.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -1013,6 +1014,7 @@
     <Compile Include="Scripts\Modding\BmlPatch.cs" />
     <Compile Include="Scripts\Modding\ModPackage.cs" />
     <Compile Include="Scripts\Modding\ModExportBuilder.cs" />
+    <Compile Include="Scripts\Modding\PakParts.cs" />
     <Compile Include="Scripts\Modding\ModInstaller.cs" />
     <Compile Include="Scripts\Modding\LevelMerge.cs" />
     <Compile Include="Scripts\Modding\LevelPart.cs" />
@@ -1020,6 +1022,7 @@
     <Compile Include="Scripts\Modding\Merging\XmlMerge.cs" />
     <Compile Include="Scripts\Modding\Merging\TextMerge.cs" />
     <Compile Include="Scripts\Modding\Merging\FileMerger.cs" />
+    <Compile Include="Scripts\Modding\Merging\AnimationPakMerge.cs" />
     <Compile Include="Scripts\Modding\VanillaManifestGenerator.cs" />
     <Compile Include="Scripts\Modding\ModServices.cs" />
     <Compile Include="Scripts\Modding\VanillaConfigs.cs" />

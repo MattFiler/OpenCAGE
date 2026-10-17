@@ -1124,14 +1124,15 @@ namespace OpenCAGE.MCP
         {
             PAK2 archive = ReadUiPak();
             string filter = NormaliseEntry(call.Str("filter"));
-            List<PAK2.File> files = archive.Entries.Where(o => o != null && (filter.Length == 0 || NormaliseEntry(o.Filename).IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0))
+            //OpenCAGE's own movies for the launch options (UiMovieOverrides) aren't the game's or the user's: not listed
+            List<PAK2.File> files = archive.Entries.Where(o => o != null && !UiMovieOverrides.IsOwnedEntry(o.Filename) && (filter.Length == 0 || NormaliseEntry(o.Filename).IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0))
                 .OrderBy(o => o.Filename, StringComparer.OrdinalIgnoreCase).ToList();
             JObject result = new JObject() { ["count"] = files.Count };
             McpPaging.Page(call, files, result, "files", o =>
             {
                 JObject file = new JObject() { ["path"] = NormaliseEntry(o.Filename), ["bytes"] = o.Content?.Length ?? 0 };
                 string uiMod = McpLevelTools.UiModOf(o.Filename);
-                if (uiMod != null) file["swapped_by_ui_mod"] = uiMod;
+                if (uiMod != null) file["replaced_in_game_while_ui_mod_on"] = uiMod;
                 return file;
             }, 300);
             return result;
@@ -1201,10 +1202,12 @@ namespace OpenCAGE.MCP
                 result["bytes_before"] = existing.Content?.Length ?? 0;
             }
 
-            //A UI mod swaps this whole movie when switched (launch_options): its edit would go then
+            //A UI mod plays OpenCAGE's own version of this movie instead while it's on (launch_options), leaving this one alone
+            if (UiMovieOverrides.IsOwnedEntry(entryPath))
+                throw new McpError("'" + entryPath + "' is OpenCAGE's own movie for a launch option, not part of the game's UI: launch_options puts it in and takes it out. Edit the game's own movie instead.");
             string uiMod = McpLevelTools.UiModOf(entryPath);
             if (uiMod != null)
-                call.Note(entryPath + " is the movie the " + uiMod + " UI mod swaps: switching launch_options " + uiMod + " (or reapply) replaces this edit with the stock or mod movie.");
+                call.Note("While the " + uiMod + " UI mod is on (launch_options), the game plays OpenCAGE's own version of " + entryPath + " instead, so this edit only shows with it off.");
             //The UI Editor keeps its own copy of the archive and writes it back on every change it makes
             bool editorOpen = McpEditor.UI(() => System.Windows.Forms.Application.OpenForms.OfType<EditPAK2>().Any(o => !o.IsDisposed));
             if (dryRun)

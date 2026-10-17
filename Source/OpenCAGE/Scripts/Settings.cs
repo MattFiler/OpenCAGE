@@ -128,10 +128,19 @@ namespace OpenCAGE
         public const string PossessCharacters = "PossessCharacters";
         public const string PossessCharactersKey = "PossessCharactersKey";
 
-        public const string UiModPauseMenu = "PAUSEMENU";
-        public const string UiModLoadingScreen = "LOADINGSCREEN";
-        public const string UiModNewFrontendMenu = "NEWFRONTENDMENU";
-        public const string UiModGameOverMenu = "GAMEOVERMENU";
+        //The Launch Game UI options: OpenCAGE's own menu movies beside the game's in UI.PAK, the game pointed at them (UiMovieOverrides)
+        public const string UiModPauseMenu = "UiOption_PauseMenu";
+        public const string UiModLoadingScreen = "UiOption_LoadingScreen";
+        public const string UiModNewFrontendMenu = "UiOption_NewFrontendMenu";
+        public const string UiModGameOverMenu = "UiOption_GameOverMenu";
+        //...named until 17 Oct 2026 after the movies themselves, when ticking one wrote OpenCAGE's movie OVER the game's in UI.PAK.
+        //Moved onto the keys above once (SettingsDefaults), then removed
+        public const string LegacyUiModPauseMenu = "PAUSEMENU";
+        public const string LegacyUiModLoadingScreen = "LOADINGSCREEN";
+        public const string LegacyUiModNewFrontendMenu = "NEWFRONTENDMENU";
+        public const string LegacyUiModGameOverMenu = "GAMEOVERMENU";
+        //The UI.PAK last checked for menus an older OpenCAGE wrote over the game's (path, size and time written)
+        public const string UiOptionsCheckedPak = "UiOption_CheckedPak";
 
         public const string AnimationEditorSplitter = "AnimEditorSplitter";
         public const string AnimationEditorTab = "AnimEditorTab";
@@ -152,8 +161,6 @@ namespace OpenCAGE
 
         public static string AnimationPreviewModel(string set) => AnimationPreviewModelPrefix + (set ?? "");
         public static string AnimationPreviewSkeleton(string set) => AnimationPreviewSkeletonPrefix + (set ?? "");
-
-        public static string UiMod(string file) => file;
 
 
     }

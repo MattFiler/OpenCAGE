@@ -100,7 +100,8 @@ namespace OpenCAGE.Modding
             byte[] cached = Cached(normalisedPath, info);
             if (cached != null)
                 return cached;
-            byte[] hash = ModToolkit.Sha256File(fullPath);
+            //Of the file as the mod system sees it: without what OpenCAGE adds for its own use (ModToolkit.WithoutOwnContent)
+            byte[] hash = ModToolkit.ContentSha(normalisedPath, fullPath);
             //Changed while it was read (written beside a check): kept out of the index, so it's read again next time
             if (Unchanged(info, fullPath))
                 Remember(normalisedPath, info, hash);
@@ -180,7 +181,7 @@ namespace OpenCAGE.Modding
                                 byte[] hash = null;
                                 if (info.Exists)
                                 {
-                                    try { hash = ModToolkit.Sha256File(sha, fullPath, buffer, Read); }
+                                    try { hash = ModToolkit.ContentSha(sha, path, fullPath, buffer, Read); }
                                     catch (FileNotFoundException) { }
                                     catch (DirectoryNotFoundException) { }
                                 }

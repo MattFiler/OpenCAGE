@@ -404,7 +404,7 @@ namespace OpenCAGE.Modding
                     string sha = own[path];
                     if (sha == null) return null;
                     if (_state.Own.TryGetValue(path, out string kept) && kept == sha) return _store.Retrieve(sha);
-                    return File.ReadAllBytes(ModToolkit.Denormalise(_gameRoot, path));
+                    return ModToolkit.ReadContent(_gameRoot, path);
                 }
 
                 foreach (KeyValuePair<string, List<Planned>> file in plan.Files)
@@ -417,7 +417,7 @@ namespace OpenCAGE.Modding
                         List<(string Name, byte[] Bytes)> sources = new List<(string, byte[])>();
                         if (hasOwn) sources.Add((MergeConflict.OwnChanges, OwnBytes(file.Key)));
                         foreach (Planned planned in file.Value)
-                            sources.Add((planned.Mod.Name, Resolve(planned)));
+                            sources.Add((planned.Mod.Name, ModToolkit.ContentOf(file.Key, Resolve(planned)))); //as ComposeFile has them
                         int lastDelete = sources.FindLastIndex(o => o.Bytes == null);
                         List<Contribution> versions = sources.Skip(lastDelete + 1).Select(o => new Contribution() { ModName = o.Name, Bytes = o.Bytes }).ToList();
                         if (lastDelete >= 0 && sources.Count > 1)
@@ -623,7 +623,7 @@ namespace OpenCAGE.Modding
                 if (own.Value == _state.Baseline[own.Key].Sha256Hex)
                     _state.Own.Remove(own.Key);
                 else
-                    _state.Own[own.Key] = own.Value == null ? null : _store.StoreFile(ModToolkit.Denormalise(_gameRoot, own.Key));
+                    _state.Own[own.Key] = own.Value == null ? null : _store.Store(ModToolkit.ReadContent(_gameRoot, own.Key));
             }
         }
 
@@ -670,6 +670,79 @@ namespace OpenCAGE.Modding
         {
             lock (_mutex)
                 return _state.Own.Keys.Where(_state.Composition.ContainsKey).ToList();
+        }
+
+        /// <summary>
+        /// Change a file the same way everywhere the user's version of it is kept - the original adopted for it (when it was
+        /// first found not as shipped), their own version, and the file on disk, keeping the record of a combined file written
+        /// there in step - so the change reads as nobody's edit and nothing puts the old bytes back. For OpenCAGE taking back
+        /// something of its own it once wrote into a game file: older Launch Game UI options wrote their menus over UI.PAK's.
+        /// <paramref name="fix"/> gets a version of the file (without OpenCAGE's own content) and returns it changed, or null
+        /// for no change. True when anything changed.
+        /// </summary>
+        public bool RewriteEverywhere(string normalisedPath, Func<byte[], byte[]> fix)
+        {
+            bool changed = false;
+            lock (_mutex)
+            {
+                //The original adopted for it: the file as first found, which was then holding what's being taken back
+                if (_state.Baseline.TryGetValue(normalisedPath, out ModState.BaselineRecord baseline) && !baseline.IsVanilla && baseline.Sha256Hex != null)
+                {
+                    byte[] bytes = _store.Retrieve(baseline.Sha256Hex);
+                    byte[] fixedBytes = bytes == null ? null : fix(bytes);
+                    if (fixedBytes != null)
+                    {
+                        _state.Baseline[normalisedPath] = new ModState.BaselineRecord()
+                        {
+                            Sha256Hex = _store.Store(fixedBytes),
+                            IsVanilla = _manifest.IsVanilla(normalisedPath, ModToolkit.Sha256(fixedBytes)),
+                        };
+                        changed = true;
+                    }
+                }
+
+                //Their own version: no longer one if all that made it theirs is gone
+                if (_state.Own.TryGetValue(normalisedPath, out string ownSha) && ownSha != null)
+                {
+                    byte[] bytes = _store.Retrieve(ownSha);
+                    byte[] fixedBytes = bytes == null ? null : fix(bytes);
+                    if (fixedBytes != null)
+                    {
+                        string sha = _store.Store(fixedBytes);
+                        if (_state.Baseline.TryGetValue(normalisedPath, out ModState.BaselineRecord now) && now.Sha256Hex == sha)
+                            _state.Own.Remove(normalisedPath);
+                        else
+                            _state.Own[normalisedPath] = sha;
+                        changed = true;
+                    }
+                }
+
+                //The file on disk; when it's the combined file as written, its record follows it (else it's been edited since,
+                //which it stays)
+                string fullPath = ModToolkit.Denormalise(_gameRoot, normalisedPath);
+                if (File.Exists(fullPath))
+                {
+                    byte[] content = ModToolkit.ReadContent(_gameRoot, normalisedPath);
+                    byte[] fixedContent = fix(content);
+                    if (fixedContent != null)
+                    {
+                        bool asWritten = _state.Composition.TryGetValue(normalisedPath, out ModState.ComposedFile composed)
+                            && composed.Sha256Hex == ModToolkit.ToHex(ModToolkit.Sha256(content));
+                        File.WriteAllBytes(fullPath, ModToolkit.ForDisk(normalisedPath, fixedContent));
+                        _cache.Invalidate(normalisedPath);
+                        if (asWritten)
+                            composed.Sha256Hex = ModToolkit.ToHex(ModToolkit.Sha256(fixedContent));
+                        changed = true;
+                    }
+                }
+
+                if (changed)
+                {
+                    _state.Save();
+                    _cache.Save();
+                }
+            }
+            return changed;
         }
 
         /* Changed files of installed mods kept as a mod of their own, holding them exactly as they are now - a level's
@@ -756,7 +829,7 @@ namespace OpenCAGE.Modding
                 //A file whose bytes the store already has (its baseline, say) needn't be read and stored again
                 byte[] hash = _cache.Hash(path);
                 string sha = hash == null ? null : ModToolkit.ToHex(hash);
-                snapshot.Files[path] = sha != null && _store.Has(sha) ? sha : _store.Store(File.ReadAllBytes(fullPath));
+                snapshot.Files[path] = sha != null && _store.Has(sha) ? sha : _store.Store(ModToolkit.ReadContent(_gameRoot, path));
             }
             Directory.CreateDirectory(ModToolkit.SnapshotsDir(_gameRoot));
             File.WriteAllText(SnapshotPath(snapshot.Id), JsonConvert.SerializeObject(snapshot, Newtonsoft.Json.Formatting.Indented));
@@ -848,7 +921,7 @@ namespace OpenCAGE.Modding
                     if (content == null)
                         throw new Exception("Snapshot content for " + file.Key + " is missing from the baseline store.");
                     Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
-                    File.WriteAllBytes(fullPath, content);
+                    File.WriteAllBytes(fullPath, ModToolkit.ForDisk(file.Key, content));
                 }
                 _cache.Invalidate(file.Key);
             }
@@ -891,7 +964,7 @@ namespace OpenCAGE.Modding
                     if (hash == null || !_manifest.IsVanilla(normalisedPath, hash))
                         return;
 
-                    string sha = _store.StoreFile(ModToolkit.Denormalise(_gameRoot, normalisedPath));
+                    string sha = _store.Store(ModToolkit.ReadContent(_gameRoot, normalisedPath));
                     if (!StoredAsShipped(normalisedPath, hash, sha))
                         return;
                     _state.Baseline[normalisedPath] = new ModState.BaselineRecord() { Sha256Hex = sha, IsVanilla = true };
@@ -944,7 +1017,7 @@ namespace OpenCAGE.Modding
                             bool vanilla = hash != null && _manifest.IsVanilla(normalisedPath, hash);
                             if (!vanilla)
                                 return;
-                            content = File.ReadAllBytes(ModToolkit.Denormalise(_gameRoot, normalisedPath));
+                            content = ModToolkit.ReadContent(_gameRoot, normalisedPath);
                         }
                         finally
                         {
@@ -1098,14 +1171,14 @@ namespace OpenCAGE.Modding
                 }
 
                 byte[] hash = _cache.Hash(path);
-                if (_manifest.IsVanilla(path, hash) && StoredAsShipped(path, hash, _store.StoreFile(fullPath)))
+                if (_manifest.IsVanilla(path, hash) && StoredAsShipped(path, hash, _store.Store(ModToolkit.ReadContent(_gameRoot, path))))
                 {
                     _state.Baseline[path] = new ModState.BaselineRecord() { Sha256Hex = ModToolkit.ToHex(hash), IsVanilla = true };
                 }
                 else if (adoptUnknown || !_manifest.Contains(path) || AdoptsAutomatically(path))
                 {
                     //Unknown bytes adopted as the restore point (or a foreign file with no shipped truth)
-                    string sha = _store.StoreFile(fullPath);
+                    string sha = _store.Store(ModToolkit.ReadContent(_gameRoot, path));
                     _state.Baseline[path] = new ModState.BaselineRecord() { Sha256Hex = sha, IsVanilla = false };
                 }
                 else
@@ -1536,7 +1609,7 @@ namespace OpenCAGE.Modding
                     if (content == null)
                         throw new Exception("OpenCAGE's copy of the original " + path + " is missing, so it can't be put back.");
                     Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
-                    File.WriteAllBytes(fullPath, content);
+                    File.WriteAllBytes(fullPath, ModToolkit.ForDisk(path, content));
                 }
             }
             _cache.Invalidate(path);
@@ -1652,8 +1725,10 @@ namespace OpenCAGE.Modding
             (bool hasOwn, byte[] ownBytes) = withOwn ? OwnVersion(target) : (false, null);
             if (hasOwn)
                 sources.Add((null, MergeConflict.OwnChanges, ownBytes));
+            //A mod's file without anything under the names OpenCAGE keeps for its own content (a package made by hand could carry
+            //an entry there): those are OpenCAGE's alone, put in on disk as its settings say
             foreach (Planned planned in contributors)
-                sources.Add((planned.Mod.Id, planned.Mod.Name, Resolve(planned)));
+                sources.Add((planned.Mod.Id, planned.Mod.Name, ModToolkit.ContentOf(target, Resolve(planned))));
 
             //A deletion is the last word on everything before it
             int lastDelete = sources.FindLastIndex(o => o.Bytes == null);
@@ -1692,7 +1767,8 @@ namespace OpenCAGE.Modding
                     written = outcome.Bytes;
                 }
                 Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
-                File.WriteAllBytes(fullPath, written);
+                //What the mod system made is the file without OpenCAGE's own content (its sha is what the composition records); that goes back in on disk
+                File.WriteAllBytes(fullPath, ModToolkit.ForDisk(target, written));
             }
             _cache.Invalidate(target);
             _state.Composition[target] = new ModState.ComposedFile()

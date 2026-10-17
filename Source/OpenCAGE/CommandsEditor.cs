@@ -248,6 +248,11 @@ namespace OpenCAGE
             modManagerBtn.Click += modManagerBtn_Click;
             toolStrip.Items.Insert(toolStrip.Items.IndexOf(manageBackupsBtn) + 1, modManagerBtn);
 #endif
+            //Menus an older OpenCAGE's Launch Game options wrote over the game's in UI.PAK go back as shipped (in what the Mod
+            //Manager keeps too, so UI.PAK doesn't read as a change of the user's), and options still on are set up the new way -
+            //beside the game's menus - straight away, as they'd be in place whether the game is launched from OpenCAGE or not
+            if (Singleton.IsPrimaryInstance && UiMovieOverrides.PutBackOldMenus(Singleton.PathToAI) && UiMovieOverrides.All.Any(o => SettingsManager.GetBool(o.Key)))
+                UiMovieOverrides.Sync(Singleton.PathToAI);
             Modding.ModServices.CaptureSmallFilesInBackground();
 
             versionToolStripMenuItem.Text = "Version " + ProductVersion;
@@ -1790,6 +1795,8 @@ namespace OpenCAGE
                 //...and an injector an earlier launch left waiting (its game never came up) would put them in this game beside
                 //the helpers: closed before the game starts (the save closed the game itself)
                 EditorUtils.CloseAI(new List<string>(new string[] { "CinematicTools", "CinematicToolsInjector" }), thisInstallOnly: true);
+                //The UI options as their settings say, as a launch from the Launch Game window does
+                UiMovieOverrides.Sync(Singleton.PathToAI);
 
                 if (Singleton.Platform == PatchManager.Platform.STEAM)
                 {

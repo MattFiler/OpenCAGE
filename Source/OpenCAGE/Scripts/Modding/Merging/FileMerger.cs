@@ -206,11 +206,13 @@ namespace OpenCAGE.Modding.Merging
             Dictionary<string, PAK2.File> baseEntries = Index(baseArchive);
             List<PAK2.File> merged = baseArchive.Entries.Select(o => new PAK2.File() { Filename = o.Filename, Content = o.Content }).ToList();
 
-            //Per entry, which mods have their own version of it
+            //Per entry, which mods have their own version of it (and which of the archives each came from)
             Dictionary<string, List<Contribution>> perEntry = new Dictionary<string, List<Contribution>>(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, List<int>> perEntryArchive = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
             List<(string Mod, string Name)> removals = new List<(string, string)>();
-            foreach ((string mod, PAK2 archive) in archives)
+            for (int a = 0; a < archives.Count; a++)
             {
+                (string mod, PAK2 archive) = archives[a];
                 Dictionary<string, PAK2.File> entries = Index(archive);
                 foreach (PAK2.File entry in archive.Entries)
                 {
@@ -221,12 +223,25 @@ namespace OpenCAGE.Modding.Merging
                     if (original != null && original.Content.AsSpan().SequenceEqual(entry.Content))
                         continue;
                     if (!perEntry.TryGetValue(entry.Filename, out List<Contribution> list))
+                    {
                         perEntry[entry.Filename] = list = new List<Contribution>();
+                        perEntryArchive[entry.Filename] = new List<int>();
+                    }
                     list.Add(new Contribution() { ModName = mod, Bytes = entry.Content });
+                    perEntryArchive[entry.Filename].Add(a);
                 }
                 foreach (PAK2.File original in baseArchive.Entries)
                     if (!entries.ContainsKey(original.Filename) && !AnimTreeLayouts.IsEntry(original.Filename))
                         removals.Add((mod, original.Filename));
+            }
+
+            //Each archive read as an animation PAK once, and only when one of its entries is merged that way (-1 is the original)
+            Dictionary<int, AnimationPakVersion> animationVersions = new Dictionary<int, AnimationPakVersion>();
+            AnimationPakVersion AnimationVersion(PAK2 archive, int index)
+            {
+                if (!animationVersions.TryGetValue(index, out AnimationPakVersion version))
+                    animationVersions[index] = version = new AnimationPakVersion(archive.Entries);
+                return version;
             }
 
             foreach (KeyValuePair<string, List<Contribution>> entry in perEntry)
@@ -240,6 +255,11 @@ namespace OpenCAGE.Modding.Merging
                         : FileMerger.WholeFile(entryTarget, entry.Value, "added by more than one mod");
                 else
                     entryOutcome = (AnimationStringsMerge.IsTable(entry.Key) ? AnimationStringsMerge.Merge(entryTarget, original.Content, entry.Value) : null)
+                        //An animation PAK's tree sets and clip lists, part by part (AnimationPakMerge) - with only one version
+                        //there's nothing to combine, and it's taken as it is below
+                        ?? (entry.Value.Count > 1 && AnimationPakMerge.Handles(entry.Key)
+                            ? AnimationPakMerge.Merge(entryTarget, entry.Key, AnimationVersion(baseArchive, -1), perEntryArchive[entry.Key].Select(o => (archives[o].Mod, AnimationVersion(archives[o].Archive, o))).ToList())
+                            : null)
                         ?? FileMerger.Merge(entryTarget, original.Content, entry.Value);
                 outcome.Conflicts.AddRange(entryOutcome.Conflicts);
                 PAK2.File existing = merged.FirstOrDefault(o => string.Equals(o.Filename, entry.Key, StringComparison.OrdinalIgnoreCase));

@@ -35,6 +35,74 @@ namespace OpenCAGE.Modding
             }
         }
 
+        #region OPENCAGE'S OWN CONTENT
+        /* Content OpenCAGE puts into a game file for its own use - today the movies for the Launch Game UI options, added to
+         * UI.PAK beside the game's (UiMovieOverrides). The mod system looks past it everywhere: a file's hash, its original,
+         * the user's own version of it and what a mod ships are all of the file WITHOUT it, so switching an option never reads
+         * as a change of the user's - and whatever the mod system writes has it put back as OpenCAGE's settings say. Set by the
+         * editor (ModServices); null where this code runs on its own, which sets nothing aside and puts nothing back. */
+
+        /// <summary>(normalised path, bytes) -> the bytes without OpenCAGE's own content, or null when they hold none.</summary>
+        public static Func<string, byte[], byte[]> WithoutOwnContent;
+
+        /// <summary>(normalised path, bytes) -> the bytes with OpenCAGE's own content as its settings say, or null when that's no change.</summary>
+        public static Func<string, byte[], byte[]> WithOwnContent;
+
+        /// <summary>Whether a file can hold OpenCAGE's own content at all.</summary>
+        public static bool MayHoldOwnContent(string normalisedPath) =>
+            string.Equals(normalisedPath, "DATA/UI.PAK", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>A file's bytes as the mod system sees them: without OpenCAGE's own content.</summary>
+        public static byte[] ContentOf(string normalisedPath, byte[] bytes)
+        {
+            if (bytes == null || WithoutOwnContent == null || !MayHoldOwnContent(normalisedPath))
+                return bytes;
+            return WithoutOwnContent(normalisedPath, bytes) ?? bytes;
+        }
+
+        /// <summary>A game file's content as the mod system sees it, read from disk.</summary>
+        public static byte[] ReadContent(string gameRoot, string normalisedPath)
+        {
+            return ContentOf(normalisedPath, ReadShared(Denormalise(gameRoot, normalisedPath)));
+        }
+
+        /// <summary>What to write to disk for content the mod system has made: with OpenCAGE's own content put back.</summary>
+        public static byte[] ForDisk(string normalisedPath, byte[] content)
+        {
+            if (content == null || WithOwnContent == null || !MayHoldOwnContent(normalisedPath))
+                return content;
+            return WithOwnContent(normalisedPath, content) ?? content;
+        }
+
+        /// <summary>A game file's hash as the mod system sees it: of its content without OpenCAGE's own.</summary>
+        public static byte[] ContentSha(SHA256 sha, string normalisedPath, string fullPath, byte[] buffer, Action<long> read = null)
+        {
+            if (WithoutOwnContent == null || !MayHoldOwnContent(normalisedPath))
+                return Sha256File(sha, fullPath, buffer, read);
+            byte[] bytes = ReadShared(fullPath);
+            read?.Invoke(bytes.Length);
+            sha.Initialize();
+            return sha.ComputeHash(ContentOf(normalisedPath, bytes));
+        }
+
+        public static byte[] ContentSha(string normalisedPath, string fullPath)
+        {
+            using (SHA256 sha = NewSha256())
+                return ContentSha(sha, normalisedPath, fullPath, new byte[1 << 20]);
+        }
+
+        /* Read whole, sharing the file as the hashing does: a check runs beside saves and applies */
+        private static byte[] ReadShared(string fullPath)
+        {
+            using (FileStream stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+            using (MemoryStream copy = new MemoryStream(stream.CanSeek ? (int)stream.Length : 0))
+            {
+                stream.CopyTo(copy);
+                return copy.ToArray();
+            }
+        }
+        #endregion
+
         /* Paths, all relative to the game root */
         public static string ModsDir(string gameRoot) { return Path.Combine(gameRoot, "DATA", "MODTOOLS", "MODS"); }
         public static string LibraryDir(string gameRoot) { return Path.Combine(ModsDir(gameRoot), "LIBRARY"); }

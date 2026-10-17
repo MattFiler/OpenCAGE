@@ -267,49 +267,29 @@ namespace OpenCAGE.MCP
                 foreach (KeyOption key in KeyOptionList.Where(o => o.Helper == option.Arg))
                     yield return McpSchema.String(key.Arg, (option.Arg == "possess_characters" ? "Possess Characters: the " : "Scripting helper: the ") + key.What + ".", options: key.Options);
             }
-            yield return McpSchema.Boolean("reapply", "UI mods given: write their movie into UI.PAK even over one edited with edit_ui_pak. Without it a UI mod is written when its setting changes or UI.PAK holds the other stock movie (as after verifying the game files), and an edited movie is left alone.");
+            yield return McpSchema.Boolean("reapply", "UI mods given: apply them even when they look applied, and put OpenCAGE's own movie back over one edited with edit_ui_pak. A UI mod adds OpenCAGE's movie to UI.PAK beside the game's own (DATA/UI/PAUSEM_OC.GFX and the like) and points AI.exe at it; the game's movies are never changed. Without reapply it is applied when its setting changes or the game files don't match it (as after verifying them), and an edited OpenCAGE movie is left alone.");
             yield return McpSchema.Boolean("close_game", "If the game is running, close it first so AI.exe / UI.PAK can be written (default false: refuse while it runs).");
             yield return McpSchema.Boolean("dry_run", "Check and report what would change, writing nothing.");
         }
 
-        /// <summary>Which movie UI.PAK holds for a UI mod: "mod", "vanilla", or "edited" (neither, e.g. written with edit_ui_pak); null when it has none.</summary>
+        /// <summary>
+        /// Where a UI mod stands on disk (see UiMovieOverrides): "on" (OpenCAGE's movie is in UI.PAK beside the game's and AI.exe
+        /// points at it), "off", "partly" (one without the other - a verify of the game files resets both), or "edited" (OpenCAGE's
+        /// entry holds something else); null when UI.PAK has no such movie at all.
+        /// </summary>
         internal static string UiMovieState(PAK2 pak, string file)
         {
-            PAK2.File entry = pak.Entries.FirstOrDefault(o => o.Filename == "DATA/UI/" + file + ".GFX");
-            if (entry?.Content == null) return null;
-            if (entry.Content.SequenceEqual(UiResource("UI_Mods/" + file + "_MOD.GFX") ?? new byte[0])) return "mod";
-            if (entry.Content.SequenceEqual(UiResource("UI_Mods/" + file + ".GFX") ?? new byte[0])) return "vanilla";
-            return "edited";
+            UiMovieOverrides.Movie movie = UiMovieOverrides.Find(file);
+            if (movie == null || !pak.Entries.Any(o => string.Equals(o.Filename, movie.OriginalEntry, StringComparison.OrdinalIgnoreCase))) return null;
+            return UiMovieOverrides.State(pak, Singleton.PathToAI, movie);
         }
 
         /// <summary>The UI mod a UI.PAK path belongs to (its launch_options name), or null.</summary>
         internal static string UiModOf(string pakPath)
         {
             string path = (pakPath ?? "").Replace('\\', '/').TrimStart('/');
-            LaunchOption option = LaunchOptionList.FirstOrDefault(o => o.Kind == KindUiMod && string.Equals(path, "DATA/UI/" + o.Key + ".GFX", StringComparison.OrdinalIgnoreCase));
+            LaunchOption option = LaunchOptionList.FirstOrDefault(o => o.Kind == KindUiMod && string.Equals(path, UiMovieOverrides.Find(o.Key)?.OriginalEntry, StringComparison.OrdinalIgnoreCase));
             return option?.Arg;
-        }
-
-        private static readonly Dictionary<string, byte[]> _uiResources = new Dictionary<string, byte[]>();
-        private static byte[] UiResource(string path)
-        {
-            lock (_uiResources)
-            {
-                if (_uiResources.TryGetValue(path, out byte[] known)) return known;
-                System.Reflection.Assembly assembly = typeof(global::OpenCAGE.LaunchGame).Assembly;
-                string wanted = path.Replace('/', '.');
-                string name = assembly.GetManifestResourceNames().FirstOrDefault(o => o.Contains(wanted));
-                byte[] bytes = null;
-                if (name != null)
-                    using (Stream stream = assembly.GetManifestResourceStream(name))
-                    using (MemoryStream copy = new MemoryStream())
-                    {
-                        stream.CopyTo(copy);
-                        bytes = copy.ToArray();
-                    }
-                _uiResources[path] = bytes;
-                return bytes;
-            }
         }
 
         private static JObject LaunchOptionState()
@@ -367,9 +347,9 @@ namespace OpenCAGE.MCP
                 result["options"] = before;
                 if (movies.Count != 0)
                     result["ui_pak_movies"] = new JObject(movies.Select(o => new JProperty(o.Key, o.Value)));
-                List<string> differ = LaunchOptionList.Where(o => o.Kind == KindUiMod && movies.TryGetValue(o.Arg, out string state) && state != null && state != (SettingsManager.GetBool(o.Key) ? "mod" : "vanilla")).Select(o => o.Arg).ToList();
+                List<string> differ = LaunchOptionList.Where(o => o.Kind == KindUiMod && movies.TryGetValue(o.Arg, out string state) && state != null && state != (SettingsManager.GetBool(o.Key) ? "on" : "off")).Select(o => o.Arg).ToList();
                 if (differ.Count != 0)
-                    call.Note("UI.PAK does not hold what these UI mod settings say: " + string.Join(", ", differ) + " (ui_pak_movies). Passing the option again writes it (reapply: true also over an edited movie).");
+                    call.Note("The game files are not as these UI mod settings say: " + string.Join(", ", differ) + " (ui_pak_movies). launch_game puts them right; passing the option again does now (reapply: true also over an edited OpenCAGE movie).");
                 result["platform"] = platform.ToString();
                 result["scripting_helpers_available"] = global::OpenCAGE.LaunchGame.ScriptingHelpersAvailable();
                 result["cinematic_tools_available"] = global::OpenCAGE.LaunchGame.CinematicToolsAvailable();
@@ -389,10 +369,11 @@ namespace OpenCAGE.MCP
             {
                 movies.TryGetValue(mod.Key.Arg, out string onDisk);
                 bool settingChanges = SettingsManager.GetBool(mod.Key.Key) != mod.Value;
-                bool diskDiffers = onDisk != null && onDisk != (mod.Value ? "mod" : "vanilla");
-                if (onDisk == "edited" && !reapply)
+                bool diskDiffers = onDisk != null && onDisk != (mod.Value ? "on" : "off");
+                UiMovieOverrides.Movie movie = UiMovieOverrides.Find(mod.Key.Key);
+                if (onDisk == "edited" && mod.Value && !reapply)
                 {
-                    call.Note("UI.PAK's " + mod.Key.Key + ".GFX was edited (not the stock or mod movie): " + mod.Key.Arg + " leaves it alone" + (settingChanges ? " and only records the setting" : "") + ". reapply: true replaces it with the " + (mod.Value ? "mod" : "stock") + " movie.");
+                    call.Note("UI.PAK's " + movie.Entry + " (OpenCAGE's own " + movie.Resource + " movie) holds something else: " + mod.Key.Arg + " leaves it alone" + (settingChanges ? " and only records the setting" : "") + ". reapply: true puts OpenCAGE's movie back.");
                     if (settingChanges && !dryRun) SettingsManager.SetBool(mod.Key.Key, mod.Value);
                     continue;
                 }
@@ -400,9 +381,9 @@ namespace OpenCAGE.MCP
                 {
                     uiMods.Add(mod);
                     if (onDisk == "edited")
-                        call.Note(mod.Key.Arg + " replaces UI.PAK's edited " + mod.Key.Key + ".GFX with the " + (mod.Value ? "mod" : "stock") + " movie (the edit is lost).");
+                        call.Note(mod.Key.Arg + " replaces what UI.PAK's " + movie.Entry + " held with OpenCAGE's movie" + (mod.Value ? "" : " - and takes it out") + ".");
                     else if (!settingChanges && diskDiffers)
-                        call.Note("UI.PAK held the " + onDisk + " " + mod.Key.Key + ".GFX although the setting said otherwise (a verify of the game files puts the stock movies back): it is written again.");
+                        call.Note(mod.Key.Arg + " was " + onDisk + " although the setting said otherwise (a verify of the game files resets AI.exe and UI.PAK): it is applied again.");
                 }
             }
             List<KeyValuePair<LaunchOption, bool>> helpers = asked.Where(o => o.Key.Kind == KindHelper && SettingsManager.GetBool(o.Key.Key) != o.Value).ToList();
@@ -475,15 +456,20 @@ namespace OpenCAGE.MCP
                 {
                     try
                     {
+                        //Menus an older OpenCAGE wrote over the game's put back first, in the file and what the Mod Manager keeps of it
+                        UiMovieOverrides.PutBackOldMenus(Singleton.PathToAI);
                         PAK2 pak = new PAK2(uiPak);
                         foreach (var change in uiMods)
                         {
-                            if (!pak.Entries.Any(o => o.Filename == "DATA/UI/" + change.Key.Key + ".GFX"))
+                            UiMovieOverrides.Movie movie = UiMovieOverrides.Find(change.Key.Key);
+                            if (!pak.Entries.Any(o => string.Equals(o.Filename, movie.OriginalEntry, StringComparison.OrdinalIgnoreCase)))
                             {
-                                failures.Add(change.Key.Arg + ": UI.PAK has no DATA/UI/" + change.Key.Key + ".GFX to replace (verify the game files)");
+                                failures.Add(change.Key.Arg + ": UI.PAK has no " + movie.OriginalEntry + " (verify the game files)");
                                 continue;
                             }
-                            global::OpenCAGE.LaunchGame.ApplyUIMod(pak, change.Key.Key, change.Value);
+                            string problem = global::OpenCAGE.LaunchGame.ApplyUIMod(pak, change.Key.Key, change.Value);
+                            if (problem != null)
+                                failures.Add(change.Key.Arg + ": " + problem);
                         }
                     }
                     catch (Exception e)

@@ -47,6 +47,14 @@ namespace OpenCAGE.Modding
         {
             lock (_lock)
             {
+                //What OpenCAGE adds to game files for its own use (the Launch Game UI option movies in UI.PAK) is looked past by
+                //every hash, original, own version and package, and put back after every write (ModToolkit.WithoutOwnContent)
+                if (ModToolkit.WithoutOwnContent == null)
+                {
+                    ModToolkit.WithoutOwnContent = (path, bytes) => UiMovieOverrides.WithoutOwnedEntries(bytes);
+                    ModToolkit.WithOwnContent = (path, bytes) => UiMovieOverrides.WithOwnedEntries(bytes);
+                }
+
                 string root = Singleton.PathToAI;
                 if (string.IsNullOrEmpty(root))
                     return;
@@ -107,7 +115,7 @@ namespace OpenCAGE.Modding
         /// is kept so mods can be diffed against it and uninstalls can restore it. Cheap when
         /// already captured, silent on any failure. Does nothing without ENABLE_MOD_PACKAGES.
         /// </summary>
-        public static void CaptureBeforeWrite(string fullPath)
+        public static void CaptureBeforeWrite(string fullPath, bool usersEdit = true)
         {
 #if ENABLE_MOD_PACKAGES
             try
@@ -120,10 +128,42 @@ namespace OpenCAGE.Modding
                     return;
                 _installer.CaptureVanillaBaseline(normalised);
                 //When the user last changed it, for Create a Mod
-                EditHistory.SharedFileChanged(_gameRoot, normalised);
+                //(not when it's OpenCAGE writing its own content, which the mod system looks past)
+                if (usersEdit)
+                    EditHistory.SharedFileChanged(_gameRoot, normalised);
             }
             catch { }
 #endif
+        }
+
+        /// <summary>
+        /// Change a game file the same way on disk and in everything the Mod Manager keeps of it (ModInstaller.RewriteEverywhere),
+        /// so the change reads as nobody's edit - for OpenCAGE taking back what it once wrote into a game file of its own accord.
+        /// Without the Mod Manager set up for this game, the file on disk alone. <paramref name="fix"/> gets the file's bytes and
+        /// returns them changed, or null for no change. True when anything changed.
+        /// </summary>
+        public static bool RewriteEverywhere(string fullPath, Func<byte[], byte[]> fix)
+        {
+            try
+            {
+#if ENABLE_MOD_PACKAGES
+                EnsureBuilt();
+                string normalised = _installer != null && ManifestAvailable ? ModToolkit.NormaliseFull(_gameRoot, fullPath) : null;
+                if (normalised != null && !ModToolkit.IsExcluded(normalised))
+                    return _installer.RewriteEverywhere(normalised, fix);
+#endif
+                if (!File.Exists(fullPath))
+                    return false;
+                byte[] content = fix(File.ReadAllBytes(fullPath));
+                if (content == null)
+                    return false;
+                File.WriteAllBytes(fullPath, content);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         /// <summary>
