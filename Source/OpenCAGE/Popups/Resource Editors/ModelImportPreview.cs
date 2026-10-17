@@ -792,7 +792,11 @@ namespace AlienPAK
             {
                 ImageSource image = PreviewImage(diffuse);
                 if (image == null) return false;
-                shown = new DiffuseMaterial(new ImageBrush(image) { ViewportUnits = BrushMappingMode.Absolute });
+
+                /* Tiled as the game's samplers wrap: an untiled brush paints only the first tile and leaves
+                 * the rest of the triangle clear, so a wall whose texture repeats (Sponza's outer walls run
+                 * to 24 tiles) vanished from the preview altogether */
+                shown = new DiffuseMaterial(new ImageBrush(image) { TileMode = TileMode.Tile, Viewport = new System.Windows.Rect(0, 0, 1, 1), ViewportUnits = BrushMappingMode.Absolute });
             }
             else
                 shown = new DiffuseMaterial(new SolidColorBrush(BaseColour(_scene.Materials[index])));

@@ -285,6 +285,7 @@ namespace OpenCAGE
                     return;
                 }
                 Models.CS2.Component.LOD toSelect = null;
+                bool inParts = false;
                 /* The name, and any folders it should live in, are settled in the preview - and the
                  * clash is checked there as it's typed, so nothing gets silently renamed after the
                  * fact any more. */
@@ -307,6 +308,7 @@ namespace OpenCAGE
                     EditHistory.AssetChanged(Content.Level, AssetModificationInfoTable.AssetKind.MODEL, previewForm.ResultCs2.Name);
                     if (previewForm.ResultCs2.Components.Count > 0 && previewForm.ResultCs2.Components[0].LODs.Count > 0)
                         toSelect = previewForm.ResultCs2.Components[0].LODs[0];
+                    inParts = previewForm.ResultCs2.Components.Count > 1;
 
                     /* The skeleton and any animation go into the game's animation data rather than
                      * this level, so they are added here once the model itself is safely in. */
@@ -317,6 +319,13 @@ namespace OpenCAGE
                         CreateCompositeForImport(previewForm.ResultCs2, previewForm.CompositeName, previewForm.CompositeSkeleton);
                 }
                 RebuildModelFileTree(toSelect, modelSearchTextBox.Text);
+
+                /* A file with more meshes than one component can draw comes in split into several (see
+                 * ModelIO.CreateImportPlan), and any one of them alone is a scrap of the model - Sponza's
+                 * first is the arcades with window shutters and rods hanging off nothing, its second the
+                 * walls round the outside. Select the model itself, which shows every part together. */
+                if (inParts && !_wholeModelsOnly && FileTree.SelectedNode?.Parent != null)
+                    FileTree.SelectedNode = FileTree.SelectedNode.Parent;
                 Singleton.OnResourceModified?.Invoke();
             }
             catch (Exception ex)
