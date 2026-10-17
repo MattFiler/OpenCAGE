@@ -92,6 +92,14 @@ namespace OpenCAGE
             public bool Usable => Problem == null;
         }
 
+        /// <summary>Where a cut-out material's alpha comes from, or None for a solid one.</summary>
+        public enum CutOutSource
+        {
+            None,
+            BaseColourAlpha,                       //ALPHA_TEST on the diffuse map's own alpha
+            OpacityMap,                            //ALPHA_TEST on a greyscale map in SEPARATE_ALPHA_MAP
+        }
+
         /// <summary>What generating would do, so it can be shown before anything is written.</summary>
         public class Plan
         {
@@ -100,6 +108,7 @@ namespace OpenCAGE
             public long Mask;
             public bool ExactMask;                 //false when we had to settle for the nearest shipped permutation
             public PermutationSource Source;
+            public CutOutSource CutOut;
             public List<PlannedTexture> Textures = new List<PlannedTexture>();
             public List<string> Features = new List<string>();      //feature names the mask turns on
             public List<string> Notes = new List<string>();
@@ -221,6 +230,8 @@ namespace OpenCAGE
             if (!plan.Textures.Any(o => o.Usable && o.Role.Sampler == "DIFFUSE_MAP"))
                 plan.Notes.Add("No base colour texture was found on this model material. Every shipped material of this kind has one, so the result will render untextured until you set one.");
 
+            plan.CutOut = PlanCutOut(source, plan);
+
             //Everything a model can't tell us comes from the level's own most typical material of this family
             long baseMask;
             if (!TryMostUsedMask(level.Materials, level.Shaders, family, gameRoot, out baseMask))
@@ -256,6 +267,7 @@ namespace OpenCAGE
                              + "Build the shader database, or install a HLSL compiler, to widen what can be built.");
             }
 
+            ReconcileCutOut(plan, family, plan.Mask);
             plan.Features = DescribeFeatures(family, plan.Mask);
             return plan;
         }
@@ -283,6 +295,91 @@ namespace OpenCAGE
                 return true;
             }
             return false;
+        }
+
+        /* Whether the model wants see-through texels, and where their alpha should come from.
+         *
+         * The game cuts geometry out with ALPHA_TEST: the pixel shader discards wherever the alpha it
+         * reads, times DIFFUSE_TINT.w and the instance's opacity (1 unless a ModelReference lowers
+         * it), falls under a half. Without the feature there is no discard at all, and the texels
+         * an exporter left black behind the alpha draw as they are. Over six shipped levels, 287 of the 455
+         * non-decal environment materials that do it read the base colour's own alpha; the rest,
+         * grilles mostly, carry a separate greyscale map, and 146 of those 168 read it from its
+         * colour channels (SEPARATE_ALPHA_MAP_USE_GREEN_CHANNEL) rather than from its alpha.
+         *
+         * A model says so with an opacity texture (OBJ map_d, FBX transparency) or a glTF alphaMode
+         * of MASK or BLEND - never with its opacity factor alone, which OBJ exports routinely get
+         * backwards: Sponza writes d 0 on every one of its solid materials. A mask that is missing,
+         * or is the base colour itself, leaves the cut-out on the base colour's alpha, which is
+         * where nearly every exporter that writes a separate mask also puts it. */
+        private static CutOutSource PlanCutOut(Assimp.Material source, Plan plan)
+        {
+            bool blended;
+            if (!DeclaresCutOut(source, out blended)) return CutOutSource.None;
+
+            PlannedTexture diffuse = plan.Textures.FirstOrDefault(o => o.Role.Sampler == "DIFFUSE_MAP" && o.Usable);
+            PlannedTexture mask = plan.Textures.FirstOrDefault(o => o.Role.Sampler == "SEPARATE_ALPHA_MAP");
+
+            if (blended)
+                plan.Notes.Add("This model material is alpha blended. Environment materials can't blend, so it's been set up to cut out wherever it is less than half opaque instead.");
+
+            if (mask != null && mask.Usable && !SameImage(mask, diffuse))
+                return CutOutSource.OpacityMap;
+            if (diffuse == null)
+                return CutOutSource.None;
+
+            if (mask != null && mask.Usable)
+                mask.Problem = "this is the base colour, whose own alpha is used for the cut-out";
+            else if (mask != null)
+                plan.Notes.Add("The opacity map " + mask.SourceLabel + " can't be used (" + mask.Problem + "), so the cut-out comes from the base colour's own alpha. If that has none, this will draw solid.");
+            return CutOutSource.BaseColourAlpha;
+        }
+
+        /* The nearest shipped permutation can leave out what the cut-out was planned on: the alpha
+         * test itself, or the separate map, in which case the base colour's alpha is all that is left. */
+        private static void ReconcileCutOut(Plan plan, SHADER_LIST family, long mask)
+        {
+            if (plan.CutOut == CutOutSource.None) return;
+
+            int alphaTest = FeatureBit(family, "ALPHA_TEST");
+            if (alphaTest == -1 || (mask & (1L << alphaTest)) == 0)
+            {
+                plan.CutOut = CutOutSource.None;
+                plan.Notes.Add("This model material is see-through in places, but no shader with alpha testing is available here for it, so it will draw solid.");
+                return;
+            }
+
+            if (plan.CutOut == CutOutSource.OpacityMap && !plan.Textures.Any(o => o.Usable && o.Role.Sampler == "SEPARATE_ALPHA_MAP"))
+            {
+                plan.CutOut = plan.Textures.Any(o => o.Usable && o.Role.Sampler == "DIFFUSE_MAP") ? CutOutSource.BaseColourAlpha : CutOutSource.None;
+                plan.Notes.Add("The nearest shader has no separate alpha map, so the cut-out comes from the base colour's own alpha instead of the opacity map. If that has none, this will draw solid.");
+            }
+        }
+
+        private static bool DeclaresCutOut(Assimp.Material source, out bool blended)
+        {
+            blended = false;
+            if (source == null) return false;
+
+            TextureSlot slot;
+            if (source.GetMaterialTexture(TextureType.Opacity, 0, out slot) && !string.IsNullOrEmpty(slot.FilePath))
+                return true;
+
+            foreach (MaterialProperty property in source.GetAllProperties())
+            {
+                if (property.Name != "$mat.gltf.alphaMode" || property.PropertyType != PropertyType.String) continue;
+                string mode = property.GetStringValue();
+                blended = string.Equals(mode, "BLEND", StringComparison.OrdinalIgnoreCase);
+                return blended || string.Equals(mode, "MASK", StringComparison.OrdinalIgnoreCase);
+            }
+            return false;
+        }
+
+        private static bool SameImage(PlannedTexture a, PlannedTexture b)
+        {
+            if (a == null || b == null) return false;
+            if (a.Embedded != null || b.Embedded != null) return ReferenceEquals(a.Embedded, b.Embedded);
+            return a.SourcePath != null && string.Equals(a.SourcePath, b.SourcePath, StringComparison.OrdinalIgnoreCase);
         }
 
         /* Where the image actually is: embedded in the file (glTF binary and FBX both do this), or a
@@ -346,24 +443,68 @@ namespace OpenCAGE
 
             try
             {
+                int width, height;
                 if (planned.Embedded != null)
                 {
                     if (planned.Embedded.HasNonCompressedData)
                         return planned.Embedded.Width == part.Width && planned.Embedded.Height == part.Height;
                     if (!planned.Embedded.HasCompressedData) return false;
                     using (MemoryStream stream = new MemoryStream(planned.Embedded.CompressedData))
-                    using (System.Drawing.Image image = System.Drawing.Image.FromStream(stream, false, false))
-                        return image.Width == part.Width && image.Height == part.Height;
+                        if (!TryReadSize(stream, planned.Embedded.CompressedFormatHint, out width, out height)) return false;
                 }
-
-                if (planned.SourcePath == null || !File.Exists(planned.SourcePath)) return false;
-                using (FileStream stream = File.OpenRead(planned.SourcePath))
-                using (System.Drawing.Image image = System.Drawing.Image.FromStream(stream, false, false))
-                    return image.Width == part.Width && image.Height == part.Height;
+                else
+                {
+                    if (planned.SourcePath == null || !File.Exists(planned.SourcePath)) return false;
+                    using (FileStream stream = File.OpenRead(planned.SourcePath))
+                        if (!TryReadSize(stream, Path.GetExtension(planned.SourcePath), out width, out height)) return false;
+                }
+                return width == part.Width && height == part.Height;
             }
             catch
             {
                 return false;
+            }
+        }
+
+        /* An image's pixel size without decoding it. System.Drawing reads neither TGA nor DDS - and
+         * TGA is what a good share of models ship with (every Sponza texture is one) - so a failed read
+         * there made every TGA texture look new, and a re-import brought all of them in again as
+         * "_1" copies. Both formats keep the size at a fixed place in the header. */
+        private static bool TryReadSize(Stream stream, string kind, out int width, out int height)
+        {
+            width = height = 0;
+            byte[] header = new byte[20];
+            int read = 0;
+            while (read < header.Length)
+            {
+                int got = stream.Read(header, read, header.Length - read);
+                if (got <= 0) break;
+                read += got;
+            }
+
+            //"DDS " then DDS_HEADER: dwSize, dwFlags, dwHeight, dwWidth
+            if (read >= 20 && header[0] == 'D' && header[1] == 'D' && header[2] == 'S' && header[3] == ' ')
+            {
+                height = BitConverter.ToInt32(header, 12);
+                width = BitConverter.ToInt32(header, 16);
+                return width > 0 && height > 0;
+            }
+
+            //TGA has no signature, so only a file that says it is one is read as one
+            if (string.Equals((kind ?? "").TrimStart('.'), "tga", StringComparison.OrdinalIgnoreCase))
+            {
+                if (read < 18) return false;
+                width = BitConverter.ToUInt16(header, 12);
+                height = BitConverter.ToUInt16(header, 14);
+                return width > 0 && height > 0;
+            }
+
+            stream.Seek(0, SeekOrigin.Begin);
+            using (System.Drawing.Image image = System.Drawing.Image.FromStream(stream, false, false))
+            {
+                width = image.Width;
+                height = image.Height;
+                return true;
             }
         }
 
@@ -481,6 +622,8 @@ namespace OpenCAGE
 
             SetIf(ref mask, family, "DOUBLE_SIDED", source != null && source.HasTwoSided && source.IsTwoSided);
             SetIf(ref mask, family, "VERTEX_COLOUR", mesh != null && mesh.VertexColorChannelCount > 0);
+            SetIf(ref mask, family, "ALPHA_TEST", plan.CutOut != CutOutSource.None);
+            SetIf(ref mask, family, "SEPARATE_ALPHA_MAP_USE_GREEN_CHANNEL", plan.CutOut == CutOutSource.OpacityMap);
 
             /* Emissive is deliberately left alone. CA_ENVIRONMENT has an EMISSIVE feature but no
              * emissive sampler, so a model's emissive MAP cannot be carried at all - and a glTF that
@@ -548,17 +691,29 @@ namespace OpenCAGE
                 if (bit != -1) samplerBits |= 1L << bit;
             }
 
+            /* Alpha testing has no texture of its own, but it is what decides whether a plant draws as
+             * a plant or as a black card - and turned on where nobody asked for it, it punches holes
+             * wherever a base colour happens to carry alpha for some other reason. So it weighs about
+             * as much as a map either way. The green-channel bit only matters while the separate alpha
+             * map is kept: without it that map is read from its alpha, which a greyscale mask has none of. */
+            int alphaTestBit = FeatureBit(family, "ALPHA_TEST");
+            int greenBit = FeatureBit(family, "SEPARATE_ALPHA_MAP_USE_GREEN_CHANNEL");
+            int separateAlphaBit = FeatureBit(family, "SEPARATE_ALPHA");
+
             long best = 0;
             int bestCost = int.MaxValue;
             foreach (ShaderPermutationService.Permutation permutation in available)
             {
                 int cost = 0;
                 long diff = permutation.Mask ^ wanted;
+                bool bothSeparateAlpha = separateAlphaBit != -1 && (permutation.Mask & wanted & (1L << separateAlphaBit)) != 0;
                 for (int b = 0; b < 64; b++)
                 {
                     long bit = 1L << b;
                     if ((diff & bit) == 0) continue;
-                    if ((samplerBits & bit) == 0) cost += 1;                       //not about a texture at all
+                    if (b == alphaTestBit) cost += 50;                             //cut out, or a solid card
+                    else if (b == greenBit && bothSeparateAlpha) cost += 50;      //the mask read from the wrong channel
+                    else if ((samplerBits & bit) == 0) cost += 1;                  //not about a texture at all
                     else if ((permutation.Mask & bit) != 0) cost += 100;           //wants a map we do not have
                     else cost += 8;                                               //drops a map we do have
                 }
