@@ -237,16 +237,18 @@ namespace OpenCAGE
 
         private static void PaintFilter(CheckBox box, Want want)
         {
+            //ControlText is black, which disappears on the dark theme
+            Color text = Theming.ThemeManager.IsDark ? Theming.ThemeColours.Text : SystemColors.ControlText;
             switch (want)
             {
                 case Want.On:
                     box.CheckState = CheckState.Checked;
-                    box.ForeColor = SystemColors.ControlText;
+                    box.ForeColor = text;
                     box.Font = new Font(box.Font, FontStyle.Bold);
                     break;
                 case Want.Off:
                     box.CheckState = CheckState.Unchecked;
-                    box.ForeColor = SystemColors.ControlText;
+                    box.ForeColor = text;
                     box.Font = new Font(box.Font, FontStyle.Strikeout);
                     break;
                 default:

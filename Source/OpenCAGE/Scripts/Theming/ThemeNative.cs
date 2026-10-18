@@ -78,6 +78,13 @@ namespace OpenCAGE.Theming
             get { return BuildNumber >= BuildDarkModeSupported; }
         }
 
+        /// <summary>
+        /// True while the process really is in dark mode at the Windows level, so the DarkMode_* control
+        /// classes take. Stronger than <see cref="IsSupported"/>: the opt-in goes through ordinals that can
+        /// still fail to resolve, and then Windows keeps drawing its controls light whatever we ask for.
+        /// </summary>
+        public static bool IsAppDark { get; private set; }
+
         private static int BuildNumber
         {
             get
@@ -149,6 +156,7 @@ namespace OpenCAGE.Theming
         public static void SetAppDarkMode(bool dark)
         {
             Resolve();
+            IsAppDark = false;
 
             try
             {
@@ -161,6 +169,8 @@ namespace OpenCAGE.Theming
                     _refreshImmersiveColorPolicyState();
                 if (_flushMenuThemes != null)
                     _flushMenuThemes();
+
+                IsAppDark = dark && (_setPreferredAppMode != null || _allowDarkModeForApp != null) && _allowDarkModeForWindow != null;
             }
             catch { }
         }

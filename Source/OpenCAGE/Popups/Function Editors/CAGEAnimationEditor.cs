@@ -182,6 +182,10 @@ namespace OpenCAGE
             int treeH = Math.Max(80, availH - TRACKS_HEADER_H - 2);
             trackTree.SetBounds(originX, treeTop, treeW, treeH);
             animHost.SetBounds(originX + treeW + 8, originY, hostW, availH);
+            //The graph is sized in pixels rather than stretched, so it has to be told. It is built before the
+            //window's first layout, and kept the designer's 625x289 in the corner of a far bigger host until
+            //something happened to resize the window or rebuild the graph.
+            SyncHostedEditorSizes();
 
             int sideH = Math.Max(80, availH);
             animKeyframeData.SetBounds(sideX, originY, sideW, Math.Min(108, sideH));

@@ -3710,7 +3710,7 @@ namespace OpenCAGE
                 _behaviourEditor = Process.Start(new ProcessStartInfo
                 {
                     FileName = editorExe,
-                    Arguments = "-pathToAI=" + Program.QuoteArgument(Singleton.PathToAI),
+                    Arguments = "-pathToAI=" + Program.QuoteArgument(Singleton.PathToAI) + (Theming.ThemeManager.IsDark ? " -darkMode=true" : ""),
                     WorkingDirectory = Path.GetDirectoryName(editorExe),
                 });
             }

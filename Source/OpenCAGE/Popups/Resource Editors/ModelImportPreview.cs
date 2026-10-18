@@ -106,6 +106,7 @@ namespace AlienPAK
 
             hierarchyTree.CheckBoxes = true;
             _previewControl = (ModelImportPreviewWPF)previewHost.Child;
+            OpenCAGE.Theming.WpfTheme.Follow(_previewControl);
             BuildStructureTree();
             hierarchyTree.ExpandAll();
             UpdateStatusLabel();
@@ -269,7 +270,11 @@ namespace AlienPAK
             _scaleBox.TextChanged += (s, e) =>
             {
                 _plan.Scale = ParseScale(_scaleBox.Text);
-                _scaleBox.ForeColor = _plan.Scale > 0 ? SystemColors.WindowText : System.Drawing.Color.Firebrick;
+                //WindowText is black, which all but vanished on the dark theme's input background - and so did Firebrick
+                bool dark = OpenCAGE.Theming.ThemeManager.IsDark;
+                _scaleBox.ForeColor = _plan.Scale > 0
+                    ? (dark ? OpenCAGE.Theming.ThemeColours.Text : SystemColors.WindowText)
+                    : (dark ? System.Drawing.Color.FromArgb(244, 120, 110) : System.Drawing.Color.Firebrick);
                 UpdatePreviewFromSelection();
             };
 

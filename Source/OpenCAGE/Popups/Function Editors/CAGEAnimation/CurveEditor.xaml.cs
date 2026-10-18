@@ -221,12 +221,25 @@ namespace OpenCAGE
 
         private static readonly Brush EventBrush = CreateFrozenBrush(0xE6, 0xC2, 0x00);
         private static readonly Brush EventHoverBrush = CreateFrozenBrush(0xF0, 0xC8, 0x00);
-        private static readonly Brush EventSelectedBrush = CreateFrozenBrush(0x8A, 0x6A, 0x00);
-        private static readonly Brush EventLabelBrush = CreateFrozenBrush(0x8A, 0x6E, 0x00);
+        /* The graph is drawn rather than templated, so dark mode can't reach it: each brush that was picked for a white plot
+         * has a dark-plot counterpart, chosen when it is used. Darker-than-the-marker labels and selections become lighter
+         * ones, so they still read against the dark plot. */
+        private static bool Dark => Theming.ThemeManager.IsDark;
+
+        private static readonly Brush EventSelectedBrushLight = CreateFrozenBrush(0x8A, 0x6A, 0x00);
+        private static readonly Brush EventSelectedBrushDark = CreateFrozenBrush(0xFF, 0xE0, 0x5A);
+        private static Brush EventSelectedBrush => Dark ? EventSelectedBrushDark : EventSelectedBrushLight;
+        private static readonly Brush EventLabelBrushLight = CreateFrozenBrush(0x8A, 0x6E, 0x00);
+        private static readonly Brush EventLabelBrushDark = CreateFrozenBrush(0xE6, 0xC2, 0x00);
+        private static Brush EventLabelBrush => Dark ? EventLabelBrushDark : EventLabelBrushLight;
         private static readonly Brush GuidEventBrush = CreateFrozenBrush(0x2E, 0x7D, 0xD8);
         private static readonly Brush GuidEventHoverBrush = CreateFrozenBrush(0x4A, 0x9A, 0xF0);
-        private static readonly Brush GuidEventSelectedBrush = CreateFrozenBrush(0x1A, 0x4F, 0x9A);
-        private static readonly Brush GuidEventLabelBrush = CreateFrozenBrush(0x1A, 0x55, 0xA8);
+        private static readonly Brush GuidEventSelectedBrushLight = CreateFrozenBrush(0x1A, 0x4F, 0x9A);
+        private static readonly Brush GuidEventSelectedBrushDark = CreateFrozenBrush(0x8C, 0xC4, 0xFF);
+        private static Brush GuidEventSelectedBrush => Dark ? GuidEventSelectedBrushDark : GuidEventSelectedBrushLight;
+        private static readonly Brush GuidEventLabelBrushLight = CreateFrozenBrush(0x1A, 0x55, 0xA8);
+        private static readonly Brush GuidEventLabelBrushDark = CreateFrozenBrush(0x6C, 0xAC, 0xF0);
+        private static Brush GuidEventLabelBrush => Dark ? GuidEventLabelBrushDark : GuidEventLabelBrushLight;
         private static readonly Brush StringLaneFill = CreateFrozenBrush(0xE6, 0xC2, 0x00, 0x28);
         private static readonly Brush StringLaneFillHover = CreateFrozenBrush(0xE6, 0xC2, 0x00, 0x40);
         private static readonly Brush StringLaneFillSelected = CreateFrozenBrush(0xE6, 0xC2, 0x00, 0x55);
@@ -236,9 +249,15 @@ namespace OpenCAGE
         private static readonly Brush AnimLengthPlotFill = CreateFrozenBrush(0x40, 0xC0, 0x60, 0x18);
         private static readonly Brush AnimLengthHandleBrush = CreateFrozenBrush(0x2E, 0x9A, 0x4A);
         private static readonly Brush AnimLengthHandleHoverBrush = CreateFrozenBrush(0x1E, 0x7A, 0x38);
-        private static readonly Brush LaneResizeFill = CreateFrozenBrush(0xD0, 0xD0, 0xD0);
-        private static readonly Brush LaneResizeFillHover = CreateFrozenBrush(0xB0, 0xB0, 0xB0);
-        private static readonly Brush LaneResizeGrip = CreateFrozenBrush(0x78, 0x78, 0x78);
+        private static readonly Brush LaneResizeFillLight = CreateFrozenBrush(0xD0, 0xD0, 0xD0);
+        private static readonly Brush LaneResizeFillDark = CreateFrozenBrush(0x3F, 0x3F, 0x46);
+        private static Brush LaneResizeFill => Dark ? LaneResizeFillDark : LaneResizeFillLight;
+        private static readonly Brush LaneResizeFillHoverLight = CreateFrozenBrush(0xB0, 0xB0, 0xB0);
+        private static readonly Brush LaneResizeFillHoverDark = CreateFrozenBrush(0x55, 0x55, 0x5B);
+        private static Brush LaneResizeFillHover => Dark ? LaneResizeFillHoverDark : LaneResizeFillHoverLight;
+        private static readonly Brush LaneResizeGripLight = CreateFrozenBrush(0x78, 0x78, 0x78);
+        private static readonly Brush LaneResizeGripDark = CreateFrozenBrush(0x9E, 0x9E, 0x9E);
+        private static Brush LaneResizeGrip => Dark ? LaneResizeGripDark : LaneResizeGripLight;
         private static readonly DoubleCollection EventDash = CreateEventDash();
 
         private static Brush CreateFrozenBrush(byte r, byte g, byte b)
@@ -292,6 +311,11 @@ namespace OpenCAGE
             border.Width = w;
             border.Height = h;
             Focusable = true;
+            if (Dark)
+            {
+                border.Background = PlotBgDark;
+                border.BorderBrush = CreateFrozenBrush(0x3F, 0x3F, 0x46);
+            }
 
             this.SizeChanged += (s, e) =>
             {
@@ -825,10 +849,18 @@ namespace OpenCAGE
 
         #region RENDER
 
-        private static readonly Brush GridBrush = new SolidColorBrush(Color.FromRgb(0xE1, 0xE1, 0xE1));
-        private static readonly Brush AxisBrush = new SolidColorBrush(Color.FromRgb(0x9A, 0x9A, 0x9A));
-        private static readonly Brush LabelBrush = new SolidColorBrush(Color.FromRgb(0x55, 0x55, 0x55));
-        private static readonly Brush PlotBg = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF));
+        private static readonly Brush GridBrushLight = new SolidColorBrush(Color.FromRgb(0xE1, 0xE1, 0xE1));
+        private static readonly Brush GridBrushDark = CreateFrozenBrush(0x3A, 0x3A, 0x3F);
+        private static Brush GridBrush => Dark ? GridBrushDark : GridBrushLight;
+        private static readonly Brush AxisBrushLight = new SolidColorBrush(Color.FromRgb(0x9A, 0x9A, 0x9A));
+        private static readonly Brush AxisBrushDark = CreateFrozenBrush(0x6A, 0x6A, 0x72);
+        private static Brush AxisBrush => Dark ? AxisBrushDark : AxisBrushLight;
+        private static readonly Brush LabelBrushLight = new SolidColorBrush(Color.FromRgb(0x55, 0x55, 0x55));
+        private static readonly Brush LabelBrushDark = CreateFrozenBrush(0xB4, 0xB4, 0xB8);
+        private static Brush LabelBrush => Dark ? LabelBrushDark : LabelBrushLight;
+        private static readonly Brush PlotBgLight = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0xFF));
+        private static readonly Brush PlotBgDark = CreateFrozenBrush(0x25, 0x25, 0x26);
+        private static Brush PlotBg => Dark ? PlotBgDark : PlotBgLight;
 
         /// <summary>Clipped drawing surface for curves/events so zoom/pan cannot spill past the plot edges.</summary>
         private Canvas _plotLayer;
@@ -1369,7 +1401,7 @@ namespace OpenCAGE
             _tanInScreen = new Point(ToX(inT, p), ToY(inV, p));
             _hasTanHandles = true;
 
-            Brush handleBrush = new SolidColorBrush(Color.FromRgb(0x20, 0x20, 0x20));
+            Brush handleBrush = Dark ? new SolidColorBrush(Color.FromRgb(0xD8, 0xD8, 0xD8)) : new SolidColorBrush(Color.FromRgb(0x20, 0x20, 0x20));
 
             Point originLocal = new Point(kx - p.Left, ky - p.Top);
             Point inLocal = new Point(_tanInScreen.X - p.Left, _tanInScreen.Y - p.Top);

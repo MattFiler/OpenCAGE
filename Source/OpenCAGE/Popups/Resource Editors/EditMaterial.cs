@@ -51,6 +51,7 @@ namespace OpenCAGE
             this.Text = "Material Editor";
 
             _controls = (MaterialInfoWPF)elementHost1.Child;
+            Theming.WpfTheme.Follow(_controls);
             _controls.OnSamplerSelected += OnSamplerSelected;
             _controls.OnPickTexture += OnPickTexture;
 

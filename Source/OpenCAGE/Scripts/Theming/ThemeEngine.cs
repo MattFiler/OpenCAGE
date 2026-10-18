@@ -275,8 +275,9 @@ namespace OpenCAGE.Theming
         /// against the surface behind it is enough separation, and it leaves nothing bright to draw.
         /// (FixedSingle was tried first and is worse: WS_BORDER paints a hard 1px line from a system
         /// colour that stays light, turning a soft grey edge into a bright one.)
+        /// Edit boxes are the exception, and pass FixedSingle as <paramref name="flat"/> - see ApplyDark.
         /// </summary>
-        private static void FlattenBorder(Control control, OriginalState state)
+        private static void FlattenBorder(Control control, OriginalState state, BorderStyle flat = BorderStyle.None)
         {
             //BorderStyle isn't declared on any shared base, so reflection is the only way to reach it
             //across ListView, TreeView and ListBox without a cast per type
@@ -291,7 +292,7 @@ namespace OpenCAGE.Theming
             if (!state.BorderStyle.HasValue)
                 state.BorderStyle = current;
 
-            property.SetValue(control, BorderStyle.None, null);
+            property.SetValue(control, flat, null);
         }
 
         private static void RestoreBorder(Control control, OriginalState state)
@@ -344,12 +345,24 @@ namespace OpenCAGE.Theming
             ComboBox comboBox = control as ComboBox;
             if (comboBox != null)
             {
-                //A DropDownList combo renders its face and button from the visual style and ignores
-                //BackColor entirely - which is why they stayed white. FlatStyle.Flat hands the drawing
-                //back to WinForms, where the colours below are actually used.
-                if (!state.FlatStyle.HasValue)
-                    state.FlatStyle = comboBox.FlatStyle;
-                comboBox.FlatStyle = FlatStyle.Flat;
+                /* With the process in dark mode, DarkMode_CFD draws the whole combo dark by itself - face,
+                 * border, drop button, the disabled state and the open list - so it keeps its own style.
+                 * Forcing FlatStyle.Flat on top handed the face to WinForms' flat painter instead, which was
+                 * worse twice over. It fills the drop button with the light system colour and rings the box
+                 * in white. And it takes its size from WinForms' copy of the bounds, which isn't updated yet
+                 * when a combo repaints itself in the middle of being resized: Create a Mod's combos are made
+                 * 74px wide and widened once the window is shown, so they kept a light button and a clipped
+                 * face at the 74px mark until something repainted them whole.
+                 * Flat is still the fallback where Windows won't theme the combo, since a DropDownList
+                 * ignores BackColor and would otherwise stay white - repainted whole on every resize. */
+                if (!ThemeNative.IsAppDark)
+                {
+                    if (!state.FlatStyle.HasValue)
+                        state.FlatStyle = comboBox.FlatStyle;
+                    comboBox.FlatStyle = FlatStyle.Flat;
+                    comboBox.SizeChanged -= RepaintFlatCombo;
+                    comboBox.SizeChanged += RepaintFlatCombo;
+                }
 
                 SetBack(comboBox, state, ThemeColours.Input);
                 comboBox.ForeColor = ThemeColours.Text;
@@ -361,11 +374,23 @@ namespace OpenCAGE.Theming
             if (textBox != null)
             {
                 //Measured at (155,155,155) before this - the 3D client edge is drawn by DefWindowProc
-                //from system metrics, so DarkMode_CFD (which only reaches the client area) can't touch it
-                FlattenBorder(textBox, state);
+                //from system metrics, so DarkMode_CFD (which only reaches the client area) can't touch it.
+                //A single-line box sizes itself to its font plus its border, though, so taking the border
+                //away entirely shrank every one to the bare text height - 13px boxes beside 23px buttons,
+                //like the model editor's search. FixedSingle keeps the height, and an edit box draws that
+                //line from DarkMode_CFD: (100,100,100) on the (51,51,55) fill, as the boxes that were
+                //FixedSingle from the start already showed.
+                TextBox plain = textBox as TextBox;
+                FlattenBorder(textBox, state, plain != null && !plain.Multiline ? BorderStyle.FixedSingle : BorderStyle.None);
                 SetBack(textBox, state, textBox.ReadOnly ? ThemeColours.InputDisabled : ThemeColours.Input);
                 textBox.ForeColor = ThemeColours.Text;
-                ThemeNative.SetControlTheme(textBox, ThemeNative.ThemeClass.Edit, true);
+
+                //DarkMode_CFD themes an edit's border but never its scrollbars, so every multiline box that
+                //scrolls kept light ones - the mod manager's details, a mod's description. Those have no border
+                //left by this point (they all start Fixed3D or None), so they take the explorer class instead,
+                //which is the one that reaches scrollbars.
+                bool scrolls = plain != null && plain.Multiline && plain.ScrollBars != ScrollBars.None;
+                ThemeNative.SetControlTheme(textBox, scrolls ? ThemeNative.ThemeClass.Explorer : ThemeNative.ThemeClass.Edit, true);
                 return;
             }
 
@@ -488,6 +513,13 @@ namespace OpenCAGE.Theming
                 //Containers take whatever they are sitting on, so nesting doesn't build up banding
                 SetBack(control, state, control.Parent != null ? control.Parent.BackColor : ThemeColours.Surface);
                 control.ForeColor = ThemeColours.Text;
+
+                //A scrolling container draws its scrollbars itself, from the window's theme, so it needs the
+                //same dark class as a list - the model editor's render filter and render flag panels kept
+                //light scrollbars beside the dark ones on every tree and list
+                ScrollableControl scrollable = control as ScrollableControl;
+                if (scrollable != null && scrollable.AutoScroll)
+                    ThemeNative.SetControlTheme(control, ThemeNative.ThemeClass.Explorer, true);
                 return;
             }
 
@@ -532,6 +564,18 @@ namespace OpenCAGE.Theming
                 ThemeNative.SetControlTheme(control, ThemeNative.ThemeClass.Explorer, true);
                 ThemePainters.AttachDisabledCheckText((ButtonBase)control);
             }
+        }
+
+        /// <summary>
+        /// A flat combo paints its border and drop button from WinForms' idea of its size, which lags the
+        /// window's own while it is being resized: the combo repaints itself right then, at the old size,
+        /// and nothing asks for another paint once the size has caught up. Asking here clears them.
+        /// </summary>
+        private static void RepaintFlatCombo(object sender, EventArgs e)
+        {
+            Control control = sender as Control;
+            if (control != null && control.IsHandleCreated)
+                control.Invalidate();
         }
 
         private static void ApplyButton(Button button, OriginalState state)
@@ -736,7 +780,10 @@ namespace OpenCAGE.Theming
 
             ComboBox comboBox = control as ComboBox;
             if (comboBox != null && state.FlatStyle.HasValue)
+            {
                 comboBox.FlatStyle = state.FlatStyle.Value;
+                comboBox.SizeChanged -= RepaintFlatCombo;
+            }
 
             TabPage tabPage = control as TabPage;
             if (tabPage != null)

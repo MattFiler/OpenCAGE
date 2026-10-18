@@ -1005,6 +1005,7 @@
     <Compile Include="Scripts\Theming\ThemeManager.cs" />
     <Compile Include="Scripts\Theming\ThemeNative.cs" />
     <Compile Include="Scripts\Theming\ThemePainters.cs" />
+    <Compile Include="Scripts\Theming\WpfTheme.cs" />
     <Compile Include="Scripts\MaterialApplier.cs" />
     <Compile Include="Scripts\MaterialConsistency.cs" />
     <Compile Include="Scripts\MaterialGenerator.cs" />

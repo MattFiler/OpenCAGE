@@ -271,6 +271,8 @@ namespace OpenCAGE
                 _preview.Owner = this;
                 _preview.FormClosed += (s, args) => _preview = null;
                 _preview.Show();
+                //Painted before the clip loads on this thread, or it shows unpainted (white in dark mode) until skinning is done
+                _preview.Update();
             }
             _preview.Show(clip);
             _preview.BringToFront();

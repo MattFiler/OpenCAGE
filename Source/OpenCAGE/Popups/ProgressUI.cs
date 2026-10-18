@@ -276,6 +276,11 @@ namespace OpenCAGE
             ShowInTaskbar = false;
             Show();
             KeepOnTop();
+
+            /* Paint it now. The caller usually goes straight on to blocking work on this thread, so the
+               queued WM_PAINTs would not be handled until it finished - and an unpainted progress bar is
+               its class's white background, which in dark mode sat there as a white bar the whole time. */
+            Update();
         }
 
         public void DoRefresh()

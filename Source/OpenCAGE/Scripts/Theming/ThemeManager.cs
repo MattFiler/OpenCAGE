@@ -151,6 +151,7 @@ namespace OpenCAGE.Theming
                  * light. Only the strips still holding OUR renderer are touched: the docking library
                  * pins its own onto the menus it owns and puts those back itself. */
                 if (previous != null) ReleaseStrips(previous);
+                ThemeToolStripRenderer.ReleaseScrollButtons();
                 return;
             }
 

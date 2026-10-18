@@ -789,6 +789,9 @@ namespace OpenCAGE
             _preview = new AnimationPreview(_animations);
             _preview.FormClosed += (s, args) => _preview = null;
             _preview.Show();
+            //Paint it before the mesh and rig load on this thread: until then the new window sat there unpainted - white,
+            //in dark mode - for as long as the skinning took
+            _preview.Update();
             _preview.Show(clip);
         }
 

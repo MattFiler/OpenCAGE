@@ -30,7 +30,9 @@ namespace OpenCAGE.Popups.UserControls
         private readonly VScrollBar _scroll = new VScrollBar { Dock = DockStyle.Right, Width = 15, Visible = false };
         private readonly ToolTip _tip = new ToolTip { InitialDelay = 220, ReshowDelay = 120 };
 
-        private float _duration;
+        //1 rather than 0 before a clip is set, as SetClip falls back to: the ruler divides by it, and a timeline painted while
+        //empty (the preview paints before its first clip loads) drew at NaN and threw an OverflowException out of GDI+
+        private float _duration = 1;
         private float _clipDuration;
         private int _frameCount;
         private float _frameDuration = 1 / 30.0f;
