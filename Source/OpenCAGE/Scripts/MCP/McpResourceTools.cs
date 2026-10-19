@@ -24,7 +24,7 @@ namespace OpenCAGE.MCP
     /// level's collision proxies and physics systems they point at, and a Character's appearance.
     /// </summary>
     /// <remarks>
-    /// Resource changes go through the editor's own undo record for the Edit Resources dialog
+    /// Resource changes go through the editor's own undo record for the inspector's Resources dialog
     /// (<see cref="ResourceSessionEdit"/>), so each call is one step exactly as a dialog session is. A changed
     /// collision mapping is written as a new row rather than into the shared one, so the step undoes cleanly and
     /// other entities sharing the old row keep it. New collision proxies and physics systems go into the level's
@@ -53,7 +53,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "set_renderable",
                 Title = "Set renderable",
-                Description = "Change the model an entity draws (a ModelReference or another renderable), and/or its submeshes' materials, or remove its renderable - for one entity, several ('entities'), or every ModelReference in the composite. The model's LOD0 submeshes are drawn, lower LODs hung off the first (at most 255 per entity: the game draws no more). One undo step, like the inspector's Edit Resources. " +
+                Description = "Change the model an entity draws (a ModelReference or another renderable), and/or its submeshes' materials, or remove its renderable - for one entity, several ('entities'), or every ModelReference in the composite. The model's LOD0 submeshes are drawn, lower LODs hung off the first (at most 255 per entity: the game draws no more). One undo step, like the inspector's Resources button. " +
                     "It edits the entity in its composite, so every placement of that composite changes (the result says how many): for one placement, set a material mapping on the instance placing it (edit_material_mapping, then set_parameters 'mapping' on that instance or an alias of it), or a ModelReference's 'material' parameter for a one-submesh model. Reaches the game after save_level build=true (the viewport shows it at once). Generated renderables (fog, particles) are refused.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("composite", "The composite holding the entity (path or id).", required: true),
@@ -93,7 +93,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "set_physics_system",
                 Title = "Set physics system",
-                Description = "Bind a PhysicsSystem entity to one of the level's physics systems (index or name, from list_physics_systems). One undo step, like the inspector's Edit Resources; reaches the game after save_level build=true. It cannot be left unbound: saving binds every PhysicsSystem entity to its system_index parameter's system (0 without one), so 'none' and remove are refused; delete the entity to drop it. import_physics_system makes a new system from a mesh.",
+                Description = "Bind a PhysicsSystem entity to one of the level's physics systems (index or name, from list_physics_systems). One undo step, like the inspector's Resources button; reaches the game after save_level build=true. It cannot be left unbound: saving binds every PhysicsSystem entity to its system_index parameter's system (0 without one), so 'none' and remove are refused; delete the entity to drop it. import_physics_system makes a new system from a mesh.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("composite", "The composite holding the PhysicsSystem entity (path or id).", required: true),
                     McpSchema.String("entity", "The PhysicsSystem entity's id or name (default: the composite's only PhysicsSystem)."),
@@ -255,7 +255,7 @@ namespace OpenCAGE.MCP
             public Composite Composite;
             public FunctionEntity Entity;
             public FunctionType Function;
-            /// <summary>The Edit Resources dialog edits the "resource" parameter for types that declare one, the entity's own list otherwise.</summary>
+            /// <summary>The Resources dialog edits the "resource" parameter for types that declare one, the entity's own list otherwise.</summary>
             public bool ParameterMode;
             /// <summary>Why the editor would not let these resources be edited, or null.</summary>
             public string Blocked;
@@ -363,7 +363,7 @@ namespace OpenCAGE.MCP
         }
 
         /// <summary>
-        /// Change the entity's resource references as one undo step, through the Edit Resources dialog's own record.
+        /// Change the entity's resource references as one undo step, through the Resources dialog's own record.
         /// <paramref name="change"/> edits a copy of the list; <paramref name="first"/> are level-list changes that go
         /// in the same step, ahead of it. UI thread; call <see cref="McpEditor.RequireUndoIdle"/> first.
         /// </summary>

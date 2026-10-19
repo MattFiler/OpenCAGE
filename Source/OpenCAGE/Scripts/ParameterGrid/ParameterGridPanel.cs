@@ -809,7 +809,7 @@ namespace OpenCAGE
                 return false;
 
             Color current = targets[0].Descriptor.GetValue(targets[0].Proxy) is Color colour ? colour : Color.Black;
-            if (ColourPickerEditor.TryPick(current, out Color chosen))
+            if (ColourPickerEditor.TryPick(current, out Color chosen, targets.Select(o => (o.Proxy, o.Descriptor.Parameter))))
             {
                 foreach ((EntityParameterProxy proxy, ColourParameterDescriptor descriptor) in targets)
                     descriptor.SetValue(proxy, chosen);

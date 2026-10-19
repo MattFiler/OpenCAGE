@@ -1272,7 +1272,7 @@ namespace AlienPAK
                         Models.CS2.Component.LOD.Submesh submesh = ToSubmesh(scene.Meshes[plannedSubmesh.MeshIndex], plannedSubmesh.Transform, plannedSubmesh.Metadata, out List<string> submeshWarnings, plan.UnitScale, plan.Scale, plan.BoneNames);
                         if (submesh == null)
                         {
-                            warnings.Add(plannedSubmesh.MeshName + ": could not be converted (it needs at least 3 vertices, triangular faces, and no more than " + short.MaxValue + " vertices).");
+                            warnings.Add(plannedSubmesh.MeshName + ": could not be converted (it needs at least 3 vertices, triangular faces, and no more than " + ushort.MaxValue.ToString("N0") + " vertices and " + (ushort.MaxValue / 3).ToString("N0") + " triangles).");
                             continue;
                         }
                         foreach (string warning in submeshWarnings)

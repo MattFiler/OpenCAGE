@@ -27,7 +27,7 @@ namespace OpenCAGE.ConfigEditors
         public CharacterAssetEditor() : base(WindowClosesOn.COMMANDS_RELOAD)
         {
             InitializeComponent();
-            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/character-editor/");
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/character-editor/#asset-type");
 
             _assetData = new CustomCharacterAssetData(Singleton.PathToAI + "/DATA/CHR_INFO/CUSTOMCHARACTERASSETDATA.BIN");
 

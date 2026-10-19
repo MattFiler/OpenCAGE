@@ -119,6 +119,8 @@ namespace OpenCAGE.UnityConnection
             _duplicate.Enabled = packet.context_menu_has_selection;
             _delete.Enabled = packet.context_menu_has_selection;
             _focus.Enabled = packet.context_menu_can_focus;
+            //Z with nothing selected in the viewport frames all its geometry, and so does this
+            _focus.Text = packet.context_menu_focus_frames_all ? "Frame All" : "Focus on Selection";
             _snapToFloor.Enabled = packet.context_menu_can_snap_to_floor;
             _hide.Enabled = packet.context_menu_can_hide;
             _unhideAll.Enabled = packet.context_menu_can_unhide_all;

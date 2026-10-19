@@ -141,12 +141,100 @@ namespace OpenCAGE.UnityConnection
             return recorded;
         }
 
+        /* Gizmo drags still under way (Packet.transform_preview): each entity a drag is moving has its transform parameter
+           set to where the drag has it, so the inspector and Live Link follow along, and the value the level held is kept
+           here. It goes back before the drag's own edit is applied - so that edit's undo step starts from where the entity
+           really was - or when the drag ends without one. Nothing else is told: no undo step, nothing to save. */
+        private static readonly Dictionary<(Entity entity, ShortGuid parameter), (Composite composite, ParameterData held)> _previews =
+            new Dictionary<(Entity, ShortGuid), (Composite, ParameterData)>();
+
+        static ViewerParameterSync()
+        {
+            //A level loaded or closed takes its entities with it: nothing is left to put back
+            Singleton.OnLevelLoaded += content => _previews.Clear();
+            Singleton.OnLevelClosing += content => _previews.Clear();
+        }
+
+        private static bool ApplyPreview(Packet packet, CompositeBrowser commands, Composite composite, Entity entity)
+        {
+            //Animation Mode makes a keyframe of the drag, not a move of the entity
+            if (AnimationModeSession.Current != null)
+                return true;
+
+            foreach (SyncedParameter sync in packet.parameters)
+            {
+                if (sync == null || sync.removed || ParameterSync.GetDataType(sync) != DataType.TRANSFORM)
+                    continue;
+                ShortGuid paramName = new ShortGuid(sync.name);
+
+                if (packet.transform_preview != 1)
+                {
+                    if (EndPreview(entity, paramName))
+                        commands.CompositeDisplay?.EntityDisplay?.RefreshParameterGrid(entity, false);
+                    continue;
+                }
+
+                //An entity with no transform of its own yet gets one from the drag's edit, which also makes its inspector row
+                Parameter parameter = entity.GetParameter(paramName);
+                if (!(parameter?.content is cTransform))
+                    continue;
+                if (!_previews.ContainsKey((entity, paramName)))
+                    _previews[(entity, paramName)] = (composite, parameter.content);
+                parameter.content = ParameterSync.Unpack(sync, commands.Content);
+
+                commands.CompositeDisplay?.EntityDisplay?.RefreshParameterGrid(entity, false);
+                RuntimeUtilsConnection.LiveLink.QueueSoon(composite);
+            }
+            return true;
+        }
+
+        /* Put back the value a drag's previews replaced, if they did. True when there was one. */
+        private static bool EndPreview(Entity entity, ShortGuid paramName)
+        {
+            if (!_previews.TryGetValue((entity, paramName), out (Composite composite, ParameterData held) preview))
+                return false;
+            _previews.Remove((entity, paramName));
+            Parameter parameter = entity.GetParameter(paramName);
+            if (parameter != null)
+                parameter.content = preview.held;
+            RuntimeUtilsConnection.LiveLink.QueueSoon(preview.composite);
+            return true;
+        }
+
+        /// <summary>
+        /// The viewer has gone mid-drag, so no edit or end will come for what it was previewing: every entity is put back
+        /// as the level holds it. Any thread.
+        /// </summary>
+        public static void EndAllPreviews()
+        {
+            CommandsEditor editor = Singleton.Editor;
+            if (editor == null || editor.IsDisposed)
+                return;
+            if (editor.InvokeRequired)
+            {
+                editor.BeginInvoke(new Action(EndAllPreviews));
+                return;
+            }
+            foreach ((Entity entity, ShortGuid parameter) key in _previews.Keys.ToList())
+            {
+                EndPreview(key.entity, key.parameter);
+                editor.CompositeDisplay?.EntityDisplay?.RefreshParameterGrid(key.entity, false);
+            }
+        }
+
         private static bool ApplyCore(Packet packet)
         {
             CompositeBrowser commands = Singleton.Editor?.CompositeBrowser;
             //Level is there from the moment a load begins; its commands only once it is done
             if (commands?.Content == null || !commands.Content.IsLevelDataLoaded)
                 return false;
+
+            if (packet.transform_preview != 0)
+            {
+                Composite previewComposite = commands.Content.Level.Commands.GetComposite(new ShortGuid(packet.composite));
+                Entity previewEntity = previewComposite?.GetEntityByID(new ShortGuid(packet.entity));
+                return previewEntity != null && ApplyPreview(packet, commands, previewComposite, previewEntity);
+            }
 
             if (TryRecordAsAnimationKeyframe(packet))
                 return true;
@@ -178,6 +266,8 @@ namespace OpenCAGE.UnityConnection
                         continue;
 
                     ShortGuid paramName = new ShortGuid(sync.name);
+                    //The drag's previews go first: its step starts from where the entity really was
+                    EndPreview(entity, paramName);
                     Parameter previous = entity.GetParameter(paramName);
                     bool hadParam = previous != null;
                     ParameterData before = ParameterValues.Clone(previous?.content);

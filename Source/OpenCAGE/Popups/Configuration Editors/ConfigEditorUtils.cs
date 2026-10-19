@@ -373,7 +373,10 @@ namespace OpenCAGE.ConfigEditors
                 XmlElement leaf = TryGetDescendant(configs[i].Content, elementPath);
                 if (leaf?.InnerText == null)
                     continue;
-                combo.Text = leaf.InnerText;
+                if (combo.DropDownStyle == ComboBoxStyle.DropDownList)
+                    SelectListed(combo, leaf.InnerText);
+                else
+                    combo.Text = leaf.InnerText;
                 combo.Enabled = true;
                 foundValue = true;
 
@@ -386,6 +389,41 @@ namespace OpenCAGE.ConfigEditors
 
             if (!foundValue)
                 combo.Enabled = false;
+        }
+
+        // The value each fixed list was given because it didn't have it, to take out again when the next one is shown
+        static readonly ConditionalWeakTable<ComboBox, string> _unlistedComboValues = new ConditionalWeakTable<ComboBox, string>();
+
+        /* A fixed list (DropDownList) can only show what it holds, and saving writes what it shows: a value it doesn't have
+         * (a mod's own, say) would show, and save, the previous entry's instead. So it's added as it's written, for as long
+         * as it's shown. Matched exactly, not by Text, which picks the first item that matches ignoring case - unless
+         * ignoreCase asks for that, for a list the game reads ignoring case, whose caller keeps the file's spelling. */
+        public static void SelectListed(ComboBox combo, string value, bool ignoreCase = false)
+        {
+            if (_unlistedComboValues.TryGetValue(combo, out string unlisted))
+            {
+                combo.Items.Remove(unlisted);
+                _unlistedComboValues.Remove(combo);
+            }
+            if (value == null)
+                return;
+
+            object item = null;
+            foreach (object listed in combo.Items)
+            {
+                if (string.Equals(listed.ToString(), value, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+                {
+                    item = listed;
+                    break;
+                }
+            }
+            if (item == null)
+            {
+                combo.Items.Add(value);
+                _unlistedComboValues.Add(combo, value);
+                item = value;
+            }
+            combo.SelectedItem = item;
         }
 
         public static void SetText(List<BML> configs, TextBox textbox, params string[] elementPath)

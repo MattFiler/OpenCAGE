@@ -99,7 +99,7 @@ namespace OpenCAGE.UnityConnection
                 sb.Append(" | can=[");
                 if (packet.context_menu_has_selection) sb.Append("selection ");
                 if (packet.context_menu_can_paste) sb.Append("paste ");
-                if (packet.context_menu_can_focus) sb.Append("focus ");
+                if (packet.context_menu_can_focus) sb.Append(packet.context_menu_focus_frames_all ? "frameAll " : "focus ");
                 if (packet.context_menu_can_snap_to_floor) sb.Append("snap ");
                 if (packet.context_menu_can_hide) sb.Append("hide ");
                 if (packet.context_menu_can_unhide_all) sb.Append("unhide ");

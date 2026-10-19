@@ -81,6 +81,9 @@ namespace OpenCAGE.Modding
          * are combined with (mods win clashes), and what removing every mod puts back. No entry: the baseline is it. */
         [JsonProperty("own")] public Dictionary<string, string> Own = new Dictionary<string, string>();
         [JsonProperty("mods")] public List<InstalledMod> Mods = new List<InstalledMod>();
+        /* The enabled mods' ids in the order the last apply installed them. The list's order (each mod's Priority) is kept as
+         * soon as it's changed, so the two differ from a reorder until the next apply - a change Apply has to make */
+        [JsonProperty("appliedOrder")] public List<string> AppliedOrder;
 
         [JsonIgnore] private string _path;
 
@@ -107,6 +110,9 @@ namespace OpenCAGE.Modding
                 foreach (KeyValuePair<string, string> applied in mod.Applied ?? new Dictionary<string, string>())
                     if (!state.Composition.ContainsKey(applied.Key))
                         state.Composition[applied.Key] = new ComposedFile() { Sha256Hex = applied.Value, Mods = new List<string>() { mod.Id } };
+            //A state from before the applied order was kept: the list's order is the one taken as installed
+            if (state.AppliedOrder == null)
+                state.AppliedOrder = state.ModsInPriorityOrder().Where(o => o.Enabled).Select(o => o.Id).ToList();
             state._path = path;
             return state;
         }
@@ -128,6 +134,23 @@ namespace OpenCAGE.Modding
         public List<InstalledMod> ModsInPriorityOrder()
         {
             return Mods.OrderBy(o => o.Priority).ToList();
+        }
+
+        /// <summary>
+        /// The enabled mods in the order the last apply installed them - the list's order, unless it's been changed since.
+        /// </summary>
+        public List<InstalledMod> EnabledInAppliedOrder()
+        {
+            List<string> order = AppliedOrder ?? new List<string>();
+            return ModsInPriorityOrder().Where(o => o.Enabled).OrderBy(o => order.Contains(o.Id) ? order.IndexOf(o.Id) : int.MaxValue).ToList();
+        }
+
+        /// <summary>
+        /// Whether the list has the enabled mods in another order than the one they're installed in: the next apply changes it.
+        /// </summary>
+        public bool OrderNotApplied()
+        {
+            return !ModsInPriorityOrder().Where(o => o.Enabled).SequenceEqual(EnabledInAppliedOrder());
         }
 
         /// <summary>

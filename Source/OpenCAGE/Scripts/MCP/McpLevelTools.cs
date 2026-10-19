@@ -137,7 +137,7 @@ namespace OpenCAGE.MCP
                     McpSchema.String("action", "list (default), import, remove, apply, repair, recover, or export.", options: new[] { "list", "import", "remove", "apply", "repair", "recover", "export" }),
                     McpSchema.String("path", "import: the .omp package; export: where to write it. An absolute path."),
                     McpSchema.String("id", "remove: the mod's id (from list)."),
-                    McpSchema.Strings("enabled", "apply: the ids of the mods to have enabled, lowest priority first (default: those enabled now)."),
+                    McpSchema.Strings("enabled", "apply: the ids of the mods to have enabled, lowest priority first (default: those enabled now, in the list's order - which can have been changed since they were applied: list's order_not_applied)."),
                     McpSchema.Boolean("adopt_current_files", "apply: take files that are neither vanilla nor stored as their restore point instead of refusing."),
                     McpSchema.String("edited_files", "apply: files installed mods had changed that were changed again since - keep (as a new mod at the end of the list) or discard. Without it apply refuses while there are any.", options: new[] { "keep", "discard" }),
                     McpSchema.Boolean("discard_unsaved", "apply/repair/recover: go ahead even though the open level or the animations have changes not saved yet in files this may change - they're lost when OpenCAGE loads the files again afterwards (save them first instead: save_level, and the animation tools' writes)."),
@@ -1698,11 +1698,14 @@ namespace OpenCAGE.MCP
                         if (unknown.Count != 0)
                             throw new McpError("No mod " + string.Join(", ", unknown) + " in the library (action list shows them).");
                         List<Modding.ModState.InstalledMod> mods = desired.Select(o => state.FindMod(o)).ToList();
+                        //The list's order is kept as soon as it's changed (the Mod Manager's Move Up/Down): this puts it in
+                        bool reordered = !(action == "apply" && call.Has("enabled")) && state.OrderNotApplied();
                         Modding.ModAnalysis analysis = installer.Analyze(desired);
                         JArray conflicts = new JArray(analysis.Conflicts.Take(limit).Select(o => new JObject() { ["kept"] = o.Kept, ["lost"] = o.Lost, ["target"] = o.Target, ["where"] = o.Where, ["text"] = o.Describe() }));
                         if (dryRun)
                         {
                             JObject plan = new JObject() { ["dry_run"] = true, ["enabled_in_order"] = new JArray(mods.Select(o => o.Name)), ["conflicts"] = conflicts };
+                            if (reordered) plan["order_not_applied"] = true;
                             if (analysis.CombinedLevels.Count != 0) plan["combined_levels"] = new JArray(analysis.CombinedLevels);
                             if (analysis.Problems.Count != 0) plan["problems"] = new JArray(analysis.Problems);
                             if (analysis.EditedFiles.Count != 0) plan["edited_since_installed"] = new JArray(analysis.EditedFiles.Take(limit));
@@ -1753,6 +1756,8 @@ namespace OpenCAGE.MCP
                         if (change.Reloaded.Count != 0) done["reloaded"] = new JArray(change.Reloaded);
                         foreach (string problem in change.Problems)
                             call.Note(problem);
+                        if (reordered)
+                            call.Note("The list's order had been changed since the mods were last applied: they're installed in that new order now.");
                         if (change.Reloaded.Any(o => o.StartsWith("the level ")))
                             call.Note("The open level is loading again from its files (wait for get_editor_state to show it loaded before editing it).");
                         return done;
@@ -1808,6 +1813,8 @@ namespace OpenCAGE.MCP
                 ["total"] = mods.Count,
                 ["mods"] = list,
                 ["needs_repair"] = stale.Count,
+                //The enabled mods are in another order in the list than they're installed in: apply puts the list's in
+                ["order_not_applied"] = state.OrderNotApplied(),
                 ["interrupted_operation"] = installer.HasCrashJournal(),
                 ["vanilla_manifest"] = Modding.ModServices.ManifestAvailable,
             };

@@ -14,36 +14,54 @@ namespace OpenCAGE.ConfigEditors
 {
     public partial class SenseSet : UserControl
     {
+        private string _unlistedViewconeSet = null;
+
         public SenseSet()
         {
             InitializeComponent();
             ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
+            //Every set the game lists. This used to keep only STANDARD, HUMAN, SLEEPING and ANDROID (the Viewcone Editor's list),
+            //but characters use the others too: THE_PLAYER's normal set is VIEWCONESET_NONE
             BML viewconeTypes = new BML(Singleton.PathToAI + "\\DATA\\VIEW_CONE_SETS\\VIEWCONESETS.BML");
             var viewcones = viewconeTypes.Content["ViewconeSets"];
             viewcone_set.BeginUpdate();
             foreach (XmlElement viewcone in viewcones)
             {
-                string name = viewcone["Name"].InnerText;
-                switch (name)
-                {
-                    case "VIEWCONESET_STANDARD":
-                    case "VIEWCONESET_HUMAN":
-                    case "VIEWCONESET_SLEEPING": //unused? it doesnt have all sets.
-                    case "VIEWCONESET_ANDROID":
-                        break;
-                    default:
-                        // It appears the game skips any other than the ones above, so ignore them.
-                        continue;
-                }
-                viewcone_set.Items.Add(name);
+                viewcone_set.Items.Add(viewcone["Name"].InnerText);
             }
             viewcone_set.EndUpdate();
         }
 
         public void Populate(List<BML> configs, string setName, params string[] pathPrefix)
         {
-            ConfigEditorUtils.SetCombo(configs, viewcone_set, pathPrefix.Concat(new[] { "viewcone_set_" + setName }).ToArray());
+            string[] viewconePath = pathPrefix.Concat(new[] { "viewcone_set_" + setName }).ToArray();
+            string viewcone = null;
+            foreach (BML config in configs)
+            {
+                XmlNode node = config.Content;
+                foreach (string name in viewconePath)
+                    node = node?[name];
+                if (node == null)
+                    continue;
+                viewcone = node.InnerText;
+                break;
+            }
+
+            //The list can only show what it holds, and saving writes what it shows: a set it doesn't have (a mod's own, say) would
+            //show, and save, the previous character's instead. So it's added as it is, for as long as this character is shown.
+            if (_unlistedViewconeSet != null)
+                viewcone_set.Items.Remove(_unlistedViewconeSet);
+            _unlistedViewconeSet = null;
+            if (viewcone != null && !viewcone_set.Items.Contains(viewcone))
+            {
+                viewcone_set.Items.Add(viewcone);
+                _unlistedViewconeSet = viewcone;
+            }
+            viewcone_set.Enabled = viewcone != null;
+            if (viewcone != null)
+                viewcone_set.SelectedItem = viewcone; //Not Text, which picks the first item that matches ignoring case
+
             ConfigEditorUtils.SetNumber(configs, max_hearing_distance, pathPrefix.Concat(new[] { "max_hearing_distance_" + setName }).ToArray());
             ConfigEditorUtils.SetNumber(configs, max_damage_distance_scale_to, pathPrefix.Concat(new[] { "max_damage_distance_scale_to_" + setName }).ToArray());
 
@@ -59,9 +77,10 @@ namespace OpenCAGE.ConfigEditors
 
         public void Save(XmlElement sense, string setName)
         {
-            ConfigEditorUtils.EnsureChildElements(sense, "viewcone_set_" + setName).InnerText = viewcone_set.Text;
-            ConfigEditorUtils.EnsureChildElements(sense, "max_hearing_distance_" + setName).InnerText = max_hearing_distance.Text;
-            ConfigEditorUtils.EnsureChildElements(sense, "max_damage_distance_scale_to_" + setName).InnerText = max_damage_distance_scale_to.Text;
+            //A field no file in the template chain has is disabled, and still shows the previous character's value
+            if (viewcone_set.Enabled) ConfigEditorUtils.EnsureChildElements(sense, "viewcone_set_" + setName).InnerText = viewcone_set.Text;
+            if (max_hearing_distance.Enabled) ConfigEditorUtils.EnsureChildElements(sense, "max_hearing_distance_" + setName).InnerText = max_hearing_distance.Text;
+            if (max_damage_distance_scale_to.Enabled) ConfigEditorUtils.EnsureChildElements(sense, "max_damage_distance_scale_to_" + setName).InnerText = max_damage_distance_scale_to.Text;
 
             visualSense.Save(ConfigEditorUtils.EnsureChildElements(sense, "Visual_Sense"), setName, "visual");
             weaponSense.Save(ConfigEditorUtils.EnsureChildElements(sense, "Weapon_Sound_Sense"), setName, "weapon_sound");

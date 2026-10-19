@@ -27,7 +27,7 @@ namespace OpenCAGE
         public AddEntity_CompositeInstance(Composite composite, bool flowgraphMode) : base(WindowClosesOn.NEW_COMPOSITE_SELECTION | WindowClosesOn.COMMANDS_RELOAD)
         {
             InitializeComponent();
-            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/cathode-entities/#composite-instances");
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/scripting-intro/#compositeinstance-entities");
             compositeTree.ImageList = EditorIcons.CompositeTree;
             StayAboveEditor = true; //small dialog - keep it above the editor window
 

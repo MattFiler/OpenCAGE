@@ -1096,7 +1096,7 @@ namespace OpenCAGE.MCP
                 //Keep the properties of the submesh being stood in for (vertex format, material, flags), so it still renders the same way
                 Models.CS2.Component.LOD.Submesh made = ModelIO.ToSubmesh(scene.Meshes[meshes[0].MeshIndex], meshes[0].Transform, ModelIO.DescribeSubmesh(target.submesh), out List<string> meshWarnings, plan.UnitScale, scale, plan.BoneNames);
                 if (made == null)
-                    throw new McpError("'" + meshes[0].MeshName + "' could not be converted (it needs at least 3 vertices, triangular faces, and no more than " + short.MaxValue + " vertices).");
+                    throw new McpError("'" + meshes[0].MeshName + "' could not be converted (it needs at least 3 vertices, triangular faces, and no more than " + ushort.MaxValue.ToString("N0") + " vertices and " + (ushort.MaxValue / 3).ToString("N0") + " triangles).");
                 warnings.AddRange(meshWarnings);
                 Models.CS2.Component.LOD.Submesh submesh = target.submesh;
                 submesh.Data = made.Data;
@@ -1142,7 +1142,7 @@ namespace OpenCAGE.MCP
                     Models.CS2.Component.LOD.Submesh made = ModelIO.ToSubmesh(scene.Meshes[mesh.MeshIndex], mesh.Transform, mesh.Metadata, out List<string> meshWarnings, plan.UnitScale, scale, plan.BoneNames);
                     if (made == null)
                     {
-                        warnings.Add(mesh.MeshName + ": could not be converted (it needs at least 3 vertices, triangular faces, and no more than " + short.MaxValue + " vertices).");
+                        warnings.Add(mesh.MeshName + ": could not be converted (it needs at least 3 vertices, triangular faces, and no more than " + ushort.MaxValue.ToString("N0") + " vertices and " + (ushort.MaxValue / 3).ToString("N0") + " triangles).");
                         continue;
                     }
                     warnings.AddRange(meshWarnings.Select(o => mesh.MeshName + ": " + o));

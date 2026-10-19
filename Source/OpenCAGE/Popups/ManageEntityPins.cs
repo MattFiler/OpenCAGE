@@ -21,7 +21,7 @@ namespace OpenCAGE.Popups
         public ManageEntityPins() : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
             InitializeComponent();
-            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/cathode-entities/#variables");
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/scripting-intro/#node-types");
             EditorIcons.ShowIn(listView1, EditorIcons.Pins);
         }
 

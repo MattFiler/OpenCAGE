@@ -41,6 +41,7 @@ namespace OpenCAGE.Popups
         private bool _scanning;
         private bool _scanAgain;
         private bool _refreshingList;
+        private bool _pending;
         private List<string> _stale = new List<string>();
 
         public ModManagerForm()
@@ -414,12 +415,16 @@ namespace OpenCAGE.Popups
                 else status = "Installed";
                 item.SubItems[4].Text = status;
             }
+            //The list's order is kept as soon as it changes, so what's installed is compared in the order it was installed in
             List<string> desired = DesiredEnabledIds();
-            List<string> current = state.ModsInPriorityOrder().Where(o => o.Enabled).Select(o => o.Id).ToList();
-            bool pending = !desired.SequenceEqual(current);
-            _applyButton.Enabled = pending;
-            _repairButton.Enabled = !pending && _stale.Count != 0;
-            _statusLabel.Text = pending ? "You have changes that aren't applied yet - click Apply." : (_stale.Count != 0 ? "Some mod files need repairing - click Repair." : "");
+            List<string> current = state.EnabledInAppliedOrder().Select(o => o.Id).ToList();
+            _pending = !desired.SequenceEqual(current);
+            bool reorderOnly = _pending && desired.Count == current.Count && !desired.Except(current).Any();
+            _applyButton.Enabled = _pending;
+            _repairButton.Enabled = !_pending && _stale.Count != 0;
+            _statusLabel.Text = reorderOnly ? "Your mods' new order isn't applied yet - click Apply to use it."
+                : _pending ? "You have changes that aren't applied yet - click Apply."
+                : (_stale.Count != 0 ? "Some mod files need repairing - click Repair." : "");
         }
 
         private void ShowDetails()
@@ -490,7 +495,9 @@ namespace OpenCAGE.Popups
                     if (conflicts.Count != 0)
                     {
                         lines.Add("");
-                        lines.Add("Changes the same things as other ticked mods (the one lower in the list wins):");
+                        //The list as it stands: with changes not applied yet, what's installed may still have another mod's version
+                        lines.Add(_pending ? "Changes the same things as other ticked mods (once you click Apply, the one lower in the list wins):"
+                            : "Changes the same things as other ticked mods (the one lower in the list wins):");
                         foreach (MergeConflict conflict in conflicts.Take(12))
                             lines.Add("  • " + conflict.Describe());
                         if (conflicts.Count > 12)
@@ -716,7 +723,7 @@ namespace OpenCAGE.Popups
                         if (conflicts.Count > 20)
                             lines.Add("  ...and " + (conflicts.Count - 20) + " more");
                         lines.Add("");
-                        lines.Add("Everything else every mod changes is kept. To use a different mod's version, move it lower in the list.");
+                        lines.Add("Everything else every mod changes is kept. To use a different mod's version, click Cancel, move that mod lower in the list, and click Apply again.");
                     }
                     if (ModReportDialog.Show(this, "Before applying", string.Join("\r\n", lines), "Apply", "Cancel") != DialogResult.OK)
                         return;

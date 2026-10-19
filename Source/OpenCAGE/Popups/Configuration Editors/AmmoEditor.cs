@@ -188,9 +188,10 @@ namespace OpenCAGE.ConfigEditors
             ConfigEditorUtils.SetNumericFromText(vsFHugger, range_damage.GetAttribute("vsFHugger"));
             ConfigEditorUtils.SetNumericFromText(vsPhysics, range_damage.GetAttribute("vsPhysics"));
             ConfigEditorUtils.SetNumericFromText(headshot, range_damage.GetAttribute("headshot"));
-            Damage_1.SelectedItem = range_damage.GetAttribute("Damage_1").ToUpper();
-            Damage_2.SelectedItem = range_damage.GetAttribute("Damage_2").ToUpper();
-            Damage_3.SelectedItem = range_damage.GetAttribute("Damage_3").ToUpper();
+            //The game reads damage types ignoring case, and its files mostly don't use the list's capitals ("Impact")
+            ConfigEditorUtils.SelectListed(Damage_1, range_damage.GetAttribute("Damage_1"), true);
+            ConfigEditorUtils.SelectListed(Damage_2, range_damage.GetAttribute("Damage_2"), true);
+            ConfigEditorUtils.SelectListed(Damage_3, range_damage.GetAttribute("Damage_3"), true);
             ConfigEditorUtils.SetNumericFromText(Ragdoll, range_damage.GetAttribute("Ragdoll"));
             ConfigEditorUtils.SetNumericFromText(vsAlien, range_damage.GetAttribute("vsAlien"));
             ConfigEditorUtils.SetNumericFromText(AlienStun, range_damage.GetAttribute("AlienStun"));
@@ -242,9 +243,9 @@ namespace OpenCAGE.ConfigEditors
                 range_damage.SetAttribute("vsFHugger", vsFHugger.Text);
                 range_damage.SetAttribute("vsPhysics", vsPhysics.Text);
                 range_damage.SetAttribute("headshot", headshot.Text);
-                range_damage.SetAttribute("Damage_1", Damage_1.Text);
-                range_damage.SetAttribute("Damage_2", Damage_2.Text);
-                range_damage.SetAttribute("Damage_3", Damage_3.Text);
+                SetDamage(range_damage, "Damage_1", Damage_1);
+                SetDamage(range_damage, "Damage_2", Damage_2);
+                SetDamage(range_damage, "Damage_3", Damage_3);
                 range_damage.SetAttribute("Ragdoll", Ragdoll.Text);
                 range_damage.SetAttribute("vsAlien", vsAlien.Text);
                 range_damage.SetAttribute("AlienStun", AlienStun.Text);
@@ -267,6 +268,14 @@ namespace OpenCAGE.ConfigEditors
             }
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
+        }
+
+        /* The list shows the file's damage type in the list's capitals: it's only written when another type was picked, so
+         * an edit to anything else keeps the file's own spelling */
+        private static void SetDamage(XmlElement range_damage, string name, ComboBox damage)
+        {
+            if (!string.Equals(range_damage.GetAttribute(name), damage.Text, StringComparison.OrdinalIgnoreCase))
+                range_damage.SetAttribute(name, damage.Text);
         }
 
         private static string FormatRangeDistance(decimal value)

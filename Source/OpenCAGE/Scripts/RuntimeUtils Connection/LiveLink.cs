@@ -1005,8 +1005,8 @@ namespace OpenCAGE.RuntimeUtilsConnection
             if (_timer != null)
                 return;
             //Edits come in bursts (a drag, a paste, an undo of several steps): send once they settle
-            _timer = new System.Windows.Forms.Timer() { Interval = 350 };
-            _timer.Tick += (s, e) => { _timer.Stop(); Flush(); };
+            _timer = new System.Windows.Forms.Timer() { Interval = SettleMs };
+            _timer.Tick += (s, e) => { _timer.Stop(); _timer.Interval = SettleMs; Flush(); };
 
             //Every edit ends in DirtyTracker, including the flowgraph's link edits that raise nothing else
             DirtyTracker.OnDirty += () => QueueDisplayed();
@@ -1120,6 +1120,25 @@ namespace OpenCAGE.RuntimeUtilsConnection
             //Deleted entities are no longer in their composite; the pending-delete event has queued it already
             Composite owner = commands?.Entries.FirstOrDefault(o => o.GetEntityByID(entity.shortGUID) == entity);
             Queue(owner);
+        }
+
+        //How long the auto push waits for edits to settle, and how soon it sends a change that is still under way
+        private const int SettleMs = 350;
+        private const int SoonMs = 100;
+
+        /// <summary>
+        /// A change still under way (a viewport drag being followed): sent within <see cref="SoonMs"/>, and again as it goes
+        /// on. Waiting for it to settle, as other edits do, would send nothing until it ended. UI thread.
+        /// </summary>
+        public static void QueueSoon(Composite composite)
+        {
+            if (composite == null || !Connected || _timer == null)
+                return;
+            lock (_queued) _queued.Add(composite);
+            if (_timer.Enabled)
+                return; //already on its way
+            _timer.Interval = SoonMs;
+            _timer.Start();
         }
 
         private static void Queue(Composite composite)

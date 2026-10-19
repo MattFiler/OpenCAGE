@@ -401,6 +401,8 @@ namespace OpenCAGE.UnityConnection
         private static void OnViewerDisconnected()
         {
             DropQueuedPackets();
+            //A drag it was in the middle of will never be let go: what it was showing is put back
+            ViewerParameterSync.EndAllPreviews();
             //No viewport, nothing for the game's camera to follow: it is given back to the game
             RuntimeUtilsConnection.LiveLinkCameraSync.OnViewerGone();
             CommandsEditor editor = Singleton.Editor;
@@ -874,6 +876,17 @@ namespace OpenCAGE.UnityConnection
 
             _isDirty = true;
             SendParameterPacket(entity, parameter, removed);
+        }
+
+        /// <summary>
+        /// Show the viewport a value a window is still choosing (the colour picker while it is open): sent as an edit is,
+        /// but nothing is marked as changed. The window sends the value the level holds again when it closes.
+        /// </summary>
+        public static void SendParameterPreview(Entity entity, Parameter parameter)
+        {
+            if (entity == null || parameter == null)
+                return;
+            SendParameterPacket(entity, parameter, false);
         }
 
         private static void SendParameterPacket(Entity entity, Parameter parameter, bool removed)

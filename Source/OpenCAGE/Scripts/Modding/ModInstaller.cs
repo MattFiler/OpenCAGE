@@ -1536,6 +1536,8 @@ namespace OpenCAGE.Modding
                     order[slots[i]] = desired[i];
                 for (int i = 0; i < order.Count; i++)
                     order[i].Priority = i;
+                //The order they're installed in now: the list's, until it's reordered again
+                _state.AppliedOrder = desired.Select(o => o.Id).ToList();
                 foreach (string path in _state.Composition.Keys.ToList())
                     if (IsDerived(path) || !(keptFiles.Contains(path) || keptLevels.Contains(LevelUnitOf(path) ?? "")))
                         _state.Composition.Remove(path);
@@ -1654,6 +1656,7 @@ namespace OpenCAGE.Modding
                     //The state went with the files: reload what was saved before this started
                     ModState saved = ModState.Load(_gameRoot);
                     _state.Mods = saved.Mods;
+                    _state.AppliedOrder = saved.AppliedOrder;
                     _state.Composition = saved.Composition;
                     _state.Conflicts = saved.Conflicts;
                     _state.Own = saved.Own;

@@ -231,19 +231,39 @@ namespace OpenCAGE
         }
         public override object EditValue(ITypeDescriptorContext context, IServiceProvider provider, object value)
         {
+            //The row on every selected entity: the picker's choice is shown on all of them while it is open
+            List<(EntityParameterProxy, Parameter)> targets = new List<(EntityParameterProxy, Parameter)>();
+            string name = context?.PropertyDescriptor?.Name;
+            IEnumerable instances = context?.Instance as IEnumerable ?? new[] { context?.Instance };
+            if (name != null)
+            {
+                foreach (object instance in instances)
+                {
+                    if (instance is EntityParameterProxy proxy && proxy.GetParameterDescriptor(name) is ColourParameterDescriptor descriptor)
+                        targets.Add((proxy, descriptor.Parameter));
+                }
+            }
+
             //Returning the new colour lets the grid apply it (including across a multi-selection)
-            return TryPick(value is Color current ? current : Color.Black, out Color chosen) ? chosen : value;
+            return TryPick(value is Color current ? current : Color.Black, out Color chosen, targets) ? chosen : value;
         }
 
-        /// <summary>The full picker, on its own: the grid also opens it for a double-click on a colour row.</summary>
-        public static bool TryPick(Color current, out Color chosen)
+        /// <summary>
+        /// The full picker, on its own: the grid also opens it for a double-click on a colour row. While it is open, the
+        /// colour it shows is shown on <paramref name="previewOn"/>'s rows too - the viewport and the running game follow it
+        /// - and they go back as they were when it closes, for the caller to apply what was chosen.
+        /// </summary>
+        public static bool TryPick(Color current, out Color chosen, IEnumerable<(EntityParameterProxy proxy, Parameter parameter)> previewOn = null)
         {
             chosen = current;
-            using (ColorDialog dialog = new ColorDialog())
+            using (LiveColourDialog dialog = new LiveColourDialog())
+            using (ColourPreview preview = previewOn == null ? null : new ColourPreview(previewOn))
             {
                 dialog.FullOpen = true;
                 dialog.Color = current;
                 dialog.CustomColors = SettingsManager.GetIntegerArray(Settings.CustomColours);
+                if (preview != null)
+                    dialog.ColourChanged += preview.Show;
                 if (dialog.ShowDialog() != DialogResult.OK)
                     return false;
 
@@ -251,6 +271,154 @@ namespace OpenCAGE
                 chosen = dialog.Color;
                 return true;
             }
+        }
+    }
+
+    /// <summary>The standard colour picker, saying which colour it shows as that changes - not only once OK is clicked.</summary>
+    public class LiveColourDialog : ColorDialog
+    {
+        public event Action<Color> ColourChanged;
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern uint GetDlgItemInt(IntPtr dialog, int id, out bool translated, bool signed);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool PostMessage(IntPtr window, int msg, IntPtr wparam, IntPtr lparam);
+
+        private const int WM_COMMAND = 0x0111;
+        private const int EN_CHANGE = 0x0300;
+        //Posted to itself once a change is made, so it is read after the picker has filled in all three boxes
+        private const int WM_REPORT_COLOUR = 0x8000 + 0x4C1;
+        private bool _reportPosted;
+        //The picker's Red, Green and Blue boxes (colordlg.h): they follow every way of choosing, spectrum and presets included
+        private const int COLOR_RED = 706, COLOR_GREEN = 707, COLOR_BLUE = 708;
+
+        //By value: a named colour (Color.Red) is not equal to the same channels from FromArgb
+        private int? _lastArgb;
+
+        protected override bool RunDialog(IntPtr hwndOwner)
+        {
+            //The picker fills its boxes in with the colour it opens on, before the hook hears of it opening: that is no change
+            _lastArgb = Color.FromArgb(Color.R, Color.G, Color.B).ToArgb();
+            return base.RunDialog(hwndOwner);
+        }
+
+        protected override IntPtr HookProc(IntPtr hWnd, int msg, IntPtr wparam, IntPtr lparam)
+        {
+            IntPtr result = base.HookProc(hWnd, msg, wparam, lparam);
+            /* The picker fills the boxes in one at a time (a click on the spectrum or a preset changes all three), and each
+               says it changed: read them once it is done, or the halfway colours (the new red with the old green and blue)
+               would be shown as choices too */
+            if (msg == WM_COMMAND && ((wparam.ToInt64() >> 16) & 0xFFFF) == EN_CHANGE)
+            {
+                long id = wparam.ToInt64() & 0xFFFF;
+                if ((id == COLOR_RED || id == COLOR_GREEN || id == COLOR_BLUE) && !_reportPosted)
+                    _reportPosted = PostMessage(hWnd, WM_REPORT_COLOUR, IntPtr.Zero, IntPtr.Zero);
+            }
+            else if (msg == WM_REPORT_COLOUR)
+            {
+                _reportPosted = false;
+                Report(hWnd);
+            }
+            return result;
+        }
+
+        private void Report(IntPtr dialog)
+        {
+            uint red = GetDlgItemInt(dialog, COLOR_RED, out bool redRead, false);
+            uint green = GetDlgItemInt(dialog, COLOR_GREEN, out bool greenRead, false);
+            uint blue = GetDlgItemInt(dialog, COLOR_BLUE, out bool blueRead, false);
+            //Half typed (a box emptied to type a new number in) is not a colour yet
+            if (!redRead || !greenRead || !blueRead)
+                return;
+            Color colour = Color.FromArgb((int)Math.Min(red, 255), (int)Math.Min(green, 255), (int)Math.Min(blue, 255));
+            if (_lastArgb == colour.ToArgb())
+                return;
+            _lastArgb = colour.ToArgb();
+            ColourChanged?.Invoke(colour);
+        }
+    }
+
+    /* The colour picker's choice on its rows while it is open: each row's vector is set to it, and the viewport and
+       Live Link are sent it as they would be an edit - at most every ShowEveryMs, as the spectrum sends a stream of
+       them. Nothing is recorded or marked unsaved. Closing puts every row back as it was and sends that, so the edit
+       OK then makes starts from the colour the row had (and so does its undo step). */
+    internal sealed class ColourPreview : IDisposable
+    {
+        private const int ShowEveryMs = 66;
+
+        private readonly List<(EntityParameterProxy proxy, Parameter parameter, System.Numerics.Vector3 held)> _rows =
+            new List<(EntityParameterProxy, Parameter, System.Numerics.Vector3)>();
+        private readonly Timer _timer = new Timer() { Interval = ShowEveryMs };
+        private Color? _pending;
+        private bool _shown;
+
+        public ColourPreview(IEnumerable<(EntityParameterProxy proxy, Parameter parameter)> rows)
+        {
+            foreach ((EntityParameterProxy proxy, Parameter parameter) in rows)
+            {
+                if (proxy != null && parameter?.content is cVector3 vector)
+                    _rows.Add((proxy, parameter, vector.value));
+            }
+            _timer.Tick += (s, e) => ShowPending();
+        }
+
+        public void Show(Color colour)
+        {
+            _pending = colour;
+            if (!_timer.Enabled)
+            {
+                ShowPending();
+                _timer.Start();
+            }
+        }
+
+        private void ShowPending()
+        {
+            if (_pending == null)
+            {
+                _timer.Stop();
+                return;
+            }
+            Color colour = _pending.Value;
+            _pending = null;
+            foreach ((EntityParameterProxy proxy, Parameter parameter, System.Numerics.Vector3 held) in _rows)
+            {
+                if (!(parameter.content is cVector3 vector))
+                    continue;
+                vector.value = new System.Numerics.Vector3(colour.R, colour.G, colour.B);
+                Send(proxy, parameter);
+            }
+            _shown = true;
+            RefreshInspector();
+        }
+
+        private static void Send(EntityParameterProxy proxy, Parameter parameter)
+        {
+            OpenCAGE.UnityConnection.Send.SendParameterPreview(proxy.Entity, parameter);
+            OpenCAGE.RuntimeUtilsConnection.LiveLink.QueueSoon(proxy.Composite);
+        }
+
+        //The inspector's rows read the values live: repaint them so the row's swatch follows the picker too
+        private void RefreshInspector()
+        {
+            if (_rows.Count != 0)
+                Singleton.Editor?.CompositeDisplay?.EntityDisplay?.RefreshParameterGrid(_rows[0].proxy.Entity, false);
+        }
+
+        public void Dispose()
+        {
+            _timer.Stop();
+            _timer.Dispose();
+            foreach ((EntityParameterProxy proxy, Parameter parameter, System.Numerics.Vector3 held) in _rows)
+            {
+                if (!(parameter.content is cVector3 vector))
+                    continue;
+                vector.value = held;
+                if (_shown)
+                    Send(proxy, parameter);
+            }
+            if (_shown)
+                RefreshInspector();
         }
     }
 

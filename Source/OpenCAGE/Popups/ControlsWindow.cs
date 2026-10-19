@@ -58,11 +58,17 @@ namespace OpenCAGE.Popups
             AddControl(LevelViewerControls, "Move", "W / A / S / D");
             AddControl(LevelViewerControls, "Move Up / Down", "E / Q");
             AddControl(LevelViewerControls, "Fast Move", "Hold Shift While Moving");
+            AddControl(LevelViewerControls, "Pan", "Drag While Holding Middle Mouse");
             AddControl(LevelViewerControls, "Speed", "Scrollwheel Up/Down");
-            AddControl(LevelViewerControls, "Recenter", "Z");
+            AddControl(LevelViewerControls, "Focus on Selection", "Z");
+            AddControl(LevelViewerControls, "Frame All", "Z (with nothing selected)");
+            AddControl(LevelViewerControls, "Context Menu", "Right Click (without dragging)");
             AddControl(LevelViewerControls, "Select", "Left Click");
             AddControl(LevelViewerControls, "Add To Selection", "Ctrl + Left Click");
             AddControl(LevelViewerControls, "Toggle In Selection", "Shift + Left Click");
+            AddControl(LevelViewerControls, "Box Select", "Drag While Holding Left Mouse (off gizmo handles)");
+            AddControl(LevelViewerControls, "Box Add / Toggle In Selection", "Ctrl / Shift + Drag Left Mouse");
+            AddControl(LevelViewerControls, "Cancel Box Select", "Escape, Right or Middle Mouse (mid-drag)");
             AddControl(LevelViewerControls, "Step Inside", "Ctrl + Middle Mouse (on composite instance)");
             AddControl(LevelViewerControls, "Step Back", "Minus");
             AddControl(LevelViewerControls, "Translate (world)", "1 (with object selected)");
@@ -75,6 +81,7 @@ namespace OpenCAGE.Popups
             AddControl(LevelViewerControls, "Advanced Deep Select", "9");
             AddControl(LevelViewerControls, "Move Gizmo", "Drag Gizmo Handle (with object selected)");
             AddControl(LevelViewerControls, "Duplicate And Drag Copy", "Shift + Drag Gizmo Handle");
+            AddControl(LevelViewerControls, "Cancel Gizmo Drag / Shift-Drag Duplicate", "Escape (before releasing)");
             AddControl(LevelViewerControls, "Move Gizmo Origin (Rotation Pivot)", "Ctrl + Shift + Drag Translate Handle");
             AddControl(LevelViewerControls, "Reset Gizmo Origin", "Ctrl + Shift + Click Translate Handle");
             AddControl(LevelViewerControls, "Snap Drag To Vertex", "Hold V While Dragging (or Transform Snap > Vertex)");
@@ -82,14 +89,19 @@ namespace OpenCAGE.Popups
             AddControl(LevelViewerControls, "Highlight Mode (Green / Wireframe / Transparent / None)", "Alt + 1 / 2 / 3 / 4");
             AddControl(LevelViewerControls, "Copy", "Ctrl + C");
             AddControl(LevelViewerControls, "Paste", "Ctrl + V");
-            AddControl(LevelViewerControls, "Duplicate (Clipboard)", "Ctrl + C, Then Ctrl + V");
+            AddControl(LevelViewerControls, "Duplicate", "Ctrl + D");
             AddControl(LevelViewerControls, "Delete", "Delete");
             AddControl(LevelViewerControls, "Undo", "Ctrl + Z");
             AddControl(LevelViewerControls, "Redo", "Ctrl + Y (or Ctrl + Shift + Z)");
+            AddControl(LevelViewerControls, "Save Level", "Ctrl + S");
+            AddControl(LevelViewerControls, "Save and Build Level", "Ctrl + Shift + S");
             AddControl(LevelViewerControls, "Place Entity (Create Mode)", "Left Click");
+            AddControl(LevelViewerControls, "Place Point (Measure)", "Left Click");
+            AddControl(LevelViewerControls, "Point At Selected Origin (Measure)", "Shift + Left Click");
+            AddControl(LevelViewerControls, "Point On Vertex (Measure)", "Hold V While Clicking (or Transform Snap > Vertex)");
             AddControl(LevelViewerControls, "Hide", "H");
             AddControl(LevelViewerControls, "Un-hide All", "Shift + H");
-            AddControl(LevelViewerControls, "De-select / Exit Create Mode", "Escape");
+            AddControl(LevelViewerControls, "De-select / Exit Create Mode or Measure", "Escape");
 
             //Behaviour tree editor controls (Brainiac Designer)
             AddControl(BehaviourTreeControls, "Zoom In/Out", "Scrollwheel Up/Down");
