@@ -30,7 +30,7 @@
 	While a character is possessed:
 	- the game camera is put behind it, turned with the mouse and brought closer or taken further away (1.5 to 10 m) with
 	  its wheel (unless OpenCAGE's viewport camera is driving the game's);
-	- every zone of the level is streamed in, as the game only streams those around the player;
+	- the zones around the camera are streamed in, as the game only streams those around the player;
 	- the keyboard and mouse are kept from the game, bar Escape, so the player stands still.
 
 	OpenCAGE (the Live Link's POSSESS) can take one by name, give it a stick to move with in place of the keys, crouch it

@@ -23,8 +23,9 @@
 	The pose is stored by the socket thread (the live link server, answered at once) and read by the hook every frame. It
 	applies while the OpenCAGE connection that sent it lasts and the level it was sent for is running: a disconnect
 	drops it; while no level, or another level, is running it waits, and applies again when its level is back (OpenCAGE
-	still holds it as taken). A release, or a pose for another level, replaces it. Every zone is streamed in while it
-	applies (the zone loader's live camera request), as the game only streams the zones around the player.
+	still holds it as taken). A release, or a pose for another level, replaces it. While it applies, the zones around
+	the camera are streamed in as well as the player's (the zone loader's live camera request), as the game would
+	otherwise only stream the zones around the player.
 
 	The other way, the hook keeps the chosen camera's own state block every frame, before any pose is written over it
 	(a snapshot, keyed to the running level's root and timed), and CAMERA_GET answers from the latest on the socket

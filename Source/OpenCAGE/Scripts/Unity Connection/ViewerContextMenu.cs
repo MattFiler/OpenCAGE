@@ -38,6 +38,7 @@ namespace OpenCAGE.UnityConnection
         private static ToolStripMenuItem _hide;
         private static ToolStripMenuItem _unhideAll;
         private static ToolStripMenuItem _stepInto;
+        private static ToolStripMenuItem _openComposite;
         private static ToolStripMenuItem _selectParent;
         private static ToolStripMenuItem _deselectAll;
         private static ToolStripSeparator _refactorSeparator;
@@ -128,6 +129,7 @@ namespace OpenCAGE.UnityConnection
             /* The refactors act on the selection as the entity list holds it: the list follows a viewport pick
                at once, where the inspector (and so the packet's own selection) catches up a moment later. */
             List<Entity> selected = display.EntityListPanel?.List?.SelectedEntities ?? new List<Entity>();
+            _openComposite.Visible = InstancedComposite(selected) != null;
             bool deinstance = CompositeRefactoring.CanDeinstance(selected, commands.Content.Level.Commands);
             bool variant = CompositeRefactoring.CanCreateVariant(selected, commands.Content.Level.Commands);
             bool create = selected.Count != 0;
@@ -221,6 +223,14 @@ namespace OpenCAGE.UnityConnection
             _unhideAll = Item("Unhide All", "Shift+H", (sender, e) => Send.SendViewportAction(ViewportAction.UnhideAll));
             //Ctrl+middle click and '-', which the viewer's menu showed no text for either
             _stepInto = Item("Step Into Composite", null, (sender, e) => Send.SendViewportAction(ViewportAction.StepIntoComposite));
+            //The instanced composite on its own, as a double click on it in the Composite Browser opens it
+            _openComposite = Item("Open Composite", null, (sender, e) =>
+            {
+                Composite composite = InstancedComposite(SelectedInList());
+                if (composite != null)
+                    Singleton.Editor?.CompositeBrowser?.LoadComposite(composite);
+            });
+            EditorIcons.Bind(_openComposite, EditorIcon.Composite);
             _selectParent = Item("Select Parent Composite", null, (sender, e) => Send.SendViewportAction(ViewportAction.SelectParentComposite));
             _deselectAll = Item("Deselect All", "Escape", (sender, e) => Send.SendViewportAction(ViewportAction.DeselectAll));
             _refactorSeparator = new ToolStripSeparator();
@@ -254,6 +264,7 @@ namespace OpenCAGE.UnityConnection
                 _unhideAll,
                 new ToolStripSeparator(),
                 _stepInto,
+                _openComposite,
                 _selectParent,
                 _deselectAll,
                 _refactorSeparator,
@@ -266,6 +277,14 @@ namespace OpenCAGE.UnityConnection
         private static List<Entity> SelectedInList()
         {
             return Singleton.Editor?.CompositeDisplay?.EntityListPanel?.List?.SelectedEntities ?? new List<Entity>();
+        }
+
+        /* The composite a lone selected composite instance instances, or null for anything else */
+        private static Composite InstancedComposite(List<Entity> selected)
+        {
+            if (selected == null || selected.Count != 1 || !(selected[0] is FunctionEntity instance) || instance.function.IsFunctionType)
+                return null;
+            return Singleton.Editor?.CompositeBrowser?.Content?.Level?.Commands?.GetComposite(instance.function);
         }
 
         private static ToolStripMenuItem Item(string text, string shortcut, EventHandler onClick)
