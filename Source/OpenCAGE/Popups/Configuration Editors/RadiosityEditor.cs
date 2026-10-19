@@ -44,12 +44,12 @@ namespace OpenCAGE.ConfigEditors
         {
             File.WriteAllText(Singleton.PathToAI + @"\DATA\RADIOSITY_SETTINGS.TXT", 
                 "settings_file_version=1" + Environment.NewLine +
-                "gRadiosityEmissiveSurfaceScale=" + gRadiosityEmissiveSurfaceScale.Text + Environment.NewLine +
-                "gRadiosityFirstBounceScale=" + gRadiosityFirstBounceScale.Text + Environment.NewLine +
-                "gRadiosityMultiBounceScale=" + gRadiosityMultiBounceScale.Text + Environment.NewLine +
-                "gRadiosityAlbedoOverbrightAmount=" + gRadiosityAlbedoOverbrightAmount.Text + Environment.NewLine +
-                "gRadiosityAlbedoSaturationAmount=" + gRadiosityAlbedoSaturationAmount.Text + Environment.NewLine +
-                "gRadiositySpecularGlossScale=" + gRadiositySpecularGlossScale.Text + Environment.NewLine +
+                "gRadiosityEmissiveSurfaceScale=" + ConfigEditorUtils.NumberText(gRadiosityEmissiveSurfaceScale) + Environment.NewLine +
+                "gRadiosityFirstBounceScale=" + ConfigEditorUtils.NumberText(gRadiosityFirstBounceScale) + Environment.NewLine +
+                "gRadiosityMultiBounceScale=" + ConfigEditorUtils.NumberText(gRadiosityMultiBounceScale) + Environment.NewLine +
+                "gRadiosityAlbedoOverbrightAmount=" + ConfigEditorUtils.NumberText(gRadiosityAlbedoOverbrightAmount) + Environment.NewLine +
+                "gRadiosityAlbedoSaturationAmount=" + ConfigEditorUtils.NumberText(gRadiosityAlbedoSaturationAmount) + Environment.NewLine +
+                "gRadiositySpecularGlossScale=" + ConfigEditorUtils.NumberText(gRadiositySpecularGlossScale) + Environment.NewLine +
                 "gDeferredEmissiveSurfaceScale=1.487500" + Environment.NewLine +
                 "gDeferredEmissiveSurfaceExponent=0.563500");
 

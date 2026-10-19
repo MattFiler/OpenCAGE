@@ -1906,6 +1906,8 @@ namespace OpenCAGE.MCP
                         chosenConfigs.Add(new KeyValuePair<string, KeyValuePair<List<Modding.BmlPatchOp>, byte[]>>(path, new KeyValuePair<List<Modding.BmlPatchOp>, byte[]>(ops, vanilla)));
                         continue;
                     }
+                    //Every value as the game shipped it (a config editor only saved it again): not a change, unless named in 'files'
+                    if (ops != null && !files.Contains(path)) continue;
                     if (levels.Count != 0 || files.Count != 0) { if (!files.Contains(path)) continue; }
                 }
                 chosenFiles.Add(path);

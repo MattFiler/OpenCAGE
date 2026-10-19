@@ -108,7 +108,7 @@ namespace OpenCAGE.ConfigEditors
 
         private void SetValue(List<string> config, string name, NumericUpDown updown)
         {
-            string line = name + "=" + updown.Value.ToString();
+            string line = name + "=" + ConfigEditorUtils.NumberText(updown);
             for (int i = 0; i < config.Count; i++)
             {
                 if (!IsKey(config[i], name)) continue;

@@ -79,8 +79,8 @@ namespace OpenCAGE.ConfigEditors
         {
             //A field no file in the template chain has is disabled, and still shows the previous character's value
             if (viewcone_set.Enabled) ConfigEditorUtils.EnsureChildElements(sense, "viewcone_set_" + setName).InnerText = viewcone_set.Text;
-            if (max_hearing_distance.Enabled) ConfigEditorUtils.EnsureChildElements(sense, "max_hearing_distance_" + setName).InnerText = max_hearing_distance.Text;
-            if (max_damage_distance_scale_to.Enabled) ConfigEditorUtils.EnsureChildElements(sense, "max_damage_distance_scale_to_" + setName).InnerText = max_damage_distance_scale_to.Text;
+            if (max_hearing_distance.Enabled) ConfigEditorUtils.EnsureChildElements(sense, "max_hearing_distance_" + setName).InnerText = ConfigEditorUtils.NumberText(max_hearing_distance);
+            if (max_damage_distance_scale_to.Enabled) ConfigEditorUtils.EnsureChildElements(sense, "max_damage_distance_scale_to_" + setName).InnerText = ConfigEditorUtils.NumberText(max_damage_distance_scale_to);
 
             visualSense.Save(ConfigEditorUtils.EnsureChildElements(sense, "Visual_Sense"), setName, "visual");
             weaponSense.Save(ConfigEditorUtils.EnsureChildElements(sense, "Weapon_Sound_Sense"), setName, "weapon_sound");

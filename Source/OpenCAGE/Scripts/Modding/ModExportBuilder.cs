@@ -824,12 +824,81 @@ namespace OpenCAGE.Modding
                 XmlDocument current = new BML(currentBytes).Content;
                 if (vanilla == null || current == null)
                     return null;
-                return BmlPatch.Diff(vanilla, current);
+                return BmlPatch.Diff(vanilla, current, Inherited(current, normalisedPath, path => ModExportBuilder.UsersVersion(gameRoot, installer, path)));
             }
             catch
             {
                 return null;
             }
+        }
+
+        /* A config whose root names a template (Template_Name: character attributes, alien configs, ammo, difficulty
+           settings) takes whatever it doesn't give itself from that file in the same folder, and it from its own template.
+           The config editors save every entry they show, values it only inherits included - on purpose, so an edit to a
+           template never half-changes what inherits from it - which writes each inherited value into the file. A value
+           the file only spells out, where its templates (as the user has them) give the same, is no change of the user's:
+           left out of a mod, the file still gets it from its template. Looked up as the editors look values up: by element
+           name, the first of each. Null when the file names no template. */
+        private static Func<XmlElement, bool> Inherited(XmlDocument current, string normalisedPath, Func<string, byte[]> read)
+        {
+            List<XmlDocument> templates = new List<XmlDocument>();
+            string folder = normalisedPath.Substring(0, normalisedPath.LastIndexOf('/') + 1);
+            HashSet<string> seen = new HashSet<string>() { ModToolkit.Normalise(normalisedPath) };
+            XmlDocument at = current;
+            while (true)
+            {
+                string template = at.DocumentElement?["Template_Name"]?.InnerText?.Trim();
+                if (string.IsNullOrEmpty(template))
+                    break;
+                string path = ModToolkit.Normalise(folder + template + ".BML");
+                if (!seen.Add(path))
+                    break; //a template that comes round again
+                byte[] bytes = read(path);
+                XmlDocument document = bytes == null ? null : new BML(bytes).Content;
+                if (document?.DocumentElement == null)
+                    break;
+                templates.Add(document);
+                at = document;
+            }
+            if (templates.Count == 0)
+                return null;
+
+            return element =>
+            {
+                List<string> names = NamesFromRoot(element);
+                if (names == null)
+                    return false;
+                foreach (XmlDocument template in templates)
+                {
+                    XmlNode there = template;
+                    foreach (string name in names)
+                    {
+                        there = there[name];
+                        if (there == null)
+                            break;
+                    }
+                    if (there == null)
+                        continue;
+                    //The nearest template that has it is what the file would get
+                    return !there.ChildNodes.OfType<XmlElement>().Any() && ((XmlElement)there).Attributes.Count == 0
+                        && BmlPatch.SameValue(there.InnerText, element.InnerText);
+                }
+                return false;
+            };
+        }
+
+        /* The element names from the document's root down to this element - or null when one of them isn't the first of its
+           name under its parent, so the editors' lookup would never reach it */
+        private static List<string> NamesFromRoot(XmlElement element)
+        {
+            List<string> names = new List<string>();
+            for (XmlNode node = element; node is XmlElement; node = node.ParentNode)
+            {
+                if (node.ParentNode == null || node.ParentNode[node.Name] != node)
+                    return null;
+                names.Insert(0, node.Name);
+            }
+            return names;
         }
     }
 }

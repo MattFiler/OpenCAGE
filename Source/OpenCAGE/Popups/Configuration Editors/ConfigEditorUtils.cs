@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using System.Xml;
 
@@ -290,6 +291,7 @@ namespace OpenCAGE.ConfigEditors
             try
             {
                 if (decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal value)
+                    || TryParseCommaDecimal(text, out value)
                     || decimal.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value))
                 {
                     SetNumericValue(updown, value);
@@ -299,6 +301,28 @@ namespace OpenCAGE.ConfigEditors
             {
                 // Leave existing value if parse/assign fails
             }
+        }
+
+        /* These editors used to save a number as its box showed it, in the PC's language: on a German or French Windows,
+           0.45 went into the file as "0,45", which the game doesn't read as 0.45. Such a value is read as the number it was
+           meant to be, wherever the file is opened, so the next save writes it as the game spells numbers (NumberText). */
+        private static bool TryParseCommaDecimal(string text, out decimal value)
+        {
+            value = 0;
+            string trimmed = text.Trim();
+            return Regex.IsMatch(trimmed, @"^[-+]?\d+,\d+$")
+                && decimal.TryParse(trimmed.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+        }
+
+        /// <summary>
+        /// A number box's value as the game's files spell numbers: a point before the decimals whatever the PC's language,
+        /// and no zeros the value doesn't need. Save this, not the box's Text: Text is in the PC's language ("0,45" on a German
+        /// Windows) and padded to the box's decimal places, so a 3 read from a file went back in as "3.000" - and a value
+        /// with more decimals than the box shows lost them.
+        /// </summary>
+        public static string NumberText(NumericUpDown updown)
+        {
+            return updown.Value.ToString("0.############################", CultureInfo.InvariantCulture);
         }
 
         public static void SetCheckbox(List<BML> configs, CheckBox checkbox, params string[] elementPath)

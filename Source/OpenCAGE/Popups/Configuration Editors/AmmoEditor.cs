@@ -210,25 +210,25 @@ namespace OpenCAGE.ConfigEditors
 
             if (Projectile.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Hand_Weapon_Data", "Projectile").InnerText = Projectile.Checked.ToString();
             if (Flamethrower.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Hand_Weapon_Data", "Flamethrower").InnerText = Flamethrower.Checked.ToString();
-            if (damage_rays_per_shot.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Hand_Weapon_Data", "damage_rays_per_shot").InnerText = damage_rays_per_shot.Text;
+            if (damage_rays_per_shot.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Hand_Weapon_Data", "damage_rays_per_shot").InnerText = ConfigEditorUtils.NumberText(damage_rays_per_shot);
             if (damage_rays_blocked_by_characters.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Hand_Weapon_Data", "damage_rays_blocked_by_characters").InnerText = damage_rays_blocked_by_characters.Checked.ToString();
             if (use_fixed_accuracy.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Hand_Weapon_Data", "use_fixed_accuracy").InnerText = use_fixed_accuracy.Checked.ToString();
-            if (fixed_accuracy.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Hand_Weapon_Data", "fixed_accuracy").InnerText = fixed_accuracy.Text;
-            if (npc_accuracy_multiplier.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Hand_Weapon_Data", "npc_accuracy_multiplier").InnerText = npc_accuracy_multiplier.Text;
-            if (min_accuracy_radius_at_10_metres.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Hand_Weapon_Data", "min_accuracy_radius_at_10_metres").InnerText = min_accuracy_radius_at_10_metres.Text;
-            if (max_accuracy_radius_at_10_metres.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Hand_Weapon_Data", "max_accuracy_radius_at_10_metres").InnerText = max_accuracy_radius_at_10_metres.Text;
+            if (fixed_accuracy.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Hand_Weapon_Data", "fixed_accuracy").InnerText = ConfigEditorUtils.NumberText(fixed_accuracy);
+            if (npc_accuracy_multiplier.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Hand_Weapon_Data", "npc_accuracy_multiplier").InnerText = ConfigEditorUtils.NumberText(npc_accuracy_multiplier);
+            if (min_accuracy_radius_at_10_metres.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Hand_Weapon_Data", "min_accuracy_radius_at_10_metres").InnerText = ConfigEditorUtils.NumberText(min_accuracy_radius_at_10_metres);
+            if (max_accuracy_radius_at_10_metres.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Hand_Weapon_Data", "max_accuracy_radius_at_10_metres").InnerText = ConfigEditorUtils.NumberText(max_accuracy_radius_at_10_metres);
             if (is_fuel.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Hand_Weapon_Data", "is_fuel").InnerText = is_fuel.Checked.ToString();
-            if (fuel_units_consumed_per_second_if_firing.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Hand_Weapon_Data", "fuel_units_consumed_per_second_if_firing").InnerText = fuel_units_consumed_per_second_if_firing.Text;
-            if (fuel_units_consumed_per_second_if_switched_on.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Hand_Weapon_Data", "fuel_units_consumed_per_second_if_switched_on").InnerText = fuel_units_consumed_per_second_if_switched_on.Text;
-            if (projectile_units_consumed_per_shot.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Hand_Weapon_Data", "projectile_units_consumed_per_shot").InnerText = projectile_units_consumed_per_shot.Text;
+            if (fuel_units_consumed_per_second_if_firing.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Hand_Weapon_Data", "fuel_units_consumed_per_second_if_firing").InnerText = ConfigEditorUtils.NumberText(fuel_units_consumed_per_second_if_firing);
+            if (fuel_units_consumed_per_second_if_switched_on.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Hand_Weapon_Data", "fuel_units_consumed_per_second_if_switched_on").InnerText = ConfigEditorUtils.NumberText(fuel_units_consumed_per_second_if_switched_on);
+            if (projectile_units_consumed_per_shot.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Hand_Weapon_Data", "projectile_units_consumed_per_shot").InnerText = ConfigEditorUtils.NumberText(projectile_units_consumed_per_shot);
 
-            if (min_distance.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "damage_ranges", "min_distance").InnerText = min_distance.Text;
+            if (min_distance.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "damage_ranges", "min_distance").InnerText = ConfigEditorUtils.NumberText(min_distance);
 
             if (has_physics_response.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Physics_response_at_impact_point", "has_physics_response").InnerText = has_physics_response.Checked.ToString();
-            if (impulse_radius.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Physics_response_at_impact_point", "impulse_radius").InnerText = impulse_radius.Text;
-            if (impulse_at_centre_of_blast.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Physics_response_at_impact_point", "impulse_at_centre_of_blast").InnerText = impulse_at_centre_of_blast.Text;
-            if (impulse_fall_off_power.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Physics_response_at_impact_point", "impulse_fall_off_power").InnerText = impulse_fall_off_power.Text;
-            if (character_wavefront_speed.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Physics_response_at_impact_point", "character_wavefront_speed").InnerText = character_wavefront_speed.Text;
+            if (impulse_radius.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Physics_response_at_impact_point", "impulse_radius").InnerText = ConfigEditorUtils.NumberText(impulse_radius);
+            if (impulse_at_centre_of_blast.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Physics_response_at_impact_point", "impulse_at_centre_of_blast").InnerText = ConfigEditorUtils.NumberText(impulse_at_centre_of_blast);
+            if (impulse_fall_off_power.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Physics_response_at_impact_point", "impulse_fall_off_power").InnerText = ConfigEditorUtils.NumberText(impulse_fall_off_power);
+            if (character_wavefront_speed.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Ammo", "Physics_response_at_impact_point", "character_wavefront_speed").InnerText = ConfigEditorUtils.NumberText(character_wavefront_speed);
 
             XmlElement range_damage = GetSelectedRangeElement(doc);
             string newRange = null;
@@ -236,22 +236,22 @@ namespace OpenCAGE.ConfigEditors
             {
                 newRange = FormatRangeDistance(range_distance.Value);
                 range_damage.SetAttribute("range", newRange);
-                range_damage.SetAttribute("vs_NPC", vs_NPC.Text);
-                range_damage.SetAttribute("vsPlayer", vsPlayer.Text);
-                range_damage.SetAttribute("vsAndroid", vsAndroid.Text);
-                range_damage.SetAttribute("vsAndroidHeavy", vsAndroidHeavy.Text);
-                range_damage.SetAttribute("vsFHugger", vsFHugger.Text);
-                range_damage.SetAttribute("vsPhysics", vsPhysics.Text);
-                range_damage.SetAttribute("headshot", headshot.Text);
+                range_damage.SetAttribute("vs_NPC", ConfigEditorUtils.NumberText(vs_NPC));
+                range_damage.SetAttribute("vsPlayer", ConfigEditorUtils.NumberText(vsPlayer));
+                range_damage.SetAttribute("vsAndroid", ConfigEditorUtils.NumberText(vsAndroid));
+                range_damage.SetAttribute("vsAndroidHeavy", ConfigEditorUtils.NumberText(vsAndroidHeavy));
+                range_damage.SetAttribute("vsFHugger", ConfigEditorUtils.NumberText(vsFHugger));
+                range_damage.SetAttribute("vsPhysics", ConfigEditorUtils.NumberText(vsPhysics));
+                range_damage.SetAttribute("headshot", ConfigEditorUtils.NumberText(headshot));
                 SetDamage(range_damage, "Damage_1", Damage_1);
                 SetDamage(range_damage, "Damage_2", Damage_2);
                 SetDamage(range_damage, "Damage_3", Damage_3);
-                range_damage.SetAttribute("Ragdoll", Ragdoll.Text);
-                range_damage.SetAttribute("vsAlien", vsAlien.Text);
-                range_damage.SetAttribute("AlienStun", AlienStun.Text);
-                range_damage.SetAttribute("StunDuration", StunDuration.Text);
-                range_damage.SetAttribute("EMPDuration", EMPDuration.Text);
-                range_damage.SetAttribute("BlindDuration", BlindDuration.Text);
+                range_damage.SetAttribute("Ragdoll", ConfigEditorUtils.NumberText(Ragdoll));
+                range_damage.SetAttribute("vsAlien", ConfigEditorUtils.NumberText(vsAlien));
+                range_damage.SetAttribute("AlienStun", ConfigEditorUtils.NumberText(AlienStun));
+                range_damage.SetAttribute("StunDuration", ConfigEditorUtils.NumberText(StunDuration));
+                range_damage.SetAttribute("EMPDuration", ConfigEditorUtils.NumberText(EMPDuration));
+                range_damage.SetAttribute("BlindDuration", ConfigEditorUtils.NumberText(BlindDuration));
             }
 
             _selectedAmmo[0].Content = doc;

@@ -113,13 +113,13 @@ namespace OpenCAGE.ConfigEditors
                 if (difficulty.GetAttribute("difficulty") != hackDifficulties.Text)
                     continue;
 
-                difficulty.SetAttribute("inner_selection_angle_in_deg", inner_selection_angle_in_deg.Text);
-                difficulty.SetAttribute("outer_selection_angle_in_deg", outer_selection_angle_in_deg.Text);
-                difficulty.SetAttribute("selection_angle_increase_in_deg", selection_angle_increase_in_deg.Text);
-                difficulty.SetAttribute("number_of_rounds", number_of_rounds.Text);
-                difficulty.SetAttribute("length_of_keycode", length_of_keycode.Text);
-                difficulty.SetAttribute("number_of_alarms", number_of_alarms.Text);
-                difficulty.SetAttribute("timer_countdown_seconds", timer_countdown_seconds.Text); 
+                difficulty.SetAttribute("inner_selection_angle_in_deg", ConfigEditorUtils.NumberText(inner_selection_angle_in_deg));
+                difficulty.SetAttribute("outer_selection_angle_in_deg", ConfigEditorUtils.NumberText(outer_selection_angle_in_deg));
+                difficulty.SetAttribute("selection_angle_increase_in_deg", ConfigEditorUtils.NumberText(selection_angle_increase_in_deg));
+                difficulty.SetAttribute("number_of_rounds", ConfigEditorUtils.NumberText(number_of_rounds));
+                difficulty.SetAttribute("length_of_keycode", ConfigEditorUtils.NumberText(length_of_keycode));
+                difficulty.SetAttribute("number_of_alarms", ConfigEditorUtils.NumberText(number_of_alarms));
+                difficulty.SetAttribute("timer_countdown_seconds", ConfigEditorUtils.NumberText(timer_countdown_seconds)); 
             }
 
             _gblItem.Content = doc;

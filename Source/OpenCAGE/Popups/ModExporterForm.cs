@@ -485,6 +485,11 @@ namespace OpenCAGE.Popups
                         configs.Add(new ConfigChange() { Path = path, Ops = ops, VanillaBytes = vanilla, Original = original });
                         continue;
                     }
+                    //Every value as the game shipped it - a config editor only saved the file again (numbers spelt its way,
+                    //values it inherits written out): nothing of the user's to put in a mod, and as a whole file it would
+                    //overwrite other mods' changes to it
+                    if (ops != null)
+                        continue;
                 }
                 other.Add(path);
             }

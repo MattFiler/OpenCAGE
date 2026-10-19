@@ -244,10 +244,10 @@ namespace OpenCAGE.ConfigEditors
                 selectedElement.SetAttribute("localisation_tag", localisation_tag.Text);
                 selectedElement.SetAttribute("keyframe", keyframe.Text);
                 selectedElement.SetAttribute("vanish_when_collected", (!vanish_when_collected.Checked).ToString().ToLower());
-                selectedElement.SetAttribute("default_quantity", default_quantity.Text);
-                selectedElement.SetAttribute("stack_limit", stack_limit.Text);
+                selectedElement.SetAttribute("default_quantity", ConfigEditorUtils.NumberText(default_quantity));
+                selectedElement.SetAttribute("stack_limit", ConfigEditorUtils.NumberText(stack_limit));
                 selectedElement.SetAttribute("display_quantity", display_quantity.Checked.ToString().ToLower());
-                selectedElement.SetAttribute("radial_menu_order_index", radial_menu_order_index.Text);
+                selectedElement.SetAttribute("radial_menu_order_index", ConfigEditorUtils.NumberText(radial_menu_order_index));
                 selectedElement.SetAttribute("crafting_resource", crafting_resource.Checked.ToString().ToLower());
                 selectedElement.SetAttribute("composite", "Pickups\\" + compositeLeaf);
                 selectedElement.SetAttribute("special_slot", special_slot.Text);
@@ -288,12 +288,12 @@ namespace OpenCAGE.ConfigEditors
                 selectedElement.SetAttribute("drop_when_consume", drop_when_consume.Checked.ToString().ToLower());
                 selectedElement.SetAttribute("consume_when", consume_when.Text);
                 selectedElement.SetAttribute("activated_by", activated_by.Text);
-                selectedElement.SetAttribute("cancellable_duration_in_seconds", cancellable_duration_in_seconds.Text);
+                selectedElement.SetAttribute("cancellable_duration_in_seconds", ConfigEditorUtils.NumberText(cancellable_duration_in_seconds));
             }
             if (medikit.Visible)
             {
-                selectedElement.SetAttribute("health_increase_percentage", health_increase_percentage.Text);
-                selectedElement.SetAttribute("upgraded_health_increase_percentage", upgraded_health_increase_percentage.Text);
+                selectedElement.SetAttribute("health_increase_percentage", ConfigEditorUtils.NumberText(health_increase_percentage));
+                selectedElement.SetAttribute("upgraded_health_increase_percentage", ConfigEditorUtils.NumberText(upgraded_health_increase_percentage));
             }
 
             if (name.Text != _ogName)

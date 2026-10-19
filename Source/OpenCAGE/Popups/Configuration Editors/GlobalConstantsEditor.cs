@@ -101,17 +101,17 @@ namespace OpenCAGE.ConfigEditors
 
             var doc = _globalConstants.Content;
 
-            doc["GlobalConstants"]["StealthLightMeter"]["stealth_light_meter_full_dark_threshold"].InnerText = stealth_light_meter_full_dark_threshold.Text;
-            doc["GlobalConstants"]["StealthLightMeter"]["stealth_light_meter_full_light_threshold"].InnerText = stealth_light_meter_full_light_threshold.Text;
-            doc["GlobalConstants"]["StealthLightMeter"]["stealth_light_meter_timeout_when_detected"].InnerText = stealth_light_meter_timeout_when_detected.Text;
+            doc["GlobalConstants"]["StealthLightMeter"]["stealth_light_meter_full_dark_threshold"].InnerText = ConfigEditorUtils.NumberText(stealth_light_meter_full_dark_threshold);
+            doc["GlobalConstants"]["StealthLightMeter"]["stealth_light_meter_full_light_threshold"].InnerText = ConfigEditorUtils.NumberText(stealth_light_meter_full_light_threshold);
+            doc["GlobalConstants"]["StealthLightMeter"]["stealth_light_meter_timeout_when_detected"].InnerText = ConfigEditorUtils.NumberText(stealth_light_meter_timeout_when_detected);
 
-            doc["GlobalConstants"]["Interaction"]["interaction_distance_threshold"].InnerText = interaction_distance_threshold.Text;
+            doc["GlobalConstants"]["Interaction"]["interaction_distance_threshold"].InnerText = ConfigEditorUtils.NumberText(interaction_distance_threshold);
 
-            doc["GlobalConstants"]["squad_shots"]["min_time_between_squad_shots_lower_bound"].InnerText = min_time_between_squad_shots_lower_bound.Text;
-            doc["GlobalConstants"]["squad_shots"]["min_time_between_squad_shots_upper_bound"].InnerText = min_time_between_squad_shots_upper_bound.Text;
+            doc["GlobalConstants"]["squad_shots"]["min_time_between_squad_shots_lower_bound"].InnerText = ConfigEditorUtils.NumberText(min_time_between_squad_shots_lower_bound);
+            doc["GlobalConstants"]["squad_shots"]["min_time_between_squad_shots_upper_bound"].InnerText = ConfigEditorUtils.NumberText(min_time_between_squad_shots_upper_bound);
 
-            doc["GlobalConstants"]["suspicious_item_reaction"]["min_time_suspicious_reaction_loop"].InnerText = min_time_suspicious_reaction_loop.Text;
-            doc["GlobalConstants"]["suspicious_item_reaction"]["max_time_suspicious_reaction_loop"].InnerText = max_time_suspicious_reaction_loop.Text;
+            doc["GlobalConstants"]["suspicious_item_reaction"]["min_time_suspicious_reaction_loop"].InnerText = ConfigEditorUtils.NumberText(min_time_suspicious_reaction_loop);
+            doc["GlobalConstants"]["suspicious_item_reaction"]["max_time_suspicious_reaction_loop"].InnerText = ConfigEditorUtils.NumberText(max_time_suspicious_reaction_loop);
 
             _globalConstants.Content = doc;
             _globalConstants.Save();

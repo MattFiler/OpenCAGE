@@ -1,6 +1,7 @@
 #if ENABLE_MOD_PACKAGES
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Xml;
@@ -41,6 +42,16 @@ namespace OpenCAGE.Modding
         /// </summary>
         public static List<BmlPatchOp> Diff(XmlDocument vanilla, XmlDocument current)
         {
+            return Diff(vanilla, current, null);
+        }
+
+        /// <summary>
+        /// The ops that turn the vanilla document into the current one. <paramref name="inherited"/>, when given, says whether
+        /// a value element only the current document has holds just what the file would get anyway from a template it
+        /// inherits from: such an element is no change, and nor is such a value inside an element the current document adds.
+        /// </summary>
+        public static List<BmlPatchOp> Diff(XmlDocument vanilla, XmlDocument current, Func<XmlElement, bool> inherited)
+        {
             List<BmlPatchOp> ops = new List<BmlPatchOp>();
             XmlElement vanillaRoot = vanilla.DocumentElement;
             XmlElement currentRoot = current.DocumentElement;
@@ -50,17 +61,67 @@ namespace OpenCAGE.Modding
                 ops.Add(new BmlPatchOp() { Kind = "replace", Path = currentRoot == null ? "" : Step(currentRoot), Xml = current.OuterXml });
                 return ops;
             }
-            DiffElement(vanillaRoot, currentRoot, Step(vanillaRoot), ops);
+            DiffElement(vanillaRoot, currentRoot, Step(vanillaRoot), ops, inherited);
             return ops;
         }
 
-        private static void DiffElement(XmlElement vanilla, XmlElement current, string path, List<BmlPatchOp> ops)
+        /// <summary>
+        /// Whether two spellings of a value mean the same to the game. The config editors save a number as their number box
+        /// holds it, so a 3 can come back as "3.000" and 0.45 as "0.450" (and, from an older OpenCAGE on a German or French
+        /// Windows, "0,450"); a tick box saves "True" whatever case the file had. Whole numbers are only the same when spelt
+        /// the same, so a "007" stays apart from a "7".
+        /// </summary>
+        public static bool SameValue(string a, string b)
+        {
+            if (a == b)
+                return true;
+            if (a == null || b == null)
+                return false;
+            string x = a.Trim(), y = b.Trim();
+            if (x == y)
+                return true;
+            if (IsFraction(x) || IsFraction(y))
+            {
+                decimal dx, dy;
+                if (TryNumber(x, out dx) && TryNumber(y, out dy))
+                    return dx == dy;
+                double fx, fy;
+                if (double.TryParse(x, NumberStyles.Float, CultureInfo.InvariantCulture, out fx) && double.TryParse(y, NumberStyles.Float, CultureInfo.InvariantCulture, out fy))
+                    return fx == fy;
+            }
+            if (IsBoolean(x) && IsBoolean(y))
+                return string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
+            return false;
+        }
+
+        /* A number with a fractional part or an exponent ("3.000", "0,450", "1e-3"), as against a whole number ("3", "007") */
+        private static bool IsFraction(string text)
+        {
+            decimal ignored;
+            return (text.IndexOf('.') >= 0 || text.IndexOf(',') >= 0 || text.IndexOf('e') >= 0 || text.IndexOf('E') >= 0) && TryNumber(text, out ignored);
+        }
+
+        private static bool TryNumber(string text, out decimal value)
+        {
+            if (decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value))
+                return true;
+            //"0,450": a decimal comma, as an older OpenCAGE wrote numbers on a PC set to a language that uses one
+            return System.Text.RegularExpressions.Regex.IsMatch(text, @"^[-+]?\d+,\d+$")
+                && decimal.TryParse(text.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+        }
+
+        private static bool IsBoolean(string text)
+        {
+            return string.Equals(text, "true", StringComparison.OrdinalIgnoreCase) || string.Equals(text, "false", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static void DiffElement(XmlElement vanilla, XmlElement current, string path, List<BmlPatchOp> ops, Func<XmlElement, bool> inherited)
         {
             //Attributes
             foreach (XmlAttribute attr in current.Attributes)
             {
                 string vanillaValue = vanilla.HasAttribute(attr.Name) ? vanilla.GetAttribute(attr.Name) : null;
-                if (vanillaValue != attr.Value)
+                if (!SameValue(vanillaValue, attr.Value))
                     ops.Add(new BmlPatchOp() { Kind = "set", Path = path, Attr = attr.Name, Value = attr.Value });
             }
             foreach (XmlAttribute attr in vanilla.Attributes)
@@ -72,7 +133,7 @@ namespace OpenCAGE.Modding
             {
                 string vanillaText = DirectText(vanilla);
                 string currentText = DirectText(current);
-                if (vanillaText != currentText)
+                if (!SameValue(vanillaText, currentText))
                     ops.Add(new BmlPatchOp() { Kind = "settext", Path = path, Value = currentText });
                 return;
             }
@@ -95,19 +156,58 @@ namespace OpenCAGE.Modding
             {
                 XmlElement vanillaChild;
                 if (vanillaByStep.TryGetValue(child.Key, out vanillaChild))
-                    DiffElement(vanillaChild, child.Value, path + "/" + child.Key, ops);
+                    DiffElement(vanillaChild, child.Value, path + "/" + child.Key, ops, inherited);
                 else
+                {
+                    XmlElement added = inherited == null ? child.Value : WithoutInherited(child.Value, inherited);
+                    if (added == null)
+                        continue;
                     ops.Add(new BmlPatchOp()
                     {
                         Kind = "add",
                         Path = path,
                         Index = currentChildren.IndexOf(child.Value),
-                        Xml = child.Value.OuterXml,
+                        Xml = added.OuterXml,
                     });
+                }
             }
             foreach (KeyValuePair<string, XmlElement> child in vanillaByStep)
                 if (!currentByStep.ContainsKey(child.Key))
                     ops.Add(new BmlPatchOp() { Kind = "remove", Path = path + "/" + child.Key });
+        }
+
+        /* An added element without the values in it that it only inherits (see Diff): the element itself when nothing goes,
+           a copy without them when some do, and null when it is nothing but such values. A value with attributes, and any
+           group's own attributes, always stay. */
+        private static XmlElement WithoutInherited(XmlElement element, Func<XmlElement, bool> inherited)
+        {
+            if (!HasElementChildren(element))
+                return element.Attributes.Count == 0 && inherited(element) ? null : element;
+
+            XmlElement copy = (XmlElement)element.CloneNode(false); //its attributes, none of its children
+            bool changed = false, keptAny = false;
+            foreach (XmlNode node in element.ChildNodes)
+            {
+                XmlElement child = node as XmlElement;
+                if (child == null)
+                {
+                    copy.AppendChild(node.CloneNode(true));
+                    continue;
+                }
+                XmlElement kept = WithoutInherited(child, inherited);
+                if (kept == null)
+                {
+                    changed = true;
+                    continue;
+                }
+                if (kept != child)
+                    changed = true;
+                copy.AppendChild(kept == child ? child.CloneNode(true) : kept);
+                keptAny = true;
+            }
+            if (!changed)
+                return element;
+            return keptAny || element.Attributes.Count != 0 ? copy : null;
         }
         #endregion
 
@@ -264,7 +364,7 @@ namespace OpenCAGE.Modding
                 case "removeattr":
                     return "removes " + Friendly(op.Attr) + (where.Length == 0 ? "" : " from " + where);
                 case "add":
-                    return "adds " + DescribeElement(op.Xml) + (where.Length == 0 ? "" : " to " + where);
+                    return DescribeValues(op.Xml, where) ?? "adds " + DescribeElement(op.Xml) + (where.Length == 0 ? "" : " to " + where);
                 case "remove":
                     return "removes " + FriendlyStep(op.Path.Substring(op.Path.LastIndexOf('/') + 1));
                 case "replace":
@@ -316,6 +416,44 @@ namespace OpenCAGE.Modding
             int start = at + "[@name='".Length;
             int end = step.IndexOf("']", start, StringComparison.Ordinal);
             return end < 0 ? null : step.Substring(start, end - start);
+        }
+
+        /* An added element that is only values (no attributes anywhere): the values, as a set would say them - "Senses ›
+           Sensing Set 2 › max hearing distance set 2: 12.345" - rather than "adds Sensing Set 2 to Senses". Null for anything
+           else, or more than a few values. */
+        private static string DescribeValues(string xml, string where)
+        {
+            XmlElement added;
+            try
+            {
+                XmlDocument fragment = new XmlDocument();
+                fragment.LoadXml(xml);
+                added = fragment.DocumentElement;
+            }
+            catch (XmlException)
+            {
+                return null;
+            }
+            List<string> values = new List<string>();
+            if (added == null || !CollectValues(added, where.Length == 0 ? "" : where + " › ", values) || values.Count == 0 || values.Count > 3)
+                return null;
+            return string.Join("; ", values);
+        }
+
+        private static bool CollectValues(XmlElement element, string prefix, List<string> values)
+        {
+            if (element.Attributes.Count != 0)
+                return false;
+            string here = prefix + Friendly(element.Name);
+            if (!HasElementChildren(element))
+            {
+                values.Add(here + ": " + Short(element.InnerText));
+                return true;
+            }
+            foreach (XmlElement child in Children(element))
+                if (!CollectValues(child, here + " › ", values))
+                    return false;
+            return true;
         }
 
         private static string DescribeElement(string xml)

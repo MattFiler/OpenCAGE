@@ -84,9 +84,9 @@ namespace OpenCAGE.ConfigEditors
         {
             var doc = _selectedCharacter[0].Content;
 
-            if (capsuleRadius.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Locomotion", "capsuleRadius").InnerText = capsuleRadius.Text;
-            if (capsuleHeight.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Locomotion", "capsuleHeight").InnerText = capsuleHeight.Text;
-            if (permittedLocomotionModulation.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Locomotion", "permittedLocomotionModulation").InnerText = permittedLocomotionModulation.Text;
+            if (capsuleRadius.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Locomotion", "capsuleRadius").InnerText = ConfigEditorUtils.NumberText(capsuleRadius);
+            if (capsuleHeight.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Locomotion", "capsuleHeight").InnerText = ConfigEditorUtils.NumberText(capsuleHeight);
+            if (permittedLocomotionModulation.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Locomotion", "permittedLocomotionModulation").InnerText = ConfigEditorUtils.NumberText(permittedLocomotionModulation);
 
             foreach (TabPage page in tabControl1.TabPages)
             {
