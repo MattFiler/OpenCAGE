@@ -3,6 +3,7 @@ using OpenCAGE.UnityConnection;
 using System;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using WeifenLuo.WinFormsUI.Docking;
 
@@ -28,13 +29,15 @@ namespace OpenCAGE.DockPanels
             filterList.ItemChecked += FilterList_ItemChecked;
 
             /* Every row but the divider is still commctrl's to draw (DrawDefault), so the theme's
-               per-item colours, selection and hover are untouched; only the divider row is ours. */
+               per-item colours, selection and hover are untouched; only the divider row is ours.
+               OwnerDraw does cost the hovered and selected rows their text colour: see HoverTextColour. */
             filterList.OwnerDraw = true;
             filterList.DrawColumnHeader += (s, e) => e.DrawDefault = true;
             filterList.DrawItem += FilterList_DrawItem;
             filterList.DrawSubItem += FilterList_DrawSubItem;
             filterList.ItemCheck += FilterList_ItemCheck;
             filterList.ItemSelectionChanged += FilterList_ItemSelectionChanged;
+            HoverTextColour.Attach(filterList);
 
             SettingsManager.SettingsChanged += OnSettingsChanged;
             RefreshFilters();
@@ -173,6 +176,76 @@ namespace OpenCAGE.DockPanels
                 filterList.Items[index].Selected = true;
                 filterList.Items[index].Focused = true;
             }));
+        }
+
+        /* WinForms colours a hovered or selected row from a cache it only fills while OwnerDraw is off, so with it
+           on those rows kept the cache's starting colours, the system's black text on white: unreadable on the dark
+           theme. Once WinForms has set a row's colours, a row given that pair gets the list's own colours, as it
+           would in any other list. The light theme's list colours are that pair, so nothing changes there. */
+        private sealed class HoverTextColour : NativeWindow
+        {
+            private const int WM_REFLECT_NOTIFY = 0x2000 + 0x004E;
+            private const int NM_CUSTOMDRAW = -12;
+            private const int CDDS_ITEMPREPAINT = 0x00010001;
+            private const int CDDS_SUBITEM = 0x00020000;
+
+            [StructLayout(LayoutKind.Sequential)]
+            private struct NMHDR
+            {
+                public IntPtr hwndFrom;
+                public IntPtr idFrom;
+                public int code;
+            }
+
+            [StructLayout(LayoutKind.Sequential)]
+            private struct NMLVCUSTOMDRAW
+            {
+                public NMHDR hdr;
+                public int dwDrawStage;
+                public IntPtr hdc;
+                public int left, top, right, bottom;
+                public IntPtr dwItemSpec;
+                public int uItemState;
+                public IntPtr lItemlParam;
+                public int clrText;
+                public int clrTextBk;
+            }
+
+            private static readonly int CodeOffset = Marshal.OffsetOf(typeof(NMHDR), "code").ToInt32();
+            private static readonly int TextOffset = Marshal.OffsetOf(typeof(NMLVCUSTOMDRAW), "clrText").ToInt32();
+            private static readonly int TextBackOffset = Marshal.OffsetOf(typeof(NMLVCUSTOMDRAW), "clrTextBk").ToInt32();
+
+            private readonly ListView _listView;
+
+            private HoverTextColour(ListView listView)
+            {
+                _listView = listView;
+            }
+
+            public static void Attach(ListView listView)
+            {
+                HoverTextColour fix = new HoverTextColour(listView);
+                if (listView.IsHandleCreated)
+                    fix.AssignHandle(listView.Handle);
+                //A new handle drops the old subclass with it
+                listView.HandleCreated += (s, e) => fix.AssignHandle(listView.Handle);
+            }
+
+            protected override void WndProc(ref Message m)
+            {
+                base.WndProc(ref m);
+
+                if (m.Msg != WM_REFLECT_NOTIFY || Marshal.ReadInt32(m.LParam, CodeOffset) != NM_CUSTOMDRAW)
+                    return;
+                NMLVCUSTOMDRAW draw = Marshal.PtrToStructure<NMLVCUSTOMDRAW>(m.LParam);
+                if (draw.hdr.hwndFrom != Handle || (draw.dwDrawStage & ~CDDS_SUBITEM) != CDDS_ITEMPREPAINT)
+                    return;
+                if (draw.clrText != ColorTranslator.ToWin32(SystemColors.WindowText) || draw.clrTextBk != ColorTranslator.ToWin32(SystemColors.Window))
+                    return;
+
+                Marshal.WriteInt32(m.LParam, TextOffset, ColorTranslator.ToWin32(_listView.ForeColor));
+                Marshal.WriteInt32(m.LParam, TextBackOffset, ColorTranslator.ToWin32(_listView.BackColor));
+            }
         }
         #endregion
 
