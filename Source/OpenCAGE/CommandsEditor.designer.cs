@@ -120,7 +120,12 @@ namespace OpenCAGE
             this.showCameraPositionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.renderWireframeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.renderGalaxyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.renderFogToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.renderWaterToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.renderPlanetsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.planarReflectionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.hideNestedScriptEntitiesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.renderingOptionsToolStripSeparator = new System.Windows.Forms.ToolStripSeparator();
             this.snapIncrementsToolStripSeparator = new System.Windows.Forms.ToolStripSeparator();
             this.snapIncrementsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.highlightModeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -128,6 +133,19 @@ namespace OpenCAGE
             this.highlightModeWireframeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.highlightModeWireframeTransparentToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.highlightModeNoneToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.antialiasingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.antialiasingOffToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.antialiasingFxaaToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.antialiasingSmaaToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.antialiasingMsaa2xToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.antialiasingMsaa4xToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.antialiasingMsaa8xToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.drawDistanceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.drawDistanceShortToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.drawDistanceMediumToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.drawDistanceLongToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.drawDistanceVeryLongToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.drawDistanceUnlimitedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.miscToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showConfirmationWhenSavingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.promptToSaveOnCloseToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -855,10 +873,17 @@ namespace OpenCAGE
             this.focusOnSelectedToolStripMenuItem,
             this.fixCameraToSelectedEntityToolStripMenuItem,
             this.showCameraPositionToolStripMenuItem,
-            this.renderWireframeToolStripMenuItem,
-            this.renderGalaxyToolStripMenuItem,
             this.hideNestedScriptEntitiesToolStripMenuItem,
             this.highlightModeToolStripMenuItem,
+            this.renderingOptionsToolStripSeparator,
+            this.renderWireframeToolStripMenuItem,
+            this.renderGalaxyToolStripMenuItem,
+            this.renderPlanetsToolStripMenuItem,
+            this.renderFogToolStripMenuItem,
+            this.renderWaterToolStripMenuItem,
+            this.planarReflectionsToolStripMenuItem,
+            this.antialiasingToolStripMenuItem,
+            this.drawDistanceToolStripMenuItem,
             this.snapIncrementsToolStripSeparator,
             this.snapIncrementsToolStripMenuItem});
             this.viewportOptionsToolStripMenuItem.Name = "viewportOptionsToolStripMenuItem";
@@ -938,7 +963,43 @@ namespace OpenCAGE
             this.renderGalaxyToolStripMenuItem.ToolTipText = "Draw the level's galaxy (its starfield) as the viewport sky, as the game does. Off " +
     "shows the plain sky instead.";
             this.renderGalaxyToolStripMenuItem.Click += new System.EventHandler(this.renderGalaxyToolStripMenuItem_Click);
-            // 
+            //
+            // renderFogToolStripMenuItem
+            //
+            this.renderFogToolStripMenuItem.Name = "renderFogToolStripMenuItem";
+            this.renderFogToolStripMenuItem.Size = new System.Drawing.Size(226, 22);
+            this.renderFogToolStripMenuItem.Text = "Render Distance Fog";
+            this.renderFogToolStripMenuItem.ToolTipText = "Draw the distance fog the level switches on as it starts, as the game does. Off shows the whole level clear, ho" +
+    "w far out the camera goes. Fog volumes and planes (FogBox, FogPlane, FogSphere) are never drawn as fog.";
+            this.renderFogToolStripMenuItem.Click += new System.EventHandler(this.renderFogToolStripMenuItem_Click);
+            //
+            // renderWaterToolStripMenuItem
+            //
+            this.renderWaterToolStripMenuItem.Name = "renderWaterToolStripMenuItem";
+            this.renderWaterToolStripMenuItem.Size = new System.Drawing.Size(226, 22);
+            this.renderWaterToolStripMenuItem.Text = "Render Water";
+            this.renderWaterToolStripMenuItem.ToolTipText = "Draw the level's water as the game does: its pools and puddles, their reflections, ripples and caustics. Off shows wh" +
+    "at is under them.";
+            this.renderWaterToolStripMenuItem.Click += new System.EventHandler(this.renderWaterToolStripMenuItem_Click);
+            //
+            // planarReflectionsToolStripMenuItem
+            //
+            this.planarReflectionsToolStripMenuItem.Name = "planarReflectionsToolStripMenuItem";
+            this.planarReflectionsToolStripMenuItem.Size = new System.Drawing.Size(226, 22);
+            this.planarReflectionsToolStripMenuItem.Text = "Use Planar Reflections";
+            this.planarReflectionsToolStripMenuItem.ToolTipText = "Mirror the water as the game does, by drawing what the level marks to be reflected a second time. Off uses a cheape" +
+    "r reflection of what is already on screen. Needs Render Water.";
+            this.planarReflectionsToolStripMenuItem.Click += new System.EventHandler(this.planarReflectionsToolStripMenuItem_Click);
+            //
+            // renderPlanetsToolStripMenuItem
+            //
+            this.renderPlanetsToolStripMenuItem.Name = "renderPlanetsToolStripMenuItem";
+            this.renderPlanetsToolStripMenuItem.Size = new System.Drawing.Size(226, 22);
+            this.renderPlanetsToolStripMenuItem.Text = "Render Planets";
+            this.renderPlanetsToolStripMenuItem.ToolTipText = "Draw the level's planets, moons and suns in the sky, as the game does. Needs Render Galaxy: with the galaxy off, " +
+    "planets are off too.";
+            this.renderPlanetsToolStripMenuItem.Click += new System.EventHandler(this.renderPlanetsToolStripMenuItem_Click);
+            //
             // hideNestedScriptEntitiesToolStripMenuItem
             // 
             this.hideNestedScriptEntitiesToolStripMenuItem.Name = "hideNestedScriptEntitiesToolStripMenuItem";
@@ -947,6 +1008,11 @@ namespace OpenCAGE
             this.hideNestedScriptEntitiesToolStripMenuItem.ToolTipText = "Hide render previews for script entities defined in nested composites in the view" +
     "port. Model references are not affected.";
             this.hideNestedScriptEntitiesToolStripMenuItem.Click += new System.EventHandler(this.hideNestedScriptEntitiesToolStripMenuItem_Click);
+            //
+            // renderingOptionsToolStripSeparator
+            //
+            this.renderingOptionsToolStripSeparator.Name = "renderingOptionsToolStripSeparator";
+            this.renderingOptionsToolStripSeparator.Size = new System.Drawing.Size(223, 6);
             //
             // snapIncrementsToolStripSeparator
             //
@@ -1004,7 +1070,122 @@ namespace OpenCAGE
             this.highlightModeNoneToolStripMenuItem.Text = "None";
             this.highlightModeNoneToolStripMenuItem.ToolTipText = "Do not mark the selected entity at all.";
             this.highlightModeNoneToolStripMenuItem.Click += new System.EventHandler(this.highlightModeToolStripMenuItem_Click);
-            // 
+            //
+            // antialiasingToolStripMenuItem
+            //
+            this.antialiasingToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.antialiasingOffToolStripMenuItem,
+            this.antialiasingFxaaToolStripMenuItem,
+            this.antialiasingSmaaToolStripMenuItem,
+            this.antialiasingMsaa2xToolStripMenuItem,
+            this.antialiasingMsaa4xToolStripMenuItem,
+            this.antialiasingMsaa8xToolStripMenuItem});
+            this.antialiasingToolStripMenuItem.Name = "antialiasingToolStripMenuItem";
+            this.antialiasingToolStripMenuItem.Size = new System.Drawing.Size(226, 22);
+            this.antialiasingToolStripMenuItem.Text = "Anti-aliasing";
+            this.antialiasingToolStripMenuItem.ToolTipText = "How the viewport smooths jagged edges.";
+            //
+            // antialiasingOffToolStripMenuItem
+            //
+            this.antialiasingOffToolStripMenuItem.Name = "antialiasingOffToolStripMenuItem";
+            this.antialiasingOffToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.antialiasingOffToolStripMenuItem.Text = "Off";
+            this.antialiasingOffToolStripMenuItem.ToolTipText = "Leave edges as they are drawn.";
+            this.antialiasingOffToolStripMenuItem.Click += new System.EventHandler(this.antialiasingToolStripMenuItem_Click);
+            //
+            // antialiasingFxaaToolStripMenuItem
+            //
+            this.antialiasingFxaaToolStripMenuItem.Name = "antialiasingFxaaToolStripMenuItem";
+            this.antialiasingFxaaToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.antialiasingFxaaToolStripMenuItem.Text = "FXAA";
+            this.antialiasingFxaaToolStripMenuItem.ToolTipText = "Smooth edges over the finished picture. Cheap, but softens textures a little.";
+            this.antialiasingFxaaToolStripMenuItem.Click += new System.EventHandler(this.antialiasingToolStripMenuItem_Click);
+            //
+            // antialiasingSmaaToolStripMenuItem
+            //
+            this.antialiasingSmaaToolStripMenuItem.Name = "antialiasingSmaaToolStripMenuItem";
+            this.antialiasingSmaaToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.antialiasingSmaaToolStripMenuItem.Text = "SMAA";
+            this.antialiasingSmaaToolStripMenuItem.ToolTipText = "Smooth edges over the finished picture, keeping textures sharper than FXAA. Cheap.";
+            this.antialiasingSmaaToolStripMenuItem.Click += new System.EventHandler(this.antialiasingToolStripMenuItem_Click);
+            //
+            // antialiasingMsaa2xToolStripMenuItem
+            //
+            this.antialiasingMsaa2xToolStripMenuItem.Name = "antialiasingMsaa2xToolStripMenuItem";
+            this.antialiasingMsaa2xToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.antialiasingMsaa2xToolStripMenuItem.Text = "MSAA 2x";
+            this.antialiasingMsaa2xToolStripMenuItem.ToolTipText = "Draw the edges of models with 2 samples a pixel. Sharp, but slower on busy views, and cut-outs (grates, cables) stay jagged.";
+            this.antialiasingMsaa2xToolStripMenuItem.Click += new System.EventHandler(this.antialiasingToolStripMenuItem_Click);
+            //
+            // antialiasingMsaa4xToolStripMenuItem
+            //
+            this.antialiasingMsaa4xToolStripMenuItem.Name = "antialiasingMsaa4xToolStripMenuItem";
+            this.antialiasingMsaa4xToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.antialiasingMsaa4xToolStripMenuItem.Text = "MSAA 4x";
+            this.antialiasingMsaa4xToolStripMenuItem.ToolTipText = "Draw the edges of models with 4 samples a pixel. Smoother than 2x, and slower again.";
+            this.antialiasingMsaa4xToolStripMenuItem.Click += new System.EventHandler(this.antialiasingToolStripMenuItem_Click);
+            //
+            // antialiasingMsaa8xToolStripMenuItem
+            //
+            this.antialiasingMsaa8xToolStripMenuItem.Name = "antialiasingMsaa8xToolStripMenuItem";
+            this.antialiasingMsaa8xToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.antialiasingMsaa8xToolStripMenuItem.Text = "MSAA 8x";
+            this.antialiasingMsaa8xToolStripMenuItem.ToolTipText = "Draw the edges of models with 8 samples a pixel. The smoothest edges, and the slowest.";
+            this.antialiasingMsaa8xToolStripMenuItem.Click += new System.EventHandler(this.antialiasingToolStripMenuItem_Click);
+            //
+            // drawDistanceToolStripMenuItem
+            //
+            this.drawDistanceToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.drawDistanceShortToolStripMenuItem,
+            this.drawDistanceMediumToolStripMenuItem,
+            this.drawDistanceLongToolStripMenuItem,
+            this.drawDistanceVeryLongToolStripMenuItem,
+            this.drawDistanceUnlimitedToolStripMenuItem});
+            this.drawDistanceToolStripMenuItem.Name = "drawDistanceToolStripMenuItem";
+            this.drawDistanceToolStripMenuItem.Size = new System.Drawing.Size(226, 22);
+            this.drawDistanceToolStripMenuItem.Text = "Draw Distance";
+            this.drawDistanceToolStripMenuItem.ToolTipText = "How far away the viewport keeps drawing models, by their size. Further shows small things from further off, and is slower on big levels.";
+            //
+            // drawDistanceShortToolStripMenuItem
+            //
+            this.drawDistanceShortToolStripMenuItem.Name = "drawDistanceShortToolStripMenuItem";
+            this.drawDistanceShortToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.drawDistanceShortToolStripMenuItem.Text = "Short";
+            this.drawDistanceShortToolStripMenuItem.ToolTipText = "Models drawn out to 50 times their size (10 m at the least). The fastest.";
+            this.drawDistanceShortToolStripMenuItem.Click += new System.EventHandler(this.drawDistanceToolStripMenuItem_Click);
+            //
+            // drawDistanceMediumToolStripMenuItem
+            //
+            this.drawDistanceMediumToolStripMenuItem.Name = "drawDistanceMediumToolStripMenuItem";
+            this.drawDistanceMediumToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.drawDistanceMediumToolStripMenuItem.Text = "Medium";
+            this.drawDistanceMediumToolStripMenuItem.ToolTipText = "Models drawn out to 100 times their size (15 m at the least).";
+            this.drawDistanceMediumToolStripMenuItem.Click += new System.EventHandler(this.drawDistanceToolStripMenuItem_Click);
+            //
+            // drawDistanceLongToolStripMenuItem
+            //
+            this.drawDistanceLongToolStripMenuItem.Name = "drawDistanceLongToolStripMenuItem";
+            this.drawDistanceLongToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.drawDistanceLongToolStripMenuItem.Text = "Long";
+            this.drawDistanceLongToolStripMenuItem.ToolTipText = "Models drawn out to 200 times their size (30 m at the least).";
+            this.drawDistanceLongToolStripMenuItem.Click += new System.EventHandler(this.drawDistanceToolStripMenuItem_Click);
+            //
+            // drawDistanceVeryLongToolStripMenuItem
+            //
+            this.drawDistanceVeryLongToolStripMenuItem.Name = "drawDistanceVeryLongToolStripMenuItem";
+            this.drawDistanceVeryLongToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.drawDistanceVeryLongToolStripMenuItem.Text = "Very Long";
+            this.drawDistanceVeryLongToolStripMenuItem.ToolTipText = "Models drawn out to 400 times their size (60 m at the least).";
+            this.drawDistanceVeryLongToolStripMenuItem.Click += new System.EventHandler(this.drawDistanceToolStripMenuItem_Click);
+            //
+            // drawDistanceUnlimitedToolStripMenuItem
+            //
+            this.drawDistanceUnlimitedToolStripMenuItem.Name = "drawDistanceUnlimitedToolStripMenuItem";
+            this.drawDistanceUnlimitedToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.drawDistanceUnlimitedToolStripMenuItem.Text = "Unlimited";
+            this.drawDistanceUnlimitedToolStripMenuItem.ToolTipText = "Every model drawn however far away it is. Nothing pops out, but big levels are much slower.";
+            this.drawDistanceUnlimitedToolStripMenuItem.Click += new System.EventHandler(this.drawDistanceToolStripMenuItem_Click);
+            //
             // miscToolStripMenuItem
             // 
             this.miscToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -1389,14 +1570,32 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem showCameraPositionToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem renderWireframeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem renderGalaxyToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem renderFogToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem renderWaterToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem renderPlanetsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem planarReflectionsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem hideNestedScriptEntitiesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem highlightModeToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator renderingOptionsToolStripSeparator;
         private System.Windows.Forms.ToolStripSeparator snapIncrementsToolStripSeparator;
         private System.Windows.Forms.ToolStripMenuItem snapIncrementsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem highlightModeGreenToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem highlightModeWireframeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem highlightModeWireframeTransparentToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem highlightModeNoneToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem antialiasingToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem antialiasingOffToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem antialiasingFxaaToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem antialiasingSmaaToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem antialiasingMsaa2xToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem antialiasingMsaa4xToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem antialiasingMsaa8xToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem drawDistanceToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem drawDistanceShortToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem drawDistanceMediumToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem drawDistanceLongToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem drawDistanceVeryLongToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem drawDistanceUnlimitedToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem enableViewportToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator viewportOptionsToolStripSeparator;
         private System.Windows.Forms.ToolStripDropDownButton toolStripButton2;

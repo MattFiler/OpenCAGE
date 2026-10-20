@@ -49,6 +49,12 @@ namespace OpenCAGE
             EnsureBool(Settings.FixCameraToSelected, false);
             EnsureBool(Settings.RenderWireframe, false);
             EnsureBool(Settings.RenderGalaxy, true);
+            EnsureBool(Settings.RenderFog, false);
+            EnsureBool(Settings.RenderWater, true);
+            EnsureBool(Settings.RenderPlanets, true);
+            EnsureBool(Settings.PlanarReflections, true);
+            EnsureInteger(Settings.LevelViewerAntialiasMode, (int)LevelViewerViewportDefinitions.DefaultAntialiasMode);
+            EnsureInteger(Settings.LevelViewerDrawDistance, (int)LevelViewerViewportDefinitions.DefaultDrawDistance);
             EnsureInteger(Settings.LevelViewerHighlightMode, (int)LevelViewerHighlightMode.Green);
             EnsureBool(Settings.HideNestedScriptEntities, false);
             EnsureBool(Settings.ResetRenderFilters, false);

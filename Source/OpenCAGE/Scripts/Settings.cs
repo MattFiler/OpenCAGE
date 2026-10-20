@@ -99,6 +99,12 @@ namespace OpenCAGE
         public const string LevelViewerHighlightMode = "LevelViewerHighlightMode";
         public const string ShowZones = "ShowZones";
         public const string RenderGalaxy = "RenderGalaxy";
+        public const string RenderFog = "RenderFog";
+        public const string RenderWater = "RenderWater";
+        public const string RenderPlanets = "RenderPlanets";
+        public const string PlanarReflections = "PlanarReflections";
+        public const string LevelViewerAntialiasMode = "LevelViewerAntialiasMode";
+        public const string LevelViewerDrawDistance = "LevelViewerDrawDistance";
         public const string EntityListSortColumn = "EntityListSortColumn";
         public const string EntityListSortAscending = "EntityListSortAscending";
 

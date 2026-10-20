@@ -50,6 +50,8 @@ namespace OpenCAGE.MCP
 
         //Indexed by the enums' values (LevelViewerViewportDefinitions)
         private static readonly string[] HighlightModes = { "green", "wireframe", "wireframe_transparent", "none" };
+        private static readonly string[] AntialiasModes = { "off", "fxaa", "smaa", "msaa_2x", "msaa_4x", "msaa_8x" };
+        private static readonly string[] DrawDistances = { "short", "medium", "long", "very_long", "unlimited" };
         private static readonly string[] SelectionModes = { "regular", "deep", "advanced_deep" };
         private static readonly string[] GizmoModes = { "none", "translate_world", "rotate_local", "rotate_world", "translate_local" };
         //The Live Link Camera menu, in LiveLinkCameraSync.CameraMode order
@@ -109,8 +111,14 @@ namespace OpenCAGE.MCP
                     McpSchema.Boolean("show_camera_position", "Show the camera's position in the viewport."),
                     McpSchema.Boolean("wireframe", "Draw models as wireframe."),
                     McpSchema.Boolean("galaxy", "Draw the galaxy (sky) behind the level."),
+                    McpSchema.Boolean("planets", "Draw the level's planets, moons and suns in the sky. Drawn only while galaxy is on too: with it off they are off, whatever this says."),
+                    McpSchema.Boolean("distance_fog", "Draw the distance fog the level switches on as it starts (off: the whole level shows clear, however far out the camera is). Fog volumes and planes (FogBox, FogPlane, FogSphere) are never drawn as fog."),
+                    McpSchema.Boolean("water", "Draw the level's water - pools, puddles, their reflections, ripples and caustics (off: what is under them)."),
+                    McpSchema.Boolean("planar_reflections", "Mirror the water as the game does, from what the level marks include_in_planar_reflections drawn a second time (off: a cheaper reflection of what is already on screen). Only while water is on."),
                     McpSchema.Boolean("hide_nested_script_entities", "Hide script entity previews inside nested composites."),
                     McpSchema.String("highlight_mode", "How the selection is marked.", options: HighlightModes),
+                    McpSchema.String("draw_distance", "How far away the viewport keeps drawing models, by their size (Options > Viewport > Draw Distance): short 50x radius (10 m min), medium 100x (15 m), long 200x (30 m), very_long 400x (60 m), unlimited everything (slow on big levels).", options: DrawDistances),
+                    McpSchema.String("antialiasing","How the viewport smooths edges (Options > Viewport > Anti-aliasing): fxaa/smaa filter the finished picture (cheap; cut-outs too), msaa_* samples model edges (sharper, dearer on busy views).", options: AntialiasModes),
                     McpSchema.String("selection_mode", "How clicks in the viewport pick (deep modes pick inside instances).", options: SelectionModes),
                     McpSchema.String("gizmo_mode", "The transform gizmo on the selection.", options: GizmoModes),
                     McpSchema.String("create_mode", "Put the viewport in creation mode, where the user's clicks create this type (e.g. 'PlayerTriggerBox'; turns the gizmo off), or 'none'."),
@@ -733,8 +741,14 @@ namespace OpenCAGE.MCP
                 ["show_camera_position"] = SettingsManager.GetBool(Settings.ShowCameraPosition),
                 ["wireframe"] = SettingsManager.GetBool(Settings.RenderWireframe),
                 ["galaxy"] = SettingsManager.GetBool(Settings.RenderGalaxy),
+                ["planets"] = SettingsManager.GetBool(Settings.RenderPlanets),
+                ["distance_fog"] = SettingsManager.GetBool(Settings.RenderFog),
+                ["water"] = SettingsManager.GetBool(Settings.RenderWater),
+                ["planar_reflections"] = SettingsManager.GetBool(Settings.PlanarReflections),
                 ["hide_nested_script_entities"] = SettingsManager.GetBool(Settings.HideNestedScriptEntities),
                 ["highlight_mode"] = HighlightModes[(int)LevelViewerViewportDefinitions.NormalizeHighlightMode(SettingsManager.GetInteger(Settings.LevelViewerHighlightMode))],
+                ["antialiasing"] = AntialiasModes[(int)LevelViewerViewportDefinitions.NormalizeAntialiasMode(SettingsManager.GetInteger(Settings.LevelViewerAntialiasMode))],
+                ["draw_distance"] = DrawDistances[(int)LevelViewerViewportDefinitions.NormalizeDrawDistance(SettingsManager.GetInteger(Settings.LevelViewerDrawDistance))],
                 ["selection_mode"] = SelectionModes[(int)LevelViewerViewportDefinitions.NormalizeDeepSelectMode(SettingsManager.GetInteger(Settings.LevelViewerDeepSelectMode))],
                 ["gizmo_mode"] = GizmoModes[(int)LevelViewerViewportDefinitions.NormalizeGizmoMode(SettingsManager.GetInteger(Settings.LevelViewerGizmoMode))],
                 ["create_mode"] = ViewerCreateMode.IsActive ? ((FunctionType)ViewerCreateMode.ActiveFunctionType).ToString() : null,
@@ -772,6 +786,10 @@ namespace OpenCAGE.MCP
             ("show_camera_position", Settings.ShowCameraPosition),
             ("wireframe", Settings.RenderWireframe),
             ("galaxy", Settings.RenderGalaxy),
+            ("planets", Settings.RenderPlanets),
+            ("distance_fog", Settings.RenderFog),
+            ("water", Settings.RenderWater),
+            ("planar_reflections", Settings.PlanarReflections),
             ("hide_nested_script_entities", Settings.HideNestedScriptEntities),
             ("vertex_snap", Settings.TransformVertexSnap),
         };
@@ -819,6 +837,8 @@ namespace OpenCAGE.MCP
                     throw new McpError("fix_camera_to_selected needs focus_on_selected: they cannot be false and true together.");
 
                 int? highlight = ReadMode(call, "highlight_mode", HighlightModes);
+                int? antialias = ReadMode(call, "antialiasing", AntialiasModes);
+                int? drawDistance = ReadMode(call, "draw_distance", DrawDistances);
                 int? selection = ReadMode(call, "selection_mode", SelectionModes);
                 int? gizmo = ReadMode(call, "gizmo_mode", GizmoModes);
                 uint? create = null;
@@ -914,6 +934,18 @@ namespace OpenCAGE.MCP
                     SettingsManager.SetInteger(Settings.LevelViewerHighlightMode, highlight.Value);
                     keys.Add(Settings.LevelViewerHighlightMode);
                     changed.Add("highlight_mode");
+                }
+                if (antialias.HasValue)
+                {
+                    SettingsManager.SetInteger(Settings.LevelViewerAntialiasMode, antialias.Value);
+                    keys.Add(Settings.LevelViewerAntialiasMode);
+                    changed.Add("antialiasing");
+                }
+                if (drawDistance.HasValue)
+                {
+                    SettingsManager.SetInteger(Settings.LevelViewerDrawDistance, drawDistance.Value);
+                    keys.Add(Settings.LevelViewerDrawDistance);
+                    changed.Add("draw_distance");
                 }
                 if (selection.HasValue || gizmo.HasValue)
                 {

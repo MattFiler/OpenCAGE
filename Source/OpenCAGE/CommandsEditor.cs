@@ -197,20 +197,44 @@ namespace OpenCAGE
             //If we have been launched to a level, load that. With the viewport on it waits for the window to be shown: the
             //viewer is embedded into a panel of this window, which has no handle to take it yet - the embed used to wait out
             //its 30 seconds here, before there was any window, and then give up
-            if (level != null)
+            string startupLevel = level != null ? ResolveStartupLevel(level, levels) : null;
+            if (level != null && startupLevel == null)
+            {
+                MessageBox.Show("There is no level '" + level + "' in this install to open (-level in the launch options). Choose a level to load instead.",
+                    "Level not found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            if (startupLevel != null)
             {
                 if (Singleton.ViewportEnabled)
-                    _startupLevel = level;
+                    _startupLevel = startupLevel;
                 else
-                    OnLevelSelected(level);
+                    OnLevelSelected(startupLevel);
             }
             else
                 loadLevel_Click(null, null);
         }
 
+        /* The level a -level launch option means, as the level list spells it: its full name in any case or slashes, or only its
+           last part ('SCI_HUB') when one level ends so. Null when it is none of them - loading a name with no level behind it
+           crashed the loader, at every launch until the option was taken out. */
+        private static string ResolveStartupLevel(string given, List<string> levels)
+        {
+            string Tidy(string name) => (name ?? "").Replace('\\', '/').Trim().Trim('"').Trim('/').ToUpperInvariant();
+            string wanted = Tidy(given);
+            if (wanted.Length == 0)
+                return null;
+            string exact = levels.FirstOrDefault(o => Tidy(o) == wanted);
+            if (exact != null)
+                return exact;
+            List<string> byLeaf = levels.Where(o => Tidy(o).EndsWith("/" + wanted, StringComparison.Ordinal)).ToList();
+            return byLeaf.Count == 1 ? byLeaf[0] : null;
+        }
+
         private void SetupOptions()
         {
             SetupHighlightModeMenu();
+            SetupAntialiasingMenu();
+            SetupDrawDistanceMenu();
             SetupCompositeBrowserModeMenu();
             ConfigureLevelViewerAvailability();
 
@@ -1938,6 +1962,7 @@ namespace OpenCAGE
                 if (item != enableViewportToolStripMenuItem && item != viewportOptionsToolStripSeparator)
                     item.Enabled = Singleton.ViewportEnabled;
             }
+            ApplyRenderOptionGates();
             resetRenderFiltersOnLoadToolStripMenuItem.Visible = Singleton.ViewportEnabled;
 
             if (!Singleton.ViewportEnabled)
@@ -2058,6 +2083,26 @@ namespace OpenCAGE
             ToggleBoolSetting(Settings.RenderGalaxy);
         }
 
+        private void renderFogToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.RenderFog);
+        }
+
+        private void renderWaterToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.RenderWater);
+        }
+
+        private void planarReflectionsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.PlanarReflections);
+        }
+
+        private void renderPlanetsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.RenderPlanets);
+        }
+
         private void hideNestedScriptEntitiesToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ToggleBoolSetting(Settings.HideNestedScriptEntities);
@@ -2108,6 +2153,71 @@ namespace OpenCAGE
             foreach (ToolStripItem item in highlightModeToolStripMenuItem.DropDownItems)
             {
                 if (item is ToolStripMenuItem menuItem && menuItem.Tag is LevelViewerHighlightMode itemMode)
+                    menuItem.Checked = itemMode == mode;
+            }
+        }
+
+        private void SetupAntialiasingMenu()
+        {
+            antialiasingOffToolStripMenuItem.Tag = LevelViewerAntialiasMode.Off;
+            antialiasingFxaaToolStripMenuItem.Tag = LevelViewerAntialiasMode.Fxaa;
+            antialiasingSmaaToolStripMenuItem.Tag = LevelViewerAntialiasMode.Smaa;
+            antialiasingMsaa2xToolStripMenuItem.Tag = LevelViewerAntialiasMode.Msaa2x;
+            antialiasingMsaa4xToolStripMenuItem.Tag = LevelViewerAntialiasMode.Msaa4x;
+            antialiasingMsaa8xToolStripMenuItem.Tag = LevelViewerAntialiasMode.Msaa8x;
+            antialiasingToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
+        }
+
+        /* Options > Viewport > Anti-aliasing. One of several, as Selection Highlight Mode is: the chosen one is ticked. */
+        private void antialiasingToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!((sender as ToolStripMenuItem)?.Tag is LevelViewerAntialiasMode mode))
+                return;
+
+            SettingsManager.SetInteger(Settings.LevelViewerAntialiasMode, (int)mode);
+            ApplySettingEffects(new[] { Settings.LevelViewerAntialiasMode });
+        }
+
+        private void SetupDrawDistanceMenu()
+        {
+            drawDistanceShortToolStripMenuItem.Tag = LevelViewerDrawDistance.Short;
+            drawDistanceMediumToolStripMenuItem.Tag = LevelViewerDrawDistance.Medium;
+            drawDistanceLongToolStripMenuItem.Tag = LevelViewerDrawDistance.Long;
+            drawDistanceVeryLongToolStripMenuItem.Tag = LevelViewerDrawDistance.VeryLong;
+            drawDistanceUnlimitedToolStripMenuItem.Tag = LevelViewerDrawDistance.Unlimited;
+            drawDistanceToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
+        }
+
+        /* Options > Viewport > Draw Distance. One of several, as Anti-aliasing is: the chosen one is ticked. */
+        private void drawDistanceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!((sender as ToolStripMenuItem)?.Tag is LevelViewerDrawDistance preset))
+                return;
+
+            SettingsManager.SetInteger(Settings.LevelViewerDrawDistance, (int)preset);
+            ApplySettingEffects(new[] { Settings.LevelViewerDrawDistance });
+        }
+
+        private void ApplyDrawDistanceSelectionFromSettings()
+        {
+            LevelViewerDrawDistance preset = LevelViewerViewportDefinitions.NormalizeDrawDistance(
+                SettingsManager.GetInteger(Settings.LevelViewerDrawDistance));
+
+            foreach (ToolStripItem item in drawDistanceToolStripMenuItem.DropDownItems)
+            {
+                if (item is ToolStripMenuItem menuItem && menuItem.Tag is LevelViewerDrawDistance itemPreset)
+                    menuItem.Checked = itemPreset == preset;
+            }
+        }
+
+        private void ApplyAntialiasingSelectionFromSettings()
+        {
+            LevelViewerAntialiasMode mode = LevelViewerViewportDefinitions.NormalizeAntialiasMode(
+                SettingsManager.GetInteger(Settings.LevelViewerAntialiasMode));
+
+            foreach (ToolStripItem item in antialiasingToolStripMenuItem.DropDownItems)
+            {
+                if (item is ToolStripMenuItem menuItem && menuItem.Tag is LevelViewerAntialiasMode itemMode)
                     menuItem.Checked = itemMode == mode;
             }
         }
@@ -2462,6 +2572,12 @@ namespace OpenCAGE
             Settings.ShowCameraPosition,
             Settings.RenderWireframe,
             Settings.RenderGalaxy,
+            Settings.RenderFog,
+            Settings.RenderWater,
+            Settings.PlanarReflections,
+            Settings.RenderPlanets,
+            Settings.LevelViewerAntialiasMode,
+            Settings.LevelViewerDrawDistance,
             Settings.HideNestedScriptEntities,
             Settings.LevelViewerDeepSelectMode,
             Settings.LevelViewerGizmoMode,
@@ -2520,6 +2636,10 @@ namespace OpenCAGE
 
             if (ShouldApplySetting(Settings.LevelViewerHighlightMode, changedKeys))
                 ApplyHighlightModeSelectionFromSettings();
+            if (ShouldApplySetting(Settings.LevelViewerAntialiasMode, changedKeys))
+                ApplyAntialiasingSelectionFromSettings();
+            if (ShouldApplySetting(Settings.LevelViewerDrawDistance, changedKeys))
+                ApplyDrawDistanceSelectionFromSettings();
 
             if (ShouldApplySetting(Settings.HighlightAliases, changedKeys))
                 highlightAliasesToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.HighlightAliases);
@@ -2535,12 +2655,32 @@ namespace OpenCAGE
                 renderWireframeToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.RenderWireframe);
             if (ShouldApplySetting(Settings.RenderGalaxy, changedKeys))
                 renderGalaxyToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.RenderGalaxy);
+            if (ShouldApplySetting(Settings.RenderFog, changedKeys))
+                renderFogToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.RenderFog);
+            if (ShouldApplySetting(Settings.RenderWater, changedKeys))
+                renderWaterToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.RenderWater);
+            if (ShouldApplySetting(Settings.RenderGalaxy, changedKeys) || ShouldApplySetting(Settings.RenderPlanets, changedKeys)
+                || ShouldApplySetting(Settings.RenderWater, changedKeys) || ShouldApplySetting(Settings.PlanarReflections, changedKeys))
+                ApplyRenderOptionGates();
             if (ShouldApplySetting(Settings.HideNestedScriptEntities, changedKeys))
                 hideNestedScriptEntitiesToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.HideNestedScriptEntities);
             if (ShouldApplySetting(Settings.ResetRenderFilters, changedKeys))
                 resetRenderFiltersOnLoadToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ResetRenderFilters);
             if (ShouldApplySetting(Settings.AlwaysFullyRebuildRadiosity, changedKeys))
                 alwaysFullyRebuildRadiosityToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.AlwaysFullyRebuildRadiosity);
+        }
+
+        /* Render Planets and Use Planar Reflections each hang off the option above them. Planets are drawn in the galaxy's sky,
+           so with Render Galaxy off they are off too, and shown so; planar reflections are the water's, greyed while Render
+           Water is off. Each keeps its own setting for when the one above comes back on (the viewer gates the same way). */
+        private void ApplyRenderOptionGates()
+        {
+            bool galaxy = SettingsManager.GetBool(Settings.RenderGalaxy);
+            bool water = SettingsManager.GetBool(Settings.RenderWater);
+            renderPlanetsToolStripMenuItem.Enabled = Singleton.ViewportEnabled && galaxy;
+            renderPlanetsToolStripMenuItem.Checked = galaxy && SettingsManager.GetBool(Settings.RenderPlanets);
+            planarReflectionsToolStripMenuItem.Enabled = Singleton.ViewportEnabled && water;
+            planarReflectionsToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.PlanarReflections);
         }
 
         private void ApplySettingEffects(IReadOnlyList<string> changedKeys)

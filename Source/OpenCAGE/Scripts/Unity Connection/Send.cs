@@ -228,6 +228,14 @@ namespace OpenCAGE.UnityConnection
             packet.selection_highlight_mode = (int)LevelViewerViewportDefinitions.NormalizeHighlightMode(
                 SettingsManager.GetInteger(Settings.LevelViewerHighlightMode));
             packet.render_galaxy = SettingsManager.GetBool(Settings.RenderGalaxy);
+            packet.render_fog = SettingsManager.GetBool(Settings.RenderFog);
+            packet.render_water = SettingsManager.GetBool(Settings.RenderWater);
+            packet.render_planets = SettingsManager.GetBool(Settings.RenderPlanets);
+            packet.planar_reflections = SettingsManager.GetBool(Settings.PlanarReflections);
+            packet.antialias_mode = (int)LevelViewerViewportDefinitions.NormalizeAntialiasMode(
+                SettingsManager.GetInteger(Settings.LevelViewerAntialiasMode));
+            packet.draw_distance = (int)LevelViewerViewportDefinitions.NormalizeDrawDistance(
+                SettingsManager.GetInteger(Settings.LevelViewerDrawDistance));
             packet.scene_render_filters = RenderFilters.GetScenePacketFilters();
             packet.stream_camera_pose = RuntimeUtilsConnection.LiveLinkCameraSync.StreamPose;
             packet.camera_follows_game = RuntimeUtilsConnection.LiveLinkCameraSync.CameraFollowsGame;
@@ -1124,6 +1132,14 @@ namespace OpenCAGE.UnityConnection
             p.selection_highlight_mode = (int)LevelViewerViewportDefinitions.NormalizeHighlightMode(
                 SettingsManager.GetInteger(Settings.LevelViewerHighlightMode));
             p.render_galaxy = SettingsManager.GetBool(Settings.RenderGalaxy);
+            p.render_fog = SettingsManager.GetBool(Settings.RenderFog);
+            p.render_water = SettingsManager.GetBool(Settings.RenderWater);
+            p.render_planets = SettingsManager.GetBool(Settings.RenderPlanets);
+            p.planar_reflections = SettingsManager.GetBool(Settings.PlanarReflections);
+            p.antialias_mode = (int)LevelViewerViewportDefinitions.NormalizeAntialiasMode(
+                SettingsManager.GetInteger(Settings.LevelViewerAntialiasMode));
+            p.draw_distance = (int)LevelViewerViewportDefinitions.NormalizeDrawDistance(
+                SettingsManager.GetInteger(Settings.LevelViewerDrawDistance));
             p.entity_clipboard_has_content = EntityClipboard.HasContent;
             //While the game's camera follows the viewport's: the viewer reports its camera as it moves (VIEWER_CAMERA_POSE)
             p.stream_camera_pose = RuntimeUtilsConnection.LiveLinkCameraSync.StreamPose;
