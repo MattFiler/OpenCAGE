@@ -70,6 +70,7 @@
     <ClCompile Include="GAME_LEVEL_MANAGER.cpp" />
     <ClCompile Include="LIVE_ANIMATION.cpp" />
     <ClCompile Include="LIVE_CAMERA.cpp" />
+    <ClCompile Include="CUBEMAP_CAPTURE.cpp" />
     <ClCompile Include="LIVE_LINK.cpp">
       <!-- Faults inside game calls are caught (Guarded): /EHa runs the destructors that release what was held -->
       <ExceptionHandling>Async</ExceptionHandling>
@@ -107,6 +108,7 @@
     <ClInclude Include="GAME_LEVEL_MANAGER.h" />
     <ClInclude Include="LIVE_ANIMATION.h" />
     <ClInclude Include="LIVE_CAMERA.h" />
+    <ClInclude Include="CUBEMAP_CAPTURE.h" />
     <ClInclude Include="LIVE_LINK.h" />
     <ClInclude Include="LIVE_LINK_SERVER.h" />
     <ClInclude Include="LIVE_TRACE.h" />

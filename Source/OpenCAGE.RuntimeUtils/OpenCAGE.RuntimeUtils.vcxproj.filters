@@ -105,6 +105,9 @@
     <ClCompile Include="LIVE_CAMERA.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CUBEMAP_CAPTURE.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="LIVE_ANIMATION.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -189,6 +192,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="LIVE_CAMERA.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CUBEMAP_CAPTURE.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="LIVE_ANIMATION.h">

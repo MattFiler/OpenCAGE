@@ -973,7 +973,9 @@
     </Compile>
     <Compile Include="Scripts\HiddenProcessLauncher.cs" />
     <Compile Include="Scripts\NativeAssets.cs" />
+    <Compile Include="Scripts\Textures\CubemapFilter.cs" />
     <Compile Include="Scripts\Textures\DdsFile.cs" />
+    <Compile Include="Scripts\Textures\EnvironmentMapCapture.cs" />
     <Compile Include="Scripts\Textures\TextureConverter.cs" />
     <Compile Include="Scripts\Audio\VorbisReader.cs" />
     <Compile Include="Scripts\Audio\VorbisBitStream.cs" />

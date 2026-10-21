@@ -44,6 +44,8 @@ namespace OpenCAGE
             this.exportCompositesMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.portCompositesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exportCompositesToDiskToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.cubemapsToolStripSeparator = new System.Windows.Forms.ToolStripSeparator();
+            this.recaptureAllCubemapsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripButton3 = new System.Windows.Forms.ToolStripDropDownButton();
             this.modelsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.materialsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -159,6 +161,13 @@ namespace OpenCAGE
             this.writeCompressedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.resetRenderFiltersOnLoadToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.alwaysFullyRebuildRadiosityToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.cubemapCaptureSizeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.cubemapCaptureSizeReplacedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.cubemapCaptureSizeToolStripSeparator = new System.Windows.Forms.ToolStripSeparator();
+            this.cubemapCaptureSize64ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.cubemapCaptureSize128ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.cubemapCaptureSize256ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.cubemapCaptureSize512ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.controlsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.manageGameDirectoriesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpBtn = new System.Windows.Forms.ToolStripButton();
@@ -218,12 +227,15 @@ namespace OpenCAGE
             this.saveAndBuildLevelToolStripMenuItem,
             this.toolStripSeparator1,
             this.importCompositesMenu,
-            this.exportCompositesMenu});
+            this.exportCompositesMenu,
+            this.cubemapsToolStripSeparator,
+            this.recaptureAllCubemapsToolStripMenuItem});
             this.toolStripButton1.Image = ((System.Drawing.Image)(resources.GetObject("toolStripButton1.Image")));
             this.toolStripButton1.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.toolStripButton1.Name = "toolStripButton1";
             this.toolStripButton1.Size = new System.Drawing.Size(38, 22);
             this.toolStripButton1.Text = "File";
+            this.toolStripButton1.DropDownOpening += new System.EventHandler(this.fileMenu_DropDownOpening);
             // 
             // createLevelToolStripMenuItem
             // 
@@ -311,6 +323,19 @@ namespace OpenCAGE
             this.exportCompositesToDiskToolStripMenuItem.Size = new System.Drawing.Size(140, 22);
             this.exportCompositesToDiskToolStripMenuItem.Text = "To Disk";
             this.exportCompositesToDiskToolStripMenuItem.Click += new System.EventHandler(this.exportCompositesToDiskToolStripMenuItem_Click);
+            // 
+            // cubemapsToolStripSeparator
+            // 
+            this.cubemapsToolStripSeparator.Name = "cubemapsToolStripSeparator";
+            this.cubemapsToolStripSeparator.Size = new System.Drawing.Size(178, 6);
+            // 
+            // recaptureAllCubemapsToolStripMenuItem
+            // 
+            this.recaptureAllCubemapsToolStripMenuItem.Name = "recaptureAllCubemapsToolStripMenuItem";
+            this.recaptureAllCubemapsToolStripMenuItem.Size = new System.Drawing.Size(181, 22);
+            this.recaptureAllCubemapsToolStripMenuItem.Text = "Recapture All Cubemaps";
+            this.recaptureAllCubemapsToolStripMenuItem.ToolTipText = "Capture every environment map's cubemap again in the running game (Live Link)";
+            this.recaptureAllCubemapsToolStripMenuItem.Click += new System.EventHandler(this.recaptureAllCubemapsToolStripMenuItem_Click);
             // 
             // toolStripButton3
             // 
@@ -1200,6 +1225,7 @@ namespace OpenCAGE
             this.writeCompressedToolStripMenuItem,
             this.resetRenderFiltersOnLoadToolStripMenuItem,
             this.alwaysFullyRebuildRadiosityToolStripMenuItem,
+            this.cubemapCaptureSizeToolStripMenuItem,
             this.allowAiAssistantsToolStripMenuItem});
             this.miscToolStripMenuItem.Name = "miscToolStripMenuItem";
             this.miscToolStripMenuItem.Size = new System.Drawing.Size(210, 22);
@@ -1294,6 +1320,66 @@ namespace OpenCAGE
             this.alwaysFullyRebuildRadiosityToolStripMenuItem.ToolTipText = "If enabled, saving rebuilds the level\'s radiosity from scratch every time, instead of keeping the existing light" +
     "ing and only baking what changed. Slower, and replaces the game\'s own lighting on unedited areas too.";
             this.alwaysFullyRebuildRadiosityToolStripMenuItem.Click += new System.EventHandler(this.alwaysFullyRebuildRadiosityToolStripMenuItem_Click);
+            //
+            // cubemapCaptureSizeToolStripMenuItem
+            //
+            this.cubemapCaptureSizeToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.cubemapCaptureSizeReplacedToolStripMenuItem,
+            this.cubemapCaptureSizeToolStripSeparator,
+            this.cubemapCaptureSize64ToolStripMenuItem,
+            this.cubemapCaptureSize128ToolStripMenuItem,
+            this.cubemapCaptureSize256ToolStripMenuItem,
+            this.cubemapCaptureSize512ToolStripMenuItem});
+            this.cubemapCaptureSizeToolStripMenuItem.Name = "cubemapCaptureSizeToolStripMenuItem";
+            this.cubemapCaptureSizeToolStripMenuItem.Size = new System.Drawing.Size(254, 22);
+            this.cubemapCaptureSizeToolStripMenuItem.Text = "Cubemap Capture Size";
+            this.cubemapCaptureSizeToolStripMenuItem.ToolTipText = "The size of each face of the cubemaps captured in the game over Live Link (Capture on an EnvironmentMap, File > Re" +
+    "capture All Cubemaps). Bigger is sharper on mirror-like surfaces; it needs the game\'s window at least as tall.";
+            //
+            // cubemapCaptureSizeReplacedToolStripMenuItem
+            //
+            this.cubemapCaptureSizeReplacedToolStripMenuItem.Name = "cubemapCaptureSizeReplacedToolStripMenuItem";
+            this.cubemapCaptureSizeReplacedToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
+            this.cubemapCaptureSizeReplacedToolStripMenuItem.Text = "Same as the Cubemap Replaced";
+            this.cubemapCaptureSizeReplacedToolStripMenuItem.ToolTipText = "Each new cubemap is the size of the one it replaces (the game\'s own are all 128 x 128), or 128 x 128 if there was none.";
+            this.cubemapCaptureSizeReplacedToolStripMenuItem.Click += new System.EventHandler(this.cubemapCaptureSizeToolStripMenuItem_Click);
+            //
+            // cubemapCaptureSizeToolStripSeparator
+            //
+            this.cubemapCaptureSizeToolStripSeparator.Name = "cubemapCaptureSizeToolStripSeparator";
+            this.cubemapCaptureSizeToolStripSeparator.Size = new System.Drawing.Size(217, 6);
+            //
+            // cubemapCaptureSize64ToolStripMenuItem
+            //
+            this.cubemapCaptureSize64ToolStripMenuItem.Name = "cubemapCaptureSize64ToolStripMenuItem";
+            this.cubemapCaptureSize64ToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
+            this.cubemapCaptureSize64ToolStripMenuItem.Text = "64 x 64";
+            this.cubemapCaptureSize64ToolStripMenuItem.ToolTipText = "Half the game\'s own size: a quarter of the memory, and softer reflections.";
+            this.cubemapCaptureSize64ToolStripMenuItem.Click += new System.EventHandler(this.cubemapCaptureSizeToolStripMenuItem_Click);
+            //
+            // cubemapCaptureSize128ToolStripMenuItem
+            //
+            this.cubemapCaptureSize128ToolStripMenuItem.Name = "cubemapCaptureSize128ToolStripMenuItem";
+            this.cubemapCaptureSize128ToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
+            this.cubemapCaptureSize128ToolStripMenuItem.Text = "128 x 128";
+            this.cubemapCaptureSize128ToolStripMenuItem.ToolTipText = "The size of the game\'s own cubemaps.";
+            this.cubemapCaptureSize128ToolStripMenuItem.Click += new System.EventHandler(this.cubemapCaptureSizeToolStripMenuItem_Click);
+            //
+            // cubemapCaptureSize256ToolStripMenuItem
+            //
+            this.cubemapCaptureSize256ToolStripMenuItem.Name = "cubemapCaptureSize256ToolStripMenuItem";
+            this.cubemapCaptureSize256ToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
+            this.cubemapCaptureSize256ToolStripMenuItem.Text = "256 x 256";
+            this.cubemapCaptureSize256ToolStripMenuItem.ToolTipText = "Twice the game\'s own size: sharper on mirror-like surfaces, four times the memory.";
+            this.cubemapCaptureSize256ToolStripMenuItem.Click += new System.EventHandler(this.cubemapCaptureSizeToolStripMenuItem_Click);
+            //
+            // cubemapCaptureSize512ToolStripMenuItem
+            //
+            this.cubemapCaptureSize512ToolStripMenuItem.Name = "cubemapCaptureSize512ToolStripMenuItem";
+            this.cubemapCaptureSize512ToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
+            this.cubemapCaptureSize512ToolStripMenuItem.Text = "512 x 512";
+            this.cubemapCaptureSize512ToolStripMenuItem.ToolTipText = "Four times the game\'s own size: sharpest, sixteen times the memory. Needs the game\'s window at least 512 pixels tall.";
+            this.cubemapCaptureSize512ToolStripMenuItem.Click += new System.EventHandler(this.cubemapCaptureSizeToolStripMenuItem_Click);
             //
             // controlsToolStripMenuItem
             // 
@@ -1510,6 +1596,8 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem exportCompositesToDiskToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem importCompositesMenu;
         private System.Windows.Forms.ToolStripMenuItem exportCompositesMenu;
+        private System.Windows.Forms.ToolStripSeparator cubemapsToolStripSeparator;
+        private System.Windows.Forms.ToolStripMenuItem recaptureAllCubemapsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem saveLevel;
         private System.Windows.Forms.ToolStripStatusLabel statusText;
         private System.Windows.Forms.ToolTip toolTip1;
@@ -1637,6 +1725,13 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripButton manageBackupsBtn;
         private System.Windows.Forms.ToolStripMenuItem resetRenderFiltersOnLoadToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem alwaysFullyRebuildRadiosityToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem cubemapCaptureSizeToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem cubemapCaptureSizeReplacedToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator cubemapCaptureSizeToolStripSeparator;
+        private System.Windows.Forms.ToolStripMenuItem cubemapCaptureSize64ToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem cubemapCaptureSize128ToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem cubemapCaptureSize256ToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem cubemapCaptureSize512ToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem manageGameDirectoriesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem logABugToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem openLogsFolderToolStripMenuItem;

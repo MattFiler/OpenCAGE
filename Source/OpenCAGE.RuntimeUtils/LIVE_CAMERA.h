@@ -32,6 +32,9 @@
 	thread: the game's camera as of its last frame, never OpenCAGE's pose. No camera is chosen while a level loads, so
 	no snapshot is taken then.
 
+	A cubemap capture (CUBEMAP_CAPTURE.h) takes the camera ahead of all of this while it runs: the frame is rendered from
+	the face it is capturing, and OpenCAGE's pose (or Possess) applies again once it is over.
+
 	Cinematic Tools hooks the same function later (MinHook over this Detours hook): the two chain, and CT's pose is
 	written first, so while OpenCAGE drives the camera its pose wins - and what CAMERA_GET reads while CT's camera is on
 	is CT's. The hook stays attached while the game runs.

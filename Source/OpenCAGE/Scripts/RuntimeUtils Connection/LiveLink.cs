@@ -40,6 +40,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
             ANIMATION_GET = 10,
             TRACE = 11,
             TRACE_GET = 12,
+            CAPTURE_CUBEMAP = 15,
         }
 
         public sealed class Reply
@@ -474,6 +475,84 @@ namespace OpenCAGE.RuntimeUtilsConnection
         public static Task<Reply> Screenshot(string path)
         {
             return Request(Command.SCREENSHOT, w => WriteString(w, path));
+        }
+
+        /// <summary>What a cubemap capture leaves as the game has it (CaptureCubemap).</summary>
+        [Flags]
+        public enum CubemapCaptureFlags : uint
+        {
+            None = 0,
+            /// <summary>Leave the game's HUD showing (it is hidden while the faces are taken otherwise).</summary>
+            KeepHud = 1,
+            /// <summary>Leave film grain, vignette, chromatic aberration, lens distortion and depth of field on.</summary>
+            KeepPostEffects = 2,
+        }
+
+        /// <summary>
+        /// Have the game take the six faces of a cubemap from a point in its world space (CATHODE's axes: Y up), while it is
+        /// running the level of this root (0: any level): it renders from the point with a 90 degree field of view along +X,
+        /// -X, +Y, -Y, +Z and -Z, after streaming in the zones around it, holding each face settleFrames frames before taking
+        /// it, and answers with the faces scaled to size x size (a power of two, 16 to 1024). Takes a few seconds; the game
+        /// turns it away while paused, while it runs another level, or from runtime utils that predate it ("Unknown request").
+        /// </summary>
+        public static async Task<CubemapCapture> CaptureCubemap(uint root, System.Numerics.Vector3 position, int size, int settleFrames = 8,
+            int streamTimeoutMs = 30000, CubemapCaptureFlags flags = CubemapCaptureFlags.None)
+        {
+            //The game answers once the capture ends: up to its streaming wait, then the faces (its own limit is a minute more)
+            double timeout = streamTimeoutMs / 1000.0 + 75.0;
+            Reply reply = await Request(Command.CAPTURE_CUBEMAP, w =>
+            {
+                w.Write(root);
+                WriteVector(w, position);
+                w.Write((uint)size);
+                w.Write((uint)settleFrames);
+                w.Write((uint)streamTimeoutMs);
+                w.Write((uint)flags);
+            }, timeout);
+            CubemapCapture capture = new CubemapCapture() { Reply = reply };
+            if (!reply.Ok || reply.Payload == null || reply.Payload.Length < 28)
+                return capture;
+            using (BinaryReader reader = new BinaryReader(new MemoryStream(reply.Payload)))
+            {
+                uint format = reader.ReadUInt32();
+                int faceSize = (int)reader.ReadUInt32();
+                int faceCount = (int)reader.ReadUInt32();
+                uint answerFlags = reader.ReadUInt32();
+                capture.FrameWidth = (int)reader.ReadUInt32();
+                capture.FrameHeight = (int)reader.ReadUInt32();
+                capture.StreamingMilliseconds = (int)reader.ReadUInt32();
+                long faceBytes = (long)faceSize * faceSize * 4;
+                if (format != 1 || faceCount != 6 || faceSize <= 0 || reply.Payload.Length - 28 < faceBytes * 6)
+                    return capture;
+                capture.Size = faceSize;
+                capture.ZonesStillStreaming = (answerFlags & 1) != 0;
+                capture.HudHidden = (answerFlags & 2) != 0;
+                capture.PostEffectsOff = (answerFlags & 4) != 0;
+                capture.Faces = new byte[6][];
+                for (int i = 0; i < 6; i++)
+                    capture.Faces[i] = reader.ReadBytes((int)faceBytes);
+                capture.Valid = true;
+            }
+            return capture;
+        }
+
+        public sealed class CubemapCapture
+        {
+            public Reply Reply;
+            /// <summary>The game answered with six faces (a reply they could not be read from is not one).</summary>
+            public bool Valid;
+            /// <summary>Face size in pixels.</summary>
+            public int Size;
+            /// <summary>The faces +X, -X, +Y, -Y, +Z, -Z, each Size x Size RGBA (8 bits a channel, as the game's frame shows it), rows top to bottom.</summary>
+            public byte[][] Faces;
+            /// <summary>The game's frame they were cut from (each face is its middle square, scaled down).</summary>
+            public int FrameWidth, FrameHeight;
+            /// <summary>How long the game waited for the zones around the point to stream in.</summary>
+            public int StreamingMilliseconds;
+            /// <summary>The wait for streaming ran out before what was loaded stopped changing: parts of the faces may be missing.</summary>
+            public bool ZonesStillStreaming;
+            public bool HudHidden;
+            public bool PostEffectsOff;
         }
 
         /// <summary>Ask the game to load a level (e.g. "PRODUCTION/BSP_TORRENS"). Needs the hot reload helper on.</summary>

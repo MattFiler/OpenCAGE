@@ -235,6 +235,7 @@ namespace OpenCAGE
             SetupHighlightModeMenu();
             SetupAntialiasingMenu();
             SetupDrawDistanceMenu();
+            SetupCubemapCaptureSizeMenu();
             SetupCompositeBrowserModeMenu();
             ConfigureLevelViewerAvailability();
 
@@ -724,6 +725,104 @@ namespace OpenCAGE
             if (!LevelIsOpenForPorting()) return;
             new ExportCompositeArchive(null).Show();
         }
+        private void fileMenu_DropDownOpening(object sender, EventArgs e)
+        {
+            //Recapturing needs a level open; while a recapture runs, the item stops it
+            recaptureAllCubemapsToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null && (!EnvironmentMapCapture.Busy || _recapturingAll);
+            recaptureAllCubemapsToolStripMenuItem.Text = _recapturingAll ? (_stopRecapture ? "Stopping After This Cubemap..." : "Stop Recapturing Cubemaps") : "Recapture All Cubemaps";
+        }
+
+        //Recapture All Cubemaps running, and asked to stop
+        private bool _recapturingAll = false, _stopRecapture = false;
+
+        /* Every environment map's cubemap captured again in the running game, one after another (see EnvironmentMapCapture):
+           each one placed exactly once in the level, as a step of its own on the undo history. The editor stays usable
+           meanwhile; the menu item stops it after the cubemap being captured. */
+        private async void recaptureAllCubemapsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (_recapturingAll)
+            {
+                _stopRecapture = true;
+                return;
+            }
+            Level level = _compositeBrowser?.Content?.Level;
+            if (level?.Commands == null || EnvironmentMapCapture.Busy)
+                return;
+            if (!RuntimeUtilsConnection.LiveLink.Connected)
+            {
+                MessageBox.Show("Recapturing cubemaps needs the game running this level, connected over Live Link: launch it from Launch Game with Enable Live Link ticked, then try again.",
+                    "Recapture All Cubemaps", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            RuntimeUtilsConnection.LiveLink.GameStatus status = await RuntimeUtilsConnection.LiveLink.Status();
+            if (!status.IsRunning(level.Commands))
+            {
+                MessageBox.Show(status.Reply.Ok ? "The game isn't running " + level.Name + " - load it in the game (as saved), then try again." : "The game didn't answer: " + status.Reply.Message,
+                    "Recapture All Cubemaps", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            List<EnvironmentMapCapture.Target> targets = EnvironmentMapCapture.LevelTargets(level.Commands, out List<EnvironmentMapCapture.Skipped> skipped);
+            if (targets.Count == 0)
+            {
+                MessageBox.Show(level.Name + " has no environment maps placed in it to capture" + (skipped.Count != 0 ? " (" + skipped.Count + " are placed in more than one place, or not at all)" : "") + ".",
+                    "Recapture All Cubemaps", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            int minutes = Math.Max(1, (int)Math.Ceiling(targets.Count * 4.5 / 60.0));
+            string question = "Capture all " + targets.Count + " of " + level.Name + "'s environment map cubemaps again in the running game?\n\n"
+                + "The game's camera goes to each in turn, a few seconds each (about " + minutes + " minute" + (minutes == 1 ? "" : "s") + " in all): keep the game running and unpaused meanwhile. "
+                + "Each new cubemap replaces the one its environment map used, which is deleted if nothing else uses it, and each is its own step on the undo history. "
+                + "Choose Recapture All Cubemaps again from the File menu to stop."
+                + (skipped.Count != 0 ? "\n\n" + skipped.Count + " can't be captured, as they're placed in more than one place or not at all." : "");
+            if (MessageBox.Show(question, "Recapture All Cubemaps", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+
+            _recapturingAll = true;
+            _stopRecapture = false;
+            ProgressUI progress = new ProgressUI();
+            progress.ShowCounted("Recapturing cubemaps", targets.Count);
+            List<(EnvironmentMapCapture.Target target, EnvironmentMapCapture.Outcome outcome)> results;
+            try
+            {
+                results = await EnvironmentMapCapture.CaptureAllAsync(level, targets, new EnvironmentMapCapture.Options() { FaceSize = EnvironmentMapCapture.ConfiguredFaceSize },
+                    (done, text) =>
+                    {
+                        progress.SetCount(done);
+                        if (text != null)
+                            ShowLiveLinkActivity("Live Link: (" + (done + 1) + " of " + targets.Count + ") " + text);
+                    },
+                    () => _stopRecapture);
+            }
+            finally
+            {
+                _recapturingAll = false;
+                _stopRecapture = false;
+                progress.Close();
+                progress.Dispose();
+            }
+
+            //What came of it
+            List<EnvironmentMapCapture.Outcome> captured = results.Where(o => o.outcome.Ok).Select(o => o.outcome).ToList();
+            List<string> failed = results.Where(o => !o.outcome.Ok)
+                .Select(o => level.Commands.Utils.GetEntityName(o.target.Composite, o.target.Entity) + " in " + Path.GetFileName(o.target.Composite.name.Replace('\\', '/')) + ": " + o.outcome.Message).ToList();
+            bool needsBuild = captured.Any(o => o.NeedsBuild);
+            string summary = "Captured " + captured.Count + " of " + targets.Count + " cubemaps"
+                + (captured.Count(o => o.PreviousDeleted) is int deleted && deleted != 0 ? ", deleting " + deleted + " old one" + (deleted == 1 ? "" : "s") + " nothing else used" : "") + ".";
+            if (results.Count < targets.Count)
+                summary += "\n\nStopped" + (failed.Count != 0 ? " after the last one failed" : "") + ", leaving " + (targets.Count - results.Count) + " not recaptured.";
+            if (failed.Count != 0)
+                summary += "\n\nNot captured:\n" + string.Join("\n", failed.Take(8)) + (failed.Count > 8 ? "\n... and " + (failed.Count - 8) + " more" : "");
+            if (captured.Any(o => o.Capture?.ZonesStillStreaming == true))
+                summary += "\n\nThe zones round " + captured.Count(o => o.Capture?.ZonesStillStreaming == true) + " of them were still streaming in, so parts may be missing: capture those again from their Capture buttons.";
+            if (captured.Count != 0)
+                summary += "\n\n" + (needsBuild ? "Save & Build" : "Save") + ", then load the level again in the game to see them there.";
+            ShowLiveLinkActivity("Live Link: captured " + captured.Count + " of " + targets.Count + " cubemaps");
+            MessageBox.Show(summary, "Recapture All Cubemaps", MessageBoxButtons.OK, failed.Count != 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
+            if (_entityInspector != null && !_entityInspector.IsDisposed)
+                _entityInspector.Reload();
+        }
+
         private void importCompositesFromDiskToolStripMenuItem_Click(object sender, EventArgs e)
         {
             //No level need be open: the import window asks which level on disk to import into when none is
@@ -2210,6 +2309,36 @@ namespace OpenCAGE
             }
         }
 
+        private void SetupCubemapCaptureSizeMenu()
+        {
+            cubemapCaptureSizeReplacedToolStripMenuItem.Tag = 0;
+            cubemapCaptureSize64ToolStripMenuItem.Tag = 64;
+            cubemapCaptureSize128ToolStripMenuItem.Tag = 128;
+            cubemapCaptureSize256ToolStripMenuItem.Tag = 256;
+            cubemapCaptureSize512ToolStripMenuItem.Tag = 512;
+            cubemapCaptureSizeToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
+        }
+
+        /* Options > Misc > Cubemap Capture Size. One of several, as Draw Distance is: the chosen one is ticked. */
+        private void cubemapCaptureSizeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!((sender as ToolStripMenuItem)?.Tag is int size))
+                return;
+
+            SettingsManager.SetInteger(Settings.CubemapCaptureSize, size);
+            ApplySettingEffects(new[] { Settings.CubemapCaptureSize });
+        }
+
+        private void ApplyCubemapCaptureSizeSelectionFromSettings()
+        {
+            int size = EnvironmentMapCapture.ConfiguredFaceSize;
+            foreach (ToolStripItem item in cubemapCaptureSizeToolStripMenuItem.DropDownItems)
+            {
+                if (item is ToolStripMenuItem menuItem && menuItem.Tag is int itemSize)
+                    menuItem.Checked = itemSize == size;
+            }
+        }
+
         private void ApplyAntialiasingSelectionFromSettings()
         {
             LevelViewerAntialiasMode mode = LevelViewerViewportDefinitions.NormalizeAntialiasMode(
@@ -2668,6 +2797,8 @@ namespace OpenCAGE
                 resetRenderFiltersOnLoadToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ResetRenderFilters);
             if (ShouldApplySetting(Settings.AlwaysFullyRebuildRadiosity, changedKeys))
                 alwaysFullyRebuildRadiosityToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.AlwaysFullyRebuildRadiosity);
+            if (ShouldApplySetting(Settings.CubemapCaptureSize, changedKeys))
+                ApplyCubemapCaptureSizeSelectionFromSettings();
         }
 
         /* Render Planets and Use Planar Reflections each hang off the option above them. Planets are drawn in the galaxy's sky,

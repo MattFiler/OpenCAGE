@@ -27,7 +27,8 @@ struct IDXGISwapChain;
 	it out every frame (see LIVE_ANIMATION.h). So are TRACE and TRACE_GET: what to trace is stored, or what the trace hooks
 	gathered handed over, and the hooks gather it on whichever threads run the level's scripts (see LIVE_TRACE.h). And so
 	are POSSESS and POSSESS_GET: what to possess, or the stick, is stored, and the characters' behaviour updates act on it
-	(see POSSESS.h).
+	(see POSSESS.h). CAPTURE_CUBEMAP is started on the socket thread as well (or refused at once), and answered from the
+	render thread when the capture ends, a few seconds later (see CUBEMAP_CAPTURE.h).
 */
 namespace LIVE_LINK_SERVER
 {
@@ -113,6 +114,18 @@ namespace LIVE_LINK_SERVER
 		                     //    \ncharacters=NAME@x,y,z;...": as of the last frame
 		                     //    (yaws in radians, forward = (sin, 0, cos)); let_go says why the last character was let go of, or why none
 		                     //    was taken; characters lists those the game runs that aren't players.
+		CAPTURE_CUBEMAP = 15,// u32 root (0: any), f32 position[3] (game world space), u32 face size (16..1024, a power of two), u32 settle
+		                     //    frames (4..120: how many frames each face is held before its picture is taken), u32 stream timeout ms (the
+		                     //    longest the first face waits for the zones around the point to finish streaming in, at most 120000), u32
+		                     //    flags (1: leave the HUD showing; 2: leave the post-processing alone). Answered when the capture ends (it
+		                     //    takes a few seconds): ok -> "Captured ..." and a payload: u32 format (1), u32 face size, u32 face count (6),
+		                     //    u32 flags (1: the zones were still streaming when the wait ran out; 2: the HUD was hidden; 4: the
+		                     //    post-processing was turned off), u32 frame width, u32 frame height, u32 ms spent waiting for zones, then the
+		                     //    faces +X, -X, +Y, -Y, +Z, -Z, each size x size RGBA (8 bits a channel, as the frame shows it, alpha 255), rows
+		                     //    top to bottom - each face as a cube texture keeps it. Refused at once with LiveLinkCamera=0, no level or
+		                     //    another level running, the game paused, or a capture already running; ended early (not ok, no payload) if
+		                     //    OpenCAGE disconnects, the level changes, the game is paused, or nothing is drawn for a while. See
+		                     //    CUBEMAP_CAPTURE.h.
 	};
 
 	void Start(uint16_t port);

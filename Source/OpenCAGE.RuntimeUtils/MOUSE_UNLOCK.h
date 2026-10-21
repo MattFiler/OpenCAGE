@@ -21,6 +21,10 @@
 	- the game never moves the cursor itself (it puts it back where it was when the level stops being played, a menu
 	  opening say, which would pull it off whatever the cursor is over).
 	Menus are left as they are: the game frees and shows the cursor for them itself, and clicks reach them.
+
+	A cubemap capture holds the cursor free the same way while it runs (Hold), whether Unlock Mouse is on or not, so
+	clicking into the game to watch one doesn't hand the game the mouse; afterwards it is as it was. The hooks are in
+	for that whenever captures can be asked for (the live link's camera sync on), and only pass through otherwise.
 */
 namespace MOUSE_UNLOCK
 {
@@ -31,9 +35,13 @@ namespace MOUSE_UNLOCK
 	inline BOOL(WINAPI* set_cursor_pos)(int, int) = SetCursorPos;
 	BOOL WINAPI h_set_cursor_pos(int x, int y);
 
-	// The game window's messages, before the game has them (its window thread): the key, the cursor shown or not, and
-	// whether the message is kept from the game - true when it is, with what to answer it.
+	// The game window's messages, before the game has them (its window thread): the key (with Unlock Mouse on), the
+	// cursor shown or not, and whether the message is kept from the game - true when it is, with what to answer it.
 	bool OnWindowMessage(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result);
+
+	// Holds the cursor free (a cubemap capture running), or lets it go back to how Unlock Mouse and the game have it
+	// (any thread; the game is told at the window's next message).
+	void Hold(bool held);
 
 	// The overlay (render thread): a note for a few seconds when the key is pressed, and the first time a level is
 	// played with the cursor free.

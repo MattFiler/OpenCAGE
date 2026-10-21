@@ -11,7 +11,8 @@ namespace
 
 	constexpr uint32_t kEveryZone = static_cast<uint32_t>(ZONE_LOADER::Source::Config);
 	constexpr uint32_t kAroundCamera = static_cast<uint32_t>(ZONE_LOADER::Source::External)
-		| static_cast<uint32_t>(ZONE_LOADER::Source::LiveCamera) | static_cast<uint32_t>(ZONE_LOADER::Source::Possess);
+		| static_cast<uint32_t>(ZONE_LOADER::Source::LiveCamera) | static_cast<uint32_t>(ZONE_LOADER::Source::Possess)
+		| static_cast<uint32_t>(ZONE_LOADER::Source::Capture);
 
 	char* MainView()
 	{

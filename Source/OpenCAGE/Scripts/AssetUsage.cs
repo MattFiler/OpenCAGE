@@ -241,6 +241,36 @@ namespace OpenCAGE
                             yield return submesh;
         }
 
+        /// <summary>
+        /// What still uses one level texture other than movers: the materials binding it, and the script entities with a
+        /// string naming it (an EnvironmentMap's cubemap, a light's gobo...) - with or without the build prefix or extension.
+        /// Movers hold a cubemap until the next build works their environment maps out again, so they are left to the caller.
+        /// </summary>
+        public static void TextureUsers(Level level, Textures.TEX4 texture, out List<Materials.Material> materials, out List<Entity> entities)
+        {
+            materials = new List<Materials.Material>();
+            entities = new List<Entity>();
+            if (level == null || texture == null) return;
+            foreach (Materials.Material material in level.Materials?.Entries ?? new List<Materials.Material>())
+                if (material?.TextureReferences != null && material.TextureReferences.Any(o => o != null && ReferenceEquals(o.Texture, texture)))
+                    materials.Add(material);
+            string key = TextureKey(texture.Name), bare = TextureKey(StripExtension(texture.Name));
+            foreach (Entity entity in ScriptEntities(level))
+            {
+                foreach (Parameter parameter in entity.parameters)
+                {
+                    string value = (parameter?.content as cString)?.value;
+                    if (string.IsNullOrEmpty(value)) continue;
+                    string named = TextureKey(value);
+                    if (named == key || named == bare || TextureKey(StripExtension(value)) == bare)
+                    {
+                        entities.Add(entity);
+                        break;
+                    }
+                }
+            }
+        }
+
         private static IEnumerable<Entity> ScriptEntities(Level level)
         {
             foreach (Composite composite in level.Commands?.Entries ?? new List<Composite>())

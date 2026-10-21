@@ -12,6 +12,7 @@
 #include "LIVE_LINK.h"
 #include "LIVE_LINK_SERVER.h"
 #include "LIVE_CAMERA.h"
+#include "CUBEMAP_CAPTURE.h"
 #include "LIVE_TRACE.h"
 #include "MOUSE_UNLOCK.h"
 #include "FRAME_CAP.h"
@@ -93,7 +94,13 @@ HRESULT WINAPI hD3D11Present(
     UINT        SyncInterval,
     UINT        Flags
 ) {
-    if (Menu::UsePresentingSwapChain(swapChain))
+    const bool presenting = Menu::UsePresentingSwapChain(swapChain);
+
+    // A cubemap capture takes its faces from the finished frame, before the overlay draws on it.
+    if (presenting && Config::Get().liveLink)
+        CUBEMAP_CAPTURE::OnPresent(swapChain);
+
+    if (presenting)
         Menu::DrawMenu();
 
     // Live link screenshots and level loads, after the overlay so a screenshot shows it.
@@ -212,6 +219,11 @@ static void AttachHooks(bool attach)
     if ((config.liveLink && config.liveLinkCamera) || config.possess)
         hook(LIVE_CAMERA::synchronize_with_engine, LIVE_CAMERA::h_synchronize_with_engine);
 
+    // Live link cubemap captures: the post-processing settings' per-frame update, to turn off the effects that don't
+    // belong in a reflection while one runs. It only passes through otherwise. Cinematic Tools hooks it later too.
+    if (config.liveLink && config.liveLinkCamera)
+        hook(CUBEMAP_CAPTURE::post_process_update, CUBEMAP_CAPTURE::h_post_process_update);
+
     // Possess: each character's behaviour update, to give the possessed one its orders from the keys in place of its
     // behaviour tree. They only pass through while nobody is possessed.
     if (config.possess)
@@ -225,8 +237,9 @@ static void AttachHooks(bool attach)
     if (config.liveLink)
         LIVE_TRACE::AttachHooks(attach);
 
-    // Unlock Mouse: the game's grab of the cursor, and its moving of it, while the cursor is free.
-    if (config.unlockMouse)
+    // Unlock Mouse: the game's grab of the cursor, and its moving of it, while the cursor is free. Cubemap captures hold
+    // the cursor free through them as well, so they are in whenever captures can be asked for (passing through otherwise).
+    if (config.unlockMouse || (config.liveLink && config.liveLinkCamera))
     {
         hook(MOUSE_UNLOCK::grab_cursor, MOUSE_UNLOCK::h_grab_cursor);
         hook(MOUSE_UNLOCK::set_cursor_pos, MOUSE_UNLOCK::h_set_cursor_pos);

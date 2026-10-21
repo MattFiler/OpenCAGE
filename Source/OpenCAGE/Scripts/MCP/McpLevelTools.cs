@@ -104,6 +104,27 @@ namespace OpenCAGE.MCP
 
             yield return new McpTool()
             {
+                Name = "capture_environment_maps",
+                Title = "Capture environment map cubemaps in the game",
+                Description = "Capture EnvironmentMap entities' cubemaps in the running game over Live Link (the EnvironmentMap's Function button, Capture, does one; File > Recapture All Cubemaps does them all): for each, the game renders the six faces from where the entity is placed (90 degree views along +X, -X, +Y, -Y, +Z, -Z, after streaming in the zones around it, with the HUD and the lens effects - film grain, vignette, chromatic aberration, lens distortion, depth of field - off), and they are built into a cube texture shaped as the game's own (128 x 128 faces, DXT1, seven levels blurred as the game's are; or the size and format of the cubemap it replaces), imported into the level's textures as ayz\\env\\cubemaps\\level\\composite\\composite_entity.dds, and the entity's Texture set to it. The cubemap it used before is deleted when nothing else uses it (no other script names it, no material binds it, not one of GLOBAL's); movers still carrying it are given the new one. One undo step per entity. Each takes a few seconds; the game must be running the level open here, as saved, and not paused - it is moved to each point in turn and given its camera back after. The game reads cubemaps when it loads a level: save, then reload it in the game to see them there.",
+                InputSchema = McpSchema.Object(
+                    McpSchema.String("composite", "The composite holding the EnvironmentMap(s) (default: the one open in the editor)."),
+                    McpSchema.Strings("entities", "The EnvironmentMap entities in it (names or ids). Default: every EnvironmentMap in the composite."),
+                    McpSchema.Boolean("all_in_level", "Every EnvironmentMap in the level, each at the one place it is placed, as File > Recapture All Cubemaps does (any placed more than once, or not at all, is skipped and listed under skipped: capture those one at a time with instance_path)."),
+                    McpSchema.Any("instance_path", "The composite instance entities (ids or names; an array, a string split on '/') from the level's root down to the placement of the composite to capture from. Default: the path the open composite was reached through from the root, else the one place the composite is placed."),
+                    McpSchema.Integer("size", "Face size in pixels, a power of two from 16 to 1024, or 0 for the size of the cubemap it replaces, else 128 (default: Misc > Cubemap Capture Size, editor_options cubemap_capture_size, which is 0 unless changed). Bigger faces need the game's window at least as tall."),
+                    McpSchema.String("format", "The texture format (default: the format of the cubemap it replaces, else DXT1), as list_textures names formats."),
+                    McpSchema.Integer("settle_frames", "Frames the game holds each face before taking it (default 8, 4 to 120)."),
+                    McpSchema.Integer("stream_timeout_seconds", "The longest the game waits for the zones around each point to stream in (default 30)."),
+                    McpSchema.Boolean("keep_hud", "Leave the game's HUD showing."),
+                    McpSchema.Boolean("keep_post_effects", "Leave film grain, vignette, chromatic aberration, lens distortion and depth of field on."),
+                    McpSchema.Boolean("keep_old", "Keep the cubemaps the entities used before even when nothing else uses them."),
+                    McpSchema.String("faces_folder", "An absolute folder to keep the six faces the game took in, as PNGs (posx.png, negx.png, posy.png, negy.png, posz.png, negz.png; in a subfolder per entity when there are several).")),
+                Run = CaptureEnvironmentMaps,
+            };
+
+            yield return new McpTool()
+            {
                 Name = "get_player_setup",
                 Title = "Get player start",
                 Description = "How the open level starts the player: its spawn points (instances of Archetypes\\Script\\Mission\\SpawnPositionSelect, with world position and rotation and spawn_on_reset - the one with it true is where a fresh start puts the player), checkpoints, the player Character and the display model it wears, and the entities that set up the player's loadout and state (WEAPON_GiveToPlayer, AddToInventory, RemoveWeaponsFromPlayer, CHR_SetHealth, SetPlayerHasKeycard, SetPlayerHasGatingTool...) with their values and what triggers them. Also the config records that shape the player and are shared by every level (get_config_record). set_player_start moves the start.",
@@ -669,6 +690,7 @@ namespace OpenCAGE.MCP
             yield return McpSchema.Integer("composite_preview_scale", "Composite Display > Composite Preview Scale, in percent: 50, 75, 100, 150 or 200.");
             foreach (BoolOption option in BoolOptions)
                 yield return McpSchema.Boolean(option.Arg, option.Description);
+            yield return McpSchema.Integer("cubemap_capture_size", "Misc > Cubemap Capture Size: the face size, in pixels, of cubemaps captured in the game (capture_environment_maps, the inspector's Capture, Recapture All Cubemaps): 0 for the size of the cubemap each replaces (the game's own are 128), or 64, 128, 256 or 512. Bigger faces need the game's window at least as tall.");
             yield return McpSchema.Boolean("dark_mode", "Options > Dark Mode. The docked panels are rebuilt in place; the level stays open.");
             yield return McpSchema.Number("numeric_step", "Set Numeric Step: the inspector's spinner step for positions (more than 0, at most 100).");
             yield return McpSchema.Number("numeric_step_rotation", "Set Numeric Step: the inspector's spinner step for rotations, in degrees (more than 0, at most 100).");
@@ -684,6 +706,7 @@ namespace OpenCAGE.MCP
             };
             foreach (BoolOption option in BoolOptions)
                 state[option.Arg] = SettingsManager.GetBool(option.Key);
+            state["cubemap_capture_size"] = EnvironmentMapCapture.ConfiguredFaceSize;
             state["dark_mode"] = Theming.ThemeManager.IsDark;
             state["numeric_step"] = Math.Round(SettingsManager.GetFloat(Settings.NumericStep, 0.1f), 6);
             state["numeric_step_rotation"] = Math.Round(SettingsManager.GetFloat(Settings.NumericStepRot, 1.0f), 6);
@@ -709,9 +732,17 @@ namespace OpenCAGE.MCP
                     throw new McpError("'composite_preview_scale' must be one of " + string.Join(", ", PreviewScales) + " (percent).");
                 scale = wanted;
             }
+            int? captureSize = null;
+            if (call.Has("cubemap_capture_size"))
+            {
+                int wanted = call.Int("cubemap_capture_size");
+                if (!EnvironmentMapCapture.FaceSizeChoices.Contains(wanted))
+                    throw new McpError("'cubemap_capture_size' must be one of " + string.Join(", ", EnvironmentMapCapture.FaceSizeChoices) + " (0: the size of the cubemap each capture replaces).");
+                captureSize = wanted;
+            }
             float? step = ReadStep(call, "numeric_step"), rotationStep = ReadStep(call, "numeric_step_rotation");
             bool resetLayouts = call.Bool("reset_ui_layouts");
-            bool anything = mode != null || scale != null || step != null || rotationStep != null || resetLayouts || call.Has("dark_mode")
+            bool anything = mode != null || scale != null || captureSize != null || step != null || rotationStep != null || resetLayouts || call.Has("dark_mode")
                 || BoolOptions.Any(o => call.Has(o.Arg));
 
             return McpEditor.UI(() =>
@@ -747,6 +778,12 @@ namespace OpenCAGE.MCP
                     SettingsManager.SetInteger(Settings.CompositePreviewScale, scale.Value);
                     keys.Add(Settings.CompositePreviewScale);
                     changed.Add("composite_preview_scale");
+                }
+                if (captureSize != null && EnvironmentMapCapture.ConfiguredFaceSize != captureSize.Value)
+                {
+                    SettingsManager.SetInteger(Settings.CubemapCaptureSize, captureSize.Value);
+                    keys.Add(Settings.CubemapCaptureSize);
+                    changed.Add("cubemap_capture_size");
                 }
                 if (step != null && Math.Abs(SettingsManager.GetFloat(Settings.NumericStep, 0.1f) - step.Value) > 1e-7)
                 {
@@ -1158,6 +1195,132 @@ namespace OpenCAGE.MCP
                 throw new McpError("The game is not running a level yet (still loading, or at a loading screen).");
             if (!status.IsRunning(commands))
                 throw new McpError("The game is running a different level (root composite " + status.RootCompositeName + ").");
+        }
+
+        /// <summary>capture_environment_maps: each EnvironmentMap's cubemap captured in the running game and used (see EnvironmentMapCapture).</summary>
+        private static object CaptureEnvironmentMaps(McpCall call)
+        {
+            RequireLiveLink();
+            EnvironmentMapCapture.Options options = new EnvironmentMapCapture.Options()
+            {
+                FaceSize = call.Has("size") ? call.Int("size") : EnvironmentMapCapture.ConfiguredFaceSize,
+                Format = call.Has("format") ? McpAssets.ParseTextureFormat(call.Str("format")) : (Textures.TextureFormat?)null,
+                SettleFrames = Math.Max(EnvironmentMapCapture.MinimumSettleFrames, Math.Min(120, call.Int("settle_frames", 8))),
+                StreamTimeoutMs = (int)(Math.Max(0, Math.Min(120, call.Num("stream_timeout_seconds", 30))) * 1000),
+                KeepHud = call.Bool("keep_hud"),
+                KeepPostEffects = call.Bool("keep_post_effects"),
+                DeleteOld = !call.Bool("keep_old"),
+            };
+            if (options.FaceSize != 0 && !EnvironmentMapCapture.IsFaceSize(options.FaceSize))
+                throw McpError.Invalid("'size' must be 0 (the size of the cubemap it replaces) or a power of two from 16 to 1024.");
+
+            //What to capture, and from where: (composite, entity, instance path or null)
+            Level level = null;
+            Commands commands = null;
+            List<(Composite composite, Entity entity, List<ShortGuid> path)> targets = new List<(Composite, Entity, List<ShortGuid>)>();
+            JArray skipped = new JArray();
+            McpEditor.UI(() =>
+            {
+                commands = McpEditor.RequireCommands(false);
+                level = Singleton.Editor?.CompositeBrowser?.Content?.Level;
+                if (call.Bool("all_in_level"))
+                {
+                    //Each placed exactly once (a cubemap is taken from one point); the rest are reported, not captured
+                    List<EnvironmentMapCapture.Target> levelTargets = EnvironmentMapCapture.LevelTargets(commands, out List<EnvironmentMapCapture.Skipped> skippedMaps);
+                    foreach (EnvironmentMapCapture.Target target in levelTargets)
+                        targets.Add((target.Composite, target.Entity, target.Path));
+                    foreach (EnvironmentMapCapture.Skipped skip in skippedMaps)
+                        skipped.Add(new JObject() { ["entity"] = McpScript.EntityName(commands, skip.Composite, skip.Entity), ["composite"] = skip.Composite.name, ["reason"] = skip.Reason });
+                    return;
+                }
+                Composite owner = LiveLinkComposite(call, commands);
+                List<ShortGuid> path = null;
+                if (call.Has("instance_path"))
+                    path = ReadInstancePath(call, commands, owner);
+                else if (Singleton.Editor?.CompositeDisplay?.Composite == owner)
+                    path = LiveLink.InstancePath(Singleton.Editor.CompositeDisplay, commands);
+                if (call.Has("entities"))
+                {
+                    foreach (string reference in call.StrList("entities"))
+                    {
+                        Entity entity = McpScript.FindEntity(commands, owner, reference);
+                        if (!EnvironmentMapCapture.IsEnvironmentMap(entity))
+                            throw McpError.Invalid(McpScript.EntityName(commands, owner, entity) + " is not an EnvironmentMap.");
+                        targets.Add((owner, entity, path));
+                    }
+                }
+                else
+                {
+                    foreach (FunctionEntity function in owner.functions)
+                        if (EnvironmentMapCapture.IsEnvironmentMap(function))
+                            targets.Add((owner, function, path));
+                    if (targets.Count == 0)
+                        throw McpError.Invalid(owner.name + " has no EnvironmentMap entities: pass 'composite', or all_in_level.");
+                }
+            });
+            if (level == null)
+                throw new McpError("No level is open.");
+            RequireRunningLevel(commands);
+
+            JArray captured = new JArray(), failed = new JArray();
+            string faces = call.Str("faces_folder");
+            if (!string.IsNullOrEmpty(faces) && !Path.IsPathRooted(faces))
+                throw McpError.Invalid("'faces_folder' must be an absolute path.");
+            foreach ((Composite composite, Entity entity, List<ShortGuid> path) in targets)
+            {
+                string name = McpUI(() => McpScript.EntityName(commands, composite, entity));
+                options.FacesFolder = string.IsNullOrEmpty(faces) ? null : targets.Count == 1 ? faces
+                    : Path.Combine(faces, string.Join("_", (composite.name.Substring(composite.name.LastIndexOfAny(new[] { '\\', '/' }) + 1) + "_" + name).Split(Path.GetInvalidFileNameChars())));
+                //The capture and the build (awaited on the UI thread), then the change to the level as a step of its own, so it
+                //is recorded as this call's (an AI step); anything thrown is this target's failure, not the call's
+                EnvironmentMapCapture.Outcome outcome;
+                try
+                {
+                    using (McpEditor.UI(() => EnvironmentMapCapture.HoldBusy()))
+                    {
+                        EnvironmentMapCapture.Prepared prepared = McpEditor.UI(() => EnvironmentMapCapture.PrepareAsync(level, composite, entity, path, options)).Result;
+                        outcome = prepared.Failed ?? McpEditor.UI(() => EnvironmentMapCapture.Apply(prepared, options, "AI: "));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Exception inner = ex is AggregateException aggregate ? aggregate.GetBaseException() : ex is McpUiException ui && ui.InnerException != null ? ui.InnerException : ex;
+                    outcome = new EnvironmentMapCapture.Outcome() { Ok = false, Message = inner.Message };
+                }
+                if (outcome.Ok)
+                {
+                    captured.Add(new JObject()
+                    {
+                        ["entity"] = name,
+                        ["composite"] = composite.name,
+                        ["position"] = new JArray(outcome.Position.X, outcome.Position.Y, outcome.Position.Z),
+                        ["texture"] = outcome.Texture.Name,
+                        ["format"] = outcome.Texture.Format.ToString(),
+                        ["size"] = outcome.Capture.Size,
+                        ["previous"] = outcome.Previous?.Name,
+                        ["previous_deleted"] = outcome.PreviousDeleted,
+                        ["movers_given_it"] = outcome.MoversRepointed,
+                        ["needs_build"] = outcome.NeedsBuild,
+                        ["zones_still_streaming"] = outcome.Capture.ZonesStillStreaming,
+                        ["streaming_seconds"] = Math.Round(outcome.Capture.StreamingMilliseconds / 1000.0, 1),
+                    });
+                }
+                else
+                {
+                    failed.Add(new JObject() { ["entity"] = name, ["composite"] = composite.name, ["reason"] = outcome.Message });
+                    //The game is gone, or too old: the rest would only fail the same way
+                    if (!LiveLink.Connected || outcome.Message.Contains("too old"))
+                        break;
+                }
+            }
+            JObject result = new JObject() { ["captured"] = captured };
+            if (failed.Count != 0)
+                result["failed"] = failed;
+            if (skipped.Count != 0)
+                result["skipped"] = skipped;
+            if (captured.Count != 0)
+                call.Note("The game reads cubemaps when it loads a level: " + (captured.Any(o => (bool)o["needs_build"]) ? "save_level with build=true (needs_build: models only take some of the new cubemaps from a build)" : "save_level") + ", then reload it in the game to see them there. The 3D viewport shows them on surfaces once the level is opened again.");
+            return result;
         }
 
         private static Composite LiveLinkComposite(McpCall call, Commands commands)

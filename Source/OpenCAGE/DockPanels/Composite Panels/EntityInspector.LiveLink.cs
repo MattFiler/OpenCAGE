@@ -1,6 +1,7 @@
 using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
+using CathodeLib;
 using OpenCAGE.RuntimeUtilsConnection;
 using System;
 using System.Collections.Generic;
@@ -30,7 +31,12 @@ namespace OpenCAGE.DockPanels
             toolStrip1.Items.Insert(0, _liveLinkCall);
 
             LiveLink.ConnectionChanged += OnLiveLinkConnectionChanged;
-            this.Disposed += (s, e) => LiveLink.ConnectionChanged -= OnLiveLinkConnectionChanged;
+            EnvironmentMapCapture.BusyChanged += OnLiveLinkConnectionChanged;
+            this.Disposed += (s, e) =>
+            {
+                LiveLink.ConnectionChanged -= OnLiveLinkConnectionChanged;
+                EnvironmentMapCapture.BusyChanged -= OnLiveLinkConnectionChanged;
+            };
         }
 
         private void OnLiveLinkConnectionChanged()
@@ -58,8 +64,48 @@ namespace OpenCAGE.DockPanels
                 _liveLinkCall.DropDownItems.Add(item);
             }
             _liveLinkCall.Visible = methods.Count != 0;
+
+            //An EnvironmentMap's Function button captures its cubemap, so it follows the connection (and a capture running)
+            if (!IsMultiEditing && EnvironmentMapCapture.IsEnvironmentMap(_entity) && _entityCompositePtr == null)
+            {
+                editFunction.Enabled = CanCaptureCubemap;
+                LabelFunctionButton();
+            }
         }
 
+        /// <summary>Whether an EnvironmentMap's cubemap can be captured now: the game connected, and no capture running.</summary>
+        private static bool CanCaptureCubemap => LiveLink.Connected && !EnvironmentMapCapture.Busy;
+
+        /// <summary>Capture the selected EnvironmentMap's cubemap in the running game, from where it is, and use it.</summary>
+        private async void CaptureCubemapInGame()
+        {
+            if (_entity == null || Composite == null || EnvironmentMapCapture.Busy)
+                return;
+            Level level = Content?.Level;
+            if (level == null)
+                return;
+            Composite composite = Composite;
+            Entity entity = _entity;
+            List<ShortGuid> path = LiveLink.InstancePath(_compositeDisplay, level.Commands);
+
+            EnvironmentMapCapture.Outcome outcome;
+            try
+            {
+                outcome = await EnvironmentMapCapture.CaptureAsync(level, composite, entity, path, new EnvironmentMapCapture.Options() { FaceSize = EnvironmentMapCapture.ConfiguredFaceSize },
+                    text => Singleton.Editor?.ShowLiveLinkActivity("Live Link: " + text));
+            }
+            catch (Exception ex)
+            {
+                outcome = new EnvironmentMapCapture.Outcome() { Ok = false, Message = ex.Message };
+            }
+
+            Singleton.Editor?.ShowLiveLinkActivity("Live Link: " + (outcome.Ok ? outcome.Message : "could not capture the cubemap - " + outcome.Message));
+            if (!outcome.Ok)
+                MessageBox.Show(outcome.Message, "Capture Cubemap", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            //The Texture row shows the new cubemap
+            else if (!IsDisposed && ReferenceEquals(_entity, entity))
+                Reload();
+        }
         private void CallInGame(ShortGuid method)
         {
             if (_entity == null || Composite == null)

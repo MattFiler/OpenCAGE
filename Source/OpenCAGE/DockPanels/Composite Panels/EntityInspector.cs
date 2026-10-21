@@ -580,6 +580,7 @@ namespace OpenCAGE.DockPanels
             entity_params.Controls.Clear();
             jumpToComposite.Visible = false;
             editFunction.Enabled = false;
+            LabelFunctionButton();
             editEntityResources.Enabled = false;
             showOverridesAndProxies.Enabled = false;
             goToZone.Enabled = false;
@@ -659,9 +660,6 @@ namespace OpenCAGE.DockPanels
             entityInfoGroup.Text = "Selected " + entityVariantStr + " Info";
             entityParamGroup.Text = "Selected " + entityVariantStr + " Parameters";
 
-            //TODO: change this text contextually based on the linked editor - and hide the button when one isn't available.
-            editFunction.Text = "Function";
-
             CompositePinInfoTable.PinInfo variableInfo = null;
             string description = "";
             switch (_entity.variant)
@@ -685,7 +683,8 @@ namespace OpenCAGE.DockPanels
 
                         FunctionType function = ((FunctionEntity)_entity).function.AsFunctionType;
                         description = function.ToString();
-                        editFunction.Enabled = function == FunctionType.CAGEAnimation || function == FunctionType.TriggerSequence || function == FunctionType.Character;
+                        editFunction.Enabled = function == FunctionType.CAGEAnimation || function == FunctionType.TriggerSequence || function == FunctionType.Character
+                            || (function == FunctionType.EnvironmentMap && CanCaptureCubemap);
 
                         bool supportsResources = EntitySupportsResources((FunctionEntity)_entity, function);
                         editEntityResources.Enabled = supportsResources && Content.Level.Models != null;
@@ -741,6 +740,7 @@ namespace OpenCAGE.DockPanels
             }
             selected_entity_type_description.Text = description;
             this.Text = selected_entity_name.Text;
+            LabelFunctionButton();
             RefreshZoneColour();
 
 #if DO_ENTITY_PERF_CHECK
@@ -1614,6 +1614,50 @@ namespace OpenCAGE.DockPanels
             return Content?.Level?.Commands?.GetComposite(function.function);
         }
 
+        /// <summary>
+        /// Names the Function button after what it does for the entity shown, as it stands now: Edit Tracks for a
+        /// CAGEAnimation, Edit Sequence for a TriggerSequence (or a proxy to one), Edit Character, Capture for an
+        /// EnvironmentMap (Capturing... while a capture runs) - and plain Function whenever it does nothing.
+        /// </summary>
+        private void LabelFunctionButton()
+        {
+            string text = "Function", tip = null;
+            if (_entity is ProxyEntity && editFunction.Enabled)
+            {
+                text = "Edit Sequence";
+                tip = "Edit the trigger data this proxy carries for the TriggerSequence it points at";
+            }
+            else if (_entity is FunctionEntity function && _entityCompositePtr == null && function.function.IsFunctionType)
+            {
+                switch (function.function.AsFunctionType)
+                {
+                    case FunctionType.CAGEAnimation:
+                        text = "Edit Tracks";
+                        tip = "Edit this animation's tracks, keyframes and events";
+                        break;
+                    case FunctionType.TriggerSequence:
+                        text = "Edit Sequence";
+                        tip = "Edit the entities this TriggerSequence triggers, and when";
+                        break;
+                    case FunctionType.Character:
+                        text = "Edit Character";
+                        tip = "Edit this character's appearance";
+                        break;
+                    case FunctionType.EnvironmentMap:
+                        if (EnvironmentMapCapture.Busy)
+                            text = "Capturing...";
+                        else
+                            text = "Capture";
+                        tip = "Capture this environment map's cubemap in the running game, from where it is, and use it (Live Link)";
+                        break;
+                }
+            }
+            if (!editFunction.Enabled && text != "Capturing...")
+                text = "Function";
+            editFunction.Text = text;
+            toolTip1.SetToolTip(editFunction, editFunction.Enabled ? tip : null);
+        }
+
         ShowCompositeInstanceOverrides _instanceOverridesDialog = null;
         CAGEAnimationEditor _cageAnimDialog = null;
         TriggerSequenceEditor _triggerSeqDialog = null;
@@ -1666,6 +1710,9 @@ namespace OpenCAGE.DockPanels
                             _charEditorDialog.Close();
                         _charEditorDialog = new CharacterEditor(this);
                         _charEditorDialog.Show();
+                        break;
+                    case FunctionType.EnvironmentMap:
+                        CaptureCubemapInGame();
                         break;
                 }
             }

@@ -1,4 +1,5 @@
 #include "LIVE_CAMERA.h"
+#include "CUBEMAP_CAPTURE.h"
 #include "LIVE_LINK_SERVER.h"
 #include "ZONE_LOADER.h"
 #include "POSSESS.h"
@@ -423,7 +424,11 @@ void __fastcall LIVE_CAMERA::h_synchronize_with_engine(void* _this, void* /*_EDX
 	if (camera)
 		TakeSnapshot(saved);
 	bool written = false, behind = false;
-	if (camera && state == State::Applying)
+	// A cubemap capture owns the camera while it runs (see CUBEMAP_CAPTURE.h), ahead of OpenCAGE's pose and Possess
+	Pose capture;
+	if (camera && CUBEMAP_CAPTURE::CameraPose(capture.rotation, capture.position, capture.fov))
+		written = WritePose(camera, capture, saved);
+	else if (camera && state == State::Applying)
 		written = WritePose(camera, pose, saved);
 	else if (camera && Config::Get().possess)
 	{

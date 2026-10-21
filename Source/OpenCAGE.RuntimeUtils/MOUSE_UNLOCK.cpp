@@ -16,8 +16,18 @@
 */
 namespace
 {
-	// Whether the cursor is free: the key takes turns, and it starts free
+	// Whether the key has the cursor free (with Unlock Mouse on): it takes turns, and starts free
 	std::atomic<bool> g_free = true;
+	// Whether a cubemap capture holds the cursor free
+	std::atomic<bool> g_held = false;
+	// The hold as the game's routine was last told of it (the window thread only)
+	bool g_heldPassedOn = false;
+
+	// Whether the cursor is free now: by the key, or held by a capture
+	bool Free()
+	{
+		return (g_free && Config::Get().unlockMouse) || g_held;
+	}
 
 	// What the game last asked of the cursor routine, and for which mouse: the routine is called from the window thread
 	// and the game's own, so these (and the calls to it) are under g_mutex
@@ -58,7 +68,7 @@ namespace
 			free = !g_free;
 			g_free = free;
 			if (g_mouse && g_grabAsked)
-				MOUSE_UNLOCK::grab_cursor(g_mouse, !free);
+				MOUSE_UNLOCK::grab_cursor(g_mouse, !Free());
 		}
 		g_noteFree = free;
 		g_noteAt = GetTickCount64();
@@ -75,11 +85,11 @@ void __fastcall MOUSE_UNLOCK::h_grab_cursor(void* _this, void* /*_EDX*/, bool gr
 		g_mouse = _this;
 		g_grabAsked = grab;
 		g_grabWanted = grab;
-		grab_cursor(_this, grab && !g_free);
+		grab_cursor(_this, grab && !Free());
 	}
 
 	// The first time a level is played with the cursor free, say how to look around
-	if (grab && g_free && !g_hinted.exchange(true))
+	if (grab && g_free && Config::Get().unlockMouse && !g_hinted.exchange(true))
 	{
 		g_noteFree = true;
 		g_noteAt = GetTickCount64();
@@ -89,17 +99,27 @@ void __fastcall MOUSE_UNLOCK::h_grab_cursor(void* _this, void* /*_EDX*/, bool gr
 BOOL WINAPI MOUSE_UNLOCK::h_set_cursor_pos(int x, int y)
 {
 	// The game putting the cursor back: it stays where it was left
-	if (g_free && InGame(reinterpret_cast<uintptr_t>(_ReturnAddress())))
+	if (Free() && InGame(reinterpret_cast<uintptr_t>(_ReturnAddress())))
 		return TRUE;
 	return set_cursor_pos(x, y);
 }
 
 bool MOUSE_UNLOCK::OnWindowMessage(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
 {
-	if (message == WM_KEYUP && wParam == static_cast<WPARAM>(Config::Get().unlockMouseKey))
+	if (Config::Get().unlockMouse && message == WM_KEYUP && wParam == static_cast<WPARAM>(Config::Get().unlockMouseKey))
 		Toggle();
 
-	const bool free = g_free;
+	// A capture's hold starting or ending: the game's routine lets the cursor go or takes it back, as the key has it do
+	const bool held = g_held;
+	if (held != g_heldPassedOn)
+	{
+		g_heldPassedOn = held;
+		std::lock_guard<std::mutex> lock(g_mutex);
+		if (g_mouse && g_grabAsked)
+			grab_cursor(g_mouse, !Free());
+	}
+
+	const bool free = Free();
 	const bool grabWanted = g_grabWanted;
 
 	const bool show = free && grabWanted;
@@ -122,6 +142,12 @@ bool MOUSE_UNLOCK::OnWindowMessage(HWND window, UINT message, WPARAM wParam, LPA
 		}
 	}
 	return false;
+}
+
+void MOUSE_UNLOCK::Hold(bool held)
+{
+	if (g_held.exchange(held) != held)
+		DevTools::Log("Unlock Mouse: %s", held ? "the cursor is held free for a cubemap capture" : "the capture's hold on the cursor ended");
 }
 
 void MOUSE_UNLOCK::DrawOverlay()

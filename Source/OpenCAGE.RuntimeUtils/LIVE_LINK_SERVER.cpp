@@ -1,6 +1,7 @@
 #include "LIVE_LINK_SERVER.h"
 #include "LIVE_LINK.h"
 #include "LIVE_CAMERA.h"
+#include "CUBEMAP_CAPTURE.h"
 #include "LIVE_ANIMATION.h"
 #include "LIVE_TRACE.h"
 #include "POSSESS.h"
@@ -568,6 +569,37 @@ namespace
 		Reply(request, result.ok, result.message);
 	}
 
+	// A cubemap capture is only started here (the camera hook and the frame presentation carry it out over a few seconds,
+	// see CUBEMAP_CAPTURE.h), and answered when it ends - from the render thread, with the six faces. A refusal is answered
+	// at once.
+	void HandleCaptureCubemap(const Request& request)
+	{
+		Reader reader(request.payload);
+		CUBEMAP_CAPTURE::Request capture;
+		capture.connection = request.connection;
+		capture.root = reader.U32();
+		for (float& value : capture.position)
+			value = reader.F32();
+		capture.size = reader.U32();
+		capture.settleFrames = reader.U32();
+		capture.streamTimeoutMs = reader.U32();
+		capture.flags = reader.U32();
+		const bool powerOfTwo = capture.size && (capture.size & (capture.size - 1)) == 0;
+		if (reader.failed || !powerOfTwo || capture.size < 16 || capture.size > 1024 || capture.settleFrames < 4 || capture.settleFrames > 120 ||
+			capture.streamTimeoutMs > 120000)
+		{
+			Reply(request, false, "Malformed request");
+			return;
+		}
+		const LIVE_LINK::Result result = CUBEMAP_CAPTURE::Start(capture, [request](bool ok, const std::string& message, std::vector<uint8_t>&& payload)
+		{
+			Reply(request, ok, message, payload);
+		});
+		SetActivity(result.ok ? "Capturing a cubemap" : result.message);
+		if (!result.ok)
+			Reply(request, false, result.message);
+	}
+
 	void HandlePossessGet(const Request& request)
 	{
 		Reader reader(request.payload);
@@ -638,6 +670,11 @@ namespace
 		if (request.command == LIVE_LINK_SERVER::POSSESS_GET)
 		{
 			HandlePossessGet(request);
+			return;
+		}
+		if (request.command == LIVE_LINK_SERVER::CAPTURE_CUBEMAP)
+		{
+			HandleCaptureCubemap(request);
 			return;
 		}
 

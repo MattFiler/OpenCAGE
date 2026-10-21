@@ -59,6 +59,7 @@ namespace OpenCAGE
             EnsureBool(Settings.HideNestedScriptEntities, false);
             EnsureBool(Settings.ResetRenderFilters, false);
             EnsureBool(Settings.AlwaysFullyRebuildRadiosity, false);
+            EnsureInteger(Settings.CubemapCaptureSize, 0); // the size of the cubemap each capture replaces
             EnsureBool(Settings.ShowZones, false);
             EnsureBool(Settings.TransformVertexSnap, false);
 

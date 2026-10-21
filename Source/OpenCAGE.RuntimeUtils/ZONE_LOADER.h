@@ -47,6 +47,7 @@ namespace ZONE_LOADER
 		External = 1 << 1,   // other injected tools, through this DLL's exported zone loading switch (Cinematic Tools, while its camera is on)
 		LiveCamera = 1 << 2, // the Live Link camera sync, while the game renders from OpenCAGE's camera (LIVE_CAMERA.h)
 		Possess = 1 << 3,    // the camera behind a possessed character (POSSESS.h)
+		Capture = 1 << 4,    // a cubemap capture, while the game renders from the capture point (CUBEMAP_CAPTURE.h)
 	};
 
 	void SetForced(Source source, bool forced);

@@ -7,6 +7,7 @@
 #include "Config.h"
 #include "LIVE_LINK_SERVER.h"
 #include "LIVE_CAMERA.h"
+#include "CUBEMAP_CAPTURE.h"
 #include "MOUSE_UNLOCK.h"
 #include "POSSESS.h"
 
@@ -67,9 +68,18 @@ LRESULT CALLBACK Menu::WndProcHandler(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
     }
 
     // Unlock Mouse: its key, the cursor shown over the window while it's free, and the mouse kept from the game then.
-    if (config.unlockMouse) {
+    // A cubemap capture frees the cursor through it too, so it is in whenever captures can be asked for.
+    const bool captures = config.liveLink && config.liveLinkCamera;
+    if (config.unlockMouse || captures) {
         LRESULT result = 0;
         if (MOUSE_UNLOCK::OnWindowMessage(hWnd, uMsg, wParam, lParam, result))
+            return result;
+    }
+
+    // Cubemap capture: the keyboard and mouse kept from the game while one runs (bar Escape, which stops it).
+    if (captures) {
+        LRESULT result = 0;
+        if (CUBEMAP_CAPTURE::OnWindowMessage(hWnd, uMsg, wParam, lParam, result))
             return result;
     }
 
@@ -186,6 +196,19 @@ void Menu::DrawMenu() {
             const char* camera = "Camera: following OpenCAGE";
             const float cameraWidth = ImGui::GetFont()->CalcTextSizeA(size, FLT_MAX, 0.0f, camera).x;
             drawList->AddText(ImGui::GetFont(), size, ImVec2(width - cameraWidth - 12.0f, line), IM_COL32(120, 220, 140, 220), camera);
+            line += 20.0f;
+        }
+        // A cubemap capture: what it is waiting for, or which face it is on
+        const std::string capture = CUBEMAP_CAPTURE::OverlayText();
+        if (!capture.empty())
+        {
+            const float captureWidth = ImGui::GetFont()->CalcTextSizeA(size, FLT_MAX, 0.0f, capture.c_str()).x;
+            drawList->AddText(ImGui::GetFont(), size, ImVec2(width - captureWidth - 12.0f, line), IM_COL32(120, 220, 140, 220), capture.c_str());
+            line += 20.0f;
+            // ... and that the game's keys and mouse wait for it
+            const char* held = "Keys and mouse ignored until it's done - Escape stops it";
+            const float heldWidth = ImGui::GetFont()->CalcTextSizeA(size, FLT_MAX, 0.0f, held).x;
+            drawList->AddText(ImGui::GetFont(), size, ImVec2(width - heldWidth - 12.0f, line), IM_COL32(230, 230, 230, 170), held);
             line += 20.0f;
         }
         const std::string activity = LIVE_LINK_SERVER::LastActivity(4000);
