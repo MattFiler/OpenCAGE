@@ -49,7 +49,7 @@ namespace OpenCAGE.Popups
         private void RevertFiles(string key)
         {
             Singleton.OnResetConfigs?.Invoke();
-            EditorUtils.CloseAI();
+            EditorUtils.CloseAI(null, thisInstallOnly: true);
             foreach (string file in ConfigReset.FilesToReset(ConfigReset.Find(key)))
                 ConfigReset.ResetFile(_backupFiles, file);
         }
@@ -144,7 +144,7 @@ namespace OpenCAGE.Popups
 
         private void resetBehaviourTrees_Click(object sender, EventArgs e)
         {
-            EditorUtils.CloseAI(new List<string>(ConfigReset.BehaviourTreeProcesses));
+            EditorUtils.CloseAI(new List<string>(ConfigReset.BehaviourTreeProcesses), thisInstallOnly: true);
             foreach (string file in ConfigReset.FilesToReset(ConfigReset.Find(ConfigReset.BehaviourTrees)))
                 ConfigReset.ResetFile(_backupFiles, file);
             ConfigReset.RegenerateBehaviourTrees();

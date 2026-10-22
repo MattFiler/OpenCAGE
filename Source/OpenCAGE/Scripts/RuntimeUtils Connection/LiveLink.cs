@@ -18,10 +18,10 @@ namespace OpenCAGE.RuntimeUtilsConnection
     /// A composite is sent whole, as the game holds it in memory (Commands.WriteLiveLinkImage); the game works out what
     /// changed against what it is running and brings every running instance of the composite in line - entities that
     /// went are shut down and removed, new ones are created and initialised, and entities whose parameters changed are
-    /// reinitialised the way CA's own live link did (EntityState::live_edit). New composites, and new models or other
+    /// reinitialised with the game's own live edit (EntityState::live_edit). New composites, and new models or other
     /// resources, need the level saved and reloaded.
     /// </summary>
-    public static class LiveLink
+    public static partial class LiveLink
     {
         public const uint Magic = 0x4C4C434F; //"OCLL"
         public const ushort Version = 1;
@@ -41,6 +41,9 @@ namespace OpenCAGE.RuntimeUtilsConnection
             TRACE = 11,
             TRACE_GET = 12,
             CAPTURE_CUBEMAP = 15,
+            SETTINGS = 16,
+            SETTINGS_GET = 17,
+            DEBUG_MENU_CONTROL = 18,
         }
 
         public sealed class Reply
@@ -477,6 +480,88 @@ namespace OpenCAGE.RuntimeUtilsConnection
             return Request(Command.SCREENSHOT, w => WriteString(w, path));
         }
 
+        /// <summary>The game's settings files whose numbers can be changed in the running game (SetSettings).</summary>
+        public enum SettingsFile : byte
+        {
+            /// <summary>DATA\RADIOSITY_SETTINGS.TXT</summary>
+            Radiosity = 1,
+            /// <summary>DATA\SKIN_SHADING_SETTINGS.TXT</summary>
+            SkinShading = 2,
+            /// <summary>DATA\HAIR_SHADING_SETTINGS.TXT</summary>
+            HairShading = 3,
+            /// <summary>DATA\UI\SELECTIONOVERLAYPARAMS.BIN</summary>
+            SelectionOverlay = 4,
+            /// <summary>DATA\GLOBALCONSTANTS.BML</summary>
+            GlobalConstants = 5,
+        }
+
+        /// <summary>
+        /// Change numbers from one of the game's settings files in the running game, keys spelt as the file spells them: the
+        /// game uses them from its next frame (it reads the file again at the next level load). The message has a line per
+        /// key: "key=value live", "key=value inert" (the game reads that key but never uses it), "key unknown", "key refused"
+        /// (not a finite number) or "key unavailable"; Ok when every key was live or inert. Runtime utils from before it answer
+        /// "Unknown request".
+        /// </summary>
+        public static Task<Reply> SetSettings(SettingsFile file, IReadOnlyList<KeyValuePair<string, float>> values)
+        {
+            return Request(Command.SETTINGS, w =>
+            {
+                w.Write((byte)file);
+                w.Write(values.Count);
+                foreach (KeyValuePair<string, float> value in values)
+                {
+                    WriteString(w, value.Key);
+                    w.Write(value.Value);
+                }
+            });
+        }
+
+        /// <summary>What the running game holds for each of a settings file's keys, as "key=value" lines.</summary>
+        public static Task<Reply> GetSettings(SettingsFile file)
+        {
+            return Request(Command.SETTINGS_GET, w => w.Write((byte)file));
+        }
+
+        /// <summary>What to do with the game's Debug Menu (DebugMenu).</summary>
+        public enum DebugMenuOp : byte
+        {
+            Report = 0,
+            Open = 1,
+            Close = 2,
+            /// <summary>Bring a tab to the front (name: part of its title).</summary>
+            ShowTab = 3,
+            /// <summary>Select a character (name: part of its name; none when no character's name has it).</summary>
+            Select = 4,
+            /// <summary>Set one of its switches (name: the switch's, as the report lists them).</summary>
+            SetSwitch = 5,
+            /// <summary>Run one of its commands (name: the command's, as the report lists them; "help" lists them all) with an argument.</summary>
+            RunCommand = 6,
+            /// <summary>Set one of its values (name: the value's, as the report lists them) to a number (kept within its range).</summary>
+            SetValue = 7,
+        }
+
+        /// <summary>
+        /// Drive the game's Debug Menu from outside its window (the game must have been launched with it on): open or close it,
+        /// bring a tab to the front, select a character, set one of its named switches or values, or run one of its commands.
+        /// The message is what the command answers for RunCommand; otherwise what it holds after: "open=0|1", "group=..",
+        /// "tab=..", "selected=..", "tabs=..", "groups=..", "commands=a,b", "values=name:1.5,..", then a "name=0|1" line per switch.
+        /// </summary>
+        public static Task<Reply> DebugMenu(DebugMenuOp op, string name = null, bool value = false, string argument = null, float number = 0.0f)
+        {
+            return Request(Command.DEBUG_MENU_CONTROL, w =>
+            {
+                w.Write((byte)op);
+                if (op == DebugMenuOp.ShowTab || op == DebugMenuOp.Select || op == DebugMenuOp.SetSwitch || op == DebugMenuOp.RunCommand || op == DebugMenuOp.SetValue)
+                    WriteString(w, name ?? "");
+                if (op == DebugMenuOp.SetSwitch)
+                    w.Write((byte)(value ? 1 : 0));
+                if (op == DebugMenuOp.RunCommand)
+                    WriteString(w, argument ?? "");
+                if (op == DebugMenuOp.SetValue)
+                    w.Write(number);
+            });
+        }
+
         /// <summary>What a cubemap capture leaves as the game has it (CaptureCubemap).</summary>
         [Flags]
         public enum CubemapCaptureFlags : uint
@@ -486,6 +571,8 @@ namespace OpenCAGE.RuntimeUtilsConnection
             KeepHud = 1,
             /// <summary>Leave film grain, vignette, chromatic aberration, lens distortion and depth of field on.</summary>
             KeepPostEffects = 2,
+            /// <summary>Capture even while the game's Debug Menu has changed how it draws (it is turned away otherwise).</summary>
+            KeepDebugLook = 4,
         }
 
         /// <summary>

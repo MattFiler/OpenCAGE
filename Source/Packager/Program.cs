@@ -25,7 +25,8 @@ namespace Packager
             Directory.CreateDirectory(_outputPath);
 
             CopyProjectToBuild("Source/Dependencies/BehaviourTreeEditor/Build/", "legendplugin");
-            CopyProjectToBuild("Source/Dependencies/CinematicTools/Build/", "cinematictools");
+            /* Cinematic Tools (cinematictools: their injector and DLL) are no longer shipped: the Debug Menu in the runtime
+             * utils has their camera now. Steam removes the files an earlier build shipped from installs as they update. */
             CopyProjectToBuild("Build/runtimeutils", "runtimeutils");
             CopyProjectToBuild("Source/Dependencies/LevelViewer/Build/", "levelviewer"); //requires manual local build in godot
 

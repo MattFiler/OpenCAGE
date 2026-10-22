@@ -226,7 +226,7 @@ namespace OpenCAGE
                 return;
             }
 
-            EditorUtils.CloseAI();
+            EditorUtils.CloseAI(null, thisInstallOnly: true);
 
             this.Cursor = Cursors.WaitCursor;
             if (level.RestoreBackup(level.Backups[backupList.SelectedItems[0].Index].ID))

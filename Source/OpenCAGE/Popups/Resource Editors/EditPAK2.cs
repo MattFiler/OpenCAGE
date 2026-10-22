@@ -247,7 +247,7 @@ namespace OpenCAGE
 
         private void Save()
         {
-            EditorUtils.CloseAI();
+            EditorUtils.CloseAI(null, thisInstallOnly: true);
             try
             {
                 Modding.ModServices.CaptureBeforeWrite(_archive.Filepath);

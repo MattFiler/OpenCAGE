@@ -1,6 +1,9 @@
 #include "POSSESS.h"
+#include "BT_DEBUG.h"
+#include "DEBUG_MENU.h"
 #include "LIVE_LINK_SERVER.h"
 #include "ZONE_LOADER.h"
+#include "Menu.h"
 #include "Config.h"
 
 #include <algorithm>
@@ -16,11 +19,9 @@
 
 #include <imgui.h>
 
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
 /*
 	Layouts are the Steam retail AI.exe's (the GOG and Epic Games Store builds' are the same, and addresses in the Steam
-	build here). The move-in-direction order is filled in as CA's debug behaviour that moves a character with the gamepad
+	build here). The move-in-direction order is filled in as the game's debug behaviour that moves a character with the gamepad
 	fills it in (VA 0x0040E580): created on the character's order layer, queued in place of whatever was queued, then
 	given a heading, a quarter turn and a distance ahead, flagged as changed - and the speed set on the character's
 	locomotion. That behaviour only runs under a debug camera retail never turns on. The crouch order is filled in as the
@@ -72,7 +73,7 @@ namespace
 	constexpr uint32_t kOrderType = 0x10;     // which order it is
 	constexpr uint32_t kOrderGiven = 0x18;    // set by whoever gives it
 	constexpr uint32_t kOrderHeading = 0x1C;  // the world yaw to move along (radians, -pi..pi)
-	constexpr uint32_t kOrderTurn = 0x20;     // a quarter turn, as CA's gamepad behaviour sets it
+	constexpr uint32_t kOrderTurn = 0x20;     // a quarter turn, as the game's gamepad behaviour sets it
 	constexpr uint32_t kOrderDistance = 0x24; // how much further to move (m)
 	constexpr uint32_t kOrderChanged = 0x34;  // set when the fields above change
 	constexpr int kMoveInDirection = 9;
@@ -108,6 +109,9 @@ namespace
 	// The running level's root composite id, as LIVE_LINK.cpp reads it
 	constexpr uintptr_t kEntityManagerInstance = 0x0134EF40;
 	constexpr uint32_t kEntityManagerRootGuid = 0x0C;
+	// Beside it, the state the level's scripts run in: 2 while the pause menu is open
+	constexpr uint32_t kEntityManagerScriptState = 0xBC;
+	constexpr int kScriptStatePauseMenu = 2;
 
 	// A shared pointer as the game keeps one: the object, then its counts - the strong count at +4 and the weak at +8,
 	// dropped through the counts' own table (its first entry frees the object, its second the counts)
@@ -273,6 +277,23 @@ namespace
 		__except (EXCEPTION_EXECUTE_HANDLER)
 		{
 			return 0;
+		}
+	}
+
+	// Whether the game's pause menu is open (its keys and mouse are then the game's), guarded the same way
+	bool PauseMenuOpen()
+	{
+		__try
+		{
+			const uintptr_t at = DEVTOOLS_RELATIVE_ADDRESS(kEntityManagerInstance);
+			if (!at)
+				return false;
+			const uint8_t* manager = *reinterpret_cast<const uint8_t* const*>(at);
+			return manager && *reinterpret_cast<const int*>(manager + kEntityManagerScriptState) == kScriptStatePauseMenu;
+		}
+		__except (EXCEPTION_EXECUTE_HANDLER)
+		{
+			return false;
 		}
 	}
 
@@ -845,7 +866,8 @@ namespace
 		bool fromStick = false;
 	};
 
-	// The stick OpenCAGE gave while it lasts, else the keys while the game window is in front (and the menu is not open)
+	// The stick OpenCAGE gave while it lasts, else the keys while the game window is in front (and neither menu is open:
+	// this one, nor the debug menu)
 	Input ReadInput()
 	{
 		Input input;
@@ -868,7 +890,7 @@ namespace
 			}
 		}
 		const HWND window = g_window;
-		if (!window || GetForegroundWindow() != window || g_menuOpen)
+		if (!window || GetForegroundWindow() != window || g_menuOpen || DEBUG_MENU::IsOpen())
 		{
 			g_crouchKeyDown = false;
 			return input;
@@ -1101,7 +1123,10 @@ namespace
 __declspec(noinline)
 void __fastcall POSSESS::h_behaviour_update(void* _this, void* /*_EDX*/, float elapsed, float time)
 {
-	Act();
+	if (Config::Get().debugMenu)
+		DEBUG_MENU::RunAiThreadWork();
+	if (Config::Get().possess)
+		Act();
 	uint8_t* character = CharacterOf(_this);
 	const bool possessed = character && character == g_character;
 	t_inPossessed = possessed;
@@ -1118,6 +1143,9 @@ void __fastcall POSSESS::h_tree_update(void* _this, void* /*_EDX*/, bool full)
 	if (t_inPossessed)
 		return;
 	tree_update(_this, full);
+	// The debug menu copies what the tree did
+	if (Config::Get().debugMenu)
+		BT_DEBUG::AfterTreeUpdate(_this);
 }
 
 LIVE_LINK::Result POSSESS::Take(uint32_t root, const std::string& name)
@@ -1215,7 +1243,8 @@ LIVE_LINK::Result POSSESS::GetState(uint32_t root)
 bool POSSESS::OnWindowMessage(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
 {
 	g_window = window;
-	if (message == WM_KEYUP && wParam == static_cast<WPARAM>(Config::Get().possessKey))
+	// (Not while the debug menu is open: a key released in it reaches here, but was pressed for it)
+	if (message == WM_KEYUP && wParam == static_cast<WPARAM>(Config::Get().possessKey) && !DEBUG_MENU::IsOpen())
 	{
 		if (g_menuOpen)
 			CloseMenu();
@@ -1243,16 +1272,30 @@ bool POSSESS::OnWindowMessage(HWND window, UINT message, WPARAM wParam, LPARAM l
 		const bool mouse = message >= WM_MOUSEFIRST && message <= WM_MOUSELAST;
 		if (keyboard || mouse)
 		{
-			ImGui_ImplWin32_WndProcHandler(window, message, wParam, lParam);
+			Menu::QueueImGuiMessage(window, message, wParam, lParam);
+			// The game holds a key down from its press until its release, so it is given the release too, bar Alt+Enter's,
+			// which switches it between windowed and full screen
+			if (message == WM_KEYUP || (message == WM_SYSKEYUP && wParam != VK_RETURN))
+				return false;
 			result = 0;
 			return true;
 		}
 		return false;
 	}
 
-	// While a character is possessed, the keyboard (bar Escape, for the pause menu) and the mouse are kept from the game,
-	// so the player stands still; the mouse turns the camera behind the character instead
-	if (!g_possessing || message != WM_INPUT || GetFocus() != window)
+	// While a character is possessed the game's keyboard is kept from it, so the player stands still: the game takes its
+	// keys from their key messages, a key down from its press until its release. Only presses are kept (bar Escape, for the
+	// pause menu, and any while that menu is open), so no key is left down in the game; answered as the game answers them.
+	// Possess reads its own keys from the keyboard itself, so it loses none of them.
+	if (g_possessing && message == WM_KEYDOWN && wParam != VK_ESCAPE && GetFocus() == window && !PauseMenuOpen())
+	{
+		result = 0;
+		return true;
+	}
+
+	// ... and its mouse, which the game reads as raw input (but not while the pause menu is open, so it has the mouse): it
+	// turns the camera behind the character instead. The keyboard's raw input, which the game leaves alone, goes with it.
+	if (!g_possessing || message != WM_INPUT || GetFocus() != window || PauseMenuOpen())
 		return false;
 	RAWINPUT input = {};
 	UINT size = sizeof(input);

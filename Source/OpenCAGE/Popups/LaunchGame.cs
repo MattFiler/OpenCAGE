@@ -25,6 +25,7 @@ namespace OpenCAGE
     {
         bool _applyingExternalSettings;
         bool _scriptingHelpersAvailable;
+        bool _revertingKeyPicker;
 
         //Key names the runtime utils ASI understands (see OpenCAGE.RuntimeUtils/Config.cpp), offered for its hot reload and
         //unlock mouse keys
@@ -36,26 +37,36 @@ namespace OpenCAGE
         internal const string DefaultHotReloadKey = "INSERT";
         internal const string DefaultUnlockMouseKey = "F4";
         internal const string DefaultPossessKey = "F6";
+        internal const string DefaultDebugMenuKey = "F7";
+
+        /* Keys the Debug Menu's free camera uses: F8 turns it on and off and F9 takes a screenshot (unless CinematicCameraKey and
+           CinematicScreenshotKey in the runtime utils config name others), the rest act while it flies. The game leaves any of
+           them another helper has to that helper, so the camera loses what that key does. */
+        internal static readonly string[] CinematicCameraKeys = { "F8", "F9", "F1", "F2", "F3", "HOME", "DELETE", "END", "PAGEUP", "PAGEDOWN" };
 
         //Frame rates Cap FPS offers (the runtime utils ASI's CapFps)
         internal static readonly string[] CapFpsRates = new string[] { "30", "60", "90", "120" };
         internal const string DefaultCapFpsRate = "60";
 
         //Shipped beside OpenCAGE.exe: resolved against its folder (Beside), since file dialogs move the current directory
-        internal const string CinematicToolsDll = "cinematictools/CT_AlienIsolation.dll";
-        internal const string CinematicToolsInjector = "cinematictools/CinematicTools.exe";
         internal const string RuntimeUtilsFolder = "runtimeutils";
         private static string Beside(string relative) => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, relative);
 
-        /* The runtime utils ASI (the scripting helpers, Possess Characters and Live Link) supports the Steam, GOG and Epic Games
-           Store builds of the game (see OpenCAGE.RuntimeUtils/GameAddresses.h) */
-        internal static bool RuntimeUtilsSupports(PatchManager.Platform platform)
+        /* The injector of Cinematic Tools, the separate camera tool an older OpenCAGE started beside the game (the Debug Menu's
+           Cinematic group has its camera now). One an older launch left waiting for its game would put them into the next game
+           that starts, so it is closed with the game before every launch. */
+        internal static readonly string[] OldInjectorProcesses = new string[] { "CinematicTools", "CinematicToolsInjector" };
+
+        /* This install's game, and any old Cinematic Tools injector, closed (another install's AI.exe holds none of the files a
+           launch writes). Returns what was running ("AI.exe (path)", names). */
+        internal static List<string> CloseGameAndOldInjector()
         {
-            return platform == PatchManager.Platform.STEAM || platform == PatchManager.Platform.GOG || platform == PatchManager.Platform.EPIC_GAMES_STORE;
+            return EditorUtils.CloseAI(new List<string>(OldInjectorProcesses), thisInstallOnly: true);
         }
 
-        /* Cinematic Tools support the same three (their offsets for each are in the CinematicTools dependency's Util/Offsets.cpp) */
-        internal static bool CinematicToolsSupports(PatchManager.Platform platform)
+        /* The runtime utils ASI (the scripting helpers, Possess Characters, the Debug Menu and Live Link) supports the Steam, GOG
+           and Epic Games Store builds of the game (see OpenCAGE.RuntimeUtils/GameAddresses.h) */
+        internal static bool RuntimeUtilsSupports(PatchManager.Platform platform)
         {
             return platform == PatchManager.Platform.STEAM || platform == PatchManager.Platform.GOG || platform == PatchManager.Platform.EPIC_GAMES_STORE;
         }
@@ -66,39 +77,19 @@ namespace OpenCAGE
             return RuntimeUtilsSupports(Singleton.Platform) && Directory.Exists(Beside(RuntimeUtilsFolder));
         }
 
-        internal static bool CinematicToolsAvailable()
-        {
-            return CinematicToolsSupports(Singleton.Platform) && File.Exists(Beside(CinematicToolsDll)) && File.Exists(Beside(CinematicToolsInjector));
-        }
-
-        //Every scripting helper's on/off setting (the Scripting Helpers box)
+        //Every scripting helper's on/off setting: the runtime utils options beside Possess Characters and the Debug Menu (Debug
+        //entities, Hot reload and Live Link under Debug tools; Cap FPS and Unlock mouse under Game options)
         internal static readonly string[] HelperSettings = new string[]
         {
             Settings.ScriptingHelpersHotReload, Settings.ScriptingHelpersUnlockMouse, Settings.ScriptingHelpersCapFps,
-            Settings.ScriptingHelpersDebugText, Settings.ScriptingHelpersDebugTextStacking, Settings.ScriptingHelpersDebugEnvironmentMarker,
-            Settings.ScriptingHelpersDebugPositionMarker, Settings.ScriptingHelpersLiveLink,
+            Settings.DebugEntities, Settings.ScriptingHelpersLiveLink,
         };
 
-        /* Cinematic Tools and the scripting helpers are one or the other for a run: both take over the game's camera (their
-           free camera, Live Link's camera sync), and they are different jobs - filming, and working on a level's scripts. The
-           Launch Game window (and launch_game) start Cinematic Tools when they are ticked and can run, and then every scripting
-           helper is off, their ticks kept for a run without them. The runtime utils still go in for Cinematic Tools, which
-           stream zones around their free camera through it. Open Game On Save never starts them: its runs keep the helpers. */
-        internal static bool CinematicToolsChosen()
+        /* Don't Write Saves as a launch applies it: a Debug Menu feature (the Debug Menu keeps the game from writing its saves),
+           so only with the Debug Menu on */
+        internal static bool DontWriteSavesOn()
         {
-            return SettingsManager.GetBool(Settings.CinematicTools) && CinematicToolsAvailable();
-        }
-
-        /* A scripting helper's setting as a launch applies it: off for one that starts Cinematic Tools */
-        internal static bool HelperOn(string setting, bool cinematicTools)
-        {
-            return SettingsManager.GetBool(setting) && !cinematicTools;
-        }
-
-        /* ...for a launch from the Launch Game window (or launch_game), which starts Cinematic Tools when they are chosen */
-        internal static bool HelperOn(string setting)
-        {
-            return HelperOn(setting, CinematicToolsChosen());
+            return SettingsManager.GetBool(Settings.DebugMenu) && SettingsManager.GetBool(Settings.DontWriteSaves);
         }
 
         public LaunchGame()
@@ -108,21 +99,22 @@ namespace OpenCAGE
             Theming.ThemeManager.ApplyToForm(this);
 
             //Close this install's game down before we do anything (another install's AI.exe holds none of these files)
-            EditorUtils.CloseAI(new List<string>(new string[] { "CinematicTools", "CinematicToolsInjector" }), thisInstallOnly: true);
+            CloseGameAndOldInjector();
 
             //Every AI.exe patch as its option says, as launch_game writes them (a verified or replaced AI.exe has lost them; the
-            //current-gen patch is on unless switched off), rather than the recommended set, which forced the current-gen one on
+            //current-gen patch is on unless switched off), rather than the recommended set, which forced the current-gen one on.
+            //The patches of options this window no longer has go off; the title screen skip is written with the level at launch.
             MCP.McpLevelTools.ApplyPatchSettings(Singleton.Platform, null);
             PatchManager.UpdateLevelListInPackages(Singleton.Platform, Singleton.PathToAI);
 
-            enableCinematicTools.Checked = SettingsManager.GetBool(Settings.CinematicTools);
+            /* The boxes as the settings already have them: their handlers don't act on it (they'd write each setting back, and the
+               patch boxes and the UI tweaks rewrote AI.exe and parsed and rewrote UI.PAK - over a second each time the window
+               opened with the UI tweaks on). Launching writes all of that as the settings say. */
+            _applyingExternalSettings = true;
             enableHotReload.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersHotReload);
             enableUnlockMouse.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersUnlockMouse);
             enableCapFps.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersCapFps);
-            enableDebugText.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugText);
-            enableDebugTextStacking.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugTextStacking);
-            enableDebugEnvironmentMarker.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugEnvironmentMarker);
-            enableDebugPositionMarker.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugPositionMarker);
+            enableDebugEntities.Checked = SettingsManager.GetBool(Settings.DebugEntities);
             enableLiveLink.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink);
             hotReloadKey.Items.AddRange(HelperKeys);
             hotReloadKey.SelectedIndex = Array.IndexOf(HelperKeys, HotReloadKey());
@@ -133,26 +125,37 @@ namespace OpenCAGE
             enablePossess.Checked = SettingsManager.GetBool(Settings.PossessCharacters);
             possessKey.Items.AddRange(HelperKeys);
             possessKey.SelectedIndex = Array.IndexOf(HelperKeys, PossessKey());
+            enableDebugMenu.Checked = SettingsManager.GetBool(Settings.DebugMenu);
+            debugMenuKey.Items.AddRange(HelperKeys);
+            debugMenuKey.SelectedIndex = Array.IndexOf(HelperKeys, DebugMenuKey());
+            dontWriteSaves.Checked = SettingsManager.GetBool(Settings.DontWriteSaves);
             disableUI.Checked = SettingsManager.GetBool(Settings.HudDisabled);
-            skipFrontend.Checked = SettingsManager.GetBool(Settings.SkipFrontend);
-            enableUIPerf.Checked = SettingsManager.GetBool(Settings.UiEnabledUiPerf);
-            enableMemReplayLogs.Checked = SettingsManager.GetBool(Settings.MemReplayLogs);
             patchCurrentGen.Checked = SettingsManager.GetBool(Settings.PatchCurrentGen, true);
             renderConstantAmbient.Checked = SettingsManager.GetBool(Settings.RenderConstantAmbient);
-            UIMOD_DebugCheckpoints.Checked = SettingsManager.GetBool(Settings.UiModPauseMenu);
-            UIMOD_MapName.Checked = SettingsManager.GetBool(Settings.UiModLoadingScreen);
-            UIMOD_MapSelection.Checked = SettingsManager.GetBool(Settings.UiModNewFrontendMenu);
-            UIMOD_ReturnFrontend.Checked = SettingsManager.GetBool(Settings.UiModGameOverMenu);
+            debugLoadingScreen.Checked = SettingsManager.GetBool(Settings.UiModLoadingScreen);
+            quitToMenuOnDeath.Checked = SettingsManager.GetBool(Settings.UiModGameOverMenu);
+            _applyingExternalSettings = false;
 
-            enableCinematicTools.Enabled = CinematicToolsAvailable();
             _scriptingHelpersAvailable = ScriptingHelpersAvailable();
-            UpdateScriptingHelpersEnabled();
-            //Possess Characters runs in the runtime utils ASI too, but is not one of the scripting helpers
+            foreach (CheckBox helper in new CheckBox[] { enableHotReload, enableUnlockMouse, enableCapFps, enableDebugEntities, enableLiveLink })
+                helper.Enabled = _scriptingHelpersAvailable;
+            hotReloadKey.Enabled = _scriptingHelpersAvailable && enableHotReload.Checked;
+            unlockMouseKey.Enabled = _scriptingHelpersAvailable && enableUnlockMouse.Checked;
+            capFpsRate.Enabled = _scriptingHelpersAvailable && enableCapFps.Checked;
+            //Possess Characters and the Debug Menu run in the runtime utils ASI too, but are not scripting helpers
             enablePossess.Enabled = _scriptingHelpersAvailable;
             possessKey.Enabled = _scriptingHelpersAvailable && enablePossess.Checked;
+            enableDebugMenu.Enabled = _scriptingHelpersAvailable;
+            UpdateDebugMenuOptionsEnabled();
 
-            //The picker never offers FRONTEND: leaving this unchecked is how the game starts at its menu
-            loadToLevel.Checked = SettingsManager.GetBool(Settings.LaunchToLevel);
+            //The picker never offers FRONTEND: leaving this unchecked is how the game starts at its menu (and ticked, it skips the
+            //title screen: the old Skip Frontend option is what this means now). With a level open in the editor it's ticked, with
+            //that level picked (PopulateLevelDropdown) - that's what you'd launch into. That tick isn't saved, so with no level open
+            //it's as it was last left.
+            bool levelOpen = Singleton.Editor?.CompositeBrowser?.Content?.Level != null;
+            _applyingExternalSettings = true;
+            loadToLevel.Checked = levelOpen || SettingsManager.GetBool(Settings.LaunchToLevel);
+            _applyingExternalSettings = false;
             levelList.Enabled = loadToLevel.Checked;
             EditorUtils.PopulateLevelDropdown(levelList);
 
@@ -165,19 +168,13 @@ namespace OpenCAGE
             SettingsManager.SettingsChanged -= OnSettingsChanged;
         }
 
-        /* The scripting helpers can be ticked only while Cinematic Tools are not (see CinematicToolsChosen) */
-        private bool HelpersUsable => _scriptingHelpersAvailable && !(enableCinematicTools.Enabled && enableCinematicTools.Checked);
-
-        /* The Scripting Helpers box as Cinematic Tools leave it: greyed out while they are ticked, its ticks kept */
-        private void UpdateScriptingHelpersEnabled()
+        /* The Debug Menu's key, and Don't Write Saves (a Debug Menu feature), only while the Debug Menu is ticked: unticked, they
+           are greyed out, their choices kept */
+        private void UpdateDebugMenuOptionsEnabled()
         {
-            bool usable = HelpersUsable;
-            foreach (CheckBox helper in new CheckBox[] { enableHotReload, enableUnlockMouse, enableCapFps, enableDebugText, enableDebugTextStacking, enableDebugEnvironmentMarker, enableDebugPositionMarker, enableLiveLink })
-                helper.Enabled = usable;
-            hotReloadKey.Enabled = usable && enableHotReload.Checked;
-            unlockMouseKey.Enabled = usable && enableUnlockMouse.Checked;
-            capFpsRate.Enabled = usable && enableCapFps.Checked;
-            groupBox2.Text = _scriptingHelpersAvailable && !usable ? "Scripting Helpers (off while Cinematic Tools are enabled)" : "Scripting Helpers";
+            bool debugMenu = _scriptingHelpersAvailable && enableDebugMenu.Checked;
+            debugMenuKey.Enabled = debugMenu;
+            dontWriteSaves.Enabled = debugMenu;
         }
 
         private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
@@ -203,9 +200,6 @@ namespace OpenCAGE
                 {
                     switch (key)
                     {
-                        case Settings.CinematicTools:
-                            enableCinematicTools.Checked = SettingsManager.GetBool(Settings.CinematicTools);
-                            break;
                         case Settings.ScriptingHelpersHotReload:
                             enableHotReload.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersHotReload);
                             break;
@@ -224,17 +218,8 @@ namespace OpenCAGE
                         case Settings.ScriptingHelpersCapFpsRate:
                             capFpsRate.SelectedIndex = Array.IndexOf(CapFpsRates, CapFpsRate());
                             break;
-                        case Settings.ScriptingHelpersDebugText:
-                            enableDebugText.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugText);
-                            break;
-                        case Settings.ScriptingHelpersDebugTextStacking:
-                            enableDebugTextStacking.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugTextStacking);
-                            break;
-                        case Settings.ScriptingHelpersDebugEnvironmentMarker:
-                            enableDebugEnvironmentMarker.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugEnvironmentMarker);
-                            break;
-                        case Settings.ScriptingHelpersDebugPositionMarker:
-                            enableDebugPositionMarker.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersDebugPositionMarker);
+                        case Settings.DebugEntities:
+                            enableDebugEntities.Checked = SettingsManager.GetBool(Settings.DebugEntities);
                             break;
                         case Settings.ScriptingHelpersLiveLink:
                             enableLiveLink.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink);
@@ -245,21 +230,21 @@ namespace OpenCAGE
                         case Settings.PossessCharactersKey:
                             possessKey.SelectedIndex = Array.IndexOf(HelperKeys, PossessKey());
                             break;
+                        case Settings.DebugMenu:
+                            enableDebugMenu.Checked = SettingsManager.GetBool(Settings.DebugMenu);
+                            break;
+                        case Settings.DebugMenuKey:
+                            debugMenuKey.SelectedIndex = Array.IndexOf(HelperKeys, DebugMenuKey());
+                            break;
+                        case Settings.DontWriteSaves:
+                            dontWriteSaves.Checked = SettingsManager.GetBool(Settings.DontWriteSaves);
+                            break;
                         case Settings.HudDisabled:
                             disableUI.Checked = SettingsManager.GetBool(Settings.HudDisabled);
-                            break;
-                        case Settings.SkipFrontend:
-                            skipFrontend.Checked = SettingsManager.GetBool(Settings.SkipFrontend);
                             break;
                         case Settings.LaunchToLevel:
                             loadToLevel.Checked = SettingsManager.GetBool(Settings.LaunchToLevel);
                             levelList.Enabled = loadToLevel.Checked;
-                            break;
-                        case Settings.UiEnabledUiPerf:
-                            enableUIPerf.Checked = SettingsManager.GetBool(Settings.UiEnabledUiPerf);
-                            break;
-                        case Settings.MemReplayLogs:
-                            enableMemReplayLogs.Checked = SettingsManager.GetBool(Settings.MemReplayLogs);
                             break;
                         case Settings.PatchCurrentGen:
                             patchCurrentGen.Checked = SettingsManager.GetBool(Settings.PatchCurrentGen, true);
@@ -267,17 +252,11 @@ namespace OpenCAGE
                         case Settings.RenderConstantAmbient:
                             renderConstantAmbient.Checked = SettingsManager.GetBool(Settings.RenderConstantAmbient);
                             break;
-                        case Settings.UiModPauseMenu:
-                            UIMOD_DebugCheckpoints.Checked = SettingsManager.GetBool(Settings.UiModPauseMenu);
-                            break;
                         case Settings.UiModLoadingScreen:
-                            UIMOD_MapName.Checked = SettingsManager.GetBool(Settings.UiModLoadingScreen);
-                            break;
-                        case Settings.UiModNewFrontendMenu:
-                            UIMOD_MapSelection.Checked = SettingsManager.GetBool(Settings.UiModNewFrontendMenu);
+                            debugLoadingScreen.Checked = SettingsManager.GetBool(Settings.UiModLoadingScreen);
                             break;
                         case Settings.UiModGameOverMenu:
-                            UIMOD_ReturnFrontend.Checked = SettingsManager.GetBool(Settings.UiModGameOverMenu);
+                            quitToMenuOnDeath.Checked = SettingsManager.GetBool(Settings.UiModGameOverMenu);
                             break;
                     }
                 }
@@ -298,14 +277,17 @@ namespace OpenCAGE
                 return false;
             }
 
+            /* The integrity check and popup patches every launch needs, the options' patches as set (and those of options this
+               window no longer has off), and the title screen skip, which goes with the level: skipped whenever the game boots
+               into a level, never at the menu */
+            List<string> patchFailures = MCP.McpLevelTools.ApplyPatchSettings(Singleton.Platform, !EditorUtils.IsFrontend(MapName));
             bool patchLaunch = PatchManager.PatchLaunchMode(Singleton.Platform, Singleton.PathToAI, MapName);
-            bool patchIntegrity = PatchManager.PatchFileIntegrityCheck(Singleton.Platform, Singleton.PathToAI);
-            bool patchMsg = PatchManager.PatchPopupMessage(Singleton.Platform, Singleton.PathToAI);
-            if (!patchLaunch || !patchIntegrity || !patchMsg)
+            if (!patchLaunch || patchFailures.Contains("file integrity check") || patchFailures.Contains("popup message") || patchFailures.Contains(MCP.McpLevelTools.SkipFrontendArg))
                 MessageBox.Show("Failed to set level loading values in AI.exe!\nIs the game already open?", "Failed to patch binary.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
             PatchManager.UpdateLevelListInPackages(Singleton.Platform, Singleton.PathToAI);
-            //The UI options as their settings say: checking the game's files puts the binary and UI.PAK back as shipped
+            //The UI options as their settings say: checking the game's files puts the binary and UI.PAK back as shipped. The
+            //menus of the two this window no longer has (debug checkpoints, level selection) are taken out.
             UiMovieOverrides.Sync(Singleton.PathToAI);
 
             //Start game process
@@ -327,6 +309,14 @@ namespace OpenCAGE
         /* Load game from GUI map selection */
         private void LaunchGame_Click(object sender, EventArgs e)
         {
+            //Two features that are on with the same key would both act on it: not launched until one has another
+            string keyClash = KeyClash();
+            if (keyClash != null)
+            {
+                MessageBox.Show(keyClash, "Key in use", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             //The game loads levels from disk: edits not saved yet are not in it (and the live link only sends what is edited
             //from when it connects), so offer to save first
             if (DirtyTracker.IsDirty && Singleton.Editor != null)
@@ -348,8 +338,7 @@ namespace OpenCAGE
                 }
             }
 
-            bool cinematicTools = CinematicToolsChosen();
-            string runtimeUtilsProblem = ApplyRuntimeUtils(cinematicTools);
+            string runtimeUtilsProblem = ApplyRuntimeUtils();
             if (runtimeUtilsProblem != null)
                 MessageBox.Show(runtimeUtilsProblem, "Runtime utils error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
@@ -359,31 +348,13 @@ namespace OpenCAGE
                 : EditorUtils.FrontendLevel;
             if (!LaunchToMap(startingLevel))
                 return;
-
-            //Enable Cinematic Tools if requested (the scripting helpers are off for this run then)
-            if (cinematicTools)
-            {
-                string cinematicToolsProblem = StartCinematicTools(out string caption);
-                if (cinematicToolsProblem != null)
-                    MessageBox.Show(cinematicToolsProblem, caption, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
-            //Ticked on an install they support whose Cinematic Tools files have gone (antivirus often removes the injector):
-            //said, as the game runs the scripting helpers instead
-            else if (SettingsManager.GetBool(Settings.CinematicTools) && CinematicToolsSupports(Singleton.Platform))
-            {
-                MessageBox.Show("Enable Cinematic Tools is ticked, but their files are missing from:\n" + Path.GetFullPath(Beside("cinematictools")) +
-                    "\n\nThe game was launched with the scripting helpers instead. Antivirus software may have removed CinematicTools.exe: allow or exclude it, or reinstall/update OpenCAGE to restore it.",
-                    "Cinematic Tools missing", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
             this.Close();
         }
 
         /* Copy/delete the runtime utils ASI as the settings ask, for a game about to be launched - it is needed if any
-           scripting helper is on, or for Cinematic Tools (cinematicTools: this launch starts them), which rely on it to stream
-           zones around the free camera, and then have every helper off (see CinematicToolsChosen). A game that will serve
-           Live Link is connected to by itself: the Live Link button is switched on (as the editor is told). Returns what went
-           wrong, or null. */
-        internal static string ApplyRuntimeUtils(bool cinematicTools)
+           scripting helper, Possess Characters or the Debug Menu is on. A game that will serve Live Link is connected to by
+           itself: the Live Link button is switched on (as the editor is told). Returns what went wrong, or null. */
+        internal static string ApplyRuntimeUtils()
         {
             string rtUtilASI = Singleton.PathToAI + "\\OpenCAGE.RuntimeUtils.asi";
             string rtUtilDLL = Singleton.PathToAI + "\\d3d11.dll";
@@ -398,7 +369,7 @@ namespace OpenCAGE
                 catch { }
             }
 
-            if (RuntimeUtilsNeeded(cinematicTools))
+            if (RuntimeUtilsNeeded())
             {
                 try
                 {
@@ -414,13 +385,13 @@ namespace OpenCAGE
                     }
                 }
                 //Written even when a copy failed and an older ASI stays: the config must be this launch's (an old one could
-                //say Cinematic Tools, or switch Live Link off)
+                //switch Live Link off, or have every helper off as an older OpenCAGE wrote it for Cinematic Tools)
                 try
                 {
-                    WriteScriptingHelpersConfig(Singleton.PathToAI, cinematicTools);
+                    WriteScriptingHelpersConfig(Singleton.PathToAI);
                 }
                 catch { }
-                liveLink = HelperOn(Settings.ScriptingHelpersLiveLink, cinematicTools);
+                liveLink = SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink);
             }
             else
             {
@@ -440,14 +411,6 @@ namespace OpenCAGE
         internal static bool LiveLinkInstalled()
         {
             return RuntimeUtilsSwitch("LiveLink", true);
-        }
-
-        /* Whether a game started from this folder was launched with Cinematic Tools, which have its camera for the run: there
-           is no Live Link to offer it (the Live Link button hides). They always have the runtime utils installed (for their zone
-           streaming), and the config written for them says so (CinematicTools=, which only OpenCAGE reads). Any thread. */
-        internal static bool CinematicToolsLaunched()
-        {
-            return RuntimeUtilsSwitch("CinematicTools", false);
         }
 
         /* A switch in the runtime utils config beside the game, as it was written for the last launch: false while the runtime
@@ -478,54 +441,14 @@ namespace OpenCAGE
             }
         }
 
-        /* Start the Cinematic Tools injector for a game just launched. Returns why it did not start (with a caption for it), or null. */
-        internal static string StartCinematicTools(out string caption)
-        {
-            caption = null;
-            if (!File.Exists(Beside(CinematicToolsInjector)))
-            {
-                Debug.Log("Cinematic Tools", "Executable doesn't exist!");
-                caption = "Cinematic Tools missing";
-                return "Cinematic Tools injector was not found at:\n" + Path.GetFullPath(Beside(CinematicToolsInjector)) +
-                    "\n\nThe game was still launched. Reinstall/update OpenCAGE to restore cinematictools/CinematicTools.exe.";
-            }
-            try
-            {
-                Process.Start(new ProcessStartInfo
-                    {
-                        FileName = Beside(CinematicToolsInjector),
-                        WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory,
-                        Arguments = "-CinematicToolsDLL=\"" + CinematicToolsDll + "\"",
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    }
-                );
-            }
-            catch (Win32Exception ex)
-            {
-                Debug.Log("Cinematic Tools", "Failed to start injector: " + ex.Message);
-                // Windows Defender / antivirus often flags the injector as a false positive
-                string message = ex.Message ?? "";
-                if (message.IndexOf("virus", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    message.IndexOf("potentially unwanted", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    caption = "Cinematic Tools blocked";
-                    return "Windows blocked Cinematic Tools from launching because antivirus flagged CinematicTools.exe as potentially unwanted software.\n\n" +
-                        "The game was still launched. To use Cinematic Tools, allow or exclude cinematictools\\CinematicTools.exe in Windows Security (or your antivirus), then try again.";
-                }
-                caption = "Cinematic Tools error";
-                return "Failed to start Cinematic Tools.\n" + ex.Message;
-            }
-            return null;
-        }
-
         /* Remember selected level */
         private void levelList_SelectedIndexChanged(object sender, EventArgs e)
         {
             SettingsManager.SetString(Settings.LastSelectedLevel, levelList.Items[levelList.SelectedIndex].ToString());
         }
 
-        /* Boot straight into the chosen level, or (unchecked) start the game at its menu */
+        /* Boot straight into the chosen level past the title screen, or (unchecked) start the game at its main menu: the title
+           screen skip is written with the level when the game is launched (LaunchToMap) */
         private void loadToLevel_CheckedChanged(object sender, EventArgs e)
         {
             levelList.Enabled = loadToLevel.Checked;
@@ -533,36 +456,10 @@ namespace OpenCAGE
             SettingsManager.SetBool(Settings.LaunchToLevel, loadToLevel.Checked);
         }
 
-        /* Enable/disable the Cinematic Tools (the scripting helpers are off while they are on) */
-        private void enableCinematicTools_CheckedChanged(object sender, EventArgs e)
-        {
-            UpdateScriptingHelpersEnabled();
-            if (_applyingExternalSettings) return;
-            SettingsManager.SetBool(Settings.CinematicTools, enableCinematicTools.Checked);
-        }
-
-        /* Enable/disable cUI rendering for UI perf stats (Cathode debug render) */ 
-        private void enableUIPerf_CheckedChanged(object sender, EventArgs e)
-        {
-            if (_applyingExternalSettings) return;
-            SettingsManager.SetBool(Settings.UiEnabledUiPerf, enableUIPerf.Checked);
-            if (!PatchManager.PatchUIPerfFlag(Singleton.Platform, Singleton.PathToAI, enableUIPerf.Checked))
-                MessageBox.Show("Failed to set cUI UI perf option.\nIs Alien: Isolation open?", "Couldn't write!", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
-
-        /* Enable/disable Mem_Replay_Logs */
-        private void enableMemReplayLogs_CheckedChanged(object sender, EventArgs e)
-        {
-            if (_applyingExternalSettings) return;
-            SettingsManager.SetBool(Settings.MemReplayLogs, enableMemReplayLogs.Checked);
-            if (!PatchManager.PatchMemReplayLogFlag(Singleton.Platform, Singleton.PathToAI, enableMemReplayLogs.Checked))
-                MessageBox.Show("Failed to set memory logging option.\nIs Alien: Isolation open?", "Couldn't write!", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
-
         /* Enable/disable the hot reload scripting helper */
         private void enableHotReload_CheckedChanged(object sender, EventArgs e)
         {
-            hotReloadKey.Enabled = HelpersUsable && enableHotReload.Checked;
+            hotReloadKey.Enabled = _scriptingHelpersAvailable && enableHotReload.Checked;
             if (_applyingExternalSettings) return;
             SettingsManager.SetBool(Settings.ScriptingHelpersHotReload, enableHotReload.Checked);
         }
@@ -570,14 +467,15 @@ namespace OpenCAGE
         /* Choose the hot reload key */
         private void hotReloadKey_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (_applyingExternalSettings || hotReloadKey.SelectedIndex < 0) return;
+            if (_applyingExternalSettings || _revertingKeyPicker || hotReloadKey.SelectedIndex < 0) return;
+            if (!KeyPicked(hotReloadKey, "Hot Reload", HotReloadKey())) return;
             SettingsManager.SetString(Settings.ScriptingHelpersHotReloadKey, HelperKeys[hotReloadKey.SelectedIndex]);
         }
 
         /* Enable/disable the unlock mouse scripting helper: the game leaves the cursor free until its key is pressed */
         private void enableUnlockMouse_CheckedChanged(object sender, EventArgs e)
         {
-            unlockMouseKey.Enabled = HelpersUsable && enableUnlockMouse.Checked;
+            unlockMouseKey.Enabled = _scriptingHelpersAvailable && enableUnlockMouse.Checked;
             if (_applyingExternalSettings) return;
             SettingsManager.SetBool(Settings.ScriptingHelpersUnlockMouse, enableUnlockMouse.Checked);
         }
@@ -585,7 +483,8 @@ namespace OpenCAGE
         /* Choose the unlock mouse key */
         private void unlockMouseKey_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (_applyingExternalSettings || unlockMouseKey.SelectedIndex < 0) return;
+            if (_applyingExternalSettings || _revertingKeyPicker || unlockMouseKey.SelectedIndex < 0) return;
+            if (!KeyPicked(unlockMouseKey, "Unlock Mouse", UnlockMouseKey())) return;
             SettingsManager.SetString(Settings.ScriptingHelpersUnlockMouseKey, HelperKeys[unlockMouseKey.SelectedIndex]);
         }
 
@@ -593,7 +492,7 @@ namespace OpenCAGE
            too fast - its clock never moves on less than 1/360 of a second a frame) */
         private void enableCapFps_CheckedChanged(object sender, EventArgs e)
         {
-            capFpsRate.Enabled = HelpersUsable && enableCapFps.Checked;
+            capFpsRate.Enabled = _scriptingHelpersAvailable && enableCapFps.Checked;
             if (_applyingExternalSettings) return;
             SettingsManager.SetBool(Settings.ScriptingHelpersCapFps, enableCapFps.Checked);
         }
@@ -605,26 +504,12 @@ namespace OpenCAGE
             SettingsManager.SetString(Settings.ScriptingHelpersCapFpsRate, CapFpsRates[capFpsRate.SelectedIndex]);
         }
 
-        /* Enable/disable the debug entity scripting helpers */
-        private void enableDebugText_CheckedChanged(object sender, EventArgs e)
+        /* Enable/disable Debug entities: DebugText, DebugTextStacking, DebugEnvironmentMarker and DebugPositionMarker script
+           entities draw in game (the four runtime utils switches, together) */
+        private void enableDebugEntities_CheckedChanged(object sender, EventArgs e)
         {
             if (_applyingExternalSettings) return;
-            SettingsManager.SetBool(Settings.ScriptingHelpersDebugText, enableDebugText.Checked);
-        }
-        private void enableDebugTextStacking_CheckedChanged(object sender, EventArgs e)
-        {
-            if (_applyingExternalSettings) return;
-            SettingsManager.SetBool(Settings.ScriptingHelpersDebugTextStacking, enableDebugTextStacking.Checked);
-        }
-        private void enableDebugEnvironmentMarker_CheckedChanged(object sender, EventArgs e)
-        {
-            if (_applyingExternalSettings) return;
-            SettingsManager.SetBool(Settings.ScriptingHelpersDebugEnvironmentMarker, enableDebugEnvironmentMarker.Checked);
-        }
-        private void enableDebugPositionMarker_CheckedChanged(object sender, EventArgs e)
-        {
-            if (_applyingExternalSettings) return;
-            SettingsManager.SetBool(Settings.ScriptingHelpersDebugPositionMarker, enableDebugPositionMarker.Checked);
+            SettingsManager.SetBool(Settings.DebugEntities, enableDebugEntities.Checked);
         }
 
         /* Enable/disable the live link the game serves (OpenCAGE connects to it by itself once the game is up) */
@@ -645,27 +530,117 @@ namespace OpenCAGE
         /* Choose the key that opens the Possess Characters menu */
         private void possessKey_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (_applyingExternalSettings || possessKey.SelectedIndex < 0) return;
+            if (_applyingExternalSettings || _revertingKeyPicker || possessKey.SelectedIndex < 0) return;
+            if (!KeyPicked(possessKey, "Possess Characters", PossessKey())) return;
             SettingsManager.SetString(Settings.PossessCharactersKey, HelperKeys[possessKey.SelectedIndex]);
         }
 
-        /* Whether the runtime utils ASI is needed at all, for a launch that starts Cinematic Tools or not: for their zone
-           streaming, any scripting helper (Live Link among them, which the ASI serves), or Possess Characters */
-        internal static bool RuntimeUtilsNeeded(bool cinematicTools)
+        /* Enable/disable the Debug Menu: its key opens an in-game window of debug views (characters, behaviour trees, rendering
+           switches, the cinematic camera that replaced Cinematic Tools...) */
+        private void enableDebugMenu_CheckedChanged(object sender, EventArgs e)
         {
-            return ScriptingHelpersAvailable() && (cinematicTools || HelperSettings.Any(o => SettingsManager.GetBool(o)) || SettingsManager.GetBool(Settings.PossessCharacters));
+            UpdateDebugMenuOptionsEnabled();
+            if (_applyingExternalSettings) return;
+            SettingsManager.SetBool(Settings.DebugMenu, enableDebugMenu.Checked);
         }
 
-        /* Whether a launch from the Launch Game window (or launch_game) runs any scripting helper: none with Cinematic Tools */
+        /* Choose the key that opens the Debug Menu */
+        private void debugMenuKey_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_applyingExternalSettings || _revertingKeyPicker || debugMenuKey.SelectedIndex < 0) return;
+            if (!KeyPicked(debugMenuKey, "Debug Menu", DebugMenuKey())) return;
+            SettingsManager.SetString(Settings.DebugMenuKey, HelperKeys[debugMenuKey.SelectedIndex]);
+        }
+
+        /* The four features with a key (Hot Reload, Unlock Mouse, Possess Characters, the Debug Menu): their names, whether each
+           is on, and their keys, as the settings say */
+        private static (string Name, bool On, string Key)[] KeyedFeatures()
+        {
+            return new (string Name, bool On, string Key)[]
+            {
+                ("Hot Reload", SettingsManager.GetBool(Settings.ScriptingHelpersHotReload), HotReloadKey()),
+                ("Unlock Mouse", SettingsManager.GetBool(Settings.ScriptingHelpersUnlockMouse), UnlockMouseKey()),
+                ("Possess Characters", SettingsManager.GetBool(Settings.PossessCharacters), PossessKey()),
+                ("Debug Menu", SettingsManager.GetBool(Settings.DebugMenu), DebugMenuKey()),
+            };
+        }
+
+        /* Two features that are on with the same key, as a message naming both (null when none clash, or the runtime utils
+           are not available): the game would do both when it is pressed */
+        internal static string KeyClash()
+        {
+            if (!ScriptingHelpersAvailable()) return null;
+            (string Name, bool On, string Key)[] features = KeyedFeatures();
+            for (int i = 0; i < features.Length; i++)
+                for (int j = i + 1; j < features.Length; j++)
+                    if (features[i].On && features[j].On && features[i].Key == features[j].Key)
+                        return features[i].Name + " and " + features[j].Name + " both use " + features[i].Key + ": the game would do both when it is pressed.\n\nPick another key for one of them.";
+            return null;
+        }
+
+        /* A key just picked for one of the four features with a key: refused when another of them that is on has it already
+           (the picker goes back to its last key), and warned about while the Debug Menu is ticked when its free camera uses it
+           (the game leaves that key to the helper, so the camera loses what it does). Returns whether the key is kept. */
+        private bool KeyPicked(ComboBox picker, string feature, string previousKey)
+        {
+            string key = HelperKeys[picker.SelectedIndex];
+            if (key == previousKey) return true;
+
+            foreach ((string Name, bool On, string Key) other in KeyedFeatures())
+            {
+                if (other.Name == feature || !other.On || other.Key != key)
+                    continue;
+                MessageBox.Show(key + " is already the " + other.Name + " key.\n\nPick another key for " + feature + ", or give " + other.Name + " another key first.", "Key in use", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                _revertingKeyPicker = true;
+                try
+                {
+                    picker.SelectedIndex = Array.IndexOf(HelperKeys, previousKey);
+                }
+                finally
+                {
+                    _revertingKeyPicker = false;
+                }
+                return false;
+            }
+
+            if (enableDebugMenu.Checked && CinematicCameraKeys.Contains(key))
+            {
+                string use;
+                if (key == "F8") use = "F8 turns the Debug Menu's free camera on and off (unless CinematicCameraKey in OpenCAGE.RuntimeUtils.ini names another key)";
+                else if (key == "F9") use = "F9 takes the Debug Menu's screenshots (unless CinematicScreenshotKey in OpenCAGE.RuntimeUtils.ini names another key)";
+                else use = key + " is one of the keys the Debug Menu's free camera uses while it flies";
+                MessageBox.Show(use + ".\n\nWith " + feature + " on " + key + " too, the game leaves the key to " + feature + " and the free camera goes without it.", "Free camera key", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            return true;
+        }
+
+        /* Enable/disable Don't Write Saves: with the Debug Menu on, the game writes nothing to the player's saved games while it
+           runs (the Debug Menu can switch it in game too) */
+        private void dontWriteSaves_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_applyingExternalSettings) return;
+            SettingsManager.SetBool(Settings.DontWriteSaves, dontWriteSaves.Checked);
+        }
+
+        /* Whether the runtime utils ASI is needed at all: for any scripting helper (Live Link among them, which the ASI serves),
+           Possess Characters or the Debug Menu */
+        internal static bool RuntimeUtilsNeeded()
+        {
+            return ScriptingHelpersAvailable() && (HelperSettings.Any(o => SettingsManager.GetBool(o)) || SettingsManager.GetBool(Settings.PossessCharacters)
+                || SettingsManager.GetBool(Settings.DebugMenu));
+        }
+
+        /* Whether a launch runs any scripting helper */
         internal static bool AnyHelperOn()
         {
-            return ScriptingHelpersAvailable() && HelperSettings.Any(o => HelperOn(o));
+            return ScriptingHelpersAvailable() && HelperSettings.Any(o => SettingsManager.GetBool(o));
         }
 
         /* The hot reload, unlock mouse and possess keys as set, or their defaults when the setting names none of the keys offered */
         internal static string HotReloadKey() => HelperKey(Settings.ScriptingHelpersHotReloadKey, DefaultHotReloadKey);
         internal static string UnlockMouseKey() => HelperKey(Settings.ScriptingHelpersUnlockMouseKey, DefaultUnlockMouseKey);
         internal static string PossessKey() => HelperKey(Settings.PossessCharactersKey, DefaultPossessKey);
+        internal static string DebugMenuKey() => HelperKey(Settings.DebugMenuKey, DefaultDebugMenuKey);
         private static string HelperKey(string setting, string fallback)
         {
             string key = SettingsManager.GetString(setting, fallback);
@@ -695,33 +670,60 @@ namespace OpenCAGE
                 return sha.ComputeHash(stream);
         }
 
-        /* Write the config file the runtime utils ASI reads on startup, next to the game executable. Every helper is off for
-           a launch that starts Cinematic Tools (cinematicTools). */
-        private static void WriteScriptingHelpersConfig(string pathToAI, bool cinematicTools)
+        /* Write the config file the runtime utils ASI reads on startup, next to the game executable. The keys listed here are
+           rewritten for this launch, and CinematicTools= (an older OpenCAGE's) and LiveLinkPort= (OpenCAGE only connects on its
+           own port) are dropped; any other [RuntimeUtils] key someone set by hand (D3DDebugLayer, ExtraShadowLights,
+           CinematicCameraKey, LoadAllZones...) is kept. */
+        private static void WriteScriptingHelpersConfig(string pathToAI)
         {
+            string debugEntities = SettingsManager.GetBool(Settings.DebugEntities) ? "1" : "0";
             string[] lines = new string[]
             {
                 "[RuntimeUtils]",
-                "HotReload=" + (HelperOn(Settings.ScriptingHelpersHotReload, cinematicTools) ? "1" : "0"),
+                "HotReload=" + (SettingsManager.GetBool(Settings.ScriptingHelpersHotReload) ? "1" : "0"),
                 "HotReloadKey=" + HotReloadKey(),
                 //The game leaves the cursor free until this key is pressed in its window
-                "UnlockMouse=" + (HelperOn(Settings.ScriptingHelpersUnlockMouse, cinematicTools) ? "1" : "0"),
+                "UnlockMouse=" + (SettingsManager.GetBool(Settings.ScriptingHelpersUnlockMouse) ? "1" : "0"),
                 "UnlockMouseKey=" + UnlockMouseKey(),
                 //The most frames a second the game runs at (0 = no cap)
-                "CapFps=" + (HelperOn(Settings.ScriptingHelpersCapFps, cinematicTools) ? CapFpsRate() : "0"),
-                "DebugText=" + (HelperOn(Settings.ScriptingHelpersDebugText, cinematicTools) ? "1" : "0"),
-                "DebugTextStacking=" + (HelperOn(Settings.ScriptingHelpersDebugTextStacking, cinematicTools) ? "1" : "0"),
-                "DebugEnvironmentMarker=" + (HelperOn(Settings.ScriptingHelpersDebugEnvironmentMarker, cinematicTools) ? "1" : "0"),
-                "DebugPositionMarker=" + (HelperOn(Settings.ScriptingHelpersDebugPositionMarker, cinematicTools) ? "1" : "0"),
-                //The live link server (127.0.0.1 only) runs only when Enable Live Link is ticked
-                "LiveLink=" + (HelperOn(Settings.ScriptingHelpersLiveLink, cinematicTools) ? "1" : "0"),
-                //Read by OpenCAGE only (CinematicToolsLaunched): this launch has Cinematic Tools, so no Live Link is offered to it
-                "CinematicTools=" + (cinematicTools ? "1" : "0"),
+                "CapFps=" + (SettingsManager.GetBool(Settings.ScriptingHelpersCapFps) ? CapFpsRate() : "0"),
+                //Debug entities: the four kinds of debug script entity draw in game, all together
+                "DebugText=" + debugEntities,
+                "DebugTextStacking=" + debugEntities,
+                "DebugEnvironmentMarker=" + debugEntities,
+                "DebugPositionMarker=" + debugEntities,
+                //The live link server (127.0.0.1 only) runs only when Live Link is ticked
+                "LiveLink=" + (SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink) ? "1" : "0"),
                 //Possess Characters (a launch option, not a scripting helper): its key opens the in-game menu of characters
                 "Possess=" + (SettingsManager.GetBool(Settings.PossessCharacters) ? "1" : "0"),
                 "PossessKey=" + PossessKey(),
+                //The Debug Menu (a launch option too): its key opens the in-game window of debug views
+                "DebugMenu=" + (SettingsManager.GetBool(Settings.DebugMenu) ? "1" : "0"),
+                "DebugMenuKey=" + DebugMenuKey(),
+                //The Debug Menu's Don't Write Saves as it starts (it can be switched in game): the game writes no saves while it is on
+                "DontWriteSaves=" + (DontWriteSavesOn() ? "1" : "0"),
             };
-            File.WriteAllLines(Path.Combine(pathToAI, "OpenCAGE.RuntimeUtils.ini"), lines);
+            string path = Path.Combine(pathToAI, "OpenCAGE.RuntimeUtils.ini");
+            HashSet<string> managed = new HashSet<string>(lines.Skip(1).Select(l => l.Substring(0, l.IndexOf('='))), StringComparer.OrdinalIgnoreCase) { "CinematicTools", "LiveLinkPort" };
+            List<string> kept = new List<string>();
+            try
+            {
+                if (File.Exists(path))
+                {
+                    bool inSection = false;
+                    foreach (string raw in File.ReadAllLines(path))
+                    {
+                        string line = raw.Trim();
+                        if (line.StartsWith("[")) { inSection = string.Equals(line.Trim('[', ']').Trim(), "RuntimeUtils", StringComparison.OrdinalIgnoreCase); continue; }
+                        int equals = line.IndexOf('=');
+                        if (!inSection || equals <= 0 || line.StartsWith(";")) continue;
+                        if (managed.Contains(line.Substring(0, equals).Trim())) continue;
+                        kept.Add(line);
+                    }
+                }
+            }
+            catch { } //an unreadable old file still gets this launch's keys
+            File.WriteAllLines(path, lines.Concat(kept));
         }
 
         /* Enable/disable in-game HUD */
@@ -731,15 +733,6 @@ namespace OpenCAGE
             SettingsManager.SetBool(Settings.HudDisabled, disableUI.Checked);
             if (!PatchManager.PatchNoUIFlag(Singleton.Platform, Singleton.PathToAI, disableUI.Checked))
                 MessageBox.Show("Failed to set HUD disabled option.\nIs Alien: Isolation open?", "Couldn't write!", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
-
-        /* Skip Frontend (WARNING: Causes issues when returning to main menu - duh) */
-        private void skipFrontend_CheckedChanged(object sender, EventArgs e)
-        {
-            if (_applyingExternalSettings) return;
-            SettingsManager.SetBool(Settings.SkipFrontend, skipFrontend.Checked);
-            if (!PatchManager.PatchSkipFrontendFlag(Singleton.Platform, Singleton.PathToAI, skipFrontend.Checked))
-                MessageBox.Show("Failed to set skip frontend option.\nIs Alien: Isolation open?", "Couldn't write!", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
         /* Current-gen script optimiser patch */
@@ -760,26 +753,16 @@ namespace OpenCAGE
                 MessageBox.Show("Failed to set constant ambient patch option.\nIs Alien: Isolation open?", "Couldn't write!", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
-        /* UI Modifications */
-        private void UIMOD_DebugCheckpoints_CheckedChanged(object sender, EventArgs e)
+        /* UI tweaks: OpenCAGE's own loading screen and game-over menu beside the game's in UI.PAK (UiMovieOverrides) */
+        private void debugLoadingScreen_CheckedChanged(object sender, EventArgs e)
         {
             if (_applyingExternalSettings) return;
-            UpdateUI(Settings.UiModPauseMenu, UIMOD_DebugCheckpoints.Checked);
+            UpdateUI(Settings.UiModLoadingScreen, debugLoadingScreen.Checked);
         }
-        private void UIMOD_MapName_CheckedChanged(object sender, EventArgs e)
+        private void quitToMenuOnDeath_CheckedChanged(object sender, EventArgs e)
         {
             if (_applyingExternalSettings) return;
-            UpdateUI(Settings.UiModLoadingScreen, UIMOD_MapName.Checked);
-        }
-        private void UIMOD_MapSelection_CheckedChanged(object sender, EventArgs e)
-        {
-            if (_applyingExternalSettings) return;
-            UpdateUI(Settings.UiModNewFrontendMenu, UIMOD_MapSelection.Checked);
-        }
-        private void UIMOD_ReturnFrontend_CheckedChanged(object sender, EventArgs e)
-        {
-            if (_applyingExternalSettings) return;
-            UpdateUI(Settings.UiModGameOverMenu, UIMOD_ReturnFrontend.Checked);
+            UpdateUI(Settings.UiModGameOverMenu, quitToMenuOnDeath.Checked);
         }
         private void UpdateUI(string setting, bool modded)
         {

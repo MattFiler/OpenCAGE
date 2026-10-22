@@ -3,7 +3,11 @@
 #include "LIVE_CAMERA.h"
 #include "LIVE_ANIMATION.h"
 #include "LIVE_TRACE.h"
+#include "LIVE_DEBUGGER.h"
 #include "DEBUG_MARKER.h"
+#include "DEBUG_MENU.h"
+#include "GAME_DEBUG.h"
+#include "Config.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -58,6 +62,9 @@ namespace
 	// Whether this level's scripts have run for the whole settle time since it loaded: a pause after that is a cutscene or
 	// a message on screen waiting for the player, not the level starting
 	bool g_levelPlayed = false;
+	// Whether the scripts last stopped because the script debugger held them (at a breakpoint, or stepping), or the debug
+	// menu's pause did: going on from that needs no settling
+	bool g_stoppedByDebugger = false;
 
 	// An entity's fields: its vtable, its state flags, its owner, then its id and its type
 	constexpr uint32_t kEntityState = 0x04;
@@ -85,7 +92,7 @@ namespace
 
 	// Flags for the record the game makes to go with a call into an entity, as its own callers set them
 	constexpr uint32_t kInfoLifecycle = 0x04000000; // an instance initialising / shutting down its entities
-	constexpr uint32_t kInfoLiveEdit = 0x20000000;  // a composite template being edited live (as the dev build does)
+	constexpr uint32_t kInfoLiveEdit = 0x20000000;  // a composite template being edited live
 
 	// The game's counted allocation: for a single item, data is the object; for an array, count and data are the array.
 	struct Allocation
@@ -197,7 +204,7 @@ namespace
 		void* ptr = nullptr;
 		~InfoRef() { if (ptr) remove_reference(ptr); }
 	};
-	// The entity manager's pause for an entity, set before a live edit and cleared after it, as the dev build does when it
+	// The entity manager's pause for an entity, set before a live edit and cleared after it, as the game does when it
 	// edits a composite template live
 	struct PauseContext
 	{
@@ -877,7 +884,7 @@ namespace
 		op.outcome = "removed";
 	}
 
-	// What the dev build does to one entity when a composite template is edited live: flush its cache and live edit it. The
+	// What the game's own live editing does to one entity when a composite template is edited live: flush its cache and live edit it. The
 	// id can be an alias's (an override of something inside a nested instance), which edits what it points at.
 	void LiveEditBody(void* context)
 	{
@@ -1160,6 +1167,12 @@ namespace
 __declspec(noinline)
 void __fastcall LIVE_LINK::h_process(void* _this, void* /*_EDX*/)
 {
+	if (Config::Get().debugMenu)
+	{
+		DEBUG_MENU::RunEntityThreadWork();
+		// Script breakpoints: the game's list kept in line with what is set
+		LIVE_DEBUGGER::EntityFrame();
+	}
 	TrackTransport();
 	LIVE_LINK_SERVER::ProcessEntityRequests();
 	// After the requests, so an edit pushed this frame (which can rebind or restart the driven animation) is already in, and
@@ -1177,6 +1190,62 @@ bool LIVE_LINK::LevelRunning()
 {
 	uint8_t* manager = EntityManager();
 	return manager && manager[kManagerInitialised] && !manager[kManagerShuttingDown] && *reinterpret_cast<Allocation**>(manager + kManagerRoot) && PackFileBase();
+}
+
+namespace
+{
+	// The running level's root composite id (false with no level)
+	bool ReadRunningRoot(uint32_t& root)
+	{
+		__try
+		{
+			if (!LIVE_LINK::LevelRunning())
+				return false;
+			root = *reinterpret_cast<uint32_t*>(EntityManager() + kManagerRootGuid);
+			return true;
+		}
+		__except (EXCEPTION_EXECUTE_HANDLER)
+		{
+			return false;
+		}
+	}
+
+	// Its name, copied out (the templates are searched, so this is done once per level)
+	bool ReadRootName(uint32_t root, char* out, size_t size)
+	{
+		__try
+		{
+			CompositeTemplate* rootTemplate = FindTemplate(root);
+			const char* name = rootTemplate ? rootTemplate->debug_name : nullptr;
+			size_t i = 0;
+			for (; name && i + 1 < size && name[i]; i++)
+				out[i] = name[i];
+			out[i] = '\0';
+			return true;
+		}
+		__except (EXCEPTION_EXECUTE_HANDLER)
+		{
+			return false;
+		}
+	}
+}
+
+std::string LIVE_LINK::RunningLevelName()
+{
+	static uint32_t s_root = 0;
+	static std::string s_name;
+	uint32_t root = 0;
+	if (!ReadRunningRoot(root))
+		return std::string();
+	if (root != s_root)
+	{
+		char name[260];
+		if (!ReadRootName(root, name, sizeof(name)))
+			return std::string();
+		s_root = root;
+		s_name = name;
+	}
+	return s_name;
 }
 
 namespace
@@ -1250,6 +1319,7 @@ void LIVE_LINK::TrackTransport()
 		g_transport = ~0u; // the next level starts afresh
 		g_transportStopped = kTransportPaused;
 		g_levelPlayed = false;
+		g_stoppedByDebugger = false;
 		return;
 	}
 	if (g_transport == kTransportRunning && GetTickCount64() - g_transportSince >= kTransportSettleMs)
@@ -1259,6 +1329,8 @@ void LIVE_LINK::TrackTransport()
 		return;
 	if (g_transport != ~0u && g_transport != kTransportRunning)
 		g_transportStopped = g_transport;
+	if (transport != kTransportRunning)
+		g_stoppedByDebugger = LIVE_DEBUGGER::Holding() || GAME_DEBUG::Paused();
 	DevTools::Log("LiveLink: level scripts %s (transport %u)", transport == kTransportRunning ? "running" : "not running", transport);
 	g_transport = transport;
 	g_transportSince = GetTickCount64();
@@ -1279,10 +1351,21 @@ const char* LIVE_LINK::EditsMustWait()
 		return "The level is still starting";
 	if (state == 5 /* game over: the level stays loaded, and restarts from a checkpoint */)
 		return "The game is over (it restarts from a checkpoint) - the level is still starting";
+	// Held by the script debugger (LIVE_DEBUGGER.h): until it is told to go on. The wording has "scripts are stopped", which
+	// OpenCAGE sends again later.
+	if (const char* held = LIVE_DEBUGGER::HeldReason())
+		return held;
+	// Held by the debug menu's pause (GAME_DEBUG.h): likewise until it is let go. The wording has "is paused", which
+	// OpenCAGE sends again later.
+	if (GAME_DEBUG::Paused())
+		return "The game is paused from the Debug Menu (game.paused) - its edits wait until it is unpaused";
 	switch (*reinterpret_cast<uint32_t*>(EntityManager() + kManagerTransport))
 	{
 	case kTransportRunning:
 		if (g_transport == kTransportRunning && GetTickCount64() - g_transportSince >= kTransportSettleMs)
+			return nullptr;
+		// Going on from the debugger's hold: the level was running before it, and is again
+		if (g_stoppedByDebugger && g_levelPlayed)
 			return nullptr;
 		switch (g_transportStopped) // OpenCAGE recognises this wording and sends the edit again later
 		{

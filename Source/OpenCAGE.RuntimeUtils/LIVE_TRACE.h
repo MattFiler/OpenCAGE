@@ -99,6 +99,16 @@ namespace LIVE_TRACE
 	// another way than a link's call. While tracing, it is noted like one, with no caller (the source fields all 0).
 	void NoteOwnCall(void* entity, uint32_t method);
 
+	// While one is in scope on a thread, that thread's reads and lookups are our own (the debugger reading values for
+	// OpenCAGE), not the scripts', and are not noted.
+	struct OwnReads
+	{
+		OwnReads();
+		~OwnReads();
+		OwnReads(const OwnReads&) = delete;
+		OwnReads& operator=(const OwnReads&) = delete;
+	};
+
 	// Attaches (or detaches) the hooks, inside the caller's hook transaction. They pass straight through until a TRACE.
 	void AttachHooks(bool attach);
 }

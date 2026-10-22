@@ -172,11 +172,11 @@ namespace OpenCAGE.MCP
             {
                 Name = "launch_game",
                 Title = "Launch the game",
-                Description = "Start Alien: Isolation straight into a level (Steam, Epic or GOG). Closes this install's game and Cinematic Tools first if running, and writes the launch_options AI.exe patches as set. The game loads what is on disk: save (or save_level first) - a level needing a Save & Build is refused unless allow_stale_build (get_editor_state level.build says why). Without skip_frontend the level's scripts start but the game waits at PRESS ANY BUTTON; skip_frontend (default: the launch_options setting) starts it playing. wait_for 'level' or 'playing' waits until the game reports it through Live Link (launch_options live_link on, cinematic_tools off), 'process' until AI.exe runs. Installs or removes the scripting-helpers ASI and starts Cinematic Tools as launch_options say - one or the other: with cinematic_tools on, every scripting helper is off for the run. Without a level it starts at the menu.",
+                Description = "Start Alien: Isolation straight into a level (Steam, Epic or GOG). Closes this install's game first if running, and writes the launch_options AI.exe patches and UI mods as set (and puts those of options Launch Game no longer has back off). The game loads what is on disk: save (or save_level first) - a level needing a Save & Build is refused unless allow_stale_build (get_editor_state level.build says why). A level starts playing straight away: the title screen is skipped, as Launch Game's Load straight into does. wait_for 'level' or 'playing' waits until the game reports it through Live Link (launch_options live_link on), 'process' until AI.exe runs. Installs or removes the runtime utils ASI (the Debug tools - debug_menu and its dont_write_saves, debug_entities, hot_reload, live_link - and cap_fps, unlock_mouse, possess_characters) as launch_options say. Without a level it starts at the main menu.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("level", "The level to start in, as list_levels names it. Defaults to the open level; 'menu' for the main menu."),
                     McpSchema.String("save", "Save the open level first when it is the one launched: none (default), save, build (Save & Build), or auto (build if it needs one, else save if it has unsaved changes).", options: new[] { "none", "save", "build", "auto" }),
-                    McpSchema.Boolean("skip_frontend", "This launch only: true skips the frontend so the level starts playing; false waits at PRESS ANY BUTTON. Default: the launch_options skip_frontend setting. The next launch writes the setting back."),
+                    McpSchema.Boolean("skip_frontend", "Deprecated, ignored: the title screen is skipped whenever a level is launched, never at the main menu (it is implied by level)."),
                     McpSchema.String("wait_for", "none (default: return once started), process (AI.exe is running), level (the level has loaded) or playing (its scripts are running). level and playing need Live Link.", options: new[] { "none", "process", "level", "playing" }),
                     McpSchema.Integer("timeout_seconds", "With wait_for: how long to wait (default 180, at most 600)."),
                     McpSchema.Boolean("allow_stale_build", "Launch even though the level has changes only a Save & Build gives the game (it runs the older data)."),
@@ -1508,11 +1508,12 @@ namespace OpenCAGE.MCP
             int timeoutSeconds = Math.Max(5, Math.Min(600, call.Int("timeout_seconds", 180)));
             if (call.Has("timeout_seconds") && waitFor == "none")
                 call.Note("timeout_seconds only applies with wait_for.");
-            bool? skipFrontend = call.Has("skip_frontend") ? call.Bool("skip_frontend") : (bool?)null;
+            //The title screen is skipped whenever a level is launched, never at the menu, as the Launch Game window does
+            bool skipFrontend = !menu;
+            if (call.Has("skip_frontend"))
+                call.Note("skip_frontend is no longer an option and was ignored: it is implied by the level - a launch into a level skips the title screen, one at the main menu does not.");
             bool dryRun = call.Bool("dry_run");
             bool liveLinkWait = waitFor == "level" || waitFor == "playing";
-            if (liveLinkWait && global::OpenCAGE.LaunchGame.CinematicToolsChosen())
-                throw new McpError(McpErrorCodes.Refused, "wait_for '" + waitFor + "' needs Live Link, which is off while Cinematic Tools are on (launch_options cinematic_tools): Cinematic Tools and the scripting helpers are one or the other, as both take over the game's camera. Set launch_options cinematic_tools: false, or wait_for 'process'. Nothing was launched.");
             if (liveLinkWait && !(SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink) && global::OpenCAGE.LaunchGame.ScriptingHelpersAvailable()))
                 throw new McpError(McpErrorCodes.Refused, "wait_for '" + waitFor + "' needs Live Link, which the game serves only when launched with launch_options live_link: true. Turn it on with launch_options, or wait_for 'process'. Nothing was launched.");
 
@@ -1575,7 +1576,7 @@ namespace OpenCAGE.MCP
             {
                 result["dry_run"] = true;
                 result["level"] = menu ? "menu" : level;
-                result["skip_frontend"] = skipFrontend ?? SettingsManager.GetBool(Settings.SkipFrontend);
+                result["skip_frontend"] = skipFrontend;
                 result["game_running"] = EditorUtils.ThisInstallsGameRunning();
                 result["patches"] = McpLevelTools.PatchSettings(skipFrontend);
                 result["wait_for"] = waitFor;
@@ -1589,18 +1590,25 @@ namespace OpenCAGE.MCP
                 result["closed_game"] = new JArray(closed);
                 call.Note("The game was already running (" + string.Join(", ", closed) + ") and was closed first.");
             }
-            //The launch_options patches as set (a verified AI.exe loses them), with skip_frontend as asked for this launch
+            //The launch_options patches as set (a verified AI.exe loses them), the removed options' written off, and the title
+            //screen skip that goes with the level
             List<string> patchFailures = McpLevelTools.ApplyPatchSettings(platform, skipFrontend);
-            //The scripting helpers (runtime utils ASI) go in or come out as launch_options ask, as the Launch Game window does: all
-            //off when Cinematic Tools start (below)
-            string runtimeUtilsProblem = global::OpenCAGE.LaunchGame.ApplyRuntimeUtils(global::OpenCAGE.LaunchGame.CinematicToolsChosen());
+            //The Debug tools, Cap FPS, Unlock mouse and Possess characters (runtime utils ASI) go in or come out as launch_options
+            //ask, as the Launch Game window does
+            string runtimeUtilsProblem = global::OpenCAGE.LaunchGame.ApplyRuntimeUtils();
             if (runtimeUtilsProblem != null)
-                call.Note(runtimeUtilsProblem + " In-game scripting helpers (debug text, hot reload, Live Link) will not work this run.");
+                call.Note(runtimeUtilsProblem + " The Debug Menu, debug entities, hot reload, Live Link and the other runtime utils options will not work this run.");
+            //The UI mods as launch_options say, as the Launch Game window does: also takes out the movies of the ones it no longer has
+            string uiModProblem = UiMovieOverrides.Sync(Singleton.PathToAI);
+            if (uiModProblem != null)
+                call.Note("The UI mods could not all be set as launch_options say (" + uiModProblem + "): the game runs with UI.PAK as it is.");
             //The level to start in, the integrity check and the popup are what a launch needs; the rest are options
             bool launchPatched = PatchManager.PatchLaunchMode(platform, Singleton.PathToAI, level) && !patchFailures.Contains("file integrity check") && !patchFailures.Contains("popup message");
             if (!launchPatched)
                 call.Note("AI.exe could not be patched to start in " + level + " (is it read-only, or still held open?): the game may start at its menu, or refuse edited files.");
-            List<string> optional = patchFailures.Where(o => o != "file integrity check" && o != "popup message").ToList();
+            else if (patchFailures.Contains(McpLevelTools.SkipFrontendArg))
+                call.Note("AI.exe's title screen skip could not be written: " + (menu ? "the game may skip its title screen into the menu." : "the game may wait at PRESS ANY BUTTON until someone presses one."));
+            List<string> optional = patchFailures.Where(o => o != "file integrity check" && o != "popup message" && o != McpLevelTools.SkipFrontendArg).ToList();
             if (optional.Count != 0)
                 call.Note("These launch_options AI.exe patches could not be written this time, so the game runs without them as set: " + string.Join(", ", optional) + ".");
             PatchManager.UpdateLevelListInPackages(platform, Singleton.PathToAI);
@@ -1622,35 +1630,16 @@ namespace OpenCAGE.MCP
 
             result["launched"] = true;
             result["level"] = menu ? "menu" : level;
-            bool skipped = skipFrontend ?? SettingsManager.GetBool(Settings.SkipFrontend);
-            result["skip_frontend"] = skipped;
-            if (!skipped && !menu)
-                call.Note("The frontend is not skipped: the level's scripts start, but the game waits at PRESS ANY BUTTON until someone presses one (skip_frontend: true starts it playing).");
+            result["skip_frontend"] = skipFrontend;
             if (waitFor != "none")
                 result["wait"] = WaitForGame(call, waitFor, TimeSpan.FromSeconds(timeoutSeconds), launched, launchesOpen);
             result["scripting_helpers"] = global::OpenCAGE.LaunchGame.AnyHelperOn() && runtimeUtilsProblem == null;
             result["possess_characters"] = SettingsManager.GetBool(Settings.PossessCharacters) && global::OpenCAGE.LaunchGame.ScriptingHelpersAvailable() && runtimeUtilsProblem == null;
-            if (global::OpenCAGE.LaunchGame.CinematicToolsChosen())
-            {
-                List<string> parked = global::OpenCAGE.LaunchGame.HelperSettings.Where(o => SettingsManager.GetBool(o)).Select(McpLevelTools.LaunchOptionArg).ToList();
-                if (parked.Count != 0)
-                    call.Note("Cinematic Tools have the game's camera this run, so the scripting helpers set on (" + string.Join(", ", parked) + ") are off: the two are one or the other. launch_options cinematic_tools: false brings them back next launch.");
-            }
-            if (SettingsManager.GetBool(Settings.CinematicTools))
-            {
-                if (!global::OpenCAGE.LaunchGame.CinematicToolsAvailable())
-                {
-                    result["cinematic_tools"] = "not available";
-                    call.Note("Cinematic Tools are switched on in launch_options but only work with the Steam, GOG and Epic Games Store builds and a complete OpenCAGE install; they were not started.");
-                }
-                else
-                {
-                    string problem = global::OpenCAGE.LaunchGame.StartCinematicTools(out string caption);
-                    result["cinematic_tools"] = problem == null ? "started" : "failed";
-                    if (problem != null)
-                        call.Note(caption + ": " + problem.Replace("\n\n", " ").Replace("\n", " "));
-                }
-            }
+            result["debug_menu"] = SettingsManager.GetBool(Settings.DebugMenu) && global::OpenCAGE.LaunchGame.ScriptingHelpersAvailable() && runtimeUtilsProblem == null;
+            //The Debug Menu's Don't Write Saves as the game starts with it (only with the Debug Menu)
+            result["dont_write_saves"] = global::OpenCAGE.LaunchGame.DontWriteSavesOn() && global::OpenCAGE.LaunchGame.ScriptingHelpersAvailable() && runtimeUtilsProblem == null;
+            if (SettingsManager.GetBool(Settings.DontWriteSaves) && !SettingsManager.GetBool(Settings.DebugMenu))
+                call.Note("launch_options dont_write_saves is on but debug_menu is off, so the game writes its saves as usual: Don't Write Saves is a Debug Menu feature.");
             return result;
         }
 

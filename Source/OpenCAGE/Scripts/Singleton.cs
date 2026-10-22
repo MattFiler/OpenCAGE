@@ -123,6 +123,11 @@ namespace OpenCAGE
         /// page that was edited is not the only one showing the old value.
         /// </summary>
         public static Action<Entity> OnPinDelayModified;
+        /// <summary>
+        /// Showing this entity in the inspector filled in parameters it didn't have (its defaults). Nothing was edited, so
+        /// no edit event goes out, but anything showing the entity's values has more to show.
+        /// </summary>
+        public static Action<Entity> OnEntityDefaultsApplied;
         public static Action<SelectEnumString> OnEnumStringUIShown;
         public static Action OnResetConfigs;
 

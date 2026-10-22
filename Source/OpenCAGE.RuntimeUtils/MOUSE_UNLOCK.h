@@ -23,8 +23,9 @@
 	Menus are left as they are: the game frees and shows the cursor for them itself, and clicks reach them.
 
 	A cubemap capture holds the cursor free the same way while it runs (Hold), whether Unlock Mouse is on or not, so
-	clicking into the game to watch one doesn't hand the game the mouse; afterwards it is as it was. The hooks are in
-	for that whenever captures can be asked for (the live link's camera sync on), and only pass through otherwise.
+	clicking into the game to watch one doesn't hand the game the mouse; afterwards it is as it was. So does the debug
+	menu while it is open. The hooks are in for that whenever captures can be asked for (the live link's camera sync
+	on) or the debug menu is on, and only pass through otherwise.
 */
 namespace MOUSE_UNLOCK
 {
@@ -39,11 +40,16 @@ namespace MOUSE_UNLOCK
 	// cursor shown or not, and whether the message is kept from the game - true when it is, with what to answer it.
 	bool OnWindowMessage(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result);
 
-	// Holds the cursor free (a cubemap capture running), or lets it go back to how Unlock Mouse and the game have it
-	// (any thread; the game is told at the window's next message).
+	// Holds the cursor free (a cubemap capture running, the debug menu open), or lets go of a hold: once nothing holds
+	// it, it goes back to how Unlock Mouse and the game have it. Every hold is let go of once. Any thread; the game is
+	// told at the window's next message.
 	void Hold(bool held);
 
 	// The overlay (render thread): a note for a few seconds when the key is pressed, and the first time a level is
 	// played with the cursor free.
 	void DrawOverlay();
+
+	// Where that note's box ends, down from the top of the screen in pixels, while it shows (0 when it doesn't): for the
+	// debug menu's notes along the top, which go under it (render thread).
+	float NoteBottom();
 }

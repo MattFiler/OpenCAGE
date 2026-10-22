@@ -158,6 +158,17 @@ namespace OpenCAGE
 
         //Commands made after the rest (appended, so the strips keep their order)
         ConnectedLinks,
+
+        //The composite toolbar's Script Debugger menu, and its Continue and Step buttons
+        DebugScripts,
+        Breakpoint,
+        RemoveBreakpoints,
+        LiveStates,
+        SelectFromGame,
+        PauseScripts,
+        JumpToBreakpointHit,
+        ContinueScripts,
+        StepScripts,
     }
 
     /// <summary>
@@ -584,6 +595,36 @@ namespace OpenCAGE
 
         /// <summary>Below this zoom (title text is 8 pt: at half size it can't be read), node graphs draw each node as its icon.</summary>
         public const float NodeIconZoom = 0.55f;
+
+        /// <summary>
+        /// Options > Entity Display > Show Node Icons When Zoomed Out: whether script flowgraphs and animation trees draw each
+        /// node as its icon below <see cref="NodeIconZoom"/>. Off, nodes are drawn in full at every zoom (the editor's
+        /// furthest out is 20%), their text just getting smaller, and there is no hovered-name label.
+        /// </summary>
+        public static bool NodeIconsWhenZoomedOut => SettingsManager.GetBool(Settings.NodeIconsWhenZoomedOut, true);
+
+        /// <summary>The option above was switched (the menu, an assistant, the settings file): open node graphs apply it again.</summary>
+        public static event Action NodeIconsWhenZoomedOutChanged;
+
+        public static void RaiseNodeIconsWhenZoomedOutChanged()
+        {
+            NodeIconsWhenZoomedOutChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// A node graph's zoom for icons, as the option says (0 never draws them), and a repaint. Its NodeIconProvider is
+        /// the graph's own to set (<see cref="ForZoomedOutNode"/>).
+        /// </summary>
+        public static void ApplyNodeIconZoom(STNodeEditor editor)
+        {
+            if (editor == null || editor.IsDisposed)
+                return;
+            float zoom = NodeIconsWhenZoomedOut ? NodeIconZoom : 0f;
+            if (editor.NodeIconZoom == zoom)
+                return;
+            editor.NodeIconZoom = zoom;
+            editor.Invalidate();
+        }
 
         //The sizes a zoomed-out node's icon is made at (the largest that fits is used), so a zoom doesn't make one per pixel
         private static readonly int[] _nodeIconSizes = { 8, 10, 12, 14, 16, 20, 24, 28, 32, 40, 48, 56, 64, 80, 96, 112, 128 };

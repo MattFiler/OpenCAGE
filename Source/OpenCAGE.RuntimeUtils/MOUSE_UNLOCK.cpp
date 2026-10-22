@@ -18,15 +18,15 @@ namespace
 {
 	// Whether the key has the cursor free (with Unlock Mouse on): it takes turns, and starts free
 	std::atomic<bool> g_free = true;
-	// Whether a cubemap capture holds the cursor free
-	std::atomic<bool> g_held = false;
+	// How many hold the cursor free (a cubemap capture, the debug menu while it is open)
+	std::atomic<int> g_held = 0;
 	// The hold as the game's routine was last told of it (the window thread only)
 	bool g_heldPassedOn = false;
 
-	// Whether the cursor is free now: by the key, or held by a capture
+	// Whether the cursor is free now: by the key, or held
 	bool Free()
 	{
-		return (g_free && Config::Get().unlockMouse) || g_held;
+		return (g_free && Config::Get().unlockMouse) || g_held > 0;
 	}
 
 	// What the game last asked of the cursor routine, and for which mouse: the routine is called from the window thread
@@ -46,6 +46,24 @@ namespace
 	std::atomic<ULONGLONG> g_noteAt = 0;
 	std::atomic<bool> g_noteFree = true;
 	std::atomic<bool> g_hinted = false;
+	// Its text size, and its box: centred along the top, the text this far down, padded this much around it
+	constexpr float kNoteTextSize = 18.0f;
+	constexpr float kNoteTop = 14.0f;
+	constexpr float kNotePadX = 10.0f, kNotePadY = 5.0f;
+
+	// The note's text while it shows, false once it has gone (or when there is none)
+	bool NoteText(char* text, size_t size)
+	{
+		const ULONGLONG at = g_noteAt;
+		if (at == 0 || GetTickCount64() - at > kNoteMs)
+			return false;
+		const char* key = Config::KeyName(Config::Get().unlockMouseKey);
+		if (g_noteFree)
+			snprintf(text, size, "Mouse unlocked - press %s in the game to look around", key);
+		else
+			snprintf(text, size, "Mouse locked to the game - press %s to unlock it", key);
+		return true;
+	}
 
 	// Whether an address is in the game's own code (not a DLL's - another tool's, Windows')
 	bool InGame(uintptr_t address)
@@ -109,8 +127,8 @@ bool MOUSE_UNLOCK::OnWindowMessage(HWND window, UINT message, WPARAM wParam, LPA
 	if (Config::Get().unlockMouse && message == WM_KEYUP && wParam == static_cast<WPARAM>(Config::Get().unlockMouseKey))
 		Toggle();
 
-	// A capture's hold starting or ending: the game's routine lets the cursor go or takes it back, as the key has it do
-	const bool held = g_held;
+	// A hold starting or ending: the game's routine lets the cursor go or takes it back, as the key has it do
+	const bool held = g_held > 0;
 	if (held != g_heldPassedOn)
 	{
 		g_heldPassedOn = held;
@@ -146,27 +164,36 @@ bool MOUSE_UNLOCK::OnWindowMessage(HWND window, UINT message, WPARAM wParam, LPA
 
 void MOUSE_UNLOCK::Hold(bool held)
 {
-	if (g_held.exchange(held) != held)
-		DevTools::Log("Unlock Mouse: %s", held ? "the cursor is held free for a cubemap capture" : "the capture's hold on the cursor ended");
+	int holders = g_held.load();
+	while (!g_held.compare_exchange_weak(holders, held ? holders + 1 : (holders > 0 ? holders - 1 : 0)))
+	{
+	}
+	if (holders == 0 && held)
+		DevTools::Log("Unlock Mouse: the cursor is held free");
+	else if (holders == 1 && !held)
+		DevTools::Log("Unlock Mouse: the cursor is no longer held free");
 }
 
 void MOUSE_UNLOCK::DrawOverlay()
 {
-	const ULONGLONG at = g_noteAt;
-	if (at == 0 || GetTickCount64() - at > kNoteMs)
+	char text[128];
+	if (!NoteText(text, sizeof(text)))
 		return;
 
-	char text[128];
-	const char* key = Config::KeyName(Config::Get().unlockMouseKey);
-	if (g_noteFree)
-		snprintf(text, sizeof(text), "Mouse unlocked - press %s in the game to look around", key);
-	else
-		snprintf(text, sizeof(text), "Mouse locked to the game - press %s to unlock it", key);
-
 	ImDrawList* drawList = ImGui::GetForegroundDrawList();
-	const float size = 18.0f;
-	const ImVec2 textSize = ImGui::GetFont()->CalcTextSizeA(size, FLT_MAX, 0.0f, text);
-	const ImVec2 place(ImGui::GetIO().DisplaySize.x * 0.5f - textSize.x * 0.5f, 14.0f);
-	drawList->AddRectFilled(ImVec2(place.x - 10.0f, place.y - 5.0f), ImVec2(place.x + textSize.x + 10.0f, place.y + textSize.y + 5.0f), IM_COL32(0, 0, 0, 150), 4.0f);
-	drawList->AddText(ImGui::GetFont(), size, place, IM_COL32(235, 235, 235, 240), text);
+	const ImVec2 textSize = ImGui::GetFont()->CalcTextSizeA(kNoteTextSize, FLT_MAX, 0.0f, text);
+	const ImVec2 place(ImGui::GetIO().DisplaySize.x * 0.5f - textSize.x * 0.5f, kNoteTop);
+	drawList->AddRectFilled(ImVec2(place.x - kNotePadX, place.y - kNotePadY), ImVec2(place.x + textSize.x + kNotePadX, place.y + textSize.y + kNotePadY), IM_COL32(0, 0, 0, 150), 4.0f);
+	drawList->AddText(ImGui::GetFont(), kNoteTextSize, place, IM_COL32(235, 235, 235, 240), text);
+}
+
+float MOUSE_UNLOCK::NoteBottom()
+{
+	// The note is drawn only with Unlock Mouse on; worked out the way DrawOverlay places it, whether or not it has been
+	// drawn yet this frame
+	char text[128];
+	if (!Config::Get().unlockMouse || !NoteText(text, sizeof(text)))
+		return 0.0f;
+	const ImVec2 textSize = ImGui::GetFont()->CalcTextSizeA(kNoteTextSize, FLT_MAX, 0.0f, text);
+	return kNoteTop + textSize.y + kNotePadY;
 }

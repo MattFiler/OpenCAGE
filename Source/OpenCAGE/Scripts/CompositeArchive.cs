@@ -765,7 +765,7 @@ namespace OpenCAGE
             Modding.ModServices.CaptureLevelBeforeSave(levelName);
 
             //Close alien down if it's open, it conflicts with our write locks!
-            EditorUtils.CloseAI();
+            EditorUtils.CloseAI(null, thisInstallOnly: true);
 
             /* Commands.Save truncates the script file to the script alone, so once the save has begun the
                editor's tables MUST go back in whatever happens after - even if a later part of the save

@@ -31,6 +31,10 @@ struct IDXGISwapChain;
 	vignette, chromatic aberration, lens distortion and depth of field. Colour grading, bloom and tone mapping are left as
 	the game has them: the faces are what the player would see from there.
 
+	With the debug menu on, a capture is turned away while any of its settings that change how the game draws is on (a
+	rendering switch, a debug view, a light muted or a kind of light left out, a cinematic look override...), as the faces
+	go into the level's reflection maps: the answer names them, to be turned off first. kKeepDebugLook captures with them.
+
 	One capture at a time, for the connection that asked: it ends when the six faces are taken (answered with them), or
 	early when OpenCAGE disconnects, the level changes, the game is paused, or nothing is drawn for a while (answered with
 	why). Anything else that drives the camera (OpenCAGE's viewport camera, Possess) waits until it is over.
@@ -42,8 +46,9 @@ struct IDXGISwapChain;
 */
 namespace CUBEMAP_CAPTURE
 {
-	// Hooked: the post-processing settings' per-frame update. After it, the effects named above are turned off while a
-	// capture runs (only passes through otherwise).
+	// Hooked: the post-processing settings' per-frame update. After it, the debug menu's cinematic look is written over the
+	// level's (CINEMATIC_VISUALS.h), then the effects named above are turned off while a capture runs. With the debug menu
+	// on and Live Link's camera sync off, CINEMATIC_VISUALS attaches it (the DLL attaches it with camera sync on).
 	DEVTOOLS_DECLARE_CLASS_HOOK(int, post_process_update, h_post_process_update, t_post_process_update, 0x00608c50)
 
 	// What a capture is asked for (see CAPTURE_CUBEMAP in LIVE_LINK_SERVER.h)
@@ -55,16 +60,21 @@ namespace CUBEMAP_CAPTURE
 		uint32_t size = 256;       // face size in pixels
 		uint32_t settleFrames = 8; // frames each face is held before its picture is taken
 		uint32_t streamTimeoutMs = 30000; // the longest the first face waits for zones to finish streaming in
-		uint32_t flags = 0;        // kKeepHud: leave the HUD showing; kKeepPostEffects: leave the post-processing alone
+		uint32_t flags = 0;        // kKeepHud: leave the HUD showing; kKeepPostEffects: leave the post-processing alone;
+		                           // kKeepDebugLook: capture with the debug menu's rendering changes (not turned away)
 	};
 	constexpr uint32_t kKeepHud = 1u << 0;
 	constexpr uint32_t kKeepPostEffects = 1u << 1;
+	constexpr uint32_t kKeepDebugLook = 1u << 2;
 
 	// Called when the capture ends, from the render thread: ok, a message, and (when ok) the answer's payload.
 	using Done = std::function<void(bool ok, const std::string& message, std::vector<uint8_t>&& payload)>;
 
 	// Socket thread: starts a capture (returns ok and "Capturing...") or refuses it at once (and done is never called).
 	LIVE_LINK::Result Start(const Request& request, Done done);
+
+	// Whether a capture is running (any thread)
+	bool Capturing();
 
 	// Camera hook: whether a capture owns the camera this frame, and if so the pose to render from (rotation as the
 	// camera's quaternion, x y z w; position; vertical field of view in degrees).
@@ -77,6 +87,7 @@ namespace CUBEMAP_CAPTURE
 	std::string OverlayText();
 
 	// The game window's messages, before the game has them (its window thread): whether the message is kept from the
-	// game - the keyboard (bar Escape) and mouse while a capture runs - true when it is, with what to answer it.
+	// game - the keyboard (bar Escape) and mouse while a capture runs - true when it is, with what to answer it. With no
+	// capture running, the debug menu's cinematic camera has them (CINEMATIC_CAMERA::OnWindowMessage).
 	bool OnWindowMessage(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result);
 }

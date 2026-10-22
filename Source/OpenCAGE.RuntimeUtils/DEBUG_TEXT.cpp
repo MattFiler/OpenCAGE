@@ -1,5 +1,6 @@
 #include "DEBUG_TEXT.h"
 #include "DEBUG_MARKER.h"
+#include "BT_DEBUG.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -204,6 +205,8 @@ void __fastcall DEBUG_TEXT::h_level_close(void* _this, void* /*_EDX*/)
 {
 	ClearAll();
 	DEBUG_MARKER::ClearAll();
+	// What the debug menu noted of the level's behaviour trees goes with it
+	BT_DEBUG::OnLevelClose();
 	level_close(_this);
 }
 

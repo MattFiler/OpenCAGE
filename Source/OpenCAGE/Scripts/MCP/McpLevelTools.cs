@@ -30,7 +30,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "close_game",
                 Title = "Close the game",
-                Description = "Close Alien: Isolation and Cinematic Tools if they are running, as OpenCAGE does before a save or launch: this install's AI.exe (the game of another install is left running, and listed). Unsaved game progress is lost; Live Link disconnects. Changes nothing on disk.",
+                Description = "Close Alien: Isolation if it is running, as OpenCAGE does before a save or launch: this install's AI.exe (the game of another install is left running, and listed), and any Cinematic Tools injector an older OpenCAGE left waiting. Unsaved game progress is lost; Live Link disconnects. Changes nothing on disk.",
                 Destructive = true,
                 Idempotent = true,
                 Run = call =>
@@ -51,7 +51,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "launch_options",
                 Title = "Game launch options",
-                Description = "Read or set the Launch Game window's options. Scripting helpers and cinematic_tools are editor settings launch_game applies - one or the other, as both take over the game's camera: while cinematic_tools is on every scripting helper (live_link among them) is off at launch, its setting kept. AI.exe patches (no_ui, skip_frontend...) are written to the game at once and again at every launch_game; UI mods (debug_checkpoints...) swap a whole movie in DATA/UI.PAK, written when the setting changes or UI.PAK holds the other movie (as after verifying the game files) - a movie edited with edit_ui_pak is kept unless reapply. For every level; not undoable. No option given: report them, with which movie UI.PAK holds (ui_pak_movies). dry_run checks without writing.",
+                Description = "Read or set the Launch Game window's options. Its Debug tools (debug_menu and dont_write_saves, debug_entities, hot_reload, live_link) and unlock_mouse, cap_fps and possess_characters are editor settings launch_game applies (the runtime utils ASI and its config). Cinematic Tools are gone: the Debug Menu's Cinematic group has their free camera, camera tracks and visuals (cinematic_tools: true is taken as debug_menu: true). AI.exe patches (no_ui, patch_current_gen_optimisations, render_constant_ambient) are written to the game at once and again at every launch_game; the title screen is skipped whenever a level is launched, never at the menu (skip_frontend is implied, not an option). UI mods (debug_loadscreen, quit_to_menu_on_death) put OpenCAGE's version of a movie in DATA/UI.PAK, written when the setting changes or UI.PAK holds the other movie (as after verifying the game files) - a movie edited with edit_ui_pak is kept unless reapply. Options Launch Game no longer has (ui_memory_overlay, memory_logging, debug_checkpoints, level_selection; and the four old debug entity names, taken as debug_entities) are still accepted: a note says where each went, and launches put what they left in the game files back off. For every level; not undoable. No option given: report them, with which movie UI.PAK holds (ui_pak_movies). dry_run checks without writing.",
                 InputSchema = McpSchema.Object(LaunchOptionProps().ToArray()),
                 Idempotent = true,
                 Run = LaunchOptions,
@@ -82,9 +82,16 @@ namespace OpenCAGE.MCP
             {
                 Name = "runtime_utils",
                 Title = "Live Link to the game",
-                Description = "Live Link to a running game (the toolbar's Live Link button, ws://127.0.0.1:8765, served by the runtime utils ASI when the game is launched with launch_options live_link on and cinematic_tools off - which also connects by itself): status, connect, disconnect; game_status (is a level running, which, where the game camera is and faces - world space, for placing new entities in view - and camera_sync, whether it is following the viewport's camera: set_viewport_view live_link_camera 'viewport_to_game'); push a composite's scripting into the running level (entities added/removed/re-parameterised in every running instance, no reload); call_method on an entity (e.g. start); animate a CAGEAnimation in the running game as Animation Mode's In game does (the game holds it at 'time', or plays it, evaluating every track itself - no level data changes; it keeps it until release, Animation Mode takes the drive over, or OpenCAGE disconnects; get reports it, and game_status too); describe a composite's running instances; screenshot the game; load_level; activity - the composite display's Show Activity, which lights up the open composite's flowgraph links as the running game uses them (a logic link when its entity fires the output, a data link when its value is read or sent out through it) and counts how often each output fired and each method was called (shown beside the pins); in the instance navigated to from the root, or every instance when opened from the browser: mode on/off switches it (a saved setting; off stops the game tracing), clear forgets what has lit up and the counts (as Clear Activity), get (default) reports what is watched, every link used since the last clear - from and to (entity name and id, pin; the way the value went for a data link: from the entity it was read from or sent by, to the entity that read it or it was sent to), kind logic/data, direction read/write (data links: the last use), count, seconds_since_last and glowing (used within the last 1.5 s) - and pins: every output fired (side fired) and method called (side called), with entity, id, pin, count and seconds_since_last. The game must be running the level open here, as saved - push sends edits made since. The 3D viewport draws no lighting: to see a light edit, push it, call_method its 'refresh' (lights take new values on refresh), then screenshot. Where the player is: game_status' camera position, which check_zones near turns into the zones there. Saving the level closes the game.",
+                Description = "Live Link to a running game (the toolbar's Live Link button, ws://127.0.0.1:8765, served by the runtime utils ASI when the game is launched with launch_options live_link on - which also connects by itself): status, connect, disconnect; game_status (is a level running, which, where the game camera is and faces - world space, for placing new entities in view - and camera_sync, whether it is following the viewport's camera: set_viewport_view live_link_camera 'viewport_to_game'); push a composite's scripting into the running level (entities added/removed/re-parameterised in every running instance, no reload); call_method on an entity (e.g. start); animate a CAGEAnimation in the running game as Animation Mode's In game does (the game holds it at 'time', or plays it, evaluating every track itself - no level data changes; it keeps it until release, Animation Mode takes the drive over, or OpenCAGE disconnects; get reports it, and game_status too); describe a composite's running instances; screenshot the game; load_level; activity - the composite display's Show Activity, which lights up the open composite's flowgraph links as the running game uses them (a logic link when its entity fires the output, a data link when its value is read or sent out through it) and counts how often each output fired and each method was called (shown beside the pins); in the instance navigated to from the root, or every instance when opened from the browser: mode on/off switches it (a saved setting; off stops the game tracing), clear forgets what has lit up and the counts (as Clear Activity), get (default) reports what is watched, every link used since the last clear - from and to (entity name and id, pin; the way the value went for a data link: from the entity it was read from or sent by, to the entity that read it or it was sent to), kind logic/data, direction read/write (data links: the last use), count, seconds_since_last and glowing (used within the last 1.5 s) - and pins: every output fired (side fired) and method called (side called), with entity, id, pin, count and seconds_since_last; settings - read or change, in the running game, the numbers of its radiosity, skin and hair shading, selection overlay glow and global constants settings files (any level, until it next loads one). The game must be running the level open here, as saved - push sends edits made since. The 3D viewport draws no lighting: to see a light edit, push it, call_method its 'refresh' (lights take new values on refresh), then screenshot. Where the player is: game_status' camera position, which check_zones near turns into the zones there. Saving the level closes the game. debugger: script breakpoints in the running game - set one on an entity and the level's scripts (and the game) stop when one of its methods is about to be called; state says where and why, continue and step go on; pick finds the entity under the game's crosshair; states reads the live state flags of a composite instance's entities.",
                 InputSchema = McpSchema.Object(
-                    McpSchema.String("action", "status (default), connect, disconnect, game_status, push, call_method, animate, describe, screenshot, load_level, or activity.", options: new[] { "status", "connect", "disconnect", "game_status", "push", "call_method", "animate", "describe", "screenshot", "load_level", "activity" }),
+                    McpSchema.String("action", "status (default), connect, disconnect, game_status, push, call_method, animate, describe, screenshot, load_level, activity, settings, debug_menu, or debugger.", options: new[] { "status", "connect", "disconnect", "game_status", "push", "call_method", "animate", "describe", "screenshot", "load_level", "activity", "settings", "debug_menu", "debugger" }),
+                    McpSchema.String("menu", "debug_menu: what to do with the game's Debug Menu (the game launched with launch_options debug_menu on) - report (default: open or not, the tab in front, the selected character, the tabs and every switch), open, close, tab (bring the tab named by 'name' to the front), select (select the character whose name contains 'name'), set (set the switch 'name' to 'value'), value (set the value 'name' to 'number'), or run (run the command 'name' with 'argument' and return what it answers; the command help lists them all). Screenshot to see it: the window and its overlays are in the game's frame.", options: new[] { "report", "open", "close", "tab", "select", "set", "value", "run" }),
+                    McpSchema.String("name", "debug_menu: the tab (or group), the character, the switch, the value or the command (as the report lists it)."),
+                    McpSchema.Boolean("value", "debug_menu set: the switch's new state."),
+                    McpSchema.Number("number", "debug_menu value: the value's new number (kept within its range)."),
+                    McpSchema.String("argument", "debug_menu run: the text the command takes (see help)."),
+                    McpSchema.String("file", "settings: which of the game's settings files - radiosity (DATA\\RADIOSITY_SETTINGS.TXT), skin_shading, hair_shading, selection_overlay (DATA\\UI\\SELECTIONOVERLAYPARAMS.BIN, the glow round usable things) or global_constants (DATA\\GLOBALCONSTANTS.BML's stealth light meter, interaction distance, squad shot and suspicious item numbers).", options: SettingsFiles.Keys),
+                    McpSchema.Map("values", "settings: numbers to set in the running game, keyed as the file spells them (e.g. {\"gRadiosityEmissiveSurfaceScale\": 16}); they show from the game's next frame and last until it next loads a level, when it reads the file again - the file itself is not changed (its config editor writes it, and sends each change to the game while Live Link is connected). Without values: what the game holds for every key of the file now."),
                     McpSchema.String("level", "load_level: the level, as list_levels names it ('menu' for the frontend)."),
                     McpSchema.String("composite", "push, call_method, animate, describe: the composite (default: the one open in the editor); activity: must be the one open (activity is shown on the open composite)."),
                     McpSchema.String("mode", "activity: on, off, clear, or get (default).", options: new[] { "on", "off", "clear", "get" }),
@@ -98,7 +105,10 @@ namespace OpenCAGE.MCP
                     McpSchema.Boolean("events", "animate with play: run the event tracks the play passes over, which reach the level's scripts (a hold never runs them)."),
                     McpSchema.Boolean("release", "animate: give the game its animation back."),
                     McpSchema.Boolean("get", "animate: only report the drive and what the game does with it."),
-                    McpSchema.String("path", "screenshot: an absolute path for the .bmp.")),
+                    McpSchema.String("path", "screenshot: an absolute path for the .bmp."),
+                    McpSchema.String("debugger", "debugger (the game launched with launch_options live_link and debug_menu on): state (default: whether the level's scripts are held, the last breakpoint hit - entity, method, instance path, the calls that led to it - and the breakpoints), set (a breakpoint on 'entity' of 'composite': the scripts, and the game, stop when one of its method pins - or just 'method' - is about to be called; in the instance at 'instance_path', default the path the open composite was reached through, else every instance; every_instance for every one), remove (the same, 'method' for just that one), list, clear, continue, step (the held call and the rest of the calls due with it: one round), step_frame (one whole frame), pause (hold the scripts now), pick (the entity the game's crosshair is on - the Debug Menu's World > Inspect crosshair on - found in the level here and selected unless select is false) or states (the state flags of the entities of 'composite' in its running instance at 'instance_path': started, enabled, locked...).", options: McpDebugger.Ops),
+                    McpSchema.Boolean("every_instance", "debugger set/remove: the breakpoint is on the entity in every running instance of its composite."),
+                    McpSchema.Boolean("select", "debugger pick: select what the crosshair is on in the editor (default true).")),
                 Run = RuntimeUtils,
             };
 
@@ -180,10 +190,10 @@ namespace OpenCAGE.MCP
         }
 
         #region Game
-        /// <summary>Close this install's game and Cinematic Tools as the Launch Game window does; what was running ("AI.exe (path)", names).</summary>
+        /// <summary>Close this install's game (and any old Cinematic Tools injector) as the Launch Game window does; what was running ("AI.exe (path)", names).</summary>
         internal static List<string> CloseGame()
         {
-            return EditorUtils.CloseAI(new List<string>() { "CinematicTools", "CinematicToolsInjector" }, thisInstallOnly: true);
+            return global::OpenCAGE.LaunchGame.CloseGameAndOldInjector();
         }
 
         /// <summary>Whether a process runs: for "AI", this install's game only (an AI.exe of another install does not hold these files).</summary>
@@ -196,10 +206,16 @@ namespace OpenCAGE.MCP
             return found.Length != 0;
         }
 
+        /// <summary>The name ApplyPatchSettings gives the title screen skip when it could not be written (launch_options' old option).</summary>
+        internal const string SkipFrontendArg = "skip_frontend";
+
         /// <summary>
         /// The launch_options AI.exe patches as they are set, written at every launch_game: a verified or replaced AI.exe has
-        /// lost them, and the setting is what launch_options reports. skipFrontend overrides that one for this launch. Also the
-        /// file integrity check and popup patches every launch needs. Returns what could not be written.
+        /// lost them, and the setting is what launch_options reports. The patches of options Launch Game no longer has (the UI
+        /// memory overlay, memory logging) are written off, so one an older OpenCAGE left on goes (best effort: not listed when
+        /// that fails). skipFrontend is the title screen skip, which goes with the level a launch starts in - true into a level,
+        /// false at the menu - and null leaves it as the last launch wrote it. Also the file integrity check and popup patches
+        /// every launch needs. Returns what could not be written.
         /// </summary>
         internal static List<string> ApplyPatchSettings(PatchManager.Platform platform, bool? skipFrontend)
         {
@@ -207,28 +223,34 @@ namespace OpenCAGE.MCP
             if (!PatchManager.PatchFileIntegrityCheck(platform, Singleton.PathToAI)) failed.Add("file integrity check");
             if (!PatchManager.PatchPopupMessage(platform, Singleton.PathToAI)) failed.Add("popup message");
             foreach (LaunchOption option in LaunchOptionList.Where(o => o.Kind == KindPatch))
-                if (!option.Patch(platform, Singleton.PathToAI, PatchValue(option, skipFrontend)))
+                if (!option.Patch(platform, Singleton.PathToAI, SettingsManager.GetBool(option.Key, option.Default)))
                     failed.Add(option.Arg);
+            foreach (RemovedOption removed in RemovedOptionList.Where(o => o.PatchOff != null))
+                removed.PatchOff(platform, Singleton.PathToAI, false);
+            if (skipFrontend != null && !PatchManager.PatchSkipFrontendFlag(platform, Singleton.PathToAI, skipFrontend.Value))
+                failed.Add(SkipFrontendArg);
             return failed;
         }
 
-        /// <summary>The AI.exe patches launch_game would write, by launch_options name.</summary>
-        internal static JObject PatchSettings(bool? skipFrontend)
+        /// <summary>The AI.exe patches launch_game would write, by launch_options name (skip_frontend: the title screen skip
+        /// that goes with the level; the removed options' patches: written off).</summary>
+        internal static JObject PatchSettings(bool skipFrontend)
         {
             JObject patches = new JObject();
             foreach (LaunchOption option in LaunchOptionList.Where(o => o.Kind == KindPatch))
-                patches[option.Arg] = PatchValue(option, skipFrontend);
+                patches[option.Arg] = SettingsManager.GetBool(option.Key, option.Default);
+            patches[SkipFrontendArg] = skipFrontend;
+            foreach (RemovedOption removed in RemovedOptionList.Where(o => o.PatchOff != null))
+                patches[removed.Arg] = false;
             return patches;
         }
-
-        private static bool PatchValue(LaunchOption option, bool? skipFrontend) =>
-            option.Arg == "skip_frontend" && skipFrontend != null ? skipFrontend.Value : SettingsManager.GetBool(option.Key, option.Default);
         #endregion
 
         #region Launch options
         private sealed class LaunchOption
         {
-            public string Arg, Key, Kind, Description;
+            //Label: the Launch Game window's own name for it
+            public string Arg, Key, Kind, Label, Description;
             //AI.exe patches: writes the patch (true) or the original bytes (false)
             public Func<PatchManager.Platform, string, bool, bool> Patch;
             //What it is when never set: the current-gen patch is one every launch made (the recommended patches)
@@ -252,30 +274,53 @@ namespace OpenCAGE.MCP
             new KeyOption() { Arg = "unlock_mouse_key", Helper = "unlock_mouse", Key = Settings.ScriptingHelpersUnlockMouseKey, What = "unlock mouse key", Current = global::OpenCAGE.LaunchGame.UnlockMouseKey },
             new KeyOption() { Arg = "cap_fps_rate", Helper = "cap_fps", Key = Settings.ScriptingHelpersCapFpsRate, What = "Cap FPS frame rate (frames a second)", Current = global::OpenCAGE.LaunchGame.CapFpsRate, Options = global::OpenCAGE.LaunchGame.CapFpsRates },
             new KeyOption() { Arg = "possess_key", Helper = "possess_characters", Key = Settings.PossessCharactersKey, What = "key that opens the Possess Characters menu", Current = global::OpenCAGE.LaunchGame.PossessKey },
+            new KeyOption() { Arg = "debug_menu_key", Helper = "debug_menu", Key = Settings.DebugMenuKey, What = "key that opens the Debug Menu", Current = global::OpenCAGE.LaunchGame.DebugMenuKey },
         };
 
         private static readonly LaunchOption[] LaunchOptionList =
         {
-            new LaunchOption() { Arg = "hot_reload", Key = Settings.ScriptingHelpersHotReload, Kind = KindHelper, Description = "Scripting helper: reload the current level in game with a key press." },
-            new LaunchOption() { Arg = "unlock_mouse", Key = Settings.ScriptingHelpersUnlockMouse, Kind = KindHelper, Description = "Scripting helper (Unlock Mouse): the game leaves the mouse cursor free, so OpenCAGE can be used beside it (e.g. with Live Link's camera sync). Clicking the game window and pressing unlock_mouse_key gives the game the mouse to look around with; pressing it again frees the cursor." },
-            new LaunchOption() { Arg = "cap_fps", Key = Settings.ScriptingHelpersCapFps, Kind = KindHelper, Description = "Scripting helper (Cap FPS): the game runs at most cap_fps_rate frames a second. Its clock never moves on less than 1/360 s a frame, so above 360 fps (a near-empty level with V-Sync off) the whole game runs too fast; this keeps it at its proper speed." },
-            new LaunchOption() { Arg = "debug_text", Key = Settings.ScriptingHelpersDebugText, Kind = KindHelper, Description = "Scripting helper: DebugText entities draw their text in game." },
-            new LaunchOption() { Arg = "debug_text_stacking", Key = Settings.ScriptingHelpersDebugTextStacking, Kind = KindHelper, Description = "Scripting helper: DebugTextStacking entities draw their text in game." },
-            new LaunchOption() { Arg = "debug_environment_marker", Key = Settings.ScriptingHelpersDebugEnvironmentMarker, Kind = KindHelper, Description = "Scripting helper: DebugEnvironmentMarker entities draw their text in the world." },
-            new LaunchOption() { Arg = "debug_position_marker", Key = Settings.ScriptingHelpersDebugPositionMarker, Kind = KindHelper, Description = "Scripting helper: DebugPositionMarker entities draw axes in the world." },
-            new LaunchOption() { Arg = "live_link", Key = Settings.ScriptingHelpersLiveLink, Kind = KindHelper, Description = "Scripting helper (Enable Live Link): the game serves Live Link, and OpenCAGE connects to it by itself once the game is up (runtime_utils) - script edits reach the running level without a reload, entity methods can be called, and the viewport's camera and the game's can follow each other (set_viewport_view live_link_camera). Off while cinematic_tools is on." },
-            new LaunchOption() { Arg = "cinematic_tools", Key = Settings.CinematicTools, Kind = KindHelper, Description = "Start Cinematic Tools (free camera) with the game (the Steam, GOG and Epic Games Store builds). They and the scripting helpers are one or the other: while this is on, every scripting helper (live_link among them) is off at launch, its setting kept." },
-            new LaunchOption() { Arg = "possess_characters", Key = Settings.PossessCharacters, Kind = KindHelper, Description = "Possess Characters: in game, possess_key opens a menu of the characters the game runs (the one in view first, then the nearest); picking one takes control of it - W/A/S/D move it relative to the camera, Shift faster, Ctrl slower, C crouches, the mouse turns the camera behind it and its wheel moves the camera closer or further (1.5 to 10 m). A launch option, not a scripting helper: cinematic_tools does not switch it off." },
-            new LaunchOption() { Arg = "no_ui", Key = Settings.HudDisabled, Kind = KindPatch, Patch = PatchManager.PatchNoUIFlag, Description = "AI.exe patch: no HUD or menus (clean screenshots)." },
-            new LaunchOption() { Arg = "skip_frontend", Key = Settings.SkipFrontend, Kind = KindPatch, Patch = PatchManager.PatchSkipFrontendFlag, Description = "AI.exe patch: skip the frontend (returning to the menu then misbehaves)." },
-            new LaunchOption() { Arg = "ui_memory_overlay", Key = Settings.UiEnabledUiPerf, Kind = KindPatch, Patch = PatchManager.PatchUIPerfFlag, Description = "AI.exe patch: the UI memory overlay." },
-            new LaunchOption() { Arg = "memory_logging", Key = Settings.MemReplayLogs, Kind = KindPatch, Patch = PatchManager.PatchMemReplayLogFlag, Description = "AI.exe patch: memory replay logging." },
-            new LaunchOption() { Arg = "patch_current_gen_optimisations", Key = Settings.PatchCurrentGen, Kind = KindPatch, Patch = PatchManager.DisableCurrentGenOptimisations, Default = true, Description = "AI.exe patch: disable the current-gen script optimisations (on unless switched off: edited levels need it)." },
-            new LaunchOption() { Arg = "render_constant_ambient", Key = Settings.RenderConstantAmbient, Kind = KindPatch, Patch = PatchManager.PatchRenderConstantAmbientFlag, Description = "AI.exe patch: render a constant ambient light." },
-            new LaunchOption() { Arg = "debug_checkpoints", Key = Settings.UiModPauseMenu, Kind = KindUiMod, Description = "UI mod (UI.PAK): debug checkpoints in the pause menu." },
-            new LaunchOption() { Arg = "debug_loadscreen", Key = Settings.UiModLoadingScreen, Kind = KindUiMod, Description = "UI mod (UI.PAK): the debug loading screen (shows the level name)." },
-            new LaunchOption() { Arg = "level_selection", Key = Settings.UiModNewFrontendMenu, Kind = KindUiMod, Description = "UI mod (UI.PAK): level selection in the main menu, custom levels included." },
-            new LaunchOption() { Arg = "quit_to_menu_on_death", Key = Settings.UiModGameOverMenu, Kind = KindUiMod, Description = "UI mod (UI.PAK): a Quit To Menu option on the game-over screen." },
+            //Debug tools
+            new LaunchOption() { Arg = "debug_menu", Key = Settings.DebugMenu, Kind = KindHelper, Default = true, Label = "Debug Menu", Description = "Debug tools > Debug Menu: in game, debug_menu_key opens a window of debug views - the characters (state, suspicion, senses, view cones, paths, targets), their behaviour trees (running nodes, debug texts, the trees' debug switches), the player's light level, the alien's menace, rendering and radiosity switches, the UI memory overlay (Performance > Memory), debug checkpoints (Game > Tools), loading any level (Game > Game flow) and more; its overlays keep drawing over the game once it is closed. Its Cinematic group replaces Cinematic Tools (the free camera, camera tracks and visuals for filming). runtime_utils action debug_menu drives it." },
+            new LaunchOption() { Arg = "dont_write_saves", Key = Settings.DontWriteSaves, Kind = KindHelper, Label = "Don't write saves", Description = "Debug tools > Don't write saves (under Debug Menu): the game writes nothing to the player's saved games while it runs (its saves, progress and settings), so testing never changes them; the Debug Menu can switch it in game (switch game.dont_write_saves). A Debug Menu feature: it only takes effect with debug_menu on (launch_game writes DontWriteSaves=1 to the runtime utils config only then)." },
+            new LaunchOption() { Arg = "debug_entities", Key = Settings.DebugEntities, Kind = KindHelper, Default = true, Label = "Debug entities", Description = "Debug tools > Debug entities: debug script entities show in game - DebugText and DebugTextStacking draw their text on screen, DebugEnvironmentMarker its text at a place in the world, DebugPositionMarker axes there. One switch for all four (debug_text, debug_text_stacking, debug_environment_marker and debug_position_marker are old names for it)." },
+            new LaunchOption() { Arg = "hot_reload", Key = Settings.ScriptingHelpersHotReload, Kind = KindHelper, Label = "Hot reload", Description = "Debug tools > Hot reload: reload the current level in game with a key press (hot_reload_key)." },
+            new LaunchOption() { Arg = "live_link", Key = Settings.ScriptingHelpersLiveLink, Kind = KindHelper, Default = true, Label = "Live Link", Description = "Debug tools > Live Link: the game serves Live Link, and OpenCAGE connects to it by itself once the game is up (runtime_utils) - script edits reach the running level without a reload, entity methods can be called, and the viewport's camera and the game's can follow each other (set_viewport_view live_link_camera)." },
+            //Game options
+            new LaunchOption() { Arg = "render_constant_ambient", Key = Settings.RenderConstantAmbient, Kind = KindPatch, Patch = PatchManager.PatchRenderConstantAmbientFlag, Label = "Constant ambient lighting", Description = "Game options > Constant ambient lighting, an AI.exe patch: the game renders in constant ambient mode, every surface evenly lit (essentially full-bright)." },
+            new LaunchOption() { Arg = "no_ui", Key = Settings.HudDisabled, Kind = KindPatch, Patch = PatchManager.PatchNoUIFlag, Label = "No HUD", Description = "Game options > No HUD, an AI.exe patch: no HUD or UI popups (clean screenshots; some actions that need a popup become impossible)." },
+            new LaunchOption() { Arg = "patch_current_gen_optimisations", Key = Settings.PatchCurrentGen, Kind = KindPatch, Patch = PatchManager.DisableCurrentGenOptimisations, Default = true, Label = "Current-gen script fixes", Description = "Game options > Current-gen script fixes, an AI.exe patch: disable the current-gen script optimisations, so script functionality the PC build left off (such as additional dynamic lighting) runs (on unless switched off: edited levels need it)." },
+            new LaunchOption() { Arg = "cap_fps", Key = Settings.ScriptingHelpersCapFps, Kind = KindHelper, Default = true, Label = "Cap FPS", Description = "Game options > Cap FPS: the game runs at most cap_fps_rate frames a second. Its clock never moves on less than 1/360 s a frame, so above 360 fps (a near-empty level with V-Sync off) the whole game runs too fast; this keeps it at its proper speed." },
+            new LaunchOption() { Arg = "unlock_mouse", Key = Settings.ScriptingHelpersUnlockMouse, Kind = KindHelper, Default = true, Label = "Unlock mouse", Description = "Game options > Unlock mouse: the game leaves the mouse cursor free, so OpenCAGE can be used beside it (e.g. with Live Link's camera sync). Clicking the game window and pressing unlock_mouse_key gives the game the mouse to look around with; pressing it again frees the cursor." },
+            new LaunchOption() { Arg = "possess_characters", Key = Settings.PossessCharacters, Kind = KindHelper, Label = "Possess characters", Description = "Game options > Possess characters: in game, possess_key opens a menu of the characters the game runs (the one in view first, then the nearest); picking one takes control of it - W/A/S/D move it relative to the camera, Shift faster, Ctrl slower, C crouches, the mouse turns the camera behind it and its wheel moves the camera closer or further (1.5 to 10 m)." },
+            //UI tweaks
+            new LaunchOption() { Arg = "quit_to_menu_on_death", Key = Settings.UiModGameOverMenu, Kind = KindUiMod, Label = "Quit to menu on death", Description = "UI tweaks > Quit to menu on death, a UI mod (UI.PAK): a Quit To Menu option on the game-over screen." },
+            new LaunchOption() { Arg = "debug_loadscreen", Key = Settings.UiModLoadingScreen, Kind = KindUiMod, Label = "Debug loading screen", Description = "UI tweaks > Debug loading screen, a UI mod (UI.PAK): the loading screen shows the name of the level being loaded." },
+        };
+
+        //launch_options' old Cinematic Tools switch, still taken: Cinematic Tools are the Debug Menu's Cinematic group now, so true asks for debug_menu
+        private const string DeprecatedCinematicTools = "cinematic_tools";
+
+        //launch_options' names for the four debug entity switches Launch Game had until 22 Oct 2026, still taken as debug_entities
+        private static readonly string[] DebugEntityAliases = { "debug_text", "debug_text_stacking", "debug_environment_marker", "debug_position_marker" };
+
+        //The options Launch Game dropped on 22 Oct 2026: still taken, changing nothing, with where each went. Their AI.exe patches
+        //are written off at every launch (ApplyPatchSettings) and their UI.PAK movies taken out (UiMovieOverrides' Removed)
+        private sealed class RemovedOption
+        {
+            public string Arg, Went;
+            public Func<PatchManager.Platform, string, bool, bool> PatchOff;
+        }
+
+        private static readonly RemovedOption[] RemovedOptionList =
+        {
+            new RemovedOption() { Arg = "ui_memory_overlay", PatchOff = PatchManager.PatchUIPerfFlag,
+                Went = "the UI memory overlay is part of the Debug Menu now (Performance > Memory, with debug_menu on); launches write the old AI.exe patch off." },
+            new RemovedOption() { Arg = "memory_logging", PatchOff = PatchManager.PatchMemReplayLogFlag,
+                Went = "memory replay logging is gone; launches write the old AI.exe patch off." },
+            new RemovedOption() { Arg = "debug_checkpoints",
+                Went = "the Debug Menu's Game > Tools jumps to the level's debug checkpoints, and any of its checkpoints, in game (debug_menu on); launches take OpenCAGE's pause menu back out of UI.PAK." },
+            new RemovedOption() { Arg = "level_selection",
+                Went = "the Debug Menu's Game > Game flow loads any level in game (debug_menu on), and launch_game starts in any level; launches take OpenCAGE's main menu back out of UI.PAK." },
         };
 
         /// <summary>The launch_options name of a launch option's setting (a scripting helper's, say), or the setting's own name.</summary>
@@ -287,9 +332,15 @@ namespace OpenCAGE.MCP
             {
                 yield return McpSchema.Boolean(option.Arg, option.Description);
                 foreach (KeyOption key in KeyOptionList.Where(o => o.Helper == option.Arg))
-                    yield return McpSchema.String(key.Arg, (option.Arg == "possess_characters" ? "Possess Characters: the " : "Scripting helper: the ") + key.What + ".", options: key.Options);
+                    yield return McpSchema.String(key.Arg, option.Label + ": the " + key.What + ".", options: key.Options);
             }
-            yield return McpSchema.Boolean("reapply", "UI mods given: apply them even when they look applied, and put OpenCAGE's own movie back over one edited with edit_ui_pak. A UI mod adds OpenCAGE's movie to UI.PAK beside the game's own (DATA/UI/PAUSEM_OC.GFX and the like) and points AI.exe at it; the game's movies are never changed. Without reapply it is applied when its setting changes or the game files don't match it (as after verifying them), and an edited OpenCAGE movie is left alone.");
+            yield return McpSchema.Boolean(DeprecatedCinematicTools, "Deprecated: Cinematic Tools are part of the Debug Menu now (its Cinematic group). true is taken as debug_menu: true (unless debug_menu is given too); false changes nothing.");
+            foreach (string alias in DebugEntityAliases)
+                yield return McpSchema.Boolean(alias, "Deprecated: an old name for debug_entities (the four debug entity switches are one now). Any of them true turns debug_entities on, all of those given false turn it off; debug_entities decides when given too.");
+            yield return McpSchema.Boolean(SkipFrontendArg, "Deprecated, ignored: skipping the title screen is implied by the level - a launch into a level always skips it, one at the main menu never does.");
+            foreach (RemovedOption removed in RemovedOptionList)
+                yield return McpSchema.Boolean(removed.Arg, "Removed from Launch Game, changes nothing: " + removed.Went);
+            yield return McpSchema.Boolean("reapply", "UI mods given: apply them even when they look applied, and put OpenCAGE's own movie back over one edited with edit_ui_pak. A UI mod adds OpenCAGE's movie to UI.PAK beside the game's own (DATA/UI/GAMEOVERM_OC.GFX and the like) and points AI.exe at it; the game's movies are never changed. Without reapply it is applied when its setting changes or the game files don't match it (as after verifying them), and an edited OpenCAGE movie is left alone.");
             yield return McpSchema.Boolean("close_game", "If the game is running, close it first so AI.exe / UI.PAK can be written (default false: refuse while it runs).");
             yield return McpSchema.Boolean("dry_run", "Check and report what would change, writing nothing.");
         }
@@ -337,10 +388,35 @@ namespace OpenCAGE.MCP
             foreach (LaunchOption option in LaunchOptionList)
                 if (call.Has(option.Arg))
                     asked.Add(new KeyValuePair<LaunchOption, bool>(option, call.Bool(option.Arg)));
-            //Cinematic Tools and the scripting helpers are one or the other: a call cannot turn both on
-            List<string> helpersOn = asked.Where(o => o.Key.Kind == KindHelper && o.Key.Arg != "cinematic_tools" && o.Key.Arg != "possess_characters" && o.Value).Select(o => o.Key.Arg).ToList();
-            if (helpersOn.Count != 0 && asked.Any(o => o.Key.Arg == "cinematic_tools" && o.Value))
-                throw new McpError("cinematic_tools and the scripting helpers are one or the other, as both take over the game's camera: this call turns on cinematic_tools and " + string.Join(", ", helpersOn) + ". Turn on one or the other. Nothing was changed.");
+            //cinematic_tools (deprecated): Cinematic Tools are the Debug Menu's Cinematic group now, so true asks for the Debug Menu
+            if (call.Has(DeprecatedCinematicTools))
+            {
+                bool wanted = call.Bool(DeprecatedCinematicTools);
+                bool debugMenuGiven = call.Has("debug_menu");
+                if (wanted && !debugMenuGiven)
+                    asked.Add(new KeyValuePair<LaunchOption, bool>(LaunchOptionList.First(o => o.Arg == "debug_menu"), true));
+                call.Note("cinematic_tools is deprecated: Cinematic Tools are part of the Debug Menu now, whose Cinematic group has their free camera, camera tracks and visuals. " +
+                    (!wanted ? "cinematic_tools: false changes nothing (debug_menu: false switches the Debug Menu off)." : debugMenuGiven ? "debug_menu was given too, so it decides." : "It was taken as debug_menu: true."));
+            }
+            //The four debug entity switches are one now: any of their old names true turns debug_entities on, all of those given
+            //false off - unless debug_entities is given too, which decides
+            List<string> aliases = DebugEntityAliases.Where(o => call.Has(o)).ToList();
+            if (aliases.Count != 0)
+            {
+                bool wanted = aliases.Any(o => call.Bool(o));
+                string named = string.Join(", ", aliases) + (aliases.Count == 1 ? " is an old name" : " are old names") + " for debug_entities: DebugText, DebugTextStacking, DebugEnvironmentMarker and DebugPositionMarker entities are one switch now (Launch Game's Debug entities). ";
+                if (call.Has("debug_entities"))
+                    call.Note(named + "debug_entities was given too, so it decides.");
+                else
+                {
+                    asked.Add(new KeyValuePair<LaunchOption, bool>(LaunchOptionList.First(o => o.Arg == "debug_entities"), wanted));
+                    call.Note(named + "Taken as debug_entities: " + (wanted ? "true" : "false") + ".");
+                }
+            }
+            if (call.Has(SkipFrontendArg))
+                call.Note("skip_frontend is no longer an option and was ignored: it is implied by the level - a launch into a level skips the title screen (Launch Game's Load straight into, or launch_game with a level), one at the main menu does not.");
+            foreach (RemovedOption removed in RemovedOptionList.Where(o => call.Has(o.Arg)))
+                call.Note(removed.Arg + " was removed from Launch Game and changes nothing: " + removed.Went);
             List<KeyValuePair<KeyOption, string>> keys = new List<KeyValuePair<KeyOption, string>>();
             foreach (KeyOption key in KeyOptionList.Where(o => call.Has(o.Arg)))
             {
@@ -354,6 +430,8 @@ namespace OpenCAGE.MCP
             string uiPak = Path.Combine(Singleton.PathToAI, "DATA", "UI.PAK");
             //What UI.PAK holds for each UI mod (a verify of the game files puts the stock movies back whatever the settings say)
             Dictionary<string, string> movies = new Dictionary<string, string>();
+            //The movies of the UI mods Launch Game no longer has that are still in the game (an older OpenCAGE put them in)
+            List<string> removedMoviesIn = new List<string>();
             if (File.Exists(uiPak) && (asked.Any(o => o.Key.Kind == KindUiMod) || (asked.Count == 0 && keys.Count == 0)))
             {
                 try
@@ -361,6 +439,12 @@ namespace OpenCAGE.MCP
                     PAK2 pak = new PAK2(uiPak);
                     foreach (LaunchOption option in LaunchOptionList.Where(o => o.Kind == KindUiMod))
                         movies[option.Arg] = UiMovieState(pak, option.Key);
+                    foreach (UiMovieOverrides.Movie movie in UiMovieOverrides.All.Where(o => o.Removed))
+                    {
+                        string state = UiMovieState(pak, movie.Key);
+                        if (state != null && state != "off")
+                            removedMoviesIn.Add(movie.OwnPath);
+                    }
                 }
                 catch (Exception) { }
             }
@@ -372,10 +456,11 @@ namespace OpenCAGE.MCP
                 List<string> differ = LaunchOptionList.Where(o => o.Kind == KindUiMod && movies.TryGetValue(o.Arg, out string state) && state != null && state != (SettingsManager.GetBool(o.Key) ? "on" : "off")).Select(o => o.Arg).ToList();
                 if (differ.Count != 0)
                     call.Note("The game files are not as these UI mod settings say: " + string.Join(", ", differ) + " (ui_pak_movies). launch_game puts them right; passing the option again does now (reapply: true also over an edited OpenCAGE movie).");
+                if (removedMoviesIn.Count != 0)
+                    call.Note("UI.PAK still has OpenCAGE's movies for UI options Launch Game no longer has (" + string.Join(", ", removedMoviesIn) + ", from the old debug checkpoints / level selection options): the next launch takes them out.");
                 result["platform"] = platform.ToString();
                 result["scripting_helpers_available"] = global::OpenCAGE.LaunchGame.ScriptingHelpersAvailable();
-                result["cinematic_tools_available"] = global::OpenCAGE.LaunchGame.CinematicToolsAvailable();
-                NoteCinematicToolsGate(call);
+                NoteDontWriteSavesNeedsDebugMenu(call);
                 if (call.Has("close_game"))
                     call.Note("close_game only matters when an AI.exe patch or UI mod is being changed.");
                 return result;
@@ -415,10 +500,8 @@ namespace OpenCAGE.MCP
                 throw new McpError("AI.exe patches exist only for the Steam, Epic and GOG builds (this install is " + platform + "). Nothing was changed.");
             if (uiMods.Count != 0 && !File.Exists(uiPak))
                 throw new McpError("DATA/UI.PAK is missing from this install, so the UI mods cannot be applied. Nothing was changed.");
-            if (asked.Any(o => (o.Key.Arg == "cinematic_tools" && o.Value && !global::OpenCAGE.LaunchGame.CinematicToolsAvailable())))
-                call.Note("Cinematic Tools only work with the Steam, GOG and Epic Games Store builds and a complete OpenCAGE install: the setting is kept, but launch_game will not start them here.");
-            if ((helpers.Any(o => o.Key.Arg != "cinematic_tools" && o.Value) || keyChanges.Count != 0) && !global::OpenCAGE.LaunchGame.ScriptingHelpersAvailable())
-                call.Note("The scripting helpers (and Possess Characters) only work with the Steam, GOG and Epic Games Store builds (and OpenCAGE's runtimeutils folder): the settings are kept, but launch_game will not install them here.");
+            if ((helpers.Any(o => o.Value) || keyChanges.Count != 0) && !global::OpenCAGE.LaunchGame.ScriptingHelpersAvailable())
+                call.Note("The Debug tools, Cap FPS, Unlock mouse and Possess characters (the runtime utils) only work with the Steam, GOG and Epic Games Store builds (and OpenCAGE's runtimeutils folder): the settings are kept, but launch_game will not install them here.");
 
             JArray changes = new JArray();
             foreach (var change in helpers) changes.Add(new JObject() { ["option"] = change.Key.Arg, ["to"] = change.Value, ["writes"] = "OpenCAGE settings (applied at launch_game)" });
@@ -509,20 +592,17 @@ namespace OpenCAGE.MCP
                 result["failed"] = new JArray(failures);
             if (helpers.Count != 0 || keyChanges.Count != 0)
             {
-                call.Note("Scripting helper and Cinematic Tools settings take effect at the next launch_game.");
-                NoteCinematicToolsGate(call);
+                call.Note("Debug tools, Cap FPS, Unlock mouse and Possess characters settings take effect at the next launch_game.");
+                NoteDontWriteSavesNeedsDebugMenu(call);
             }
             return result;
         }
 
-        /// <summary>With Cinematic Tools on (and able to start), the scripting helpers set on are off at launch: said, as launch_game will do it.</summary>
-        private static void NoteCinematicToolsGate(McpCall call)
+        /// <summary>With dont_write_saves on but debug_menu off, the game writes its saves after all: said, as launch_game will do it.</summary>
+        private static void NoteDontWriteSavesNeedsDebugMenu(McpCall call)
         {
-            if (!global::OpenCAGE.LaunchGame.CinematicToolsChosen())
-                return;
-            List<string> parked = global::OpenCAGE.LaunchGame.HelperSettings.Where(o => SettingsManager.GetBool(o)).Select(LaunchOptionArg).ToList();
-            if (parked.Count != 0)
-                call.Note("cinematic_tools is on, so these scripting helpers are off at launch_game, their settings kept: " + string.Join(", ", parked) + ". Cinematic Tools and the scripting helpers are one or the other, as both take over the game's camera; cinematic_tools: false brings them back.");
+            if (SettingsManager.GetBool(Settings.DontWriteSaves) && !SettingsManager.GetBool(Settings.DebugMenu))
+                call.Note("dont_write_saves is on but debug_menu is off: Don't Write Saves is a Debug Menu feature, so the game will write its saves as usual. Turn debug_menu on to use it.");
         }
         #endregion
 
@@ -664,6 +744,7 @@ namespace OpenCAGE.MCP
             new BoolOption() { Arg = "show_short_guids", Key = Settings.ShowShortGuids, Description = "Entity Display > Show ShortGuids: ids beside entity names in the editor's lists." },
             new BoolOption() { Arg = "populate_all_pins_on_create", Key = Settings.PopulateAllPinsOnCreateNode, Description = "Entity Display > Populate All Node Pins When Created." },
             new BoolOption() { Arg = "focus_canvas_on_new_node", Key = Settings.FocusCanvasOnNewNode, Description = "Entity Display > Focus Canvas On Newly Created Node." },
+            new BoolOption() { Arg = "node_icons_when_zoomed_out", Key = Settings.NodeIconsWhenZoomedOut, Description = "Entity Display > Show Node Icons When Zoomed Out: zoomed far out, flowgraph and animation tree nodes are drawn as their icons. false: nodes are drawn in full at every zoom, their text just getting smaller." },
             new BoolOption() { Arg = "confirm_node_delete", Key = Settings.AskBeforeDeletingNode, Description = "Entity Display > Show Confirmation When Deleting Node." },
             new BoolOption() { Arg = "confirm_on_save", Key = Settings.ShowSavedMsgOpt, Description = "Misc > Show Confirmation When Saving (save_level never shows it)." },
             new BoolOption() { Arg = "prompt_save_on_close", Key = Settings.PromptSaveOnClose, Description = "Misc > Prompt to Save on Close." },
@@ -853,6 +934,28 @@ namespace OpenCAGE.MCP
         #endregion
 
         #region Runtime utils
+        private static readonly Dictionary<string, LiveLink.SettingsFile> SettingsFiles = new Dictionary<string, LiveLink.SettingsFile>()
+        {
+            ["radiosity"] = LiveLink.SettingsFile.Radiosity,
+            ["skin_shading"] = LiveLink.SettingsFile.SkinShading,
+            ["hair_shading"] = LiveLink.SettingsFile.HairShading,
+            ["selection_overlay"] = LiveLink.SettingsFile.SelectionOverlay,
+            ["global_constants"] = LiveLink.SettingsFile.GlobalConstants,
+        };
+
+        /// <summary>The game's "key=value" lines as an object of numbers.</summary>
+        private static JObject SettingsLines(string message)
+        {
+            JObject held = new JObject();
+            foreach (string line in (message ?? "").Split('\n'))
+            {
+                int eq = line.IndexOf('=');
+                if (eq > 0 && float.TryParse(line.Substring(eq + 1).Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float value))
+                    held[line.Substring(0, eq).Trim()] = value;
+            }
+            return held;
+        }
+
         private static object RuntimeUtils(McpCall call)
         {
             string action = (call.Str("action") ?? "status").Trim().ToLowerInvariant();
@@ -868,8 +971,6 @@ namespace OpenCAGE.MCP
                         bool connect = action == "connect";
                         if (connect && !global::OpenCAGE.LaunchGame.RuntimeUtilsSupports(Singleton.Platform))
                             throw new McpError("Live Link needs the Steam, GOG or Epic Games Store version of the game (the runtime utils that serve it support no other); this install is " + Singleton.Platform + ".");
-                        if (connect && CommandsEditor.GameRunning() && global::OpenCAGE.LaunchGame.CinematicToolsLaunched())
-                            throw new McpError("The running game was launched with Cinematic Tools, which have its camera: it serves no Live Link (the two are one or the other). launch_game again with launch_options cinematic_tools: false and live_link: true.");
                         McpEditor.UI(() =>
                         {
                             SettingsManager.SetBool(Settings.RuntimeUtilsOpt, connect);
@@ -992,6 +1093,101 @@ namespace OpenCAGE.MCP
                             throw new McpError(reply.Message);
                         return new JObject() { ["composite"] = composite.name, ["running"] = new JArray(reply.Message.Split('\n').Select(o => o.TrimEnd())) };
                     }
+                case "debug_menu":
+                    {
+                        RequireLiveLink();
+                        string menu = (call.Str("menu") ?? "report").Trim().ToLowerInvariant();
+                        Dictionary<string, LiveLink.DebugMenuOp> ops = new Dictionary<string, LiveLink.DebugMenuOp>()
+                        {
+                            ["report"] = LiveLink.DebugMenuOp.Report, ["open"] = LiveLink.DebugMenuOp.Open, ["close"] = LiveLink.DebugMenuOp.Close,
+                            ["tab"] = LiveLink.DebugMenuOp.ShowTab, ["select"] = LiveLink.DebugMenuOp.Select, ["set"] = LiveLink.DebugMenuOp.SetSwitch,
+                            ["run"] = LiveLink.DebugMenuOp.RunCommand, ["value"] = LiveLink.DebugMenuOp.SetValue,
+                        };
+                        if (!ops.TryGetValue(menu, out LiveLink.DebugMenuOp op))
+                            throw new McpError("'menu' must be one of: " + string.Join(", ", ops.Keys) + ".");
+                        string name = call.Str("name");
+                        if ((op == LiveLink.DebugMenuOp.ShowTab || op == LiveLink.DebugMenuOp.SetSwitch || op == LiveLink.DebugMenuOp.RunCommand || op == LiveLink.DebugMenuOp.SetValue) && string.IsNullOrWhiteSpace(name))
+                            throw new McpError("'name' is needed for menu " + menu + ".");
+                        if (op == LiveLink.DebugMenuOp.SetSwitch && !call.Has("value"))
+                            throw new McpError("'value' is needed for menu set.");
+                        if (op == LiveLink.DebugMenuOp.SetValue && !call.Has("number"))
+                            throw new McpError("'number' is needed for menu value.");
+                        float number = op == LiveLink.DebugMenuOp.SetValue ? (float)call.Num("number") : 0.0f;
+                        if (float.IsNaN(number) || float.IsInfinity(number))
+                            throw new McpError("'number' must be a finite number.");
+                        LiveLink.Reply reply = LiveLink.DebugMenu(op, name, call.Bool("value"), call.Str("argument"), number).Result;
+                        if (LiveLink.IsUnknownRequest(reply))
+                            throw new McpError("The game's runtime utils are too old for the Debug Menu: launch the game again from this OpenCAGE.");
+                        if (!reply.Ok)
+                            throw new McpError(reply.Message);
+                        if (op == LiveLink.DebugMenuOp.RunCommand)
+                            return new JObject() { ["command"] = name, ["answer"] = new JArray((reply.Message ?? "").Split('\n').Select(o => o.TrimEnd()).Where(o => o.Length != 0)) };
+                        JObject state = new JObject();
+                        JObject switches = new JObject();
+                        foreach (string line in (reply.Message ?? "").Split('\n'))
+                        {
+                            int eq = line.IndexOf('=');
+                            if (eq <= 0) continue;
+                            string key = line.Substring(0, eq).Trim(), value = line.Substring(eq + 1).Trim();
+                            if (key == "open") state["open"] = value == "1";
+                            else if (key == "group" || key == "tab" || key == "selected") state[key] = value;
+                            else if (key == "tabs" || key == "groups" || key == "commands") state[key] = new JArray(value.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries));
+                            else if (key == "values")
+                            {
+                                JObject values = new JObject();
+                                foreach (string pair in value.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+                                {
+                                    int colon = pair.LastIndexOf(':');
+                                    if (colon > 0 && double.TryParse(pair.Substring(colon + 1), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double parsed))
+                                        values[pair.Substring(0, colon)] = parsed;
+                                }
+                                state["values"] = values;
+                            }
+                            else switches[key] = value == "1";
+                        }
+                        state["switches"] = switches;
+                        if (op == LiveLink.DebugMenuOp.Select || op == LiveLink.DebugMenuOp.ShowTab)
+                            call.Note("The window takes this up at its next frame: report again to see it.");
+                        return state;
+                    }
+                case "settings":
+                    {
+                        RequireLiveLink();
+                        string fileName = (call.Str("file", required: true) ?? "").Trim().ToLowerInvariant();
+                        if (!SettingsFiles.TryGetValue(fileName, out LiveLink.SettingsFile file))
+                            throw new McpError("'file' must be one of: " + string.Join(", ", SettingsFiles.Keys) + ".");
+                        if (!call.Has("values"))
+                        {
+                            LiveLink.Reply held = LiveLink.GetSettings(file).Result;
+                            if (LiveLink.IsUnknownRequest(held))
+                                throw new McpError("The game's runtime utils are too old for settings: launch the game again from this OpenCAGE.");
+                            if (!held.Ok)
+                                throw new McpError(held.Message);
+                            return new JObject() { ["file"] = fileName, ["held"] = SettingsLines(held.Message) };
+                        }
+                        JObject wanted = call.Token("values") as JObject;
+                        if (wanted == null || wanted.Count == 0 || wanted.Count > 64)
+                            throw new McpError("'values' must be an object of 1 to 64 keys, each a number.");
+                        List<KeyValuePair<string, float>> values = new List<KeyValuePair<string, float>>();
+                        foreach (JProperty property in wanted.Properties())
+                        {
+                            if (property.Value.Type != JTokenType.Float && property.Value.Type != JTokenType.Integer)
+                                throw new McpError("'values' " + property.Name + " must be a number.");
+                            values.Add(new KeyValuePair<string, float>(property.Name, property.Value.Value<float>()));
+                        }
+                        LiveLink.Reply reply = LiveLink.SetSettings(file, values).Result;
+                        if (LiveLink.IsUnknownRequest(reply))
+                            throw new McpError("The game's runtime utils are too old for settings: launch the game again from this OpenCAGE.");
+                        //A line per key when the game got as far as the keys; anything else is why it didn't
+                        string[] lines = (reply.Message ?? "").Split('\n').Select(o => o.Trim()).Where(o => o.Length != 0).ToArray();
+                        if (!reply.Ok && lines.Length != values.Count)
+                            throw new McpError(reply.Message);
+                        JObject result = new JObject() { ["file"] = fileName, ["ok"] = reply.Ok, ["results"] = new JArray(lines) };
+                        if (!reply.Ok)
+                            call.Note("Keys answered unknown are not in that file as the game reads it (spell them as the file does); unavailable means this build of the game has no place for them.");
+                        call.Note("Set in the running game only, until it next loads a level: the file on disk is unchanged.");
+                        return result;
+                    }
                 case "screenshot":
                     {
                         RequireLiveLink();
@@ -1003,6 +1199,8 @@ namespace OpenCAGE.MCP
                             throw new McpError(reply.Message);
                         return new JObject() { ["written"] = path };
                     }
+                case "debugger":
+                    return McpDebugger.Run(call);
                 case "load_level":
                     {
                         string level = call.Str("level", required: true).Replace('\\', '/').Trim().Trim('/');
@@ -1024,7 +1222,7 @@ namespace OpenCAGE.MCP
                         return result;
                     }
             }
-            throw new McpError("'action' must be status, connect, disconnect, game_status, push, call_method, animate, describe, screenshot, load_level or activity.");
+            throw new McpError("'action' must be status, connect, disconnect, game_status, push, call_method, animate, describe, debug_menu, settings, screenshot, load_level, activity or debugger.");
         }
 
         /// <summary>
@@ -1323,7 +1521,7 @@ namespace OpenCAGE.MCP
             return result;
         }
 
-        private static Composite LiveLinkComposite(McpCall call, Commands commands)
+        internal static Composite LiveLinkComposite(McpCall call, Commands commands)
         {
             if (call.Has("composite"))
                 return McpScript.FindComposite(commands, call.Str("composite"));
@@ -1338,7 +1536,7 @@ namespace OpenCAGE.MCP
         /// <paramref name="composite"/>, as ids or names or a path a result gives - checked against the script before it goes to the
         /// game: every step an instance, the last placing that composite. Empty for the root composite itself. UI thread.
         /// </summary>
-        private static List<ShortGuid> ReadInstancePath(McpCall call, Commands commands, Composite composite)
+        internal static List<ShortGuid> ReadInstancePath(McpCall call, Commands commands, Composite composite)
         {
             Composite root = commands.EntryPoints[0];
             JToken token = call.Token("instance_path");
@@ -1369,10 +1567,8 @@ namespace OpenCAGE.MCP
                 ["connected"] = global::OpenCAGE.RuntimeUtilsConnection.Send.Connected,
                 ["connect_at_start"] = SettingsManager.GetBool(Settings.RuntimeUtilsOpt),
                 ["game_running"] = running,
-                //Launched with Cinematic Tools, the game serves no Live Link (they have its camera)
-                ["game_runs_cinematic_tools"] = running && global::OpenCAGE.LaunchGame.CinematicToolsLaunched(),
-                //launch_options live_link: whether launch_game has the game serve it (never with cinematic_tools)
-                ["served_at_launch"] = global::OpenCAGE.LaunchGame.HelperOn(Settings.ScriptingHelpersLiveLink),
+                //launch_options live_link: whether launch_game has the game serve it
+                ["served_at_launch"] = SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink),
             };
         }
 

@@ -21,6 +21,7 @@ namespace OpenCAGE
             EnsureBool(Settings.AllowAiAssistants, true);
             EnsureBool(Settings.PopulateAllPinsOnCreateNode, true);
             EnsureBool(Settings.FocusCanvasOnNewNode, false);
+            EnsureBool(Settings.NodeIconsWhenZoomedOut, true);
             EnsureBool(Settings.DarkMode, false);
             EnsureBool(Settings.SoundPreviewAutoPlay, false);
             EnsureBool(Settings.AskBeforeDeletingNode, false);
@@ -33,16 +34,18 @@ namespace OpenCAGE
             EnsureBool(Settings.KeepUsesWindowOpen, false);
             EnsureBool(Settings.LaunchGameWhenSaved, false);
             EnsureBool(Settings.LaunchToLevel, false);
+            //Launch Game starts with the Debug Menu, Live Link, Debug entities, the current-gen script fixes, Cap FPS and Unlock
+            //mouse on (Load straight into is ticked whenever a level is open - see LaunchGame)
             EnsureBool(Settings.ScriptingHelpersHotReload, false);
-            EnsureBool(Settings.ScriptingHelpersUnlockMouse, false);
-            EnsureBool(Settings.ScriptingHelpersCapFps, false);
-            EnsureBool(Settings.ScriptingHelpersDebugText, false);
-            EnsureBool(Settings.ScriptingHelpersDebugTextStacking, false);
-            EnsureBool(Settings.ScriptingHelpersDebugEnvironmentMarker, false);
-            EnsureBool(Settings.ScriptingHelpersDebugPositionMarker, false);
-            EnsureScriptingHelpersLiveLink();
-            EnsureCinematicToolsOrHelpers();
+            EnsureBool(Settings.ScriptingHelpersUnlockMouse, true);
+            EnsureBool(Settings.ScriptingHelpersCapFps, true);
+            EnsureBool(Settings.ScriptingHelpersLiveLink, true);
+            EnsureBool(Settings.PatchCurrentGen, true);
+            EnsureCinematicToolsInDebugMenu();
+            EnsureBool(Settings.DebugMenu, true);
             EnsureUiOptionKeys();
+            EnsureLaunchGameRedesign();
+            EnsureBool(Settings.DebugEntities, true);
             EnsureBool(Settings.ShowGamePlatform, false);
             EnsureBool(Settings.ShowCameraPosition, false);
             EnsureBool(Settings.FocusOnSelected, false);
@@ -100,24 +103,19 @@ namespace OpenCAGE
             CompositeBrowserModes.Set(hadFolderBrowser ? CompositeBrowserMode.TreeAndBrowser : CompositeBrowserModes.Default);
         }
 
-        /* The Launch Game window's Enable Live Link: until it existed, the one live link option both served the link from
-           the game (the ini's LiveLink=) and connected to it, so whoever had that on keeps the game serving it */
-        static void EnsureScriptingHelpersLiveLink()
+        /* Launch Game's Enable Cinematic Tools became the Debug Menu, whose Cinematic group has their camera: whoever had Cinematic
+           Tools on gets the Debug Menu on instead, once, and the old keys go (an older OpenCAGE then shows Cinematic Tools off).
+           The Debug Menu runs beside the scripting helpers, so the rule that kept Cinematic Tools and them apart goes too. */
+        static void EnsureCinematicToolsInDebugMenu()
         {
-            if (!SettingsManager.IsSet(Settings.ScriptingHelpersLiveLink))
-                SettingsManager.SetBool(Settings.ScriptingHelpersLiveLink, SettingsManager.GetBool(Settings.RuntimeUtilsOpt));
-        }
-
-        /* Cinematic Tools and the scripting helpers became one or the other (LaunchGame.CinematicToolsChosen), Cinematic Tools
-           winning while ticked: whoever had both on keeps the helpers, Live Link among them, and has Cinematic Tools switched
-           off, once */
-        static void EnsureCinematicToolsOrHelpers()
-        {
-            if (SettingsManager.IsSet(Settings.CinematicToolsOrHelpers))
-                return;
-            if (SettingsManager.GetBool(Settings.CinematicTools) && LaunchGame.HelperSettings.Any(o => SettingsManager.GetBool(o)))
-                SettingsManager.SetBool(Settings.CinematicTools, false);
-            SettingsManager.SetBool(Settings.CinematicToolsOrHelpers, true);
+            if (SettingsManager.IsSet(Settings.LegacyCinematicTools))
+            {
+                if (SettingsManager.GetBool(Settings.LegacyCinematicTools))
+                    SettingsManager.SetBool(Settings.DebugMenu, true);
+                SettingsManager.Unset(Settings.LegacyCinematicTools);
+            }
+            if (SettingsManager.IsSet(Settings.LegacyCinematicToolsOrHelpers))
+                SettingsManager.Unset(Settings.LegacyCinematicToolsOrHelpers);
         }
 
         /* The Launch Game UI options were kept under the movies' own names while ticking one wrote OpenCAGE's movie over the
@@ -129,9 +127,9 @@ namespace OpenCAGE
         {
             (string Legacy, string Key)[] keys =
             {
-                (Settings.LegacyUiModPauseMenu, Settings.UiModPauseMenu),
+                (Settings.LegacyUiModPauseMenu, Settings.RemovedUiModPauseMenu),
                 (Settings.LegacyUiModLoadingScreen, Settings.UiModLoadingScreen),
-                (Settings.LegacyUiModNewFrontendMenu, Settings.UiModNewFrontendMenu),
+                (Settings.LegacyUiModNewFrontendMenu, Settings.RemovedUiModNewFrontendMenu),
                 (Settings.LegacyUiModGameOverMenu, Settings.UiModGameOverMenu),
             };
             foreach ((string legacy, string key) in keys)
@@ -142,6 +140,29 @@ namespace OpenCAGE
                     SettingsManager.SetBool(key, SettingsManager.GetBool(legacy));
                 SettingsManager.Unset(legacy);
             }
+        }
+
+        /* Launch Game was redesigned (22 Oct 2026). Its four debug entity switches (DebugText, DebugTextStacking,
+           DebugEnvironmentMarker, DebugPositionMarker) are one now, Debug entities: on for whoever had any of them on. The
+           options it dropped go: Skip Frontend (Load straight into a level skips the title screen, starting at the main menu
+           never does), the UI memory overlay (the Debug Menu's Performance > Memory has it), memory logging, and the debug
+           checkpoints and level selection menus (the Debug Menu's Game > Tools and Game > Game flow do those). Each old key is
+           removed once it is read, so this runs once per key (an older OpenCAGE then shows them off). What the dropped options
+           left on in AI.exe and UI.PAK goes back off at the next launch (McpLevelTools.ApplyPatchSettings, UiMovieOverrides). */
+        static void EnsureLaunchGameRedesign()
+        {
+            string[] debugEntities = { Settings.LegacyDebugText, Settings.LegacyDebugTextStacking, Settings.LegacyDebugEnvironmentMarker, Settings.LegacyDebugPositionMarker };
+            if (debugEntities.Any(o => SettingsManager.IsSet(o) && SettingsManager.GetBool(o)))
+                SettingsManager.SetBool(Settings.DebugEntities, true);
+
+            string[] removed = debugEntities.Concat(new[]
+            {
+                Settings.LegacySkipFrontend, Settings.LegacyUiMemoryOverlay, Settings.LegacyMemoryLogging,
+                Settings.RemovedUiModPauseMenu, Settings.RemovedUiModNewFrontendMenu,
+            }).ToArray();
+            foreach (string key in removed)
+                if (SettingsManager.IsSet(key))
+                    SettingsManager.Unset(key);
         }
 
         /* The Live Link Camera menu replaced the Sync Game Camera button: on was what is now "Sync viewport camera to game".

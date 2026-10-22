@@ -207,7 +207,7 @@ namespace OpenCAGE
             //What the editor's own save does before writing a level: keep pristine copies for the mod tools
             Modding.ModServices.CaptureLevelBeforeSave(levelName);
             //Close alien down if it's open, it conflicts with our write locks!
-            EditorUtils.CloseAI();
+            EditorUtils.CloseAI(null, thisInstallOnly: true);
 
             /* Commands.Save truncates the script file to the script alone, so once the save has begun the
                editor's tables must go back in whatever happens after - or the level is left saved with every

@@ -5,7 +5,7 @@
 #include <cstdint>
 
 /*
-	Camera sync: the game renders from OpenCAGE's viewport camera while OpenCAGE asks it to (the live link's CAMERA), and
+	Camera sync: the game renders from OpenCAGE's viewport camera while OpenCAGE asks it to (Live Link's CAMERA), and
 	OpenCAGE can read the game's own camera to put its viewport there (CAMERA_GET).
 
 	Once a frame, on the camera update task (after the camera manager's own update and before the render viewpoints are
@@ -33,11 +33,15 @@
 	no snapshot is taken then.
 
 	A cubemap capture (CUBEMAP_CAPTURE.h) takes the camera ahead of all of this while it runs: the frame is rendered from
-	the face it is capturing, and OpenCAGE's pose (or Possess) applies again once it is over.
+	the face it is capturing, and OpenCAGE's pose (or Possess) applies again once it is over. Next comes the debug menu's
+	cinematic camera (CINEMATIC_CAMERA.h): while it flies, the frame is rendered from it and OpenCAGE's pose waits (as
+	with another level running), applying again when it is turned off; and CAMERA_GET reads the cinematic camera, so
+	OpenCAGE following the game's camera follows it. Then OpenCAGE's pose, then Possess.
 
-	Cinematic Tools hooks the same function later (MinHook over this Detours hook): the two chain, and CT's pose is
-	written first, so while OpenCAGE drives the camera its pose wins - and what CAMERA_GET reads while CT's camera is on
-	is CT's. The hook stays attached while the game runs.
+	Other injected tools that hook the same function later (over this Detours hook) chain with it, and their pose is
+	written first, so while OpenCAGE drives the camera its pose wins - and what CAMERA_GET reads while such a tool's
+	camera is on is the tool's. The hook stays attached while the game runs (with Live Link's camera sync, Possess or the
+	debug menu on).
 */
 namespace LIVE_CAMERA
 {

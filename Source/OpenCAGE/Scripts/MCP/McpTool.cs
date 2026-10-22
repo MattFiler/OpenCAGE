@@ -1306,7 +1306,7 @@ namespace OpenCAGE.MCP
             "Saving and playing: a plain save_level writes the script and assets, enough for logic (links, triggers, logic parameters, camera CAGEAnimations). " +
             "Placing, moving or deleting models, lights, collision, physics, zones, navigation, cover or sound entities (or composites holding them) reaches the " +
             "game only with save_level build=true (Save & Build); get_editor_state's level.build says whether one is needed and why, and build: 'auto' builds only " +
-            "then. Saving closes a running game. launch_game refuses a level needing a build (save: 'auto' does it first; skip_frontend starts it playing); " +
+            "then. Saving closes a running game. launch_game refuses a level needing a build (save: 'auto' does it first) and starts a level playing, past the title screen; " +
             "runtime_utils works on the running game over Live Link (push script edits live, call_method, activity, screenshot). Ask before saving a level the " +
             "user has not asked you to save.\n\n";
 

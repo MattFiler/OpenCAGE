@@ -109,6 +109,7 @@ namespace OpenCAGE
             this.showEntityIDs = new System.Windows.Forms.ToolStripMenuItem();
             this.populateAllNodePinsWhenCreatedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.focusCanvasOnNewNodeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.showNodeIconsWhenZoomedOutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 
             this.showConfirmationWhenDeletingNodeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 
@@ -845,6 +846,7 @@ namespace OpenCAGE
             this.showEntityIDs,
             this.populateAllNodePinsWhenCreatedToolStripMenuItem,
             this.focusCanvasOnNewNodeToolStripMenuItem,
+            this.showNodeIconsWhenZoomedOutToolStripMenuItem,
 
             this.showConfirmationWhenDeletingNodeToolStripMenuItem});
             this.entityDisplayToolStripMenuItem.Name = "entityDisplayToolStripMenuItem";
@@ -874,7 +876,16 @@ namespace OpenCAGE
             this.focusCanvasOnNewNodeToolStripMenuItem.ToolTipText = "If enabled, the flowgraph canvas will move to centre on a node when it is created" +
     ".";
             this.focusCanvasOnNewNodeToolStripMenuItem.Click += new System.EventHandler(this.focusCanvasOnNewNodeToolStripMenuItem_Click);
-            // 
+            //
+            // showNodeIconsWhenZoomedOutToolStripMenuItem
+            //
+            this.showNodeIconsWhenZoomedOutToolStripMenuItem.Name = "showNodeIconsWhenZoomedOutToolStripMenuItem";
+            this.showNodeIconsWhenZoomedOutToolStripMenuItem.Size = new System.Drawing.Size(312, 22);
+            this.showNodeIconsWhenZoomedOutToolStripMenuItem.Text = "Show Node Icons When Zoomed Out";
+            this.showNodeIconsWhenZoomedOutToolStripMenuItem.ToolTipText = "If enabled, zooming far out in a flowgraph or an animation tree draws each node as its icon. Disable to keep dr" +
+    "awing nodes in full at every zoom, their text just getting smaller.";
+            this.showNodeIconsWhenZoomedOutToolStripMenuItem.Click += new System.EventHandler(this.showNodeIconsWhenZoomedOutToolStripMenuItem_Click);
+            //
 
             // 
             // showConfirmationWhenDeletingNodeToolStripMenuItem
@@ -1705,6 +1716,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem showEntityIDs;
         private System.Windows.Forms.ToolStripMenuItem populateAllNodePinsWhenCreatedToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem focusCanvasOnNewNodeToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem showNodeIconsWhenZoomedOutToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem darkModeToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator optionsToolStripSeparatorAppearance;
 

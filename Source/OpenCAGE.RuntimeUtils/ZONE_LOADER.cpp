@@ -12,7 +12,7 @@ namespace
 	constexpr uint32_t kEveryZone = static_cast<uint32_t>(ZONE_LOADER::Source::Config);
 	constexpr uint32_t kAroundCamera = static_cast<uint32_t>(ZONE_LOADER::Source::External)
 		| static_cast<uint32_t>(ZONE_LOADER::Source::LiveCamera) | static_cast<uint32_t>(ZONE_LOADER::Source::Possess)
-		| static_cast<uint32_t>(ZONE_LOADER::Source::Capture);
+		| static_cast<uint32_t>(ZONE_LOADER::Source::Capture) | static_cast<uint32_t>(ZONE_LOADER::Source::Cinematic);
 
 	char* MainView()
 	{
@@ -106,8 +106,8 @@ void __cdecl ZONE_LOADER::h_match_current_zones_to_povs()
 		RegisterEveryZone(zoneManager);
 }
 
-// For other tools injected into the game (Cinematic Tools toggles this with its free camera). It only switches their
-// own request: LoadAllZones and the Live Link camera keep theirs.
+// For other tools injected into the game, to switch on while their own camera is on. It only switches their own
+// request: LoadAllZones and the Live Link camera keep theirs.
 extern "C" __declspec(dllexport) void OpenCAGE_SetForceZoneLoading(bool forced)
 {
 	ZONE_LOADER::SetForced(ZONE_LOADER::Source::External, forced);

@@ -2,9 +2,6 @@
 	path = Source/Dependencies/BehaviourTreeEditor
 	url = https://github.com/OpenCAGE/BehaviourTreeEditor
 	branch = staging
-[submodule "Source/Dependencies/CinematicTools"]
-	path = Source/Dependencies/CinematicTools
-	url = https://github.com/OpenCAGE/CinematicTools
 [submodule "Source/Dependencies/LevelViewer"]
 	path = Source/Dependencies/LevelViewer
 	url = https://github.com/OpenCAGE/LevelViewer

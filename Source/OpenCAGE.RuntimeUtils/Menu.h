@@ -18,6 +18,11 @@ public:
 
 	static LRESULT CALLBACK WndProcHandler(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
+	// A window message for ImGui (the game window's thread): kept until the next frame and given to ImGui then, on the
+	// thread that presents it. ImGui is only safe to use from one thread at a time, and while a level loads the load screen
+	// is presented from another thread than the window's.
+	static void QueueImGuiMessage(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
+
 	static void InitMenu(IDXGISwapChain* pSwapChain);
 	static bool IsInitialised();
 

@@ -9,9 +9,9 @@ using System.Reflection;
 namespace OpenCAGE
 {
     /// <summary>
-    /// The Launch Game UI options - debug checkpoints in the pause menu, the level's name on the loading screen, level
-    /// selection in the main menu, quit to menu on the game-over screen - as OpenCAGE's own movies in UI.PAK, BESIDE the
-    /// game's rather than over them.
+    /// The Launch Game UI options - the level's name on the loading screen, quit to menu on the game-over screen (and, until
+    /// 22 Oct 2026, debug checkpoints in the pause menu and level selection in the main menu: <see cref="Movie.Removed"/>) -
+    /// as OpenCAGE's own movies in UI.PAK, BESIDE the game's rather than over them.
     ///
     /// The game opens each of these movies by a path held in its binary ("DATA/UI/PAUSEMENU.GFX"). OpenCAGE used to write
     /// its version over that entry, which made UI.PAK read as the user's own change everywhere the Mod Manager looks, and
@@ -34,6 +34,10 @@ namespace OpenCAGE
             //SHA-256 of OpenCAGE's versions of this movie before the one embedded now: older OpenCAGE wrote them over the game's
             public string[] OlderVersions = new string[0];
 
+            //An option Launch Game no longer has (the Debug Menu does it now): always off, whatever its old setting says, so a
+            //launch takes out the movie an older OpenCAGE left in. Still listed, so its entry is known as OpenCAGE's own.
+            public bool Removed;
+
             public string OriginalEntry => GamePath.ToUpperInvariant();
             public string Entry => OwnPath.ToUpperInvariant();
         }
@@ -43,14 +47,19 @@ namespace OpenCAGE
             //The pause menu's was rebuilt in 2026: OpenCAGE shipped the one before from 2020 until then (and the separate
             //LaunchGame tool before it). The other three have only ever had one version (OpenCAGE, LaunchGame and
             //CommandsEditor histories, 17 Oct 2026)
-            new Movie() { Key = Settings.UiModPauseMenu, Resource = "PAUSEMENU", GamePath = "DATA/UI/PAUSEMENU.GFX", OwnPath = "DATA/UI/PAUSEM_OC.GFX",
-                          OlderVersions = new[] { "b7403a238e91de6274de9aee86288b001e188a2cb358f3690c68b591b97cfbff" } },
+            //The pause menu's debug checkpoints and the main menu's level selection were dropped from Launch Game on 22 Oct 2026
+            //(the Debug Menu's Game > Tools and Game > Game flow): Removed, so launches take them out
+            new Movie() { Key = Settings.RemovedUiModPauseMenu, Resource = "PAUSEMENU", GamePath = "DATA/UI/PAUSEMENU.GFX", OwnPath = "DATA/UI/PAUSEM_OC.GFX",
+                          OlderVersions = new[] { "b7403a238e91de6274de9aee86288b001e188a2cb358f3690c68b591b97cfbff" }, Removed = true },
             new Movie() { Key = Settings.UiModLoadingScreen, Resource = "LOADINGSCREEN", GamePath = "data/UI/loadingscreen.gfx", OwnPath = "data/UI/loadingscr_oc.gfx" },
-            new Movie() { Key = Settings.UiModNewFrontendMenu, Resource = "NEWFRONTENDMENU", GamePath = "DATA/UI/NEWFRONTENDMENU.GFX", OwnPath = "DATA/UI/NEWFRONTENDM_OC.GFX" },
+            new Movie() { Key = Settings.RemovedUiModNewFrontendMenu, Resource = "NEWFRONTENDMENU", GamePath = "DATA/UI/NEWFRONTENDMENU.GFX", OwnPath = "DATA/UI/NEWFRONTENDM_OC.GFX", Removed = true },
             new Movie() { Key = Settings.UiModGameOverMenu, Resource = "GAMEOVERMENU", GamePath = "DATA/UI/GAMEOVERMENU.GFX", OwnPath = "DATA/UI/GAMEOVERM_OC.GFX" },
         };
 
         public static Movie Find(string key) => All.FirstOrDefault(o => o.Key == key);
+
+        /// <summary>Whether an option is on: as its setting says, except one Launch Game no longer has, which is always off.</summary>
+        public static bool IsOn(Movie movie) => !movie.Removed && SettingsManager.GetBool(movie.Key);
 
         /// <summary>An entry of UI.PAK that is OpenCAGE's own (one of the option movies), not the game's or the user's.</summary>
         public static bool IsOwnedEntry(string entryName)
@@ -200,7 +209,7 @@ namespace OpenCAGE
                 bool changed = false;
                 foreach (Movie movie in All)
                 {
-                    bool on = SettingsManager.GetBool(movie.Key);
+                    bool on = IsOn(movie);
                     //An entry of OpenCAGE's name holding something else was put there by hand: left alone
                     if (on && State(pak, pathToAI, movie) == "edited")
                         continue;
@@ -313,7 +322,7 @@ namespace OpenCAGE
                 foreach (Movie movie in All)
                 {
                     PAK2.File own = EntryOf(pak, movie.Entry);
-                    byte[] modded = SettingsManager.GetBool(movie.Key) && EntryOf(pak, movie.OriginalEntry) != null ? Embedded(movie, true) : null;
+                    byte[] modded = IsOn(movie) && EntryOf(pak, movie.OriginalEntry) != null ? Embedded(movie, true) : null;
                     if (modded != null && own == null)
                         pak.Entries.Add(new PAK2.File() { Filename = movie.Entry, Content = modded });
                     else if (modded != null && !Same(own.Content, modded))

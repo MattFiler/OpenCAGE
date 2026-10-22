@@ -76,6 +76,9 @@ namespace OpenCAGE
         public const string ControlsWindowRemainOnTop = "ControlsWindowRemainOnTop";
         public const string PopulateAllPinsOnCreateNode = "PopulateAllPinsOnCreateNode";
         public const string FocusCanvasOnNewNode = "FocusCanvasOnNewNode";
+        //Entity Display's "Show Node Icons When Zoomed Out": script flowgraphs and animation trees draw each node as its icon
+        //below EditorIcons.NodeIconZoom. Off, nodes are drawn in full at every zoom, their text just getting smaller
+        public const string NodeIconsWhenZoomedOut = "NodeIconsWhenZoomedOut";
         public const string DarkMode = "DarkMode";
         public const string SoundPreviewAutoPlay = "SoundPreviewAutoPlay";
 
@@ -109,13 +112,10 @@ namespace OpenCAGE
         public const string EntityListSortColumn = "EntityListSortColumn";
         public const string EntityListSortAscending = "EntityListSortAscending";
 
-        public const string CinematicTools = "CinematicTools";
         public const string RuntimeUtils = "Runtime_Utils";
         public const string HudDisabled = "HudDisabled";
-        public const string SkipFrontend = "SkipFE";
+        //Launch Game's "Load straight into": boot into the chosen level past the title screen, or (off) start at the main menu
         public const string LaunchToLevel = "LaunchToLevel";
-        public const string UiEnabledUiPerf = "cUIEnabled_UIPerf";
-        public const string MemReplayLogs = "Mem_Replay_Logs";
         public const string PatchCurrentGen = "PatchCurrentGen";
         public const string RenderConstantAmbient = "RenderConstantAmbient";
         public const string ScriptingHelpersHotReload = "ScriptingHelpers_HotReload";
@@ -124,22 +124,41 @@ namespace OpenCAGE
         public const string ScriptingHelpersUnlockMouseKey = "ScriptingHelpers_UnlockMouseKey";
         public const string ScriptingHelpersCapFps = "ScriptingHelpers_CapFps";
         public const string ScriptingHelpersCapFpsRate = "ScriptingHelpers_CapFpsRate";
-        public const string ScriptingHelpersDebugText = "ScriptingHelpers_DebugText";
-        public const string ScriptingHelpersDebugTextStacking = "ScriptingHelpers_DebugTextStacking";
-        public const string ScriptingHelpersDebugEnvironmentMarker = "ScriptingHelpers_DebugEnvironmentMarker";
-        public const string ScriptingHelpersDebugPositionMarker = "ScriptingHelpers_DebugPositionMarker";
+        //Launch Game's "Debug entities": DebugText, DebugTextStacking, DebugEnvironmentMarker and DebugPositionMarker script
+        //entities draw in game - one switch for the four the runtime utils config has
+        public const string DebugEntities = "ScriptingHelpers_DebugEntities";
         public const string ScriptingHelpersLiveLink = "ScriptingHelpers_LiveLink";
-        //Set once whoever had Cinematic Tools and a scripting helper both on was moved to one or the other (SettingsDefaults)
-        public const string CinematicToolsOrHelpers = "CinematicToolsOrHelpers";
-        //Possess Characters (Launch Options): its key opens an in-game menu to take a character and move it
+        //Possess Characters (Launch Game > Game options): its key opens an in-game menu to take a character and move it
         public const string PossessCharacters = "PossessCharacters";
         public const string PossessCharactersKey = "PossessCharactersKey";
+        public const string DebugMenu = "DebugMenu";
+        public const string DebugMenuKey = "DebugMenuKey";
+        //The Debug Menu's Don't Write Saves as the game starts (Launch Game > Debug tools, only with the Debug Menu on)
+        public const string DontWriteSaves = "DontWriteSaves";
+        //Cinematic Tools, the camera tool OpenCAGE started beside the game until 21 Oct 2026, when the Debug Menu took it over (its
+        //Cinematic group): whoever had it on gets the Debug Menu on, once, and these keys go (SettingsDefaults)
+        public const string LegacyCinematicTools = "CinematicTools";
+        //...and the marker set once whoever had Cinematic Tools and a scripting helper both on had been moved to one or the other
+        public const string LegacyCinematicToolsOrHelpers = "CinematicToolsOrHelpers";
+        //Launch Game options until its redesign on 22 Oct 2026, moved or dropped once (SettingsDefaults): the four debug entity
+        //switches became Debug entities; Skip Frontend is implied by "Load straight into"; the UI memory overlay is the Debug
+        //Menu's (Performance > Memory); memory logging went. Launches write the AI.exe patches the last two left on back off.
+        public const string LegacyDebugText = "ScriptingHelpers_DebugText";
+        public const string LegacyDebugTextStacking = "ScriptingHelpers_DebugTextStacking";
+        public const string LegacyDebugEnvironmentMarker = "ScriptingHelpers_DebugEnvironmentMarker";
+        public const string LegacyDebugPositionMarker = "ScriptingHelpers_DebugPositionMarker";
+        public const string LegacySkipFrontend = "SkipFE";
+        public const string LegacyUiMemoryOverlay = "cUIEnabled_UIPerf";
+        public const string LegacyMemoryLogging = "Mem_Replay_Logs";
 
         //The Launch Game UI options: OpenCAGE's own menu movies beside the game's in UI.PAK, the game pointed at them (UiMovieOverrides)
-        public const string UiModPauseMenu = "UiOption_PauseMenu";
         public const string UiModLoadingScreen = "UiOption_LoadingScreen";
-        public const string UiModNewFrontendMenu = "UiOption_NewFrontendMenu";
         public const string UiModGameOverMenu = "UiOption_GameOverMenu";
+        //...and the two Launch Game dropped on 22 Oct 2026 (the Debug Menu's Game > Tools has the debug checkpoints, its Game >
+        //Game flow loads any level): removed once (SettingsDefaults); UiMovieOverrides keeps their movies out, so a launch
+        //takes out one an older OpenCAGE left in
+        public const string RemovedUiModPauseMenu = "UiOption_PauseMenu";
+        public const string RemovedUiModNewFrontendMenu = "UiOption_NewFrontendMenu";
         //...named until 17 Oct 2026 after the movies themselves, when ticking one wrote OpenCAGE's movie OVER the game's in UI.PAK.
         //Moved onto the keys above once (SettingsDefaults), then removed
         public const string LegacyUiModPauseMenu = "PAUSEMENU";

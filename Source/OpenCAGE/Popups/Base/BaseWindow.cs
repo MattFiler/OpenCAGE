@@ -99,6 +99,22 @@ namespace OpenCAGE.Popups.Base
             _opener = null;
         }
 
+        protected override void SetVisibleCore(bool value)
+        {
+            //Shown only once it's painted in full: otherwise, in dark mode, its controls are blank white boxes until the code that
+            //showed it lets their paints through
+            bool held = value && Theming.ThemeManager.HoldUntilPainted(this);
+            try
+            {
+                base.SetVisibleCore(value);
+            }
+            finally
+            {
+                if (value)
+                    Theming.ThemeManager.PaintShownWindow(this, held);
+            }
+        }
+
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);

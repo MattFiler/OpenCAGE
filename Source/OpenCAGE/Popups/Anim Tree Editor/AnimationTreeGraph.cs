@@ -60,18 +60,26 @@ namespace OpenCAGE.AnimTrees
             stNodeEditor1.OptionConnecting += StNodeEditor1_OptionConnecting;
             stNodeEditor1.OptionConnected += StNodeEditor1_OptionConnected;
             //Zoomed out past where a node's text can be read, each node is its colour with its type's icon on it, as on script pages
-            stNodeEditor1.NodeIconZoom = EditorIcons.NodeIconZoom;
+            //(both follow Options > Entity Display > Show Node Icons When Zoomed Out)
+            EditorIcons.ApplyNodeIconZoom(stNodeEditor1);
             stNodeEditor1.NodeIconProvider = EditorIcons.ForZoomedOutNode;
+            EditorIcons.NodeIconsWhenZoomedOutChanged += OnNodeIconsWhenZoomedOutChanged;
             AnimTreeLayoutManager.Changed += OnLayoutChanged;
-            //Closing the whole editor window disposes its graphs without closing them: the static event must let go then too
+            //Closing the whole editor window disposes its graphs without closing them: the static events must let go then too
             this.Disposed += (s, e) =>
             {
                 AnimTreeLayoutManager.Changed -= OnLayoutChanged;
+                EditorIcons.NodeIconsWhenZoomedOutChanged -= OnNodeIconsWhenZoomedOutChanged;
                 if (_editor != null)
                     _editor.NodeNameChanged -= OnNodeNameChanged;
             };
 
             BuildAddNodeMenu();
+        }
+
+        private void OnNodeIconsWhenZoomedOutChanged()
+        {
+            EditorIcons.ApplyNodeIconZoom(stNodeEditor1);
         }
 
         /// <summary>The graph showing this tree in the Animation Tree Editor, if it is open there.</summary>
@@ -112,6 +120,7 @@ namespace OpenCAGE.AnimTrees
             stNodeEditor1.OptionConnected -= StNodeEditor1_OptionConnected;
             stNodeEditor1.NodeIconProvider = null;
             AnimTreeLayoutManager.Changed -= OnLayoutChanged;
+            EditorIcons.NodeIconsWhenZoomedOutChanged -= OnNodeIconsWhenZoomedOutChanged;
 
             if (_editor != null)
             {

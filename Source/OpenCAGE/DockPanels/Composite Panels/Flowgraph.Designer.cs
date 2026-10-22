@@ -65,7 +65,7 @@ namespace OpenCAGE
             this.clearDelayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.triggerInGameSeparator = new System.Windows.Forms.ToolStripSeparator();
             this.triggerInGameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.stNodeEditor1 = new ST.Library.UI.NodeEditor.STNodeEditor();
+            this.stNodeEditor1 = new OpenCAGE.DebuggerNodeEditor();
             this.TabStripContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.deleteFGToolstripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.renameFGToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();

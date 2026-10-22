@@ -922,6 +922,16 @@ namespace OpenCAGE.DockPanels
             if (entity.variant != EntityVariant.FUNCTION && entity.variant != EntityVariant.PROXY)
                 return;
 
+            //Nothing is edited, so no edit event goes out - but what shows the entity's values (the values over its pins on
+            //the flowgraph) has more to show
+            int before = entity.parameters.Count;
+            FillDefaults(entity, composite, content);
+            if (entity.parameters.Count != before)
+                Singleton.OnEntityDefaultsApplied?.Invoke(entity);
+        }
+
+        private static void FillDefaults(Entity entity, Composite composite, LevelContent content)
+        {
             /* A proxy gets its own defaults only (issue 742). Everything else it carries is applied to the entity it stands for
              * when it is enabled, so filling in that entity's defaults here - which this did, the first time a proxy was
              * shown - overrode the real values: a door proxy's zonelink 0 cut the door off from its ZoneLink, and its card and

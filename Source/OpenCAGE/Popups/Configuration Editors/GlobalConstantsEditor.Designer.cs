@@ -65,6 +65,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.stealth_light_meter_full_light_threshold)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.stealth_light_meter_full_dark_threshold)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.stealth_light_meter_timeout_when_detected)).BeginInit();
+            this.liveStatus = new System.Windows.Forms.Label();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
@@ -389,12 +390,20 @@
             this.colourAlpha.Name = "colourAlpha";
             this.colourAlpha.Size = new System.Drawing.Size(187, 45);
             this.colourAlpha.TabIndex = 372;
-            // 
+            //
+            // liveStatus
+            //
+            this.liveStatus.Location = new System.Drawing.Point(12, 342);
+            this.liveStatus.Name = "liveStatus";
+            this.liveStatus.Size = new System.Drawing.Size(432, 26);
+            this.liveStatus.TabIndex = 373;
+            //
             // GlobalConstantsEditor
-            // 
+            //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(460, 349);
+            this.ClientSize = new System.Drawing.Size(460, 372);
+            this.Controls.Add(this.liveStatus);
             this.Controls.Add(this.groupBox4);
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.groupBox2);
@@ -458,5 +467,6 @@
         private System.Windows.Forms.NumericUpDown glowRate;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.TrackBar colourAlpha;
+        private System.Windows.Forms.Label liveStatus;
     }
 }

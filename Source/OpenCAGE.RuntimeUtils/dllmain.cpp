@@ -17,6 +17,13 @@
 #include "MOUSE_UNLOCK.h"
 #include "FRAME_CAP.h"
 #include "POSSESS.h"
+#include "BT_DEBUG.h"
+#include "SOUND_DEBUG.h"
+#include "AI_DEBUG.h"
+#include "RENDER_SWITCHES.h"
+#include "DEBUG_ACTIONS.h"
+#include "DEBUG_MENU.h"
+#include "GAME_SAVES.h"
 
 // External includes.
 #include <detours.h>
@@ -191,7 +198,7 @@ static void AttachHooks(bool attach)
     };
 
     // Rendering hooks: needed for the hot reload, unlock mouse and possess keys (window procedure) and the overlay.
-    if ((config.hotReload || config.unlockMouse || Config::AnyDebug() || config.liveLink || config.possess) && d3d11CreateDeviceAndSwapChain)
+    if ((config.hotReload || config.unlockMouse || Config::AnyDebug() || config.liveLink || config.possess || config.debugMenu) && d3d11CreateDeviceAndSwapChain)
     {
         hook(d3d11CreateDeviceAndSwapChain, hD3D11CreateDeviceAndSwapChain);
         if (!attach && d3d11Present)
@@ -209,40 +216,78 @@ static void AttachHooks(bool attach)
         hook(GAME_LEVEL_MANAGER::request_next_level, GAME_LEVEL_MANAGER::h_request_next_level);
     }
 
-    // Live link: requests on entities are carried out once a frame, on the entity thread.
-    if (config.liveLink)
+    // Live link: requests on entities are carried out once a frame, on the entity thread. The debug menu's work for that
+    // thread is run there too.
+    if (config.liveLink || config.debugMenu)
         hook(LIVE_LINK::process, LIVE_LINK::h_process);
 
     // Live link camera sync: renders the game from OpenCAGE's viewport camera while OpenCAGE asks. Attached for the whole
-    // run and gated by the pose instead: Cinematic Tools hooks the same function later (MinHook), and the two chain.
-    // Possess puts the camera behind the possessed character through it too.
-    if ((config.liveLink && config.liveLinkCamera) || config.possess)
+    // run and gated by the pose. Possess puts the camera behind the possessed character through it too, and the debug
+    // menu's cinematic camera flies it.
+    if ((config.liveLink && config.liveLinkCamera) || config.possess || config.debugMenu)
         hook(LIVE_CAMERA::synchronize_with_engine, LIVE_CAMERA::h_synchronize_with_engine);
 
     // Live link cubemap captures: the post-processing settings' per-frame update, to turn off the effects that don't
-    // belong in a reflection while one runs. It only passes through otherwise. Cinematic Tools hooks it later too.
+    // belong in a reflection while one runs. It only passes through otherwise.
     if (config.liveLink && config.liveLinkCamera)
         hook(CUBEMAP_CAPTURE::post_process_update, CUBEMAP_CAPTURE::h_post_process_update);
 
     // Possess: each character's behaviour update, to give the possessed one its orders from the keys in place of its
-    // behaviour tree. They only pass through while nobody is possessed.
-    if (config.possess)
+    // behaviour tree. They only pass through while nobody is possessed. The debug menu runs its work for the AI thread,
+    // and follows the characters' behaviour trees, through them too.
+    if (config.possess || config.debugMenu)
     {
         hook(POSSESS::behaviour_update, POSSESS::h_behaviour_update);
         hook(POSSESS::tree_update, POSSESS::h_tree_update);
     }
+
+    // Debug menu behaviour trees: the loading of the level's trees (to name their nodes) and the end of each character's
+    // leading action, with the trees' debug text, assert and debug switch nodes' vtable entries replaced.
+    if (config.debugMenu)
+        BT_DEBUG::AttachHooks(attach);
+
+    // Debug menu sound: every sound played, what the AI hears and how, doorways set by doors, the sound network's loading
+    // (for its names), names turned into ids, sound objects' names, subtitles, script Sound entities and NPC dialogue.
+    // They note what they see and pass through.
+    if (config.debugMenu)
+        SOUND_DEBUG::AttachHooks(attach);
+
+    // Debug menu views' own hooks, each added from its view's file (see DEBUG_MENU::AddHooks).
+    if (config.debugMenu)
+        DEBUG_MENU::AttachHooks(attach);
+
+    // Don't write saves (DontWriteSaves=1) without the debug menu: its hooks on their own. With the debug menu they come
+    // with the views' hooks above.
+    if (!config.debugMenu && Config::IniInt("DontWriteSaves", 0) != 0)
+        GAME_SAVES::AttachHooks(attach);
+
+    // Debug menu: the game's ask whether the light meter's screen tint is on (always "off" in the shipped game) is
+    // pointed at the Player tab's switch, and put back on detach.
+    if (config.debugMenu)
+        AI_DEBUG::PatchLightTint(attach);
 
     // Live link script activity: the game's firing of outputs and reading of parameters, noted for the composites OpenCAGE
     // watches while it asks. They only pass through (after checking a flag) otherwise.
     if (config.liveLink)
         LIVE_TRACE::AttachHooks(attach);
 
-    // Unlock Mouse: the game's grab of the cursor, and its moving of it, while the cursor is free. Cubemap captures hold
-    // the cursor free through them as well, so they are in whenever captures can be asked for (passing through otherwise).
-    if (config.unlockMouse || (config.liveLink && config.liveLinkCamera))
+    // Unlock Mouse: the game's grab of the cursor, and its moving of it, while the cursor is free. Cubemap captures and the
+    // debug menu hold the cursor free through them as well, so they are in for those too (passing through otherwise).
+    if (config.unlockMouse || (config.liveLink && config.liveLinkCamera) || config.debugMenu)
     {
         hook(MOUSE_UNLOCK::grab_cursor, MOUSE_UNLOCK::h_grab_cursor);
         hook(MOUSE_UNLOCK::set_cursor_pos, MOUSE_UNLOCK::h_set_cursor_pos);
+    }
+
+    // Debug menu, Tools tab: the AI's handling of what a character's senses pick up (Invisible) and a weapon using up ammo
+    // (Infinite ammo). They only pass through while those are off. The Rendering tab puts back the calls it changed as the
+    // hooks detach.
+    if (config.debugMenu)
+    {
+        hook(DEBUG_ACTIONS::trigger_sense, DEBUG_ACTIONS::h_trigger_sense);
+        hook(DEBUG_ACTIONS::consume_ammo, DEBUG_ACTIONS::h_consume_ammo);
+        if (!attach)
+            RENDER_SWITCHES::Restore();
     }
 
     // Cap FPS: each frame waits its turn before the game reads its clock.
@@ -252,12 +297,14 @@ static void AttachHooks(bool attach)
     // A hook on the start of gameplay (it only passes through).
     hook(GameFlow::start_gameplay, GameFlow::h_start_gameplay);
 
-    // Zone streaming: always hooked, so Cinematic Tools (and the live link camera) can switch forced loading on and off
-    // while running.
+    // Zone streaming: always hooked, so LoadAllZones, the Live Link camera, cubemap captures, Possess and the debug menu's
+    // cinematic camera (and other injected tools, through the exported switch) can switch forced loading on and off while
+    // running.
     hook(ZONE_LOADER::match_current_zones_to_povs, ZONE_LOADER::h_match_current_zones_to_povs);
 
-    // DebugText / DebugTextStacking hooks. The level closing clears everything the debug entities drew, markers included.
-    if (Config::AnyDebug())
+    // DebugText / DebugTextStacking hooks. The level closing clears everything the debug entities drew, markers included,
+    // and what the debug menu noted of the level's behaviour trees.
+    if (Config::AnyDebug() || config.debugMenu)
         hook(DEBUG_TEXT::level_close, DEBUG_TEXT::h_level_close);
 
     if (config.debugText)
@@ -324,7 +371,7 @@ BOOL APIENTRY DllMain( HMODULE /*hModule*/,
         DetourUpdateThread(GetCurrentThread());
 
     	// Overlay hooks / initialisation code, adapted from Alias Isolation.
-        if (config.hotReload || config.unlockMouse || Config::AnyDebug() || config.liveLink || config.possess)
+        if (config.hotReload || config.unlockMouse || Config::AnyDebug() || config.liveLink || config.possess || config.debugMenu)
         {
             const HMODULE hModule = GetModuleHandle(L"d3d11");
 

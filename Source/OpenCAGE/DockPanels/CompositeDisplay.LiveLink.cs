@@ -126,6 +126,9 @@ namespace OpenCAGE.DockPanels
                 LiveLinkTrace.ShowActivityChanged -= UpdateLiveLinkActivityButtons;
                 LiveLinkTrace.Unregister(_liveLinkActivity);
             };
+
+            //The script debugger's menu and buttons come after these (CompositeDisplay.Debugger.cs)
+            SetupLiveLinkDebugger();
         }
 
         /// <summary>
@@ -145,6 +148,8 @@ namespace OpenCAGE.DockPanels
             //What it shows is worked out afresh first, so a page of another composite never paints what the last one had lit
             LiveLinkTrace.Refresh();
             page.AttachLiveLinkActivity(_liveLinkActivity);
+            //Its breakpoints and live states (the script debugger)
+            AttachLiveLinkDebugger(page);
         }
 
         /// <summary>

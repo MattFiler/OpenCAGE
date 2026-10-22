@@ -2,6 +2,9 @@
 #include "LIVE_LINK.h"
 #include "LIVE_CAMERA.h"
 #include "CUBEMAP_CAPTURE.h"
+#include "LIVE_SETTINGS.h"
+#include "DEBUG_MENU.h"
+#include "Config.h"
 #include "LIVE_ANIMATION.h"
 #include "LIVE_TRACE.h"
 #include "POSSESS.h"
@@ -600,6 +603,126 @@ namespace
 			Reply(request, false, result.message);
 	}
 
+	// Settings are written into the game where it keeps them (see LIVE_SETTINGS.h), so they are answered at once: OpenCAGE
+	// sends them as a config editor's numbers change, whatever the game is doing
+	void HandleSettings(const Request& request)
+	{
+		Reader reader(request.payload);
+		const uint8_t file = reader.U8();
+		const uint32_t count = reader.U32();
+		std::vector<LIVE_SETTINGS::Value> values;
+		if (!reader.failed && count >= 1 && count <= 64)
+		{
+			for (uint32_t i = 0; i < count && !reader.failed; i++)
+			{
+				LIVE_SETTINGS::Value value;
+				value.key = reader.String();
+				value.value = reader.F32();
+				values.push_back(std::move(value));
+			}
+		}
+		if (reader.failed || count < 1 || count > 64)
+		{
+			Reply(request, false, "Malformed request");
+			return;
+		}
+		const LIVE_LINK::Result result = LIVE_SETTINGS::Set(file, values);
+		SetActivity(result.ok ? "Settings: " + std::to_string(values.size()) + " changed" : "Settings: not all could be changed");
+		if (!result.ok)
+			DevTools::Log("LiveLink: settings not all changed: %s", result.message.c_str());
+		Reply(request, result.ok, result.message);
+	}
+
+	// Whether a debug menu command only reports (help, the lists, a state or status, the debugger's values and entities...):
+	// OpenCAGE may ask for those over and over, so they don't take the game's activity line
+	bool ReportOnly(const std::string& command)
+	{
+		const size_t dot = command.rfind('.');
+		const std::string last = dot == std::string::npos ? command : command.substr(dot + 1);
+		auto endsWith = [&last](const char* end) { const size_t n = strlen(end); return last.size() >= n && last.compare(last.size() - n, n, end) == 0; };
+		return last == "help" || last.rfind("list", 0) == 0 || endsWith("status") || last == "state" || last == "report" || last == "values" ||
+			last == "entities" || last == "pick" || last == "details" || last == "characters" || last == "ping_threads" || last == "hooks";
+	}
+
+	// The debug menu is driven from outside its window here (for OpenCAGE's tools and for testing), answered at once with
+	// what it holds
+	void HandleDebugMenu(const Request& request)
+	{
+		if (!Config::Get().debugMenu)
+		{
+			Reply(request, false, "The debug menu is off in the game (DebugMenu=0 in OpenCAGE.RuntimeUtils.ini)");
+			return;
+		}
+		Reader reader(request.payload);
+		const uint8_t op = reader.U8();
+		std::string name, argument;
+		uint8_t value = 0;
+		float number = 0.0f;
+		if (op >= 3 && op <= 7)
+			name = reader.String();
+		if (op == 5)
+			value = reader.U8();
+		if (op == 6)
+			argument = reader.String();
+		if (op == 7)
+			number = reader.F32();
+		if (reader.failed || op > 7)
+		{
+			Reply(request, false, "Malformed request");
+			return;
+		}
+		switch (op)
+		{
+		case 1: DEBUG_MENU::Show(true); break;
+		case 2: DEBUG_MENU::Show(false); break;
+		case 3: DEBUG_MENU::ShowTab(name); break;
+		case 4: DEBUG_MENU::SelectByName(name); break;
+		case 5:
+			if (!DEBUG_MENU::SetSwitch(name, value != 0))
+			{
+				Reply(request, false, "No debug menu switch named " + name + "\n" + DEBUG_MENU::Describe());
+				return;
+			}
+			break;
+		case 6:
+		{
+			// A command answers for itself
+			DEBUG_MENU::CommandResult result;
+			if (!DEBUG_MENU::RunCommand(name, argument, result))
+			{
+				Reply(request, false, "No debug menu command named " + name + " (\"help\" lists them)");
+				return;
+			}
+			if (!ReportOnly(name))
+				SetActivity("Debug menu: " + name);
+			Reply(request, result.ok, result.message);
+			return;
+		}
+		case 7:
+			if (!DEBUG_MENU::SetValue(name, number))
+			{
+				Reply(request, false, "No debug menu value named " + name + " (or not a finite number)\n" + DEBUG_MENU::Describe());
+				return;
+			}
+			break;
+		default: break;
+		}
+		Reply(request, true, DEBUG_MENU::Describe());
+	}
+
+	void HandleSettingsGet(const Request& request)
+	{
+		Reader reader(request.payload);
+		const uint8_t file = reader.U8();
+		if (reader.failed)
+		{
+			Reply(request, false, "Malformed request");
+			return;
+		}
+		const LIVE_LINK::Result result = LIVE_SETTINGS::Get(file);
+		Reply(request, result.ok, result.message);
+	}
+
 	void HandlePossessGet(const Request& request)
 	{
 		Reader reader(request.payload);
@@ -675,6 +798,21 @@ namespace
 		if (request.command == LIVE_LINK_SERVER::CAPTURE_CUBEMAP)
 		{
 			HandleCaptureCubemap(request);
+			return;
+		}
+		if (request.command == LIVE_LINK_SERVER::SETTINGS)
+		{
+			HandleSettings(request);
+			return;
+		}
+		if (request.command == LIVE_LINK_SERVER::SETTINGS_GET)
+		{
+			HandleSettingsGet(request);
+			return;
+		}
+		if (request.command == LIVE_LINK_SERVER::DEBUG_MENU_CONTROL)
+		{
+			HandleDebugMenu(request);
 			return;
 		}
 

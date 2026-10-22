@@ -254,6 +254,38 @@ namespace OpenCAGE.Theming
             ThemeEngine.Apply(form, true);
         }
 
+        /// <summary>
+        /// For a window about to be shown: keeps it off the screen until <see cref="PaintShownWindow"/> has
+        /// painted it. Each of its controls is a window of its own that waits for its paint behind whatever
+        /// the code showing the window does next - a busy flowgraph repainting under the menu it was opened
+        /// from, say - and until it gets it, it is a blank white box: in dark mode, white boxes flashing in a
+        /// dark window as it fades in. True when the window is held back (pass it to PaintShownWindow).
+        /// </summary>
+        public static bool HoldUntilPainted(Form form)
+        {
+            if (!IsDark || form == null || form.IsDisposed || form.Visible)
+                return false;
+
+            //Made now rather than as it's shown, so it can be held back before it first appears
+            IntPtr handle = form.Handle;
+            return ThemeNative.Cloak(handle, true);
+        }
+
+        /// <summary>
+        /// Paints a window that has just been shown, every control in it included, at once, then lets it
+        /// onto the screen if <see cref="HoldUntilPainted"/> held it back.
+        /// </summary>
+        public static void PaintShownWindow(Form form, bool held)
+        {
+            if (form == null || form.IsDisposed || !form.IsHandleCreated)
+                return;
+
+            if (IsDark && form.Visible)
+                ThemeNative.PaintNow(form.Handle);
+            if (held)
+                ThemeNative.Cloak(form.Handle, false);
+        }
+
         private static void OnFormDisposed(object sender, EventArgs e)
         {
             Form form = sender as Form;

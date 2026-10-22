@@ -28,7 +28,9 @@ struct IDXGISwapChain;
 	gathered handed over, and the hooks gather it on whichever threads run the level's scripts (see LIVE_TRACE.h). And so
 	are POSSESS and POSSESS_GET: what to possess, or the stick, is stored, and the characters' behaviour updates act on it
 	(see POSSESS.h). CAPTURE_CUBEMAP is started on the socket thread as well (or refused at once), and answered from the
-	render thread when the capture ends, a few seconds later (see CUBEMAP_CAPTURE.h).
+	render thread when the capture ends, a few seconds later (see CUBEMAP_CAPTURE.h). SETTINGS and SETTINGS_GET are
+	answered at once too: settings are single numbers the game copies afresh every frame, written or read where they are
+	(see LIVE_SETTINGS.h).
 */
 namespace LIVE_LINK_SERVER
 {
@@ -126,6 +128,19 @@ namespace LIVE_LINK_SERVER
 		                     //    another level running, the game paused, or a capture already running; ended early (not ok, no payload) if
 		                     //    OpenCAGE disconnects, the level changes, the game is paused, or nothing is drawn for a while. See
 		                     //    CUBEMAP_CAPTURE.h.
+		SETTINGS = 16,       // u8 file (1 radiosity, 2 skin shading, 3 hair shading, 4 selection overlay, 5 global constants), u32 count
+		                     //    (1..64), then count of: u32 length + UTF-8 key as the file spells it, f32 value -> message with a line per
+		                     //    key: "key=value live", "key=value inert" (read from the file but never used), "key unknown", "key
+		                     //    refused" (not a finite number) or "key unavailable"; ok when every key was live or inert. Written into
+		                     //    the running game at once, whatever level (if any) is running; see LIVE_SETTINGS.h.
+		SETTINGS_GET = 17,   // u8 file -> message "key=value" lines: what the game holds for each of the file's keys now
+		DEBUG_MENU_CONTROL = 18, // u8 op (0 report, 1 open the window, 2 close it, 3 bring a tab to the front, 4 select a character, 5 set a
+		                     //    switch, 6 run a command, 7 set a value), then for 3 and 4 a u32 length + UTF-8 name (the tab's, or
+		                     //    part of the character's), for 5 the switch's name the same way and a u8 value, for 6 the command's
+		                     //    name and a u32 length + UTF-8 argument, for 7 the value's name and an f32 -> message: for 6 what
+		                     //    the command answers (ok as it says); otherwise "open=0|1\ngroup=..\ntab=..\nselected=..\ntabs=..
+		                     //    \ngroups=..\ncommands=a,b\nvalues=name:1.5,..", then every switch as "name=0|1" a line each.
+		                     //    Refused while DebugMenu=0 in the ini. See DEBUG_MENU.h.
 	};
 
 	void Start(uint16_t port);

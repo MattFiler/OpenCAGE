@@ -1,4 +1,5 @@
 ﻿using OpenCAGE.Popups.Base;
+using OpenCAGE.RuntimeUtilsConnection;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -32,6 +33,10 @@ namespace OpenCAGE.ConfigEditors
             ConfigEditorUtils.Subscribe(this.Controls, Save);
             this.FormClosing += RadiosityEditor_FormClosing;
             CloseOnConfigReset();
+
+            //The game reads these when a level loads; with Live Link connected each change reaches it at once
+            LiveSettings.Attach(this, liveStatus, (LiveLink.SettingsFile.Radiosity, () => LiveSettings.Values(gRadiosityEmissiveSurfaceScale, gRadiosityFirstBounceScale,
+                gRadiosityMultiBounceScale, gRadiosityAlbedoOverbrightAmount, gRadiosityAlbedoSaturationAmount, gRadiositySpecularGlossScale)));
         }
 
         private void RadiosityEditor_FormClosing(object sender, FormClosingEventArgs e)
@@ -52,6 +57,7 @@ namespace OpenCAGE.ConfigEditors
                 "gRadiositySpecularGlossScale=" + ConfigEditorUtils.NumberText(gRadiositySpecularGlossScale) + Environment.NewLine +
                 "gDeferredEmissiveSurfaceScale=1.487500" + Environment.NewLine +
                 "gDeferredEmissiveSurfaceExponent=0.563500");
+            LiveSettings.Changed(LiveLink.SettingsFile.Radiosity);
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
         }

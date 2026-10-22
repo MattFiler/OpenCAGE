@@ -32,209 +32,216 @@ namespace OpenCAGE
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(LaunchGame));
             this.OpenGame = new System.Windows.Forms.Button();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
-            this.enableHotReload = new System.Windows.Forms.CheckBox();
-            this.enableCinematicTools = new System.Windows.Forms.CheckBox();
-            this.enableUIPerf = new System.Windows.Forms.CheckBox();
-            this.enableMemReplayLogs = new System.Windows.Forms.CheckBox();
-            this.disableUI = new System.Windows.Forms.CheckBox();
-            this.skipFrontend = new System.Windows.Forms.CheckBox();
-            this.patchCurrentGen = new System.Windows.Forms.CheckBox();
             this.loadToLevel = new System.Windows.Forms.CheckBox();
-            this.renderConstantAmbient = new System.Windows.Forms.CheckBox();
+            this.levelList = new System.Windows.Forms.ComboBox();
+            this.enableDebugMenu = new System.Windows.Forms.CheckBox();
+            this.debugMenuKey = new System.Windows.Forms.ComboBox();
+            this.dontWriteSaves = new System.Windows.Forms.CheckBox();
+            this.enableDebugEntities = new System.Windows.Forms.CheckBox();
+            this.enableHotReload = new System.Windows.Forms.CheckBox();
             this.hotReloadKey = new System.Windows.Forms.ComboBox();
-            this.enableUnlockMouse = new System.Windows.Forms.CheckBox();
-            this.unlockMouseKey = new System.Windows.Forms.ComboBox();
+            this.enableLiveLink = new System.Windows.Forms.CheckBox();
+            this.renderConstantAmbient = new System.Windows.Forms.CheckBox();
+            this.disableUI = new System.Windows.Forms.CheckBox();
+            this.patchCurrentGen = new System.Windows.Forms.CheckBox();
             this.enableCapFps = new System.Windows.Forms.CheckBox();
             this.capFpsRate = new System.Windows.Forms.ComboBox();
-            this.enableDebugText = new System.Windows.Forms.CheckBox();
-            this.enableDebugTextStacking = new System.Windows.Forms.CheckBox();
-            this.enableDebugEnvironmentMarker = new System.Windows.Forms.CheckBox();
-            this.enableDebugPositionMarker = new System.Windows.Forms.CheckBox();
-            this.enableLiveLink = new System.Windows.Forms.CheckBox();
-            this.UIMOD_DebugCheckpoints = new System.Windows.Forms.CheckBox();
-            this.UIMOD_MapSelection = new System.Windows.Forms.CheckBox();
-            this.UIMOD_MapName = new System.Windows.Forms.CheckBox();
-            this.UIMOD_ReturnFrontend = new System.Windows.Forms.CheckBox();
-            this.levelList = new System.Windows.Forms.ComboBox();
+            this.enableUnlockMouse = new System.Windows.Forms.CheckBox();
+            this.unlockMouseKey = new System.Windows.Forms.ComboBox();
             this.enablePossess = new System.Windows.Forms.CheckBox();
             this.possessKey = new System.Windows.Forms.ComboBox();
-            this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.groupBox2 = new System.Windows.Forms.GroupBox();
-            this.groupBox1.SuspendLayout();
-            this.groupBox2.SuspendLayout();
+            this.quitToMenuOnDeath = new System.Windows.Forms.CheckBox();
+            this.debugLoadingScreen = new System.Windows.Forms.CheckBox();
+            this.debugToolsGroup = new System.Windows.Forms.GroupBox();
+            this.gameOptionsGroup = new System.Windows.Forms.GroupBox();
+            this.uiTweaksGroup = new System.Windows.Forms.GroupBox();
+            this.debugToolsGroup.SuspendLayout();
+            this.gameOptionsGroup.SuspendLayout();
+            this.uiTweaksGroup.SuspendLayout();
             this.SuspendLayout();
-            // 
+            //
             // OpenGame
-            // 
+            //
             this.OpenGame.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.OpenGame.Location = new System.Drawing.Point(12, 351);
+            this.OpenGame.Location = new System.Drawing.Point(12, 291);
             this.OpenGame.Name = "OpenGame";
-            this.OpenGame.Size = new System.Drawing.Size(434, 44);
-            this.OpenGame.TabIndex = 22;
+            this.OpenGame.Size = new System.Drawing.Size(436, 40);
+            this.OpenGame.TabIndex = 5;
             this.OpenGame.Text = "Start Alien: Isolation";
+            this.toolTip1.SetToolTip(this.OpenGame, "Start the game with the options above. It loads levels as they are saved on disk: unsaved changes are offere" +
+        "d a save first.");
             this.OpenGame.UseVisualStyleBackColor = true;
             this.OpenGame.Click += new System.EventHandler(this.LaunchGame_Click);
-            // 
+            //
+            // loadToLevel
+            //
+            this.loadToLevel.AutoSize = true;
+            this.loadToLevel.Location = new System.Drawing.Point(12, 14);
+            this.loadToLevel.Name = "loadToLevel";
+            this.loadToLevel.Size = new System.Drawing.Size(110, 17);
+            this.loadToLevel.TabIndex = 0;
+            this.loadToLevel.Text = "Load straight into";
+            this.toolTip1.SetToolTip(this.loadToLevel, "Ticked: the game boots straight into the chosen level and skips the title screen. Unticked: the game starts a" +
+        "t its main menu.");
+            this.loadToLevel.UseVisualStyleBackColor = true;
+            this.loadToLevel.CheckedChanged += new System.EventHandler(this.loadToLevel_CheckedChanged);
+            //
+            // levelList
+            //
+            this.levelList.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.levelList.Enabled = false;
+            this.levelList.FormattingEnabled = true;
+            this.levelList.Location = new System.Drawing.Point(126, 12);
+            this.levelList.Name = "levelList";
+            this.levelList.Size = new System.Drawing.Size(322, 21);
+            this.levelList.TabIndex = 1;
+            this.toolTip1.SetToolTip(this.levelList, "The level the game boots straight into.");
+            this.levelList.SelectedIndexChanged += new System.EventHandler(this.levelList_SelectedIndexChanged);
+            //
+            // enableDebugMenu
+            //
+            this.enableDebugMenu.AutoSize = true;
+            this.enableDebugMenu.Enabled = false;
+            this.enableDebugMenu.Location = new System.Drawing.Point(10, 19);
+            this.enableDebugMenu.Name = "enableDebugMenu";
+            this.enableDebugMenu.Size = new System.Drawing.Size(88, 17);
+            this.enableDebugMenu.TabIndex = 0;
+            this.enableDebugMenu.Text = "Debug Menu";
+            this.toolTip1.SetToolTip(this.enableDebugMenu, "An in-game debug menu: press the chosen key to open it. See what each character senses, thinks and is doing (i" +
+        "ts behaviour tree, view cones, path, suspicion), flip the behaviour trees\' debug switches, rendering switches and" +
+        " more. Cinematic Tools are part of it now, under Cinematic (their free camera, camera tracks and visuals), and s" +
+        "o are the UI memory overlay (Performance > Memory), debug checkpoints (Game > Tools) and level selection (Game >" +
+        " Game flow).");
+            this.enableDebugMenu.UseVisualStyleBackColor = true;
+            this.enableDebugMenu.CheckedChanged += new System.EventHandler(this.enableDebugMenu_CheckedChanged);
+            //
+            // debugMenuKey
+            //
+            this.debugMenuKey.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.debugMenuKey.Enabled = false;
+            this.debugMenuKey.FormattingEnabled = true;
+            this.debugMenuKey.Location = new System.Drawing.Point(102, 17);
+            this.debugMenuKey.Name = "debugMenuKey";
+            this.debugMenuKey.Size = new System.Drawing.Size(86, 21);
+            this.debugMenuKey.TabIndex = 1;
+            this.toolTip1.SetToolTip(this.debugMenuKey, "The key that opens and closes the in-game debug menu.");
+            this.debugMenuKey.SelectedIndexChanged += new System.EventHandler(this.debugMenuKey_SelectedIndexChanged);
+            //
+            // dontWriteSaves
+            //
+            this.dontWriteSaves.AutoSize = true;
+            this.dontWriteSaves.Enabled = false;
+            this.dontWriteSaves.Location = new System.Drawing.Point(26, 42);
+            this.dontWriteSaves.Name = "dontWriteSaves";
+            this.dontWriteSaves.Size = new System.Drawing.Size(109, 17);
+            this.dontWriteSaves.TabIndex = 2;
+            this.dontWriteSaves.Text = "Don\'t write saves";
+            this.toolTip1.SetToolTip(this.dontWriteSaves, "The game writes nothing to your saved games while it runs (its saves, progress and settings), so testing a lev" +
+        "el never changes them. Part of the Debug Menu: tick Debug Menu to use it. The Debug Menu can switch it in-game to" +
+        "o.");
+            this.dontWriteSaves.UseVisualStyleBackColor = true;
+            this.dontWriteSaves.CheckedChanged += new System.EventHandler(this.dontWriteSaves_CheckedChanged);
+            //
+            // enableDebugEntities
+            //
+            this.enableDebugEntities.AutoSize = true;
+            this.enableDebugEntities.Enabled = false;
+            this.enableDebugEntities.Location = new System.Drawing.Point(236, 19);
+            this.enableDebugEntities.Name = "enableDebugEntities";
+            this.enableDebugEntities.Size = new System.Drawing.Size(96, 17);
+            this.enableDebugEntities.TabIndex = 5;
+            this.enableDebugEntities.Text = "Debug entities";
+            this.toolTip1.SetToolTip(this.enableDebugEntities, "Debug script entities show in-game: DebugText and DebugTextStacking draw their text on screen, DebugEnvironmen" +
+        "tMarker draws its text at a place in the world, and DebugPositionMarker draws axes there.");
+            this.enableDebugEntities.UseVisualStyleBackColor = true;
+            this.enableDebugEntities.CheckedChanged += new System.EventHandler(this.enableDebugEntities_CheckedChanged);
+            //
             // enableHotReload
-            // 
+            //
             this.enableHotReload.AutoSize = true;
             this.enableHotReload.Enabled = false;
-            this.enableHotReload.Location = new System.Drawing.Point(11, 20);
+            this.enableHotReload.Location = new System.Drawing.Point(10, 65);
             this.enableHotReload.Name = "enableHotReload";
-            this.enableHotReload.Size = new System.Drawing.Size(116, 17);
-            this.enableHotReload.TabIndex = 30;
-            this.enableHotReload.Text = "Enable Hot Reload";
+            this.enableHotReload.Size = new System.Drawing.Size(75, 17);
+            this.enableHotReload.TabIndex = 3;
+            this.enableHotReload.Text = "Hot reload";
             this.toolTip1.SetToolTip(this.enableHotReload, "Press the chosen key in-game to reload the current level.");
             this.enableHotReload.UseVisualStyleBackColor = true;
             this.enableHotReload.CheckedChanged += new System.EventHandler(this.enableHotReload_CheckedChanged);
-            // 
-            // enableCinematicTools
-            // 
-            this.enableCinematicTools.AutoSize = true;
-            this.enableCinematicTools.Location = new System.Drawing.Point(226, 68);
-            this.enableCinematicTools.Name = "enableCinematicTools";
-            this.enableCinematicTools.Size = new System.Drawing.Size(137, 17);
-            this.enableCinematicTools.TabIndex = 27;
-            this.enableCinematicTools.Text = "Enable Cinematic Tools";
-            this.toolTip1.SetToolTip(this.enableCinematicTools, "Enables HattiWatti\'s Cinematic Tools, a free camera for filming. Cinematic Tools and the scripting helpers are one or the other, " +
-        "as both take over the game\'s camera: while this is ticked, the Scripting Helpers (Live Link among them) are off.");
-            this.enableCinematicTools.UseVisualStyleBackColor = true;
-            this.enableCinematicTools.CheckedChanged += new System.EventHandler(this.enableCinematicTools_CheckedChanged);
-            // 
-            // enableUIPerf
-            // 
-            this.enableUIPerf.AutoSize = true;
-            this.enableUIPerf.Location = new System.Drawing.Point(226, 22);
-            this.enableUIPerf.Name = "enableUIPerf";
-            this.enableUIPerf.Size = new System.Drawing.Size(152, 17);
-            this.enableUIPerf.TabIndex = 28;
-            this.enableUIPerf.Text = "Enable UI Memory Overlay";
-            this.toolTip1.SetToolTip(this.enableUIPerf, "Displays current UI memory in an in-game overlay.");
-            this.enableUIPerf.UseVisualStyleBackColor = true;
-            this.enableUIPerf.CheckedChanged += new System.EventHandler(this.enableUIPerf_CheckedChanged);
-            // 
-            // enableMemReplayLogs
-            // 
-            this.enableMemReplayLogs.AutoSize = true;
-            this.enableMemReplayLogs.Location = new System.Drawing.Point(226, 45);
-            this.enableMemReplayLogs.Name = "enableMemReplayLogs";
-            this.enableMemReplayLogs.Size = new System.Drawing.Size(140, 17);
-            this.enableMemReplayLogs.TabIndex = 29;
-            this.enableMemReplayLogs.Text = "Enable Memory Logging";
-            this.toolTip1.SetToolTip(this.enableMemReplayLogs, "Enables memory replay logs, saved to the Mem_Replay_Logs folder.");
-            this.enableMemReplayLogs.UseVisualStyleBackColor = true;
-            this.enableMemReplayLogs.CheckedChanged += new System.EventHandler(this.enableMemReplayLogs_CheckedChanged);
-            // 
-            // disableUI
-            // 
-            this.disableUI.AutoSize = true;
-            this.disableUI.Location = new System.Drawing.Point(226, 91);
-            this.disableUI.Name = "disableUI";
-            this.disableUI.Size = new System.Drawing.Size(54, 17);
-            this.disableUI.TabIndex = 31;
-            this.disableUI.Text = "No UI";
-            this.toolTip1.SetToolTip(this.disableUI, "Enabling this will disable the in-game HUD. Be aware that this also disables UI p" +
-        "opups, so may make some actions impossible.");
-            this.disableUI.UseVisualStyleBackColor = true;
-            this.disableUI.CheckedChanged += new System.EventHandler(this.disableUI_CheckedChanged);
-            // 
-            // skipFrontend
-            // 
-            this.skipFrontend.AutoSize = true;
-            this.skipFrontend.Location = new System.Drawing.Point(11, 114);
-            this.skipFrontend.Name = "skipFrontend";
-            this.skipFrontend.Size = new System.Drawing.Size(92, 17);
-            this.skipFrontend.TabIndex = 32;
-            this.skipFrontend.Text = "Skip Frontend";
-            this.toolTip1.SetToolTip(this.skipFrontend, "Enabling this will skip the title screen when loading directly to a level.");
-            this.skipFrontend.UseVisualStyleBackColor = true;
-            this.skipFrontend.CheckedChanged += new System.EventHandler(this.skipFrontend_CheckedChanged);
-            // 
-            // patchCurrentGen
-            // 
-            this.patchCurrentGen.AutoSize = true;
-            this.patchCurrentGen.Location = new System.Drawing.Point(11, 137);
-            this.patchCurrentGen.Name = "patchCurrentGen";
-            this.patchCurrentGen.Size = new System.Drawing.Size(179, 17);
-            this.patchCurrentGen.TabIndex = 33;
-            this.patchCurrentGen.Text = "Patch Current-Gen Optimisations";
-            this.toolTip1.SetToolTip(this.patchCurrentGen, "Enabling this will patch current-gen script optimisations to enable functionality" +
-        " previously disabled in the PC build, such as additional dynamic lighting.");
-            this.patchCurrentGen.UseVisualStyleBackColor = true;
-            this.patchCurrentGen.CheckedChanged += new System.EventHandler(this.patchCurrentGen_CheckedChanged);
-            // 
-            // loadToLevel
-            // 
-            this.loadToLevel.AutoSize = true;
-            this.loadToLevel.Location = new System.Drawing.Point(12, 9);
-            this.loadToLevel.Name = "loadToLevel";
-            this.loadToLevel.Size = new System.Drawing.Size(141, 17);
-            this.loadToLevel.TabIndex = 32;
-            this.loadToLevel.Text = "Load straight into a level";
-            this.toolTip1.SetToolTip(this.loadToLevel, "Unchecked: the game starts at its main menu (FRONTEND). Checked: the game boots d" +
-        "irectly into the selected level.");
-            this.loadToLevel.UseVisualStyleBackColor = true;
-            this.loadToLevel.CheckedChanged += new System.EventHandler(this.loadToLevel_CheckedChanged);
-            // 
-            // renderConstantAmbient
-            // 
-            this.renderConstantAmbient.AutoSize = true;
-            this.renderConstantAmbient.Location = new System.Drawing.Point(226, 114);
-            this.renderConstantAmbient.Name = "renderConstantAmbient";
-            this.renderConstantAmbient.Size = new System.Drawing.Size(147, 17);
-            this.renderConstantAmbient.TabIndex = 34;
-            this.renderConstantAmbient.Text = "Render Constant Ambient";
-            this.toolTip1.SetToolTip(this.renderConstantAmbient, "Enabling this will render in \'constant ambient\' mode (essentially full-bright).");
-            this.renderConstantAmbient.UseVisualStyleBackColor = true;
-            this.renderConstantAmbient.CheckedChanged += new System.EventHandler(this.renderConstantAmbient_CheckedChanged);
-            // 
+            //
             // hotReloadKey
-            // 
+            //
             this.hotReloadKey.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.hotReloadKey.Enabled = false;
             this.hotReloadKey.FormattingEnabled = true;
-            this.hotReloadKey.Location = new System.Drawing.Point(130, 17);
+            this.hotReloadKey.Location = new System.Drawing.Point(102, 63);
             this.hotReloadKey.Name = "hotReloadKey";
-            this.hotReloadKey.Size = new System.Drawing.Size(85, 21);
-            this.hotReloadKey.TabIndex = 36;
+            this.hotReloadKey.Size = new System.Drawing.Size(86, 21);
+            this.hotReloadKey.TabIndex = 4;
             this.toolTip1.SetToolTip(this.hotReloadKey, "The key that reloads the current level.");
             this.hotReloadKey.SelectedIndexChanged += new System.EventHandler(this.hotReloadKey_SelectedIndexChanged);
-            // 
-            // enableUnlockMouse
-            // 
-            this.enableUnlockMouse.AutoSize = true;
-            this.enableUnlockMouse.Enabled = false;
-            this.enableUnlockMouse.Location = new System.Drawing.Point(226, 20);
-            this.enableUnlockMouse.Name = "enableUnlockMouse";
-            this.enableUnlockMouse.Size = new System.Drawing.Size(95, 17);
-            this.enableUnlockMouse.TabIndex = 42;
-            this.enableUnlockMouse.Text = "Unlock Mouse";
-            this.toolTip1.SetToolTip(this.enableUnlockMouse, "The game leaves your mouse cursor free, so you can work in OpenCAGE beside it (handy with Live Link\'s came" +
-        "ra sync). To look around in-game, click the game window and press the chosen key; press it again to free the" +
-        " cursor.");
-            this.enableUnlockMouse.UseVisualStyleBackColor = true;
-            this.enableUnlockMouse.CheckedChanged += new System.EventHandler(this.enableUnlockMouse_CheckedChanged);
-            // 
-            // unlockMouseKey
-            // 
-            this.unlockMouseKey.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.unlockMouseKey.Enabled = false;
-            this.unlockMouseKey.FormattingEnabled = true;
-            this.unlockMouseKey.Location = new System.Drawing.Point(324, 17);
-            this.unlockMouseKey.Name = "unlockMouseKey";
-            this.unlockMouseKey.Size = new System.Drawing.Size(85, 21);
-            this.unlockMouseKey.TabIndex = 43;
-            this.toolTip1.SetToolTip(this.unlockMouseKey, "The key that gives the game the mouse to look around with, and frees the cursor again.");
-            this.unlockMouseKey.SelectedIndexChanged += new System.EventHandler(this.unlockMouseKey_SelectedIndexChanged);
+            //
+            // enableLiveLink
+            //
+            this.enableLiveLink.AutoSize = true;
+            this.enableLiveLink.Enabled = false;
+            this.enableLiveLink.Location = new System.Drawing.Point(236, 42);
+            this.enableLiveLink.Name = "enableLiveLink";
+            this.enableLiveLink.Size = new System.Drawing.Size(68, 17);
+            this.enableLiveLink.TabIndex = 6;
+            this.enableLiveLink.Text = "Live Link";
+            this.toolTip1.SetToolTip(this.enableLiveLink, "The game serves OpenCAGE\'s Live Link (on this PC only), and OpenCAGE connects to it by itself once the game i" +
+        "s up (the Live Link button, beside Launch Game): script edits reach the running level without a reload, entity " +
+        "methods can be triggered from the Entity Inspector or a method pin\'s right-click menu, and the viewport\'s camer" +
+        "a and the game\'s can follow each other.");
+            this.enableLiveLink.UseVisualStyleBackColor = true;
+            this.enableLiveLink.CheckedChanged += new System.EventHandler(this.enableLiveLink_CheckedChanged);
+            //
+            // renderConstantAmbient
+            //
+            this.renderConstantAmbient.AutoSize = true;
+            this.renderConstantAmbient.Location = new System.Drawing.Point(236, 19);
+            this.renderConstantAmbient.Name = "renderConstantAmbient";
+            this.renderConstantAmbient.Size = new System.Drawing.Size(151, 17);
+            this.renderConstantAmbient.TabIndex = 6;
+            this.renderConstantAmbient.Text = "Constant ambient lighting";
+            this.toolTip1.SetToolTip(this.renderConstantAmbient, "The game renders in \'constant ambient\' mode: every surface evenly lit (essentially full-bright).");
+            this.renderConstantAmbient.UseVisualStyleBackColor = true;
+            this.renderConstantAmbient.CheckedChanged += new System.EventHandler(this.renderConstantAmbient_CheckedChanged);
+            //
+            // disableUI
+            //
+            this.disableUI.AutoSize = true;
+            this.disableUI.Location = new System.Drawing.Point(236, 42);
+            this.disableUI.Name = "disableUI";
+            this.disableUI.Size = new System.Drawing.Size(65, 17);
+            this.disableUI.TabIndex = 7;
+            this.disableUI.Text = "No HUD";
+            this.toolTip1.SetToolTip(this.disableUI, "The game draws no HUD. This also hides UI popups, so some actions may become impossible.");
+            this.disableUI.UseVisualStyleBackColor = true;
+            this.disableUI.CheckedChanged += new System.EventHandler(this.disableUI_CheckedChanged);
+            //
+            // patchCurrentGen
+            //
+            this.patchCurrentGen.AutoSize = true;
+            this.patchCurrentGen.Location = new System.Drawing.Point(236, 65);
+            this.patchCurrentGen.Name = "patchCurrentGen";
+            this.patchCurrentGen.Size = new System.Drawing.Size(140, 17);
+            this.patchCurrentGen.TabIndex = 8;
+            this.patchCurrentGen.Text = "Current-gen script fixes";
+            this.toolTip1.SetToolTip(this.patchCurrentGen, "Patches out the current-gen script optimisations, so functionality they leave disabled in the PC build (such a" +
+        "s additional dynamic lighting) runs. On by default: edited levels need it.");
+            this.patchCurrentGen.UseVisualStyleBackColor = true;
+            this.patchCurrentGen.CheckedChanged += new System.EventHandler(this.patchCurrentGen_CheckedChanged);
             //
             // enableCapFps
             //
             this.enableCapFps.AutoSize = true;
             this.enableCapFps.Enabled = false;
-            this.enableCapFps.Location = new System.Drawing.Point(226, 90);
+            this.enableCapFps.Location = new System.Drawing.Point(10, 19);
             this.enableCapFps.Name = "enableCapFps";
-            this.enableCapFps.Size = new System.Drawing.Size(66, 17);
-            this.enableCapFps.TabIndex = 44;
+            this.enableCapFps.Size = new System.Drawing.Size(69, 17);
+            this.enableCapFps.TabIndex = 0;
             this.enableCapFps.Text = "Cap FPS";
             this.toolTip1.SetToolTip(this.enableCapFps, "The game runs at most the chosen frames a second. Above 360 it runs too fast (a near-empty level with V-Sync" +
         " off, say), so this keeps it at its proper speed.");
@@ -246,146 +253,49 @@ namespace OpenCAGE
             this.capFpsRate.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.capFpsRate.Enabled = false;
             this.capFpsRate.FormattingEnabled = true;
-            this.capFpsRate.Location = new System.Drawing.Point(324, 87);
+            this.capFpsRate.Location = new System.Drawing.Point(138, 17);
             this.capFpsRate.Name = "capFpsRate";
-            this.capFpsRate.Size = new System.Drawing.Size(85, 21);
-            this.capFpsRate.TabIndex = 45;
+            this.capFpsRate.Size = new System.Drawing.Size(86, 21);
+            this.capFpsRate.TabIndex = 1;
             this.toolTip1.SetToolTip(this.capFpsRate, "The most frames a second the game runs at.");
             this.capFpsRate.SelectedIndexChanged += new System.EventHandler(this.capFpsRate_SelectedIndexChanged);
-            // 
-            // enableDebugText
-            // 
-            this.enableDebugText.AutoSize = true;
-            this.enableDebugText.Enabled = false;
-            this.enableDebugText.Location = new System.Drawing.Point(11, 43);
-            this.enableDebugText.Name = "enableDebugText";
-            this.enableDebugText.Size = new System.Drawing.Size(115, 17);
-            this.enableDebugText.TabIndex = 37;
-            this.enableDebugText.Text = "Enable DebugText";
-            this.toolTip1.SetToolTip(this.enableDebugText, "DebugText script entities draw their text on screen in-game.");
-            this.enableDebugText.UseVisualStyleBackColor = true;
-            this.enableDebugText.CheckedChanged += new System.EventHandler(this.enableDebugText_CheckedChanged);
-            // 
-            // enableDebugTextStacking
-            // 
-            this.enableDebugTextStacking.AutoSize = true;
-            this.enableDebugTextStacking.Enabled = false;
-            this.enableDebugTextStacking.Location = new System.Drawing.Point(11, 66);
-            this.enableDebugTextStacking.Name = "enableDebugTextStacking";
-            this.enableDebugTextStacking.Size = new System.Drawing.Size(157, 17);
-            this.enableDebugTextStacking.TabIndex = 38;
-            this.enableDebugTextStacking.Text = "Enable DebugTextStacking";
-            this.toolTip1.SetToolTip(this.enableDebugTextStacking, "DebugTextStacking script entities draw their text on screen in-game.");
-            this.enableDebugTextStacking.UseVisualStyleBackColor = true;
-            this.enableDebugTextStacking.CheckedChanged += new System.EventHandler(this.enableDebugTextStacking_CheckedChanged);
-            // 
-            // enableDebugEnvironmentMarker
-            // 
-            this.enableDebugEnvironmentMarker.AutoSize = true;
-            this.enableDebugEnvironmentMarker.Enabled = false;
-            this.enableDebugEnvironmentMarker.Location = new System.Drawing.Point(226, 67);
-            this.enableDebugEnvironmentMarker.Name = "enableDebugEnvironmentMarker";
-            this.enableDebugEnvironmentMarker.Size = new System.Drawing.Size(186, 17);
-            this.enableDebugEnvironmentMarker.TabIndex = 39;
-            this.enableDebugEnvironmentMarker.Text = "Enable DebugEnvironmentMarker";
-            this.toolTip1.SetToolTip(this.enableDebugEnvironmentMarker, "DebugEnvironmentMarker script entities draw their text at a world position in-gam" +
-        "e.");
-            this.enableDebugEnvironmentMarker.UseVisualStyleBackColor = true;
-            this.enableDebugEnvironmentMarker.CheckedChanged += new System.EventHandler(this.enableDebugEnvironmentMarker_CheckedChanged);
-            // 
-            // enableDebugPositionMarker
-            // 
-            this.enableDebugPositionMarker.AutoSize = true;
-            this.enableDebugPositionMarker.Enabled = false;
-            this.enableDebugPositionMarker.Location = new System.Drawing.Point(226, 44);
-            this.enableDebugPositionMarker.Name = "enableDebugPositionMarker";
-            this.enableDebugPositionMarker.Size = new System.Drawing.Size(164, 17);
-            this.enableDebugPositionMarker.TabIndex = 40;
-            this.enableDebugPositionMarker.Text = "Enable DebugPositionMarker";
-            this.toolTip1.SetToolTip(this.enableDebugPositionMarker, "DebugPositionMarker script entities draw axes at a world position in-game.");
-            this.enableDebugPositionMarker.UseVisualStyleBackColor = true;
-            this.enableDebugPositionMarker.CheckedChanged += new System.EventHandler(this.enableDebugPositionMarker_CheckedChanged);
             //
-            // enableLiveLink
+            // enableUnlockMouse
             //
-            this.enableLiveLink.AutoSize = true;
-            this.enableLiveLink.Enabled = false;
-            this.enableLiveLink.Location = new System.Drawing.Point(11, 89);
-            this.enableLiveLink.Name = "enableLiveLink";
-            this.enableLiveLink.Size = new System.Drawing.Size(105, 17);
-            this.enableLiveLink.TabIndex = 41;
-            this.enableLiveLink.Text = "Enable Live Link";
-            this.toolTip1.SetToolTip(this.enableLiveLink, "The game serves OpenCAGE\'s Live Link (on this PC only), and OpenCAGE connects to it by itself once the game i" +
-        "s up (the Live Link button, beside Launch Game): script edits reach the running level without a reload, entity " +
-        "methods can be triggered from the Entity Inspector or a method pin\'s right-click menu, and the viewport\'s camer" +
-        "a and the game\'s can follow each other. Not with Cinematic Tools, which have the game\'s camera instead.");
-            this.enableLiveLink.UseVisualStyleBackColor = true;
-            this.enableLiveLink.CheckedChanged += new System.EventHandler(this.enableLiveLink_CheckedChanged);
+            this.enableUnlockMouse.AutoSize = true;
+            this.enableUnlockMouse.Enabled = false;
+            this.enableUnlockMouse.Location = new System.Drawing.Point(10, 42);
+            this.enableUnlockMouse.Name = "enableUnlockMouse";
+            this.enableUnlockMouse.Size = new System.Drawing.Size(95, 17);
+            this.enableUnlockMouse.TabIndex = 2;
+            this.enableUnlockMouse.Text = "Unlock mouse";
+            this.toolTip1.SetToolTip(this.enableUnlockMouse, "The game leaves your mouse cursor free, so you can work in OpenCAGE beside it (handy with Live Link\'s came" +
+        "ra sync). To look around in-game, click the game window and press the chosen key; press it again to free the" +
+        " cursor.");
+            this.enableUnlockMouse.UseVisualStyleBackColor = true;
+            this.enableUnlockMouse.CheckedChanged += new System.EventHandler(this.enableUnlockMouse_CheckedChanged);
             //
-            // UIMOD_DebugCheckpoints
-            // 
-            this.UIMOD_DebugCheckpoints.AutoSize = true;
-            this.UIMOD_DebugCheckpoints.Location = new System.Drawing.Point(11, 22);
-            this.UIMOD_DebugCheckpoints.Name = "UIMOD_DebugCheckpoints";
-            this.UIMOD_DebugCheckpoints.Size = new System.Drawing.Size(156, 17);
-            this.UIMOD_DebugCheckpoints.TabIndex = 23;
-            this.UIMOD_DebugCheckpoints.Text = "Enable Debug Checkpoints";
-            this.UIMOD_DebugCheckpoints.UseVisualStyleBackColor = true;
-            this.UIMOD_DebugCheckpoints.CheckedChanged += new System.EventHandler(this.UIMOD_DebugCheckpoints_CheckedChanged);
-            // 
-            // UIMOD_MapSelection
-            // 
-            this.UIMOD_MapSelection.AutoSize = true;
-            this.UIMOD_MapSelection.Location = new System.Drawing.Point(11, 45);
-            this.UIMOD_MapSelection.Name = "UIMOD_MapSelection";
-            this.UIMOD_MapSelection.Size = new System.Drawing.Size(135, 17);
-            this.UIMOD_MapSelection.TabIndex = 24;
-            this.UIMOD_MapSelection.Text = "Enable Level Selection";
-            this.UIMOD_MapSelection.UseVisualStyleBackColor = true;
-            this.UIMOD_MapSelection.CheckedChanged += new System.EventHandler(this.UIMOD_MapSelection_CheckedChanged);
-            // 
-            // UIMOD_MapName
-            // 
-            this.UIMOD_MapName.AutoSize = true;
-            this.UIMOD_MapName.Location = new System.Drawing.Point(11, 68);
-            this.UIMOD_MapName.Name = "UIMOD_MapName";
-            this.UIMOD_MapName.Size = new System.Drawing.Size(153, 17);
-            this.UIMOD_MapName.TabIndex = 25;
-            this.UIMOD_MapName.Text = "Enable Debug Loadscreen";
-            this.UIMOD_MapName.UseVisualStyleBackColor = true;
-            this.UIMOD_MapName.CheckedChanged += new System.EventHandler(this.UIMOD_MapName_CheckedChanged);
-            // 
-            // UIMOD_ReturnFrontend
-            // 
-            this.UIMOD_ReturnFrontend.AutoSize = true;
-            this.UIMOD_ReturnFrontend.Location = new System.Drawing.Point(11, 91);
-            this.UIMOD_ReturnFrontend.Name = "UIMOD_ReturnFrontend";
-            this.UIMOD_ReturnFrontend.Size = new System.Drawing.Size(162, 17);
-            this.UIMOD_ReturnFrontend.TabIndex = 26;
-            this.UIMOD_ReturnFrontend.Text = "Add Quit To Menu On Death";
-            this.UIMOD_ReturnFrontend.UseVisualStyleBackColor = true;
-            this.UIMOD_ReturnFrontend.CheckedChanged += new System.EventHandler(this.UIMOD_ReturnFrontend_CheckedChanged);
-            // 
-            // levelList
-            // 
-            this.levelList.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.levelList.Enabled = false;
-            this.levelList.FormattingEnabled = true;
-            this.levelList.Location = new System.Drawing.Point(12, 30);
-            this.levelList.Name = "levelList";
-            this.levelList.Size = new System.Drawing.Size(434, 21);
-            this.levelList.TabIndex = 30;
-            this.levelList.SelectedIndexChanged += new System.EventHandler(this.levelList_SelectedIndexChanged);
+            // unlockMouseKey
+            //
+            this.unlockMouseKey.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.unlockMouseKey.Enabled = false;
+            this.unlockMouseKey.FormattingEnabled = true;
+            this.unlockMouseKey.Location = new System.Drawing.Point(138, 40);
+            this.unlockMouseKey.Name = "unlockMouseKey";
+            this.unlockMouseKey.Size = new System.Drawing.Size(86, 21);
+            this.unlockMouseKey.TabIndex = 3;
+            this.toolTip1.SetToolTip(this.unlockMouseKey, "The key that gives the game the mouse to look around with, and frees the cursor again.");
+            this.unlockMouseKey.SelectedIndexChanged += new System.EventHandler(this.unlockMouseKey_SelectedIndexChanged);
             //
             // enablePossess
             //
             this.enablePossess.AutoSize = true;
             this.enablePossess.Enabled = false;
-            this.enablePossess.Location = new System.Drawing.Point(226, 137);
+            this.enablePossess.Location = new System.Drawing.Point(10, 65);
             this.enablePossess.Name = "enablePossess";
-            this.enablePossess.Size = new System.Drawing.Size(117, 17);
-            this.enablePossess.TabIndex = 46;
-            this.enablePossess.Text = "Possess Characters";
+            this.enablePossess.Size = new System.Drawing.Size(122, 17);
+            this.enablePossess.TabIndex = 4;
+            this.enablePossess.Text = "Possess characters";
             this.toolTip1.SetToolTip(this.enablePossess, "Take control of a character (the alien, an android, a human) in-game: press the chosen key to open a menu of " +
         "the characters around you and pick one. W/A/S/D move it, Shift faster, Ctrl slower, C crouches, the mouse turns the camera behind it and the wheel zooms it.");
             this.enablePossess.UseVisualStyleBackColor = true;
@@ -396,64 +306,92 @@ namespace OpenCAGE
             this.possessKey.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.possessKey.Enabled = false;
             this.possessKey.FormattingEnabled = true;
-            this.possessKey.Location = new System.Drawing.Point(346, 134);
+            this.possessKey.Location = new System.Drawing.Point(138, 63);
             this.possessKey.Name = "possessKey";
-            this.possessKey.Size = new System.Drawing.Size(80, 21);
-            this.possessKey.TabIndex = 47;
+            this.possessKey.Size = new System.Drawing.Size(86, 21);
+            this.possessKey.TabIndex = 5;
             this.toolTip1.SetToolTip(this.possessKey, "The key that opens and closes the in-game menu of characters to possess.");
             this.possessKey.SelectedIndexChanged += new System.EventHandler(this.possessKey_SelectedIndexChanged);
             //
-            // groupBox1
+            // quitToMenuOnDeath
             //
-            this.groupBox1.Controls.Add(this.renderConstantAmbient);
-            this.groupBox1.Controls.Add(this.patchCurrentGen);
-            this.groupBox1.Controls.Add(this.skipFrontend);
-            this.groupBox1.Controls.Add(this.disableUI);
-            this.groupBox1.Controls.Add(this.UIMOD_DebugCheckpoints);
-            this.groupBox1.Controls.Add(this.UIMOD_MapSelection);
-            this.groupBox1.Controls.Add(this.UIMOD_MapName);
-            this.groupBox1.Controls.Add(this.enableMemReplayLogs);
-            this.groupBox1.Controls.Add(this.UIMOD_ReturnFrontend);
-            this.groupBox1.Controls.Add(this.enableUIPerf);
-            this.groupBox1.Controls.Add(this.enableCinematicTools);
-            this.groupBox1.Controls.Add(this.enablePossess);
-            this.groupBox1.Controls.Add(this.possessKey);
-            this.groupBox1.Location = new System.Drawing.Point(12, 61);
-            this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(434, 163);
-            this.groupBox1.TabIndex = 31;
-            this.groupBox1.TabStop = false;
-            this.groupBox1.Text = "Launch Options";
-            // 
-            // groupBox2
-            // 
-            this.groupBox2.Controls.Add(this.enableHotReload);
-            this.groupBox2.Controls.Add(this.hotReloadKey);
-            this.groupBox2.Controls.Add(this.enableUnlockMouse);
-            this.groupBox2.Controls.Add(this.unlockMouseKey);
-            this.groupBox2.Controls.Add(this.enableCapFps);
-            this.groupBox2.Controls.Add(this.capFpsRate);
-            this.groupBox2.Controls.Add(this.enableDebugText);
-            this.groupBox2.Controls.Add(this.enableDebugTextStacking);
-            this.groupBox2.Controls.Add(this.enableDebugEnvironmentMarker);
-            this.groupBox2.Controls.Add(this.enableDebugPositionMarker);
-            this.groupBox2.Controls.Add(this.enableLiveLink);
-            this.groupBox2.Location = new System.Drawing.Point(12, 230);
-            this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(434, 115);
-            this.groupBox2.TabIndex = 35;
-            this.groupBox2.TabStop = false;
-            this.groupBox2.Text = "Scripting Helpers";
-            // 
+            this.quitToMenuOnDeath.AutoSize = true;
+            this.quitToMenuOnDeath.Location = new System.Drawing.Point(10, 19);
+            this.quitToMenuOnDeath.Name = "quitToMenuOnDeath";
+            this.quitToMenuOnDeath.Size = new System.Drawing.Size(135, 17);
+            this.quitToMenuOnDeath.TabIndex = 0;
+            this.quitToMenuOnDeath.Text = "Quit to menu on death";
+            this.toolTip1.SetToolTip(this.quitToMenuOnDeath, "Adds a Quit To Menu option to the game-over screen, so a death can go back to the main menu.");
+            this.quitToMenuOnDeath.UseVisualStyleBackColor = true;
+            this.quitToMenuOnDeath.CheckedChanged += new System.EventHandler(this.quitToMenuOnDeath_CheckedChanged);
+            //
+            // debugLoadingScreen
+            //
+            this.debugLoadingScreen.AutoSize = true;
+            this.debugLoadingScreen.Location = new System.Drawing.Point(236, 19);
+            this.debugLoadingScreen.Name = "debugLoadingScreen";
+            this.debugLoadingScreen.Size = new System.Drawing.Size(133, 17);
+            this.debugLoadingScreen.TabIndex = 1;
+            this.debugLoadingScreen.Text = "Debug loading screen";
+            this.toolTip1.SetToolTip(this.debugLoadingScreen, "The loading screen shows the name of the level being loaded.");
+            this.debugLoadingScreen.UseVisualStyleBackColor = true;
+            this.debugLoadingScreen.CheckedChanged += new System.EventHandler(this.debugLoadingScreen_CheckedChanged);
+            //
+            // debugToolsGroup
+            //
+            this.debugToolsGroup.Controls.Add(this.enableDebugMenu);
+            this.debugToolsGroup.Controls.Add(this.debugMenuKey);
+            this.debugToolsGroup.Controls.Add(this.dontWriteSaves);
+            this.debugToolsGroup.Controls.Add(this.enableDebugEntities);
+            this.debugToolsGroup.Controls.Add(this.enableHotReload);
+            this.debugToolsGroup.Controls.Add(this.hotReloadKey);
+            this.debugToolsGroup.Controls.Add(this.enableLiveLink);
+            this.debugToolsGroup.Location = new System.Drawing.Point(12, 41);
+            this.debugToolsGroup.Name = "debugToolsGroup";
+            this.debugToolsGroup.Size = new System.Drawing.Size(436, 92);
+            this.debugToolsGroup.TabIndex = 2;
+            this.debugToolsGroup.TabStop = false;
+            this.debugToolsGroup.Text = "Debug tools";
+            //
+            // gameOptionsGroup
+            //
+            this.gameOptionsGroup.Controls.Add(this.renderConstantAmbient);
+            this.gameOptionsGroup.Controls.Add(this.disableUI);
+            this.gameOptionsGroup.Controls.Add(this.patchCurrentGen);
+            this.gameOptionsGroup.Controls.Add(this.enableCapFps);
+            this.gameOptionsGroup.Controls.Add(this.capFpsRate);
+            this.gameOptionsGroup.Controls.Add(this.enableUnlockMouse);
+            this.gameOptionsGroup.Controls.Add(this.unlockMouseKey);
+            this.gameOptionsGroup.Controls.Add(this.enablePossess);
+            this.gameOptionsGroup.Controls.Add(this.possessKey);
+            this.gameOptionsGroup.Location = new System.Drawing.Point(12, 139);
+            this.gameOptionsGroup.Name = "gameOptionsGroup";
+            this.gameOptionsGroup.Size = new System.Drawing.Size(436, 92);
+            this.gameOptionsGroup.TabIndex = 3;
+            this.gameOptionsGroup.TabStop = false;
+            this.gameOptionsGroup.Text = "Game options";
+            //
+            // uiTweaksGroup
+            //
+            this.uiTweaksGroup.Controls.Add(this.quitToMenuOnDeath);
+            this.uiTweaksGroup.Controls.Add(this.debugLoadingScreen);
+            this.uiTweaksGroup.Location = new System.Drawing.Point(12, 237);
+            this.uiTweaksGroup.Name = "uiTweaksGroup";
+            this.uiTweaksGroup.Size = new System.Drawing.Size(436, 46);
+            this.uiTweaksGroup.TabIndex = 4;
+            this.uiTweaksGroup.TabStop = false;
+            this.uiTweaksGroup.Text = "UI tweaks";
+            //
             // LaunchGame
-            // 
+            //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(462, 405);
-            this.Controls.Add(this.groupBox2);
+            this.ClientSize = new System.Drawing.Size(460, 343);
             this.Controls.Add(this.loadToLevel);
-            this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.levelList);
+            this.Controls.Add(this.debugToolsGroup);
+            this.Controls.Add(this.gameOptionsGroup);
+            this.Controls.Add(this.uiTweaksGroup);
             this.Controls.Add(this.OpenGame);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.HelpButton = true;
@@ -463,10 +401,12 @@ namespace OpenCAGE
             this.Name = "LaunchGame";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Launch Game";
-            this.groupBox1.ResumeLayout(false);
-            this.groupBox1.PerformLayout();
-            this.groupBox2.ResumeLayout(false);
-            this.groupBox2.PerformLayout();
+            this.debugToolsGroup.ResumeLayout(false);
+            this.debugToolsGroup.PerformLayout();
+            this.gameOptionsGroup.ResumeLayout(false);
+            this.gameOptionsGroup.PerformLayout();
+            this.uiTweaksGroup.ResumeLayout(false);
+            this.uiTweaksGroup.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -475,33 +415,28 @@ namespace OpenCAGE
         #endregion
         private System.Windows.Forms.Button OpenGame;
         private System.Windows.Forms.ToolTip toolTip1;
-        private System.Windows.Forms.CheckBox UIMOD_DebugCheckpoints;
-        private System.Windows.Forms.CheckBox UIMOD_MapSelection;
-        private System.Windows.Forms.CheckBox UIMOD_MapName;
-        private System.Windows.Forms.CheckBox UIMOD_ReturnFrontend;
-        private System.Windows.Forms.CheckBox enableCinematicTools;
-        private System.Windows.Forms.CheckBox enableUIPerf;
-        private System.Windows.Forms.CheckBox enableMemReplayLogs;
-        private System.Windows.Forms.ComboBox levelList;
-        private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.CheckBox loadToLevel;
+        private System.Windows.Forms.ComboBox levelList;
+        private System.Windows.Forms.GroupBox debugToolsGroup;
+        private System.Windows.Forms.CheckBox enableDebugMenu;
+        private System.Windows.Forms.ComboBox debugMenuKey;
+        private System.Windows.Forms.CheckBox dontWriteSaves;
+        private System.Windows.Forms.CheckBox enableDebugEntities;
         private System.Windows.Forms.CheckBox enableHotReload;
-        private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.ComboBox hotReloadKey;
-        private System.Windows.Forms.CheckBox enableUnlockMouse;
-        private System.Windows.Forms.ComboBox unlockMouseKey;
+        private System.Windows.Forms.CheckBox enableLiveLink;
+        private System.Windows.Forms.GroupBox gameOptionsGroup;
+        private System.Windows.Forms.CheckBox renderConstantAmbient;
+        private System.Windows.Forms.CheckBox disableUI;
+        private System.Windows.Forms.CheckBox patchCurrentGen;
         private System.Windows.Forms.CheckBox enableCapFps;
         private System.Windows.Forms.ComboBox capFpsRate;
-        private System.Windows.Forms.CheckBox enableDebugText;
-        private System.Windows.Forms.CheckBox enableDebugTextStacking;
-        private System.Windows.Forms.CheckBox enableDebugEnvironmentMarker;
-        private System.Windows.Forms.CheckBox enableDebugPositionMarker;
-        private System.Windows.Forms.CheckBox enableLiveLink;
-        private System.Windows.Forms.CheckBox disableUI;
-        private System.Windows.Forms.CheckBox skipFrontend;
-        private System.Windows.Forms.CheckBox patchCurrentGen;
-        private System.Windows.Forms.CheckBox renderConstantAmbient;
+        private System.Windows.Forms.CheckBox enableUnlockMouse;
+        private System.Windows.Forms.ComboBox unlockMouseKey;
         private System.Windows.Forms.CheckBox enablePossess;
         private System.Windows.Forms.ComboBox possessKey;
+        private System.Windows.Forms.GroupBox uiTweaksGroup;
+        private System.Windows.Forms.CheckBox quitToMenuOnDeath;
+        private System.Windows.Forms.CheckBox debugLoadingScreen;
     }
 }

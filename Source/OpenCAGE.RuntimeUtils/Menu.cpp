@@ -8,16 +8,21 @@
 #include "LIVE_LINK_SERVER.h"
 #include "LIVE_CAMERA.h"
 #include "CUBEMAP_CAPTURE.h"
+#include "CINEMATIC_CAMERA.h"
+#include "DEBUG_MENU.h"
 #include "MOUSE_UNLOCK.h"
 #include "POSSESS.h"
 
 // Engine-specific code classes.
 
 #include <detours.h>
+#include <algorithm>
 #include <map>
+#include <mutex>
 #include <sstream>
 #include <iomanip>
 #include <cfloat>
+#include <vector>
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -31,6 +36,38 @@ WNDPROC                 g_originalWndProcHandler = nullptr;
 bool g_menuInitialised = false;
 bool g_showDemoWindow = false;
 bool g_showMenu = false;
+
+namespace
+{
+    // The window messages queued for ImGui since the last frame (QueueImGuiMessage), at most kMaxImGuiMessages of them
+    struct ImGuiMessage
+    {
+        HWND window;
+        UINT message;
+        WPARAM wParam;
+        LPARAM lParam;
+    };
+    std::mutex g_imguiMessagesMutex;
+    std::vector<ImGuiMessage> g_imguiMessages;
+    constexpr size_t kMaxImGuiMessages = 256;
+
+    bool IsMouseMove(UINT message)
+    {
+        return message == WM_MOUSEMOVE || message == WM_NCMOUSEMOVE;
+    }
+
+    // The thread that presents, before its frame: ImGui is given the queued messages, in the order they came
+    void FeedQueuedImGuiInput()
+    {
+        std::vector<ImGuiMessage> messages;
+        {
+            std::lock_guard<std::mutex> lock(g_imguiMessagesMutex);
+            messages.swap(g_imguiMessages);
+        }
+        for (const ImGuiMessage& queued : messages)
+            ImGui_ImplWin32_WndProcHandler(queued.window, queued.message, queued.wParam, queued.lParam);
+    }
+}
 
 Menu::Menu()
 {
@@ -49,37 +86,46 @@ Menu::~Menu() {
 // Our custom window handler to override A:I's own handler.
 // This lets us detect keyboard inputs and pass mouse + keyboard input control to ImGui.
 LRESULT CALLBACK Menu::WndProcHandler(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    ImGuiIO& io = ImGui::GetIO();
-    POINT cursorPos;
-    GetCursorPos(&cursorPos);
-    ScreenToClient(g_hWindow, &cursorPos);
-    io.MousePos.x = cursorPos.x;
-    io.MousePos.y = cursorPos.y;
-
     const Config::Settings& config = Config::Get();
     if (uMsg == WM_KEYUP) {
         if (wParam == VK_DELETE) {
             // the Delete key once toggled the settings window; it is off for now
         }
-        // Hot reload: restart the current level.
-        if (config.hotReload && wParam == static_cast<WPARAM>(config.hotReloadKey) && GAME_LEVEL_MANAGER::m_instance != nullptr) {
+        // Hot reload: restart the current level. Not while the debug menu is open: its text fields use the keys hot reload
+        // can be set to (Insert, Delete, Home, End), and its Game tab can restart the level itself.
+        if (config.hotReload && wParam == static_cast<WPARAM>(config.hotReloadKey) && GAME_LEVEL_MANAGER::m_instance != nullptr && !(config.debugMenu && DEBUG_MENU::IsOpen())) {
             LoadLevel(GAME_LEVEL_MANAGER::get_current_level(GAME_LEVEL_MANAGER::m_instance));
         }
     }
 
     // Unlock Mouse: its key, the cursor shown over the window while it's free, and the mouse kept from the game then.
-    // A cubemap capture frees the cursor through it too, so it is in whenever captures can be asked for.
+    // A cubemap capture frees the cursor through it too, as does the debug menu while open, so it is in for those.
     const bool captures = config.liveLink && config.liveLinkCamera;
-    if (config.unlockMouse || captures) {
+    if (config.unlockMouse || captures || config.debugMenu) {
         LRESULT result = 0;
         if (MOUSE_UNLOCK::OnWindowMessage(hWnd, uMsg, wParam, lParam, result))
             return result;
     }
 
-    // Cubemap capture: the keyboard and mouse kept from the game while one runs (bar Escape, which stops it).
+    // Cubemap capture: the keyboard and mouse kept from the game while one runs (bar Escape, which stops it). When none
+    // runs it hands them on to the debug menu's cinematic camera.
     if (captures) {
         LRESULT result = 0;
         if (CUBEMAP_CAPTURE::OnWindowMessage(hWnd, uMsg, wParam, lParam, result))
+            return result;
+    }
+    // The debug menu's cinematic camera: the mouse turns it, and the game's keyboard and mouse are kept from the game while
+    // it flies.
+    else if (config.debugMenu) {
+        LRESULT result = 0;
+        if (CINEMATIC_CAMERA::OnWindowMessage(hWnd, uMsg, wParam, lParam, result))
+            return result;
+    }
+
+    // The debug menu: its key, and the keyboard and mouse its window's while it is open.
+    if (config.debugMenu) {
+        LRESULT result = 0;
+        if (DEBUG_MENU::OnWindowMessage(hWnd, uMsg, wParam, lParam, result))
             return result;
     }
 
@@ -90,11 +136,26 @@ LRESULT CALLBACK Menu::WndProcHandler(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
             return result;
     }
 
-    if (g_showMenu && ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam)) {
-        return true;
-    }
-
     return CallWindowProc(g_originalWndProcHandler, hWnd, uMsg, wParam, lParam);
+}
+
+void Menu::QueueImGuiMessage(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    std::lock_guard<std::mutex> lock(g_imguiMessagesMutex);
+    // A move after a move: only where the mouse went last matters
+    if (IsMouseMove(message) && !g_imguiMessages.empty() && IsMouseMove(g_imguiMessages.back().message))
+    {
+        g_imguiMessages.back() = { window, message, wParam, lParam };
+        return;
+    }
+    // Full (no frame presented for a while): the oldest move goes first, and the oldest of the rest only once no move is
+    // left, so a key or button is never kept pressed while its release is lost
+    if (g_imguiMessages.size() >= kMaxImGuiMessages)
+    {
+        auto oldest = std::find_if(g_imguiMessages.begin(), g_imguiMessages.end(), [](const ImGuiMessage& queued) { return IsMouseMove(queued.message); });
+        g_imguiMessages.erase(oldest != g_imguiMessages.end() ? oldest : g_imguiMessages.begin());
+    }
+    g_imguiMessages.push_back({ window, message, wParam, lParam });
 }
 
 void Menu::InitMenu(IDXGISwapChain* pSwapChain)
@@ -162,6 +223,18 @@ void Menu::DrawMenu() {
     }
 
     ImGui_ImplDX11_NewFrame();
+    // ImGui's input, given to it here on the thread that presents: the window messages queued since the last frame, and
+    // where the cursor is now (needed with no window of ours open too, when no mouse move is sent to it)
+    FeedQueuedImGuiInput();
+    {
+        ImGuiIO& io = ImGui::GetIO();
+        POINT cursorPos;
+        if (GetCursorPos(&cursorPos) && ScreenToClient(g_hWindow, &cursorPos))
+        {
+            io.MousePos.x = static_cast<float>(cursorPos.x);
+            io.MousePos.y = static_cast<float>(cursorPos.y);
+        }
+    }
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
 
@@ -219,7 +292,11 @@ void Menu::DrawMenu() {
         }
     }
 
-    if (g_showMenu) 
+    // The debug menu: its overlays over the game, and its window while open.
+    if (Config::Get().debugMenu)
+        DEBUG_MENU::Draw();
+
+    if (g_showMenu)
     {
         const ImVec2 center = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));

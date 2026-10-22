@@ -42,6 +42,7 @@
             this.gRadiosityEmissiveSurfaceScale = new System.Windows.Forms.NumericUpDown();
             this.gRadiosityAlbedoOverbrightAmount = new System.Windows.Forms.NumericUpDown();
             this.gRadiosityFirstBounceScale = new System.Windows.Forms.NumericUpDown();
+            this.liveStatus = new System.Windows.Forms.Label();
             this.groupBox2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.gRadiosityAlbedoSaturationAmount)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.gRadiositySpecularGlossScale)).BeginInit();
@@ -202,12 +203,20 @@
             0});
             this.gRadiosityFirstBounceScale.Name = "gRadiosityFirstBounceScale";
             this.gRadiosityFirstBounceScale.Size = new System.Drawing.Size(187, 20);
-            this.gRadiosityFirstBounceScale.TabIndex = 435;            // 
+            this.gRadiosityFirstBounceScale.TabIndex = 435;            //
+            // liveStatus
+            //
+            this.liveStatus.Location = new System.Drawing.Point(12, 170);
+            this.liveStatus.Name = "liveStatus";
+            this.liveStatus.Size = new System.Drawing.Size(417, 26);
+            this.liveStatus.TabIndex = 436;
+            //
             // RadiosityEditor
-            // 
+            //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(440, 177);
+            this.ClientSize = new System.Drawing.Size(440, 200);
+            this.Controls.Add(this.liveStatus);
             this.Controls.Add(this.groupBox2);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
@@ -242,5 +251,6 @@
         private System.Windows.Forms.NumericUpDown gRadiosityMultiBounceScale;
         private System.Windows.Forms.NumericUpDown gRadiosityAlbedoSaturationAmount;
         private System.Windows.Forms.NumericUpDown gRadiositySpecularGlossScale;
+        private System.Windows.Forms.Label liveStatus;
     }
 }

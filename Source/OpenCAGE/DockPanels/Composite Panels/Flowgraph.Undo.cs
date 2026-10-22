@@ -259,7 +259,7 @@ namespace OpenCAGE
                         AddOption(node, pin.Parameter, pin.Location, pin.Style);
                 }
                 node.AlignRelayRows(_composite, _commands);
-                UpdatePinDelayTexts(node);
+                UpdatePinTexts(node);
                 node.Recompute();
 
                 foreach (ConnectionSnapshot connection in snapshot.Connections)
@@ -393,7 +393,7 @@ namespace OpenCAGE
                             AddOption(node, pin.Parameter, pin.Location, pin.Style);
                     }
                     node.AlignRelayRows(_composite, _commands);
-                    UpdatePinDelayTexts(node);
+                    UpdatePinTexts(node);
                     node.Recompute();
                 }
                 finally

@@ -276,7 +276,7 @@ namespace OpenCAGE
             //Menus an older OpenCAGE's Launch Game options wrote over the game's in UI.PAK go back as shipped (in what the Mod
             //Manager keeps too, so UI.PAK doesn't read as a change of the user's), and options still on are set up the new way -
             //beside the game's menus - straight away, as they'd be in place whether the game is launched from OpenCAGE or not
-            if (Singleton.IsPrimaryInstance && UiMovieOverrides.PutBackOldMenus(Singleton.PathToAI) && UiMovieOverrides.All.Any(o => SettingsManager.GetBool(o.Key)))
+            if (Singleton.IsPrimaryInstance && UiMovieOverrides.PutBackOldMenus(Singleton.PathToAI) && UiMovieOverrides.All.Any(UiMovieOverrides.IsOn))
                 UiMovieOverrides.Sync(Singleton.PathToAI);
             Modding.ModServices.CaptureSmallFilesInBackground();
 
@@ -350,6 +350,8 @@ namespace OpenCAGE
                 return;
             }
 
+            //Breakpoints set from here would stop the game with nothing left to let it go on
+            RuntimeUtilsConnection.LiveLinkDebugger.DisarmOnLeave();
             _primaryInstanceTimer?.Stop();
             //A closing primary must not accept package files it can no longer open
             PackageHandover.StopServer();
@@ -750,7 +752,7 @@ namespace OpenCAGE
                 return;
             if (!RuntimeUtilsConnection.LiveLink.Connected)
             {
-                MessageBox.Show("Recapturing cubemaps needs the game running this level, connected over Live Link: launch it from Launch Game with Enable Live Link ticked, then try again.",
+                MessageBox.Show("Recapturing cubemaps needs the game running this level, connected over Live Link: launch it from Launch Game with Live Link ticked, then try again.",
                     "Recapture All Cubemaps", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -1828,8 +1830,9 @@ namespace OpenCAGE
                     return;
             }
 
-            //Close alien down if it's open, it conflicts with our write locks!
-            EditorUtils.CloseAI();
+            //Close alien down if it's open, it conflicts with our write locks! Only this install's: another install's game holds
+            //none of the files a save writes
+            EditorUtils.CloseAI(thisInstallOnly: true);
 
             Cursor.Current = Cursors.WaitCursor;
             statusText.Text = "Saving...";
@@ -1901,23 +1904,27 @@ namespace OpenCAGE
             PatchManager.PatchPopupMessage(Singleton.Platform, Singleton.PathToAI);
             PatchManager.UpdateLevelListInPackages(Singleton.Platform, Singleton.PathToAI);
 
-            PatchManager.PatchSkipFrontendFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool(Settings.SkipFrontend));
             PatchManager.PatchNoUIFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool(Settings.HudDisabled));
-            PatchManager.PatchMemReplayLogFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool(Settings.MemReplayLogs));
-            PatchManager.PatchUIPerfFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool(Settings.UiEnabledUiPerf));
+            //Memory logging and the UI memory overlay are no longer launch options (the overlay is the Debug Menu's now): an
+            //AI.exe an older OpenCAGE patched for them is put back, or the overlay would draw in every game
+            PatchManager.PatchMemReplayLogFlag(Singleton.Platform, Singleton.PathToAI, false);
+            PatchManager.PatchUIPerfFlag(Singleton.Platform, Singleton.PathToAI, false);
 
             if (allowLaunchGame && SettingsManager.GetBool(Settings.LaunchGameWhenSaved))
             {
                 PatchManager.PatchLaunchMode(Singleton.Platform, Singleton.PathToAI, _compositeBrowser.Content.Level.Name);
+                //Straight into the level past the title screen, as Launch Game's "Load straight into" does (the skip is written
+                //with the level a launch starts in, never on its own)
+                PatchManager.PatchSkipFrontendFlag(Singleton.Platform, Singleton.PathToAI, true);
 
-                //The scripting helpers (runtime utils ASI and its config) go in or come out as the Launch Game window's settings ask, as they do when launched from there.
-                //Cinematic Tools are never started from here, so the helpers are as ticked even while they are
-                string runtimeUtilsProblem = LaunchGame.ApplyRuntimeUtils(false);
+                //The scripting helpers, Possess Characters and the Debug Menu (runtime utils ASI and its config) go in or come out as
+                //the Launch Game window's settings ask, as they do when launched from there
+                string runtimeUtilsProblem = LaunchGame.ApplyRuntimeUtils();
                 if (runtimeUtilsProblem != null)
                     MessageBox.Show(runtimeUtilsProblem, "Runtime utils error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                //...and an injector an earlier launch left waiting (its game never came up) would put them in this game beside
-                //the helpers: closed before the game starts (the save closed the game itself)
-                EditorUtils.CloseAI(new List<string>(new string[] { "CinematicTools", "CinematicToolsInjector" }), thisInstallOnly: true);
+                //...and a Cinematic Tools injector an older OpenCAGE left waiting (its game never came up) would put them in this
+                //game: closed before the game starts (the save closed the game itself)
+                LaunchGame.CloseGameAndOldInjector();
                 //The UI options as their settings say, as a launch from the Launch Game window does
                 UiMovieOverrides.Sync(Singleton.PathToAI);
 
@@ -2758,6 +2765,8 @@ namespace OpenCAGE
                 populateAllNodePinsWhenCreatedToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.PopulateAllPinsOnCreateNode);
             if (ShouldApplySetting(Settings.FocusCanvasOnNewNode, changedKeys))
                 focusCanvasOnNewNodeToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.FocusCanvasOnNewNode);
+            if (ShouldApplySetting(Settings.NodeIconsWhenZoomedOut, changedKeys))
+                showNodeIconsWhenZoomedOutToolStripMenuItem.Checked = EditorIcons.NodeIconsWhenZoomedOut;
             if (ShouldApplySetting(Settings.DarkMode, changedKeys))
                 darkModeToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.DarkMode);
             if (ShouldApplySetting(Settings.AskBeforeDeletingNode, changedKeys))
@@ -2838,6 +2847,10 @@ namespace OpenCAGE
             //The browser and any open composite picker: a search on show matches again, and the Search buttons' hover text follows
             if (ShouldApplySetting(Settings.CompNameOnlyOpt, changedKeys))
                 CompositeSearchOption.RaiseChanged();
+
+            //Open script flowgraphs and animation trees draw zoomed-out nodes as icons, or in full, at once
+            if (ShouldApplySetting(Settings.NodeIconsWhenZoomedOut, changedKeys))
+                EditorIcons.RaiseNodeIconsWhenZoomedOutChanged();
 
             if (ShouldApplySetting(Settings.RuntimeUtilsOpt, changedKeys))
                 ApplyRuntimeUtilsOptFromSettings();
@@ -2976,7 +2989,6 @@ namespace OpenCAGE
 
         private bool _liveLinkConnecting = false;
         private bool _liveLinkNotListeningShown = false;
-        private bool _liveLinkCinematicToolsShown = false; //said once a launch: the game has Cinematic Tools, so no Live Link
         private int _liveLinkRefusals = 0;
         private async void TryConnectLiveLink()
         {
@@ -2984,13 +2996,11 @@ namespace OpenCAGE
                 return;
             _liveLinkConnecting = true;
             bool running = false;
-            bool cinematicTools = false;
             bool connected;
             try
             {
-                //Looking for the game goes through every process: that too off the UI thread, as this is asked every 3 s. A game
-                //launched with Cinematic Tools serves no Live Link (they have its camera): not even tried
-                connected = await Task.Run(() => (running = GameRunning()) && !(cinematicTools = LaunchGame.CinematicToolsLaunched()) && RuntimeUtilsConnection.Send.Start());
+                //Looking for the game goes through every process: that too off the UI thread, as this is asked every 3 s
+                connected = await Task.Run(() => (running = GameRunning()) && RuntimeUtilsConnection.Send.Start());
             }
             finally
             {
@@ -2998,15 +3008,6 @@ namespace OpenCAGE
             }
             if (!running)
                 return; //no game yet: not a refusal
-            if (cinematicTools)
-            {
-                if (!_liveLinkCinematicToolsShown && !IsDisposed)
-                {
-                    _liveLinkCinematicToolsShown = true;
-                    ShowLiveLinkActivity("Live Link: the game is running with Cinematic Tools, which have its camera - restart it from OpenCAGE (Launch Game) with Cinematic Tools off and Enable Live Link ticked to use Live Link");
-                }
-                return;
-            }
             if (connected)
             {
                 _liveLinkNotListeningShown = false;
@@ -3020,7 +3021,7 @@ namespace OpenCAGE
                 if (!LaunchGame.LiveLinkInstalled() || _liveLinkRefusals >= 5)
                 {
                     _liveLinkNotListeningShown = true;
-                    ShowLiveLinkActivity("Live Link: the game is running but not serving Live Link - restart it from OpenCAGE (Launch Game) with Enable Live Link ticked");
+                    ShowLiveLinkActivity("Live Link: the game is running but not serving Live Link - restart it from OpenCAGE (Launch Game) with Live Link ticked");
                 }
             }
         }
@@ -3028,26 +3029,26 @@ namespace OpenCAGE
         private void connectToRuntimeUtils_Click(object sender, EventArgs e)
         {
             bool wanted = !SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
+            //Breakpoints set from here would stop the game with nothing left to let it go on: switched off before the connection goes
+            if (!wanted)
+                RuntimeUtilsConnection.LiveLinkDebugger.DisarmOnLeave();
             SettingsManager.SetBool(Settings.RuntimeUtilsOpt, wanted);
             _liveLinkNotListeningShown = false;
-            _liveLinkCinematicToolsShown = false;
             _liveLinkRefusals = 0;
             ApplySettingEffects(new[] { Settings.RuntimeUtilsOpt });
             if (!wanted)
                 ShowLiveLinkActivity("Live Link: off");
             else if (!RuntimeUtilsConnection.Send.Connected && !GameRunning())
-                ShowLiveLinkActivity("Live Link: on - launch the game from OpenCAGE (Launch Game) with Enable Live Link ticked (and Cinematic Tools off), and it connects once the game is up");
+                ShowLiveLinkActivity("Live Link: on - launch the game from OpenCAGE (Launch Game) with Live Link ticked, and it connects once the game is up");
             OnLiveLinkConnectionChanged();
         }
 
         /* The Live Link menu, beside Launch Game: there only while the game is running and serves Live Link, and only for
-           the builds the runtime utils (which serve it) support - never for a game launched with Cinematic Tools, which have
-           its camera instead. The game is looked for every couple of seconds, off the UI thread, and again whenever it is
-           launched. */
+           the builds the runtime utils (which serve it) support. The game is looked for every couple of seconds, off the UI
+           thread, and again whenever it is launched. */
         private System.Windows.Forms.Timer _liveLinkMenuWatch;
         private bool _liveLinkMenuLooking = false;
         private bool _gameServesLiveLink = false;
-        private bool _gameRunsCinematicTools = false;
 
         private void StartLiveLinkMenuWatch()
         {
@@ -3066,16 +3067,9 @@ namespace OpenCAGE
             _liveLinkMenuLooking = true;
             try
             {
-                bool serves = false, cinematicTools = false;
-                await Task.Run(() =>
-                {
-                    if (!GameRunning())
-                        return;
-                    cinematicTools = LaunchGame.CinematicToolsLaunched();
-                    serves = !cinematicTools && LaunchGame.LiveLinkInstalled();
-                });
+                bool serves = false;
+                await Task.Run(() => serves = GameRunning() && LaunchGame.LiveLinkInstalled());
                 _gameServesLiveLink = serves;
-                _gameRunsCinematicTools = cinematicTools;
             }
             catch (Exception ex)
             {
@@ -3098,8 +3092,8 @@ namespace OpenCAGE
                 return;
             bool connected = RuntimeUtilsConnection.Send.Connected;
             bool wanted = SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
-            //A game launched without Live Link has nothing to connect to, and one with Cinematic Tools gave its camera to them: no button for either
-            liveLinkBtn.Visible = LaunchGame.RuntimeUtilsSupports(Singleton.Platform) && !_gameRunsCinematicTools && (_gameServesLiveLink || connected);
+            //A game launched without Live Link has nothing to connect to: no button for it
+            liveLinkBtn.Visible = LaunchGame.RuntimeUtilsSupports(Singleton.Platform) && (_gameServesLiveLink || connected);
             liveLinkBtn.Checked = wanted;
             liveLinkBtn.ToolTipText = connected ? "Connected to the game: script edits reach it as they are made, entity methods can be triggered from the Entity Inspector or a method pin's right-click menu, and the viewport's Live Link Camera menu is there. Click to disconnect."
                 : wanted ? "Waiting for the game to serve Live Link (it opens it a moment after starting). Click to stop connecting."
@@ -3126,7 +3120,6 @@ namespace OpenCAGE
                 }
                 return;
             }
-            _liveLinkCinematicToolsShown = false;
             if (servesLiveLink)
             {
                 SettingsManager.SetBool(Settings.RuntimeUtilsOpt, true);
@@ -3379,6 +3372,11 @@ namespace OpenCAGE
         private void focusCanvasOnNewNodeToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ToggleBoolSetting(Settings.FocusCanvasOnNewNode);
+        }
+
+        private void showNodeIconsWhenZoomedOutToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.NodeIconsWhenZoomedOut);
         }
 
         private void darkModeToolStripMenuItem_Click(object sender, EventArgs e)

@@ -1,5 +1,6 @@
 using CATHODE;
 using OpenCAGE;
+using OpenCAGE.RuntimeUtilsConnection;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -58,6 +59,21 @@ namespace OpenCAGE.ConfigEditors
             //Let go of with the window: left subscribed, the static event kept every one ever opened
             Singleton.OnResetConfigs += OnResetConfigs;
             this.Disposed += (s, e) => Singleton.OnResetConfigs -= OnResetConfigs;
+
+            //The game reads these when a level loads; with Live Link connected each change reaches it at once
+            LiveSettings.Attach(this, liveStatus,
+                (LiveLink.SettingsFile.SelectionOverlay, () => new List<KeyValuePair<string, float>>()
+                {
+                    new KeyValuePair<string, float>("m_colour.red", _selectionParams.Colour.X),
+                    new KeyValuePair<string, float>("m_colour.green", _selectionParams.Colour.Y),
+                    new KeyValuePair<string, float>("m_colour.blue", _selectionParams.Colour.Z),
+                    new KeyValuePair<string, float>("m_colour.alpha", _selectionParams.Colour.W),
+                    new KeyValuePair<string, float>("m_rate", _selectionParams.Rate),
+                    new KeyValuePair<string, float>("m_power", _selectionParams.Power),
+                }),
+                (LiveLink.SettingsFile.GlobalConstants, () => LiveSettings.Values(stealth_light_meter_full_dark_threshold, stealth_light_meter_full_light_threshold,
+                    stealth_light_meter_timeout_when_detected, interaction_distance_threshold, min_time_between_squad_shots_lower_bound,
+                    min_time_between_squad_shots_upper_bound, min_time_suspicious_reaction_loop, max_time_suspicious_reaction_loop)));
         }
 
         private void OnResetConfigs()
@@ -83,6 +99,8 @@ namespace OpenCAGE.ConfigEditors
                 _selectionParams.Colour = new System.Numerics.Vector4((float)colourPicker.Color.R / 255.0f, (float)colourPicker.Color.G / 255.0f, (float)colourPicker.Color.B / 255.0f, (float)colourPicker.Color.A / 255.0f);
                 glowColour.BackColor = colourPicker.Color;
                 ConfigEditorUtils.SetTrackBarValue(colourAlpha, 100);
+                //Saved here too: with the alpha already at 100 the line above changes nothing, so nothing else would save the colour
+                Save(sender, e);
             }
         }
 
@@ -115,6 +133,7 @@ namespace OpenCAGE.ConfigEditors
 
             _globalConstants.Content = doc;
             _globalConstants.Save();
+            LiveSettings.Changed(LiveLink.SettingsFile.SelectionOverlay, LiveLink.SettingsFile.GlobalConstants);
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
         }

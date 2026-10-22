@@ -91,15 +91,24 @@ namespace OpenCAGE
             Singleton.OnEntityAdded += OnEntityAddedGlobally;
             Singleton.OnEntityRenamed += OnEntityRenamedGlobally;
             Singleton.OnPinDelayModified += RefreshPinDelayTexts;
+            SubscribePinValueEvents();
 
             _deadLinkColour = Color.FromArgb(170, 20, 30);
             stNodeEditor1.ConnectionColorOverride = ConnectionColour;
             //The hovered link, and a link being drawn: green, so it can't be mistaken for a data link (blue)
             stNodeEditor1.HighLineColor = Color.FromArgb(60, 210, 90);
             //Zoomed out past where a node's text can be read, each node is its colour with its icon on it
-            //(the IconId set with its colour in RegenerateNodeStyle)
-            stNodeEditor1.NodeIconZoom = EditorIcons.NodeIconZoom;
+            //(the IconId set with its colour in RegenerateNodeStyle) - unless Show Node Icons When Zoomed Out is off
+            EditorIcons.ApplyNodeIconZoom(stNodeEditor1);
             stNodeEditor1.NodeIconProvider = EditorIcons.ForZoomedOutNode;
+            EditorIcons.NodeIconsWhenZoomedOutChanged += OnNodeIconsWhenZoomedOutChanged;
+            //A page disposed without closing must not be kept alive by the static event
+            this.Disposed += (s, e) => EditorIcons.NodeIconsWhenZoomedOutChanged -= OnNodeIconsWhenZoomedOutChanged;
+        }
+
+        private void OnNodeIconsWhenZoomedOutChanged()
+        {
+            EditorIcons.ApplyNodeIconZoom(stNodeEditor1);
         }
 
         /* What a node shows zoomed out: the icon its entity has in the entity lists - its category's for a function, its
@@ -153,8 +162,10 @@ namespace OpenCAGE
             Singleton.OnEntityRenamed -= OnEntityRenamedGlobally;
             Singleton.OnEntityAdded -= OnEntityAddedViaPopup;
             Singleton.OnPinDelayModified -= RefreshPinDelayTexts;
+            UnsubscribePinValueEvents();
             stNodeEditor1.ConnectionColorOverride = null;
             stNodeEditor1.NodeIconProvider = null;
+            EditorIcons.NodeIconsWhenZoomedOutChanged -= OnNodeIconsWhenZoomedOutChanged;
 
             if (_renameFlowgraphPopup != null)
                 _renameFlowgraphPopup.FormClosed -= _renameFlowgraphPopup_FormClosed;
@@ -486,6 +497,7 @@ namespace OpenCAGE
             RecordConnectionChanged(e);
 
             Singleton.Editor?.CompositeDisplay?.EntityDisplay?.RefreshParameterHighlights();
+            QueuePinValueRefreshAllPages(); //a pin a link comes in to shows no value, on any page with its entity
         }
 
         /// <summary>Collect the pin IDs of this entity's input pins that have live UI connections.</summary>
@@ -902,7 +914,7 @@ namespace OpenCAGE
             foreach (STNode node in stNodeEditor1.Nodes)
             {
                 node.AlignRelayRows(composite, _commands); //catches the fallback pins added above
-                UpdatePinDelayTexts(node);
+                UpdatePinTexts(node);
                 node.EnsureProperNodeSizing();
             }
             stNodeEditor1.ResumeLayout();
@@ -942,6 +954,10 @@ namespace OpenCAGE
 
             if (this.Visible)
             {
+                //Live Link script debugger: F9 breakpoint, F8 continue, F10 step (Flowgraph.Debugger.cs)
+                if (TryHandleDebuggerKey(keyData))
+                    return true;
+
                 Keys keyCode = keyData & Keys.KeyCode;
 
                 if (keyCode == Keys.Delete)
@@ -1360,11 +1376,16 @@ namespace OpenCAGE
         private void AddAllPins(STNode node)
         {
             node.AddAllPins(_composite, _commands);
-            UpdatePinDelayTexts(node);
+            UpdatePinTexts(node);
             MarkFlowgraphEdit(); //the pin layout is saved with the composite
         }
 
-        //set all delay texts on a node
+        //set all delay texts on a node, and the values over its top pins
+        private void UpdatePinTexts(STNode node)
+        {
+            UpdatePinDelayTexts(node);
+            UpdatePinValueTexts(node);
+        }
         private void UpdatePinDelayTexts(STNode node)
         {
             foreach (STNodeOption inputPin in node.GetInputOptions())
@@ -1442,7 +1463,7 @@ namespace OpenCAGE
             _managePinsDialog = new Popups.ManageEntityPins();
             _managePinsDialog.PinsSaved += savedNode =>
             {
-                UpdatePinDelayTexts(savedNode);
+                UpdatePinTexts(savedNode);
                 MarkFlowgraphEdit(); //the pin layout is saved with the composite
 
                 Point newCenter = savedNode.Location;
@@ -1680,7 +1701,7 @@ namespace OpenCAGE
                 }
             }
             node.AlignRelayRows(_composite, _commands);
-            UpdatePinDelayTexts(node);
+            UpdatePinTexts(node);
             node.Recompute();
         }
 
@@ -1771,7 +1792,7 @@ namespace OpenCAGE
             foreach (STNode node in newNodes)
             {
                 node.AlignRelayRows(_composite, _commands); //catches pins added while re-linking above
-                UpdatePinDelayTexts(node);
+                UpdatePinTexts(node);
                 node.EnsureProperNodeSizing();
                 SelectNode(node, centerCanvas: false);
             }

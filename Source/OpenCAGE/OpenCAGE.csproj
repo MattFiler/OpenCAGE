@@ -430,6 +430,10 @@
       <DependentUpon>CompositeDisplay.cs</DependentUpon>
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="DockPanels\CompositeDisplay.Debugger.cs">
+      <DependentUpon>CompositeDisplay.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="DockPanels\CompositeDisplay.Designer.cs">
       <DependentUpon>CompositeDisplay.cs</DependentUpon>
     </Compile>
@@ -507,6 +511,17 @@
     <Compile Include="DockPanels\Composite Panels\Flowgraph.LiveLink.cs">
       <DependentUpon>Flowgraph.cs</DependentUpon>
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\Composite Panels\Flowgraph.Debugger.cs">
+      <DependentUpon>Flowgraph.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\Composite Panels\Flowgraph.PinValues.cs">
+      <DependentUpon>Flowgraph.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\Composite Panels\DebuggerNodeEditor.cs">
+      <SubType>Component</SubType>
     </Compile>
     <Compile Include="Popups\Configuration Editors\AlienConfigEditor.cs">
       <SubType>Form</SubType>
@@ -1422,6 +1437,7 @@
     <Compile Include="Scripts\MCP\McpEditingTools.cs" />
     <Compile Include="Scripts\MCP\McpGameDataTools.cs" />
     <Compile Include="Scripts\MCP\McpLevelTools.cs" />
+    <Compile Include="Scripts\MCP\McpDebugger.cs" />
     <Compile Include="Scripts\MCP\McpMaterialTools.cs" />
     <Compile Include="Scripts\MCP\McpPageTools.cs" />
     <Compile Include="Scripts\MCP\McpResourceTools.cs" />
@@ -1469,7 +1485,9 @@
     <Compile Include="Scripts\RuntimeUtils Connection\LiveLinkAnimation.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\LiveLinkActivity.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\LiveLinkCamera.cs" />
+    <Compile Include="Scripts\RuntimeUtils Connection\LiveLinkDebugger.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\LiveLinkTrace.cs" />
+    <Compile Include="Scripts\RuntimeUtils Connection\LiveSettings.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\Send.cs" />
     <Compile Include="Scripts\EntityPaletteRecent.cs" />
     <Compile Include="Scripts\GameDirectorySelector.cs" />

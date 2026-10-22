@@ -245,6 +245,44 @@ namespace OpenCAGE.Theming
             catch { }
         }
 
+        /// <summary>
+        /// Keeps a window off the screen (or puts it back) without hiding it: a cloaked window is still
+        /// shown as far as Windows is concerned, so it is laid out and painted, but nothing of it is drawn
+        /// until it is uncloaked. False when it couldn't be cloaked.
+        /// </summary>
+        public static bool Cloak(IntPtr handle, bool cloak)
+        {
+            if (handle == IntPtr.Zero)
+                return false;
+
+            int value = cloak ? 1 : 0;
+            try
+            {
+                return DwmSetWindowAttribute(handle, DwmCloak, ref value, sizeof(int)) == 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private const int DwmCloak = 13;
+
+        /// <summary>
+        /// Paints a window and every child window in it now, rather than when each one's paint comes round.
+        /// </summary>
+        public static void PaintNow(IntPtr handle)
+        {
+            if (handle == IntPtr.Zero)
+                return;
+
+            try
+            {
+                RedrawWindow(handle, IntPtr.Zero, IntPtr.Zero, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN | RDW_UPDATENOW);
+            }
+            catch { }
+        }
+
         private const uint SWP_NOSIZE = 0x0001;
         private const uint SWP_NOMOVE = 0x0002;
         private const uint SWP_NOZORDER = 0x0004;
@@ -252,6 +290,8 @@ namespace OpenCAGE.Theming
         private const uint SWP_FRAMECHANGED = 0x0020;
 
         private const uint RDW_INVALIDATE = 0x0001;
+        private const uint RDW_ERASE = 0x0004;
+        private const uint RDW_ALLCHILDREN = 0x0080;
         private const uint RDW_UPDATENOW = 0x0100;
         private const uint RDW_FRAME = 0x0400;
 

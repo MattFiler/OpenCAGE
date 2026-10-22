@@ -1,6 +1,10 @@
 #include "CUBEMAP_CAPTURE.h"
+#include "CINEMATIC_CAMERA.h"
+#include "CINEMATIC_VISUALS.h"
+#include "DEBUG_MENU.h"
 #include "LIVE_LINK_SERVER.h"
 #include "MOUSE_UNLOCK.h"
+#include "RENDER_COMMON.h"
 #include "ZONE_LOADER.h"
 #include "Config.h"
 
@@ -513,6 +517,79 @@ namespace
 		_snprintf_s_l(text, sizeof(text), _TRUNCATE, "%.3f", invariant, value);
 		return text;
 	}
+
+	// The debug menu's switches that don't change the picture a capture takes, or only for the better: what is drawn over
+	// the game, the anti-aliasing, culling and caching (the same picture, at another cost), and leaving out post-processing
+	// that has no place in a reflection (film grain, blurs, fades, overlays and the like). render.debug_view_alone is on by
+	// default and only says how a debug view is shown - a view chosen is turned away below on its own
+	const char* const kDebugLookHarmless[] = {
+		"render.debug_view_alone",
+		"render.no_ui", "render.no_selection_overlay", "render.no_fxaa", "render.no_smaa", "render.no_smaa_temporal",
+		"render.no_shadow_cache", "render.no_occlusion_culling", "render.no_occluder_rasterizing", "render.update_all_particles",
+		"render.depth_only_sort", "render.radiosity_cubemap_pixel_shader", "render.shader_hot_reload", "render.envmap.overlay",
+		"render.radiosity.overlay", "render.radiosity.warning", "render.targets.window",
+		"render.post.no_film_grain", "render.post.no_motion_blur", "render.post.no_fullscreen_blur", "render.post.no_vignette",
+		"render.post.no_distortion_overlay", "render.post.no_fisheye", "render.post.no_fullscreen_overlay", "render.post.no_dof",
+		"render.post.no_chromatic_aberration", "render.post.no_screen_fade", "render.post.no_low_res_blend",
+	};
+	// The cinematic look's settings a capture zeroes itself (TurnOffPostEffects), unless it leaves the post-processing alone
+	const char* const kDebugLookTurnedOff[] = {
+		"cinematic.override.film_grain", "cinematic.override.vignette", "cinematic.override.vignette_aberration",
+		"cinematic.override.lens_distortion", "cinematic.dof",
+	};
+
+	bool Listed(const std::string& name, const char* const* list, size_t count)
+	{
+		for (size_t i = 0; i < count; i++)
+			if (name == list[i])
+				return true;
+		return false;
+	}
+
+	// Socket thread: the names of the debug menu's settings, on now, that change how the game draws (comma separated, empty
+	// when none): its rendering switches bar the harmless ones above (a new one counts), the kinds of light left out, the
+	// cinematic look's overrides, the debug view, the level of detail, the exposure and tone mapping overrides, and lights
+	// muted or played solo
+	std::string DebugLookChanges(uint32_t flags)
+	{
+		std::string names;
+		auto add = [&names](const std::string& name) { names += (names.empty() ? "" : ", ") + name; };
+		const std::string described = DEBUG_MENU::Describe();
+		size_t start = 0;
+		while (start < described.size())
+		{
+			size_t end = described.find('\n', start);
+			if (end == std::string::npos)
+				end = described.size();
+			const std::string line = described.substr(start, end - start);
+			start = end + 1;
+			const size_t equals = line.find('=');
+			if (equals == std::string::npos || line.compare(equals + 1, std::string::npos, "1") != 0)
+				continue;
+			const std::string name = line.substr(0, equals);
+			bool counts = false;
+			if (name.rfind("render.", 0) == 0)
+				counts = !Listed(name, kDebugLookHarmless, sizeof(kDebugLookHarmless) / sizeof(kDebugLookHarmless[0]));
+			else if (name.rfind("light.hide_", 0) == 0 || name.rfind("light.only_", 0) == 0)
+				counts = true;
+			else if (name.rfind("cinematic.override.", 0) == 0 || name == "cinematic.dof")
+				counts = (flags & CUBEMAP_CAPTURE::kKeepPostEffects) || !Listed(name, kDebugLookTurnedOff, sizeof(kDebugLookTurnedOff) / sizeof(kDebugLookTurnedOff[0]));
+			if (counts)
+				add(name);
+		}
+		float value = 0.0f;
+		if (DEBUG_MENU::GetValue("render.debug_view", value) && std::lround(value) != 0)
+			add("render.debug_view");
+		if (DEBUG_MENU::GetValue("render.lod_factor", value) && value > 0.0f)
+			add("render.lod_factor");
+		if (DEBUG_MENU::GetValue("render.post.exposure_scale", value) && value > 0.0f)
+			add("render.post.exposure_scale");
+		if (DEBUG_MENU::GetValue("render.post.tone_mapping", value) && std::lround(value) >= 0)
+			add("render.post.tone_mapping");
+		if (RENDER_COMMON::LightsLeftOut() > 0)
+			add("light.mute/solo");
+		return names;
+	}
 }
 
 LIVE_LINK::Result CUBEMAP_CAPTURE::Start(const Request& request, Done done)
@@ -526,6 +603,13 @@ LIVE_LINK::Result CUBEMAP_CAPTURE::Start(const Request& request, Done done)
 	for (float value : request.position)
 		if (!std::isfinite(value))
 			return LIVE_LINK::Result{ false, "The capture position is not a number" };
+	// The faces go into the level's reflection maps: none taken with the debug menu's rendering changes, unless asked for
+	if (Config::Get().debugMenu && !(request.flags & kKeepDebugLook))
+	{
+		const std::string changes = DebugLookChanges(request.flags);
+		if (!changes.empty())
+			return LIVE_LINK::Result{ false, "The Debug Menu has changed how the game draws (" + changes + ") - turn them off before capturing" };
+	}
 
 	// The answer is built in one buffer as the faces are taken: the header, then each face (allocated up front, so a
 	// 32-bit game short of memory turns the capture away now rather than failing part way)
@@ -563,6 +647,11 @@ LIVE_LINK::Result CUBEMAP_CAPTURE::Start(const Request& request, Done done)
 	DevTools::Log("LiveLink: cubemap capture at %s, %u px faces", where.c_str(), request.size);
 	SetOverlay("Capturing a cubemap: streaming in the zones around it");
 	return LIVE_LINK::Result{ true, "Capturing at " + where };
+}
+
+bool CUBEMAP_CAPTURE::Capturing()
+{
+	return g_active;
 }
 
 bool CUBEMAP_CAPTURE::CameraPose(float rotation[4], float position[3], float& fov)
@@ -742,9 +831,17 @@ std::string CUBEMAP_CAPTURE::OverlayText()
 
 bool CUBEMAP_CAPTURE::OnWindowMessage(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
 {
-	// The game reads its keyboard and mouse as raw input, and only while its window has the focus. Escape is let through:
-	// the pause menu it opens ends the capture.
-	if (!g_active || message != WM_INPUT || GetFocus() != window)
+	// The debug menu's cinematic camera takes its mouse and keeps the game's input through here too, when no capture runs
+	if (!g_active)
+		return CINEMATIC_CAMERA::OnWindowMessage(window, message, wParam, lParam, result);
+	// The game's keyboard is its key messages and its mouse is raw input, read only while its window has the focus. Escape
+	// is let through: the pause menu it opens ends the capture. With the debug menu open, its window has the keys.
+	if (message == WM_KEYDOWN && wParam != VK_ESCAPE && GetFocus() == window && !DEBUG_MENU::IsOpen())
+	{
+		result = 0;
+		return true;
+	}
+	if (message != WM_INPUT || GetFocus() != window)
 		return false;
 	RAWINPUT input = {};
 	UINT size = sizeof(input);
@@ -781,6 +878,9 @@ __declspec(noinline)
 int __fastcall CUBEMAP_CAPTURE::h_post_process_update(void* _this, void* /*_EDX*/)
 {
 	const int result = post_process_update(_this);
+	// The debug menu's cinematic look (CINEMATIC_VISUALS.h) over the level's, then a capture's own (which wins)
+	if (_this)
+		CINEMATIC_VISUALS::OnPostProcess(static_cast<uint8_t*>(_this));
 	if (g_postEffectsOff && _this)
 		TurnOffPostEffects(static_cast<uint8_t*>(_this) + kPostProcessSettings);
 	return result;

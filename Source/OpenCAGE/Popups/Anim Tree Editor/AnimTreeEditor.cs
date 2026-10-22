@@ -47,7 +47,7 @@ namespace OpenCAGE.AnimTrees
             saveBtn.Enabled = false;
             try
             {
-                EditorUtils.CloseAI();
+                EditorUtils.CloseAI(null, thisInstallOnly: true);
                 if (_animationSets.SaveAll())
                     MessageBox.Show("Animation trees saved.", "Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 /*
 	Runtime settings, read once from OpenCAGE.RuntimeUtils.ini in the game folder (next to AI.exe). Every key is
 	optional; missing keys keep their defaults. Example:
@@ -21,6 +23,8 @@
 	  LiveLinkCamera=1            ; 1/0 - let OpenCAGE's viewport camera drive the game camera when it asks (camera sync)
 	  Possess=0                   ; 1/0 - Possess Characters: the key below opens a menu to take a character (the alien...) and move it, see POSSESS.h
 	  PossessKey=F6               ; the key that opens and closes that menu (named as HotReloadKey)
+	  DebugMenu=0                 ; 1/0 - the debug menu: the key below opens a window of AI and other debug views, see DEBUG_MENU.h
+	  DebugMenuKey=F7             ; the key that opens and closes it (named as HotReloadKey)
 */
 namespace Config
 {
@@ -41,6 +45,8 @@ namespace Config
 		bool liveLinkCamera = true;
 		bool possess = false;
 		int possessKey = 0x75; // the F6 key
+		bool debugMenu = false;
+		int debugMenuKey = 0x76; // the F7 key
 	};
 
 	// Loads the settings on first use.
@@ -51,4 +57,11 @@ namespace Config
 
 	// Human-readable name of a virtual-key code, for logging.
 	const char* KeyName(int virtualKey);
+
+	// Any other key of the [RuntimeUtils] section, read when asked (for the debug menu's views, which each name their own
+	// keys, e.g. DontWriteSaves=1): the number or text there, or the fallback when it is missing. A key name is parsed as
+	// HotReloadKey's are.
+	int IniInt(const char* key, int fallback);
+	std::string IniString(const char* key, const char* fallback);
+	int IniKey(const char* key, int fallback);
 }

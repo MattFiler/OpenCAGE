@@ -237,6 +237,8 @@ namespace
 		uint64_t cycles;
 	};
 	thread_local ThreadCost t_cost = {};
+	// How many OwnReads are in scope on this thread: while any are, its reads and lookups are not noted
+	thread_local int t_ownReads = 0;
 	constexpr uint32_t kCostBatch = 256;
 	std::atomic<uint64_t> g_costCycles{ 0 };
 	std::atomic<uint64_t> g_costCalls{ 0 };
@@ -832,7 +834,7 @@ namespace
 	void __fastcall AttachedLookupHook(void* iface, void* /*edx*/, Allocation** entity, const uint32_t* pin, void* list)
 	{
 		g_attachedLookup(iface, entity, pin, list);
-		if (g_on.load(std::memory_order_acquire))
+		if (t_ownReads == 0 && g_on.load(std::memory_order_acquire))
 			NoteLinks(LIVE_TRACE::Sent, iface, entity, pin);
 	}
 
@@ -851,7 +853,7 @@ namespace
 		static bool __fastcall Hook(void* iface, void* /*edx*/, Allocation** entity, const uint32_t* pin, void* out)
 		{
 			const bool found = original(iface, entity, pin, out);
-			if (g_on.load(std::memory_order_acquire))
+			if (t_ownReads == 0 && g_on.load(std::memory_order_acquire))
 				NoteLinks(LIVE_TRACE::Read, iface, entity, pin);
 			return found;
 		}
@@ -1100,6 +1102,16 @@ void LIVE_TRACE::NoteOwnCall(void* entity, uint32_t method)
 	uint32_t root = 0;
 	if (LevelTraced(root) && ReadEnd(static_cast<Allocation*>(entity), activity.entity) && EndWanted(activity.entity))
 		Keep(activity, root);
+}
+
+LIVE_TRACE::OwnReads::OwnReads()
+{
+	t_ownReads++;
+}
+
+LIVE_TRACE::OwnReads::~OwnReads()
+{
+	t_ownReads--;
 }
 
 void LIVE_TRACE::AttachHooks(bool attach)

@@ -74,6 +74,7 @@ namespace
 		settings.liveLink = flag("LiveLink", settings.liveLink);
 		settings.liveLinkCamera = flag("LiveLinkCamera", settings.liveLinkCamera);
 		settings.possess = flag("Possess", settings.possess);
+		settings.debugMenu = flag("DebugMenu", settings.debugMenu);
 		const int port = GetPrivateProfileIntA(section, "LiveLinkPort", settings.liveLinkPort, ini.c_str());
 		if (port > 0 && port < 65536)
 			settings.liveLinkPort = port;
@@ -88,6 +89,8 @@ namespace
 		settings.unlockMouseKey = ParseKey(key, settings.unlockMouseKey);
 		GetPrivateProfileStringA(section, "PossessKey", "", key, sizeof(key), ini.c_str());
 		settings.possessKey = ParseKey(key, settings.possessKey);
+		GetPrivateProfileStringA(section, "DebugMenuKey", "", key, sizeof(key), ini.c_str());
+		settings.debugMenuKey = ParseKey(key, settings.debugMenuKey);
 
 		return settings;
 	}
@@ -97,6 +100,23 @@ const Config::Settings& Config::Get()
 {
 	static const Settings settings = Load();
 	return settings;
+}
+
+int Config::IniInt(const char* key, int fallback)
+{
+	return static_cast<int>(GetPrivateProfileIntA("RuntimeUtils", key, fallback, IniPath().c_str()));
+}
+
+std::string Config::IniString(const char* key, const char* fallback)
+{
+	char value[512] = {};
+	GetPrivateProfileStringA("RuntimeUtils", key, fallback ? fallback : "", value, sizeof(value), IniPath().c_str());
+	return value;
+}
+
+int Config::IniKey(const char* key, int fallback)
+{
+	return ParseKey(IniString(key, ""), fallback);
 }
 
 bool Config::AnyDebug()

@@ -15,8 +15,8 @@
 	address reachable), its parameters are turned into the game's variable objects the way that loader does, and the
 	template record is pointed at the new arrays. The running instances of that composite are then brought in
 	line: entities that went are shut down and removed, new ones are constructed and initialised, entities whose
-	parameters changed are live edited in place (the game's own live edit of an entity's state - what CA's own live link
-	used, which reinitialises the entity and lets it react to the edit itself), and every entity's parameter/link cache
+	parameters changed are live edited in place (the game's own live edit of an entity's state, which
+	reinitialises the entity and lets it react to the edit itself), and every entity's parameter/link cache
 	is flushed.
 
 	Method calls (e.g. "start" on a DebugTextStacking) are queued as triggers, the way the game's own code does.
@@ -65,6 +65,10 @@ namespace LIVE_LINK
 
 	// Whether the game is running the level with this root composite (0 matches any).
 	bool RunningLevelIs(uint32_t root);
+
+	// The running level's root composite name (as the level was built: a path ending in the level, or just its name), or
+	// empty with no level. Render thread only: looked up once per level and kept.
+	std::string RunningLevelName();
 
 	// The game's state (4 = gameplay, 3 = starting gameplay while a level loads), -1 if it cannot be read.
 	int GameState();

@@ -301,6 +301,10 @@ namespace OpenCAGE.DockPanels
                 return;
 
             ApplySavedDockTopPortion();
+            //Once only: this display was made with them already on (its constructor), and a second pair outlived it - the
+            //long-lived viewer panel then held the closed display, and the level it showed, after every layout rebuild
+            _levelViewerPanel.DockStateChanged -= LevelViewerPanel_DockStateChanged;
+            _levelViewerPanel.Resize -= LevelViewerPanel_Resize;
             _levelViewerPanel.DockStateChanged += LevelViewerPanel_DockStateChanged;
             _levelViewerPanel.Resize += LevelViewerPanel_Resize;
             _levelViewerPanel.Show(dockPanel, DockState.DockTop);

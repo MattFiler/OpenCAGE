@@ -37,17 +37,18 @@ namespace ZONE_LOADER
 	constexpr uint8_t kViewNoZoneOfItsOwnFlag = 0x01;
 
 	// Who wants more than the player's surroundings streamed in. Each switches only its own request on and off, so
-	// Cinematic Tools turning its camera off does not cancel LoadAllZones or the Live Link camera.
+	// another injected tool turning its camera off does not cancel LoadAllZones or the Live Link camera.
 	// LoadAllZones streams in every zone of the level. The others are cameras away from the player: they get the zones
 	// around the camera (as the player gets the zones around them), not every zone - all of a big level's zones at once
 	// can be more than the game has memory for, and then no more of them finish loading.
 	enum class Source : uint32_t
 	{
 		Config = 1 << 0,     // LoadAllZones in OpenCAGE.RuntimeUtils.ini
-		External = 1 << 1,   // other injected tools, through this DLL's exported zone loading switch (Cinematic Tools, while its camera is on)
+		External = 1 << 1,   // other injected tools, through this DLL's exported zone loading switch (while their camera is on)
 		LiveCamera = 1 << 2, // the Live Link camera sync, while the game renders from OpenCAGE's camera (LIVE_CAMERA.h)
 		Possess = 1 << 3,    // the camera behind a possessed character (POSSESS.h)
 		Capture = 1 << 4,    // a cubemap capture, while the game renders from the capture point (CUBEMAP_CAPTURE.h)
+		Cinematic = 1 << 5,  // the debug menu's cinematic camera, while it has the game camera (CINEMATIC_CAMERA.h)
 	};
 
 	void SetForced(Source source, bool forced);

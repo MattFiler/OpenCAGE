@@ -1,4 +1,5 @@
 ﻿using OpenCAGE.Popups.Base;
+using OpenCAGE.RuntimeUtilsConnection;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -49,6 +50,13 @@ namespace OpenCAGE.ConfigEditors
             ConfigEditorUtils.Subscribe(this.Controls, Save);
             this.FormClosing += HairAndSkinShadingEditor_FormClosing;
             CloseOnConfigReset();
+
+            //The game reads these when a level loads; with Live Link connected each change reaches it at once
+            LiveSettings.Attach(this, liveStatus,
+                (LiveLink.SettingsFile.SkinShading, () => LiveSettings.Values(scattering_radius, scattering_saturation)),
+                (LiveLink.SettingsFile.HairShading, () => LiveSettings.Values(alpha_threshold, alpha_threshold_shadow, primary_spec_level, secondary_spec_level,
+                    primary_spec_width, secondary_spec_width, spec_separation, diffuse_level, base_absorption, absorption_rate, ao_absorption, scatter_dist_rate,
+                    occlusion_rate, occlusion_bias, occlusion_ao_infl, specular_occlusion, specular_ao, softening_length, softening_normal_bias, softening_distance_rate)));
         }
 
         private void HairAndSkinShadingEditor_FormClosing(object sender, FormClosingEventArgs e)
@@ -102,6 +110,7 @@ namespace OpenCAGE.ConfigEditors
             SetValue(hair, "softening_normal_bias", softening_normal_bias);
             SetValue(hair, "softening_distance_rate", softening_distance_rate);
             File.WriteAllLines(hairPath, hair);
+            LiveSettings.Changed(LiveLink.SettingsFile.SkinShading, LiveLink.SettingsFile.HairShading);
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
         }
@@ -118,7 +127,8 @@ namespace OpenCAGE.ConfigEditors
             config.Add(line);
         }
 
-        //"key=1", " key = 1": the same line as far as the game's reader goes
+        //"key=1", " key = 1": the same key, so a spaced line is replaced rather than left beside the new one (the game itself
+        //only reads a key written at the very start of its line, straight before the '=')
         internal static bool IsKey(string line, string name)
         {
             int eq = line.IndexOf('=');

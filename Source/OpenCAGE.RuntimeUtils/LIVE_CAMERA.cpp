@@ -1,4 +1,5 @@
 #include "LIVE_CAMERA.h"
+#include "CINEMATIC_CAMERA.h"
 #include "CUBEMAP_CAPTURE.h"
 #include "LIVE_LINK_SERVER.h"
 #include "ZONE_LOADER.h"
@@ -65,8 +66,9 @@ namespace
 	// Refusals are logged once, not for every pose OpenCAGE sends while it is being refused
 	std::string g_lastRefusal;
 
-	// Where the hook is with the pose (its thread only); whether it is applying (g_applying) is shared with STATUS and the overlay
-	enum class State { Applying, Released, Disconnected, LevelChanged, NoLevel };
+	// Where the hook is with the pose (its thread only); whether it is applying (g_applying) is shared with STATUS and the overlay.
+	// Overridden: it would apply, but the debug menu's cinematic camera has the camera (it waits).
+	enum class State { Applying, Released, Disconnected, LevelChanged, NoLevel, Overridden };
 	State g_state = State::Released;
 	std::atomic<bool> g_applying = false;
 	std::atomic<ULONGLONG> g_frameAt = 0;
@@ -303,7 +305,7 @@ namespace
 		const char* text = nullptr;
 		if (applying)
 			text = "Camera following OpenCAGE";
-		else if (previous == State::Applying || previous == State::NoLevel)
+		else if (previous == State::Applying || previous == State::NoLevel || previous == State::Overridden)
 		{
 			switch (state)
 			{
@@ -311,6 +313,7 @@ namespace
 			case State::Disconnected: text = "Camera released (OpenCAGE disconnected)"; break;
 			case State::LevelChanged: text = "Camera waiting: another level is running"; break;
 			case State::NoLevel: text = "Camera waiting: no level is running"; break;
+			case State::Overridden: text = "Camera waiting: the Debug Menu's cinematic camera has it"; break;
 			default: break;
 			}
 		}
@@ -411,23 +414,47 @@ void __fastcall LIVE_CAMERA::h_synchronize_with_engine(void* _this, void* /*_EDX
 		if (g_pose.generation == pose.generation)
 			g_pose.active = false;
 	}
-	Transition(state);
-	g_frameAt = GetTickCount64();
-
-	// The camera's own state is kept every frame before any pose goes over it, so CAMERA_GET always reads the game's
-	// camera. The original renders the frame from the pose, then the camera gets its own state back before anything else
-	// sees it.
+	// Who has the camera this frame: a cubemap capture while it runs (see CUBEMAP_CAPTURE.h), then the debug menu's
+	// cinematic camera while it flies (CINEMATIC_CAMERA.h), then OpenCAGE's pose (which waits meanwhile), then Possess.
+	// The cinematic camera is asked every frame, for its key, whether or not it can be drawn from.
 	uint8_t* camera = ChooseCamera(_this);
 	CameraState saved = {};
 	if (camera && !ReadState(camera, saved))
 		camera = nullptr;
-	if (camera)
-		TakeSnapshot(saved);
-	bool written = false, behind = false;
-	// A cubemap capture owns the camera while it runs (see CUBEMAP_CAPTURE.h), ahead of OpenCAGE's pose and Possess
 	Pose capture;
-	if (camera && CUBEMAP_CAPTURE::CameraPose(capture.rotation, capture.position, capture.fov))
+	const bool capturing = camera && CUBEMAP_CAPTURE::CameraPose(capture.rotation, capture.position, capture.fov);
+	CINEMATIC_CAMERA::Pose flown;
+	const bool flying = CINEMATIC_CAMERA::CameraPose(flown, camera && !capturing);
+	if (flying && state == State::Applying)
+		state = State::Overridden;
+	Transition(state);
+	g_frameAt = GetTickCount64();
+
+	// The camera's own state is kept every frame before any pose goes over it, so CAMERA_GET always reads the game's
+	// camera - or the cinematic camera while it flies, so OpenCAGE following the game's camera follows that. The original
+	// renders the frame from the pose, then the camera gets its own state back before anything else sees it.
+	if (camera)
+	{
+		CameraState kept = saved;
+		if (flying)
+		{
+			memcpy(kept.rotation, flown.rotation, sizeof(kept.rotation));
+			memcpy(kept.position, flown.position, sizeof(kept.position));
+			kept.fov = flown.fov;
+		}
+		TakeSnapshot(kept);
+	}
+	bool written = false, behind = false;
+	if (capturing)
 		written = WritePose(camera, capture, saved);
+	else if (flying)
+	{
+		Pose cinematic;
+		memcpy(cinematic.rotation, flown.rotation, sizeof(cinematic.rotation));
+		memcpy(cinematic.position, flown.position, sizeof(cinematic.position));
+		cinematic.fov = flown.fov;
+		written = WritePose(camera, cinematic, saved);
+	}
 	else if (camera && state == State::Applying)
 		written = WritePose(camera, pose, saved);
 	else if (camera && Config::Get().possess)
@@ -441,13 +468,23 @@ void __fastcall LIVE_CAMERA::h_synchronize_with_engine(void* _this, void* /*_EDX
 			written = behind = WritePose(camera, follow, saved);
 		}
 	}
-	// Where the frame is drawn from, for a possessed character's keys to move it relative to
-	if (camera && Config::Get().possess)
+	// Where the frame is drawn from: for a possessed character's keys to move it relative to, and for the cinematic camera
+	// to start from (with the game camera's own state, to go back to)
+	CameraState drawn;
+	if (camera && ReadState(camera, drawn))
 	{
-		CameraState drawn;
 		float forward[3], up[3];
-		if (ReadState(camera, drawn) && AxesFromRotation(drawn.rotation, forward, up))
+		if (Config::Get().possess && AxesFromRotation(drawn.rotation, forward, up))
 			POSSESS::SeenFrom(drawn.position, forward, behind);
+		CINEMATIC_CAMERA::Pose game, seen;
+		memcpy(game.rotation, saved.rotation, sizeof(game.rotation));
+		memcpy(game.position, saved.position, sizeof(game.position));
+		game.fov = saved.fov;
+		memcpy(seen.rotation, drawn.rotation, sizeof(seen.rotation));
+		memcpy(seen.position, drawn.position, sizeof(seen.position));
+		seen.fov = drawn.fov;
+		if (Finite(game.rotation, 4) && Finite(game.position, 3) && Finite(seen.rotation, 4) && Finite(seen.position, 3))
+			CINEMATIC_CAMERA::FrameDrawn(game, seen);
 	}
 	synchronize_with_engine(_this);
 	if (written)

@@ -14,7 +14,7 @@
 
 	Each character the game runs has a behaviour tree that decides what it does, and below that a layer that carries out
 	orders: go to a place, turn to face something, move in a direction, crouch or stand. The game has an order for moving
-	in a direction (its scripted "move towards" command and one of CA's debug behaviours give it), and the character
+	in a direction (its scripted "move towards" command and one of its debug behaviours give it), and the character
 	carries it out with its own animations, speeds and navigation mesh - so the alien moves as the alien moves. While a
 	character is possessed its behaviour tree is not run (its senses, memory, aiming and the rest still are), and once a
 	frame, where the tree would have run, it is given a move-in-direction order from the keys: W/A/S/D relative to the
