@@ -2,6 +2,7 @@
 #include "COVER_DEBUG.h"
 #include "DEBUG_MENU.h"
 #include "SOUND_DEBUG.h"
+#include "TABLE_ORDER.h"
 
 #include <algorithm>
 #include <atomic>
@@ -1437,7 +1438,9 @@ namespace
 		std::vector<Row> rows;
 		for (size_t i = 0; i < mesh.offMesh.size(); i++)
 			rows.push_back({ static_cast<int>(i), (std::min)(Distance(centre, mesh.offMesh[i].start), Distance(centre, mesh.offMesh[i].end)) });
-		std::stable_sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.distance < b.distance; });
+		// A connection by its polygon's id, and its place in the list
+		TABLE_ORDER::Nearest("nav.offmesh", rows, [&mesh](const Row& row) { return static_cast<uint64_t>(mesh.offMesh[row.index].ref) << 32 | static_cast<uint32_t>(row.index); },
+			[](const Row& row) { return row.distance; });
 		const ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit;
 		if (!ImGui::BeginTable("offmesh", 9, flags, ImVec2(0.0f, 220.0f * DEBUG_MENU::Scale())))
 			return;
@@ -1533,7 +1536,7 @@ namespace
 			std::vector<Row> rows;
 			for (const COVER_DEBUG::Traversal& traversal : cover.traversals)
 				rows.push_back({ &traversal, (std::min)(Distance(centre, traversal.entrance[0]), Distance(centre, traversal.exit[0])) });
-			std::stable_sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.distance < b.distance; });
+			TABLE_ORDER::Nearest("nav.traversals", rows, [](const Row& row) { return static_cast<uint64_t>(static_cast<uint32_t>(row.traversal->uid)); }, [](const Row& row) { return row.distance; });
 			const ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit;
 			if (ImGui::BeginTable("traversals", 7, flags, ImVec2(0.0f, 200.0f * DEBUG_MENU::Scale())))
 			{

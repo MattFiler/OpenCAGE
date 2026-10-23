@@ -135,6 +135,7 @@
             this.label8 = new System.Windows.Forms.Label();
             this.label20 = new System.Windows.Forms.Label();
             this.tabPage3 = new System.Windows.Forms.TabPage();
+            this.liveStatus = new System.Windows.Forms.Label();
             this.viewconeDifficultySet1 = new Popups.Configuration_Editors.User_Controls.ViewconeDifficultySet();
             this.groupBox2.SuspendLayout();
             this.groupBox11.SuspendLayout();
@@ -1625,11 +1626,19 @@
             this.viewconeDifficultySet1.Name = "viewconeDifficultySet1";
             this.viewconeDifficultySet1.Size = new System.Drawing.Size(434, 89);
             this.viewconeDifficultySet1.TabIndex = 418;            // 
+            // liveStatus
+            // 
+            this.liveStatus.Location = new System.Drawing.Point(12, 497);
+            this.liveStatus.Name = "liveStatus";
+            this.liveStatus.Size = new System.Drawing.Size(721, 26);
+            this.liveStatus.TabIndex = 479;
+            // 
             // DifficultyEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(746, 501);
+            this.ClientSize = new System.Drawing.Size(746, 527);
+            this.Controls.Add(this.liveStatus);
             this.Controls.Add(this.tabControl1);
             this.Controls.Add(this.label85);
             this.Controls.Add(this.classSelection);
@@ -1826,5 +1835,6 @@
         private System.Windows.Forms.NumericUpDown shooting_in_cover_duration_modifier;
         private System.Windows.Forms.NumericUpDown suspicious_item_loop_scalar;
         private System.Windows.Forms.NumericUpDown damage_received_scalar;
+        private System.Windows.Forms.Label liveStatus;
     }
 }

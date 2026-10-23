@@ -1,6 +1,7 @@
 #include "DEBUG_ACTIONS.h"
 #include "DEBUG_MENU.h"
 #include "GAME_DEBUG.h"
+#include "GAME_SNAPSHOTS.h"
 #include "LIVE_LINK.h"
 
 #include <atomic>
@@ -636,8 +637,8 @@ namespace
 	};
 
 	const Flag kFlags[] = {
-		{ "prevent_all_attacks", "Prevent all attacks", "It makes no attacks at all.", 0x1F },
-		{ "prevent_grapples", "Prevent grapples", "It doesn't grab the player.", 0x1E },
+		{ "prevent_all_attacks", "Prevent all attacks", "Only matters on the player: humans and androids don't hit or grab them, and facehuggers don't leap at them. The alien ignores it.", 0x1F },
+		{ "prevent_grapples", "Prevent grapples", "Only matters on the player: humans and androids don't grab and strangle them. The alien ignores it.", 0x1E },
 		{ "block_ambush_and_killtraps", "Block ambushes and kill traps", "The alien doesn't lie in wait or spring kill traps.", 0x1D },
 		{ "never_aggressive", "Never aggressive", "It never turns aggressive.", 0x19 },
 		{ "totally_blind_in_dark", "Totally blind in the dark", "It sees nothing in the dark.", 0x14 },
@@ -765,7 +766,23 @@ namespace
 	// ---- Player cheats ----
 
 	std::atomic<bool> g_invisible = false;
+	std::atomic<bool> g_invisibleButAudible = false;
 	std::atomic<bool> g_infiniteAmmo = false;
+
+	// Invisible but audible keeps back only the senses that see: sight itself and the player's torch light seen. The rest
+	// get through: weapon and movement sounds, damage, touch and flame. So does the combined sense: every sense also feeds a
+	// character's combined sense under its own kind, so the combined kind itself only comes from a squadmate passing on what
+	// it sensed - which, with sight kept back, it heard or felt.
+	constexpr int kSenseSight = 0;
+	constexpr int kSenseTorchLight = 6;
+	// Since the game started: the player's senses Invisible but audible kept back, and let through
+	std::atomic<uint32_t> g_sightKeptBack = 0;
+	std::atomic<uint32_t> g_othersLetThrough = 0;
+
+	bool SightSense(int sense)
+	{
+		return sense == kSenseSight || sense == kSenseTorchLight;
+	}
 
 	// Whether a sense activation is about to pick up the player
 	bool SensesPlayer(const void* activation)
@@ -817,6 +834,14 @@ namespace
 		DEBUG_MENU::AddValue("game.speed", &g_speed, kSpeedMin, kSpeedMax);
 		DEBUG_MENU::AddSwitch("tools.free_camera", &g_freeCamera);
 		DEBUG_MENU::AddSwitch("tools.invisible", &g_invisible);
+		DEBUG_MENU::AddSwitch("tools.invisible_but_audible", &g_invisibleButAudible);
+		DEBUG_MENU::AddCommand("tools.invisible_status", "Invisible to the AI and Invisible but audible: on or off, then (since the game started) the senses of the player Invisible but audible kept back and let through", [](const std::string&)
+		{
+			char text[160];
+			snprintf(text, sizeof(text), "invisible=%d\ninvisible_but_audible=%d\nsight_kept_back=%u\nothers_let_through=%u\n", g_invisible ? 1 : 0, g_invisibleButAudible ? 1 : 0,
+				g_sightKeptBack.load(), g_othersLetThrough.load());
+			return DEBUG_MENU::CommandResult{ true, text };
+		});
 		DEBUG_MENU::AddSwitch("tools.infinite_ammo", &g_infiniteAmmo);
 		for (size_t i = 0; i < kFlagCount; i++)
 			DEBUG_MENU::AddSwitch(std::string("tools.flag.") + kFlags[i].name, &g_flagWanted[i]);
@@ -919,11 +944,13 @@ namespace
 		ImGui::EndDisabled();
 	}
 
-	// The debug checkpoints, then every checkpoint of the level and the reload (GAME_DEBUG.h)
+	// The debug checkpoints, then every checkpoint of the level and the reload (GAME_DEBUG.h), then the snapshot slots
+	// (GAME_SNAPSHOTS.h)
 	void DrawCheckpoints()
 	{
 		DrawDebugCheckpoints();
 		GAME_DEBUG::DrawLevelCheckpoints();
+		GAME_SNAPSHOTS::DrawSlots();
 	}
 
 	void DrawSpeed()
@@ -1094,6 +1121,16 @@ bool __fastcall DEBUG_ACTIONS::h_trigger_sense(void* _this, void* /*_EDX*/, cons
 {
 	if (g_invisible && SensesPlayer(_this))
 		return false;
+	// Invisible but audible: only the senses that see are kept from the player
+	if (g_invisibleButAudible && SensesPlayer(_this))
+	{
+		if (SightSense(sense))
+		{
+			g_sightKeptBack++;
+			return false;
+		}
+		g_othersLetThrough++;
+	}
 	return trigger_sense(_this, position, amount, distance, sense, modifier, threshold, flagA, flagB, time);
 }
 

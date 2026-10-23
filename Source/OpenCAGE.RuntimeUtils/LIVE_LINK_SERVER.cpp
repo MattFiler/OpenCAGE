@@ -9,6 +9,7 @@
 #include "LIVE_TRACE.h"
 #include "POSSESS.h"
 #include "GAME_LEVEL_MANAGER.h"
+#include "GAME_DEBUG.h"
 #include "SCREENSHOT.h"
 #include "DevTools.h"
 
@@ -644,8 +645,52 @@ namespace
 			last == "entities" || last == "pick" || last == "details" || last == "characters" || last == "ping_threads" || last == "hooks";
 	}
 
+	// Debug menu commands that act on the game run on a thread of their own, one after another: one that waits for a game
+	// thread (up to 2 s, and the whole wait while a breakpoint holds the scripts) then doesn't hold up the requests behind
+	// it - the reports, and OpenCAGE's script debugger asking whether a breakpoint has been hit. Reports still answer at once.
+	struct QueuedCommand
+	{
+		Request request;
+		std::string name, argument;
+	};
+	std::mutex g_commandMutex;
+	std::condition_variable g_commandReady;
+	std::deque<QueuedCommand> g_commandQueue;
+
+	void RunQueuedCommand(const QueuedCommand& queued)
+	{
+		DEBUG_MENU::CommandResult result;
+		if (!DEBUG_MENU::RunCommand(queued.name, queued.argument, result))
+		{
+			Reply(queued.request, false, "No debug menu command named " + queued.name + " (\"help\" lists them)");
+			return;
+		}
+		if (!ReportOnly(queued.name))
+			SetActivity("Debug menu: " + queued.name);
+		Reply(queued.request, result.ok, result.message);
+	}
+
+	void CommandThread()
+	{
+		while (g_running)
+		{
+			QueuedCommand queued;
+			{
+				std::unique_lock<std::mutex> lock(g_commandMutex);
+				g_commandReady.wait(lock, [] { return !g_commandQueue.empty() || !g_running; });
+				if (!g_running)
+					return;
+				queued = std::move(g_commandQueue.front());
+				g_commandQueue.pop_front();
+			}
+			// One sent on a connection that has gone is dropped, as the other queues drop theirs
+			if (queued.request.connection == g_connection)
+				RunQueuedCommand(queued);
+		}
+	}
+
 	// The debug menu is driven from outside its window here (for OpenCAGE's tools and for testing), answered at once with
-	// what it holds
+	// what it holds (a command that acts on the game is answered from the command thread above)
 	void HandleDebugMenu(const Request& request)
 	{
 		if (!Config::Get().debugMenu)
@@ -686,16 +731,17 @@ namespace
 			break;
 		case 6:
 		{
-			// A command answers for itself
-			DEBUG_MENU::CommandResult result;
-			if (!DEBUG_MENU::RunCommand(name, argument, result))
+			// A command answers for itself: a report at once, one that acts on the game from the command thread
+			if (ReportOnly(name))
 			{
-				Reply(request, false, "No debug menu command named " + name + " (\"help\" lists them)");
+				RunQueuedCommand({ request, name, argument });
 				return;
 			}
-			if (!ReportOnly(name))
-				SetActivity("Debug menu: " + name);
-			Reply(request, result.ok, result.message);
+			{
+				std::lock_guard<std::mutex> lock(g_commandMutex);
+				g_commandQueue.push_back({ request, name, argument });
+			}
+			g_commandReady.notify_one();
 			return;
 		}
 		case 7:
@@ -946,12 +992,14 @@ void LIVE_LINK_SERVER::Start(uint16_t port)
 	g_thread = std::thread(ServerThread, port);
 	g_thread.detach();
 	std::thread(SenderThread).detach();
+	std::thread(CommandThread).detach();
 }
 
 void LIVE_LINK_SERVER::Stop()
 {
 	g_running = false;
 	g_outReady.notify_all();
+	g_commandReady.notify_all();
 	if (g_listener != INVALID_SOCKET)
 		closesocket(g_listener);
 	std::lock_guard<std::mutex> lock(g_sendMutex);
@@ -1174,26 +1222,13 @@ void LIVE_LINK_SERVER::ProcessRenderRequests(IDXGISwapChain* swapChain)
 		}
 		case LOAD_LEVEL:
 		{
-			std::string level = reader.String();
-			std::replace(level.begin(), level.end(), '/', '\\');
-			if (level.find('\\') == std::string::npos && level.find('/') == std::string::npos)
-				level = "Production\\" + level;
-			bool ok = false;
-			// The one the hooks saw, or else the game's own (from its globals), so this works whichever hooks are on
-			GAME_LEVEL_MANAGER::Instance* manager = GAME_LEVEL_MANAGER::m_instance ? GAME_LEVEL_MANAGER::m_instance :
-				static_cast<GAME_LEVEL_MANAGER::Instance*>(LIVE_LINK::LevelManager());
-			if (manager)
-			{
-				const int index = GAME_LEVEL_MANAGER::get_level_from_name(manager, const_cast<char*>(level.c_str()));
-				if (index != 0)
-				{
-					GAME_LEVEL_MANAGER::queue_level(manager, index);
-					GAME_LEVEL_MANAGER::request_next_level(manager, false);
-					ok = true;
-				}
-			}
-			DevTools::Log("LiveLink: load level %s %s", level.c_str(), ok ? "requested" : "failed");
-			Reply(request, ok, ok ? "Loading " + level : "Could not load " + level + " (the level manager has not been seen yet, or the level is unknown)");
+			// Looked up in the game's own list of levels, so a level made with OpenCAGE's Create Level (no "Production\")
+			// loads too, as do "Production\BSP_Torrens", "DLC\ChallengeMap1" and a last part alone
+			const std::string level = reader.String();
+			std::string message = "no level was named";
+			const bool ok = !reader.failed && GAME_DEBUG::RequestLevelLoad(level, message);
+			DevTools::Log("LiveLink: load level %s: %s", level.c_str(), message.c_str());
+			Reply(request, ok, message);
 			break;
 		}
 		}

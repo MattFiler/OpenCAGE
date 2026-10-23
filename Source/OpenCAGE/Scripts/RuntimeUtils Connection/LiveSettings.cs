@@ -12,6 +12,10 @@ namespace OpenCAGE.RuntimeUtilsConnection
     /// level and reads the file again. An editor attaches the files it edits while it is open, with a label kept saying
     /// whether its changes reach the game. A change is sent a moment after the last one (a spinner makes many), with every
     /// number of that file, and everything attached is sent again when Live Link connects. UI thread throughout.
+    ///
+    /// The AI config folders (alien setups, difficulty settings, view cones) are read by the game only when it starts: after
+    /// an edit to one of their files is saved, the running game is asked to read the folder again (ReloadAfterEdit: the
+    /// game's Debug Menu command ai.reload_configs, so the game must have the Debug Menu on), with the label saying how it went.
     /// </summary>
     internal static class LiveSettings
     {
@@ -39,11 +43,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
         /// </summary>
         public static void Attach(Form form, Label status, params (LiveLink.SettingsFile file, Func<List<KeyValuePair<string, float>>> values)[] files)
         {
-            if (!_subscribed)
-            {
-                LiveLink.ConnectionChanged += OnConnectionChanged;
-                _subscribed = true;
-            }
+            Subscribe();
             Attached attached = new Attached() { Status = status, Files = files.ToDictionary(o => o.file, o => o.values) };
             _attached.Add(attached);
             form.FormClosed += (s, e) => _attached.Remove(attached);
@@ -137,6 +137,14 @@ namespace OpenCAGE.RuntimeUtilsConnection
                 attached.Status.Text = "Live Link: changes show in the game as you make them.";
         }
 
+        private static void Subscribe()
+        {
+            if (_subscribed)
+                return;
+            LiveLink.ConnectionChanged += OnConnectionChanged;
+            _subscribed = true;
+        }
+
         private static void OnConnectionChanged()
         {
             Form main = Singleton.Editor;
@@ -153,9 +161,171 @@ namespace OpenCAGE.RuntimeUtilsConnection
                 attached.Outdated = false;
                 ShowStatus(attached);
             }
+            //A game connected (or gone) since: how the last reload went no longer says anything about it
+            foreach (AttachedReload attached in _reloadsAttached)
+            {
+                attached.Result = null;
+                ShowReloadStatus(attached);
+            }
+            if (!LiveLink.Connected)
+                _toReload.Clear();
             //A newly connected game read the files when its level loaded: send what the open editors hold, in case they differ
             if (LiveLink.Connected)
                 Changed(_attached.SelectMany(o => o.Files.Keys).Distinct().ToArray());
+        }
+
+        /// <summary>The AI config folders the game reads only when it starts, which the running game can read again.</summary>
+        public enum ReloadableConfig
+        {
+            /// <summary>DATA\ALIENCONFIGS</summary>
+            AlienConfigs,
+            /// <summary>DATA\DIFFICULTYSETTINGS</summary>
+            DifficultySettings,
+            /// <summary>DATA\VIEW_CONE_SETS</summary>
+            Viewcones,
+        }
+
+        /// <summary>The game's Debug Menu command that reads them again (and has the characters take them up), answering a line per folder.</summary>
+        public const string ReloadCommand = "ai.reload_configs";
+
+        /// <summary>What the command calls a folder.</summary>
+        public static string ReloadArgument(ReloadableConfig config)
+        {
+            switch (config)
+            {
+                case ReloadableConfig.AlienConfigs: return "alien";
+                case ReloadableConfig.DifficultySettings: return "difficulty";
+                default: return "viewcones";
+            }
+        }
+
+        /// <summary>How the command's line about a folder starts.</summary>
+        private static string ReloadLine(ReloadableConfig config)
+        {
+            switch (config)
+            {
+                case ReloadableConfig.AlienConfigs: return "alien setups:";
+                case ReloadableConfig.DifficultySettings: return "difficulty:";
+                default: return "view cones:";
+            }
+        }
+
+        private const int ReloadDebounceMs = 400;
+
+        private sealed class AttachedReload
+        {
+            public Label Status;
+            public ReloadableConfig Config;
+            /// <summary>How the last reload sent while it was open went, as the label shows it; null when none was.</summary>
+            public string Result;
+        }
+
+        private static readonly List<AttachedReload> _reloadsAttached = new List<AttachedReload>();
+        private static readonly HashSet<ReloadableConfig> _toReload = new HashSet<ReloadableConfig>();
+        private static Timer _reloadTimer;
+        private static bool _reloading;
+
+        /// <summary>
+        /// For an editor of one of the AI config folders, while it is open: the label says whether its changes reach the running
+        /// game, and how the last one went (ReloadAfterEdit sends them).
+        /// </summary>
+        public static void AttachReload(Form form, Label status, ReloadableConfig config)
+        {
+            Subscribe();
+            AttachedReload attached = new AttachedReload() { Status = status, Config = config };
+            _reloadsAttached.Add(attached);
+            form.FormClosed += (s, e) => _reloadsAttached.Remove(attached);
+            ShowReloadStatus(attached);
+        }
+
+        /// <summary>
+        /// An edit to one of a folder's files was saved: the running game reads the folder again shortly after (a spinner makes
+        /// many edits, which go as one). Only for an edit: the saves an editor makes as it opens, or as another entry is picked,
+        /// change nothing the game reads.
+        /// </summary>
+        public static void ReloadAfterEdit(ReloadableConfig config)
+        {
+            if (!LiveLink.Connected)
+                return;
+            _toReload.Add(config);
+            if (_reloadTimer == null)
+            {
+                _reloadTimer = new Timer() { Interval = ReloadDebounceMs };
+                _reloadTimer.Tick += async (s, e) =>
+                {
+                    _reloadTimer.Stop();
+                    await SendReloads();
+                };
+            }
+            _reloadTimer.Stop();
+            _reloadTimer.Start();
+        }
+
+        private static async Task SendReloads()
+        {
+            //One at a time: what is edited meanwhile goes once the one in flight is answered
+            if (_reloading)
+            {
+                _reloadTimer.Start();
+                return;
+            }
+            _reloading = true;
+            try
+            {
+                while (_toReload.Count != 0 && LiveLink.Connected)
+                {
+                    List<ReloadableConfig> configs = _toReload.ToList();
+                    _toReload.Clear();
+                    LiveLink.Reply reply = await LiveLink.DebugMenu(LiveLink.DebugMenuOp.RunCommand, ReloadCommand, argument: string.Join(" ", configs.Select(ReloadArgument)));
+                    foreach (AttachedReload attached in _reloadsAttached.Where(o => configs.Contains(o.Config)))
+                    {
+                        attached.Result = ReloadResult(reply, attached.Config);
+                        ShowReloadStatus(attached);
+                    }
+                }
+            }
+            finally
+            {
+                _reloading = false;
+            }
+        }
+
+        /// <summary>What the game's answer says for a folder, for its label.</summary>
+        private static string ReloadResult(LiveLink.Reply reply, ReloadableConfig config)
+        {
+            string message = (reply.Message ?? "").Trim();
+            if (LiveLink.IsUnknownRequest(reply) || message.StartsWith("No debug menu command named"))
+                return "Live Link: the game's runtime utils are too old to read these files again as you edit - launch it again from this OpenCAGE.";
+            if (message.StartsWith("The debug menu is off"))
+                return "Live Link: the game's Debug Menu is off, so changes reach the game when it next starts (launch it with the Debug Menu on to see them as you edit).";
+            if (message.StartsWith("Timed out waiting for the game"))
+                return "Live Link: the game reads the change once its AI runs again (it is paused, or no level is running).";
+            if (!reply.Answered)
+                return "Live Link: the game didn't answer" + (message.Length != 0 ? " (" + message + ")" : "") + ".";
+
+            //A line per folder, and one for the characters that took them up (the setups and the difficulty)
+            List<string> lines = message.Split('\n').Select(o => o.Trim()).Where(o => o.Length != 0).ToList();
+            string line = lines.FirstOrDefault(o => o.StartsWith(ReloadLine(config)));
+            if (line == null)
+                return "Live Link: " + (reply.Ok ? "changes read again by the game." : "not read again: " + message);
+            string text = line.Substring(ReloadLine(config).Length).Trim();
+            if (!text.StartsWith("read again"))
+                return "Live Link: " + text + ".";
+            text = "changes read again by the game" + text.Substring("read again".Length);
+            string characters = config == ReloadableConfig.Viewcones ? null : lines.FirstOrDefault(o => o.StartsWith("characters:"));
+            return "Live Link: " + text + (characters != null ? "; " + characters : "") + ".";
+        }
+
+        private static void ShowReloadStatus(AttachedReload attached)
+        {
+            if (attached.Status == null || attached.Status.IsDisposed)
+                return;
+            if (!LiveLink.Connected)
+                attached.Status.Text = "The game reads these files when it starts. While Live Link is connected (with the game's Debug Menu on), each change is read again by the running game.";
+            else if (attached.Result != null)
+                attached.Status.Text = attached.Result;
+            else
+                attached.Status.Text = "Live Link: each change is read again by the running game (with its Debug Menu on).";
         }
     }
 }

@@ -21,17 +21,19 @@
 	  entity does), force its menace aggressive or passive, reset an NPC or its senses and memory, and its logic flags as
 	  checkboxes that read the character's own flags. Everything that changes a character runs on the AI thread, through
 	  the game's own functions, with the character found again by its unique id there.
-	- Player cheats: invisible to the AI (a sense that would pick up the player is not triggered) and infinite ammo (a
-	  player's weapon uses no ammo when fired).
+	- Player cheats: invisible to the AI (a sense that would pick up the player is not triggered), invisible but audible
+	  (the same for the senses that see - sight and the player's torch light - only: sounds, damage, touch and flame still
+	  get through) and infinite ammo (a player's weapon uses no ammo when fired).
 
-	The on/off options have dotted names ("tools.free_camera", "tools.invisible", "tools.infinite_ammo",
-	"tools.flag.prevent_all_attacks", ...) so that OpenCAGE can set them over the Live Link (see DEBUG_MENU.h); they are
-	compared with what was applied every frame.
+	The on/off options have dotted names ("tools.free_camera", "tools.invisible", "tools.invisible_but_audible",
+	"tools.infinite_ammo", "tools.flag.prevent_all_attacks", ...) so that OpenCAGE can set them over the Live Link (see
+	DEBUG_MENU.h); they are compared with what was applied every frame.
 */
 namespace DEBUG_ACTIONS
 {
 	// Hooked: the AI's handling of something one of a character's senses picks up (the sense's activation is raised from
-	// it). Invisible returns before anything happens when what is sensed is the player.
+	// it). Invisible returns before anything happens when what is sensed is the player; Invisible but audible does the same
+	// for the senses that see.
 	DEVTOOLS_DECLARE_CLASS_HOOK(bool, trigger_sense, h_trigger_sense, t_trigger_sense, 0x00329120, const void*, float, float, int, int, int, bool, bool, float)
 
 	// Hooked: a weapon using up ammo from its clip as it fires. Infinite ammo returns at once for a player's weapon.

@@ -1,6 +1,7 @@
 #include "RENDER_COMMON.h"
 #include "Config.h"
 #include "DEBUG_MENU.h"
+#include "TABLE_ORDER.h"
 
 #include <algorithm>
 #include <atomic>
@@ -1177,12 +1178,18 @@ namespace
 			ImGui::TableSetupColumn("Mute");
 			ImGui::TableHeadersRow();
 			int index = 0;
+			// The snapshot is nearest first this frame; the list keeps an order that holds still between sorts
+			std::vector<const Light*> rows;
+			rows.reserve(snapshot.lights.size());
+			for (const Light& light : snapshot.lights)
+				rows.push_back(&light);
+			TABLE_ORDER::Nearest("render.lights", rows, [](const Light* light) { return static_cast<uint64_t>(light->object); }, [](const Light* light) { return light->distance; });
 			ImGuiListClipper clipper;
-			clipper.Begin(static_cast<int>(snapshot.lights.size()));
+			clipper.Begin(static_cast<int>(rows.size()));
 			while (clipper.Step())
 				for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
 				{
-					const Light& light = snapshot.lights[row];
+					const Light& light = *rows[row];
 					index = row + 1;
 					ImGui::TableNextRow();
 					ImGui::PushID(static_cast<int>(light.object));

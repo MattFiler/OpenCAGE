@@ -1,6 +1,7 @@
 #include "ANIM_NAMES.h"
 #include "DEBUG_MENU.h"
 #include "LIVE_LINK.h"
+#include "TABLE_ORDER.h"
 
 #include <algorithm>
 #include <atomic>
@@ -482,6 +483,9 @@ namespace
 
 	// ---- The tab ----
 
+	// The rig and clip columns' widths, measured the first time the table is drawn (render thread)
+	float g_rigWidth = 0.0f, g_clipWidth = 0.0f;
+
 	void DrawTab()
 	{
 		Register();
@@ -516,19 +520,31 @@ namespace
 		std::vector<Row> rows;
 		for (const Model& model : frame.models)
 			rows.push_back({ &model, haveCamera ? Distance(model.position, camera) : 0.0f });
-		std::stable_sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.distance < b.distance; });
-		ImGui::TextDisabled("%d animated objects, nearest first. Click one to pick it out (drawn whatever its distance).", static_cast<int>(rows.size()));
-		// Scrolls sideways rather than cutting off the last columns when the rig and clip names are long
+		TABLE_ORDER::Nearest("anim.environment", rows, [](const Row& row) { return static_cast<uint64_t>(row.model->address); }, [](const Row& row) { return row.distance; });
+		if (g_rigWidth == 0.0f)
+		{
+			g_rigWidth = ImGui::CalcTextSize("Rig").x;
+			g_clipWidth = 180.0f * DEBUG_MENU::Scale();
+			for (const Row& row : rows)
+			{
+				g_rigWidth = (std::max)(g_rigWidth, ImGui::CalcTextSize(Format("%s (%d bones)", ANIM_NAMES::Name(row.model->skeleton).c_str(), row.model->bones).c_str()).x);
+				g_clipWidth = (std::max)(g_clipWidth, ImGui::CalcTextSize(ClipName(row.model->clip).c_str()).x);
+			}
+		}
+		ImGui::TextDisabled("%d animated objects, nearest first (sorted again each second). Click one to pick it out (drawn whatever its distance).", static_cast<int>(rows.size()));
+		// Scrolls sideways rather than cutting off the last columns when the rig and clip names are long. Each column is as
+		// wide as what it can hold, set when the table is first drawn: left to fit what is in it each frame, the widths
+		// change with the times, states and distances, the sideways scroll bar comes and goes, and the bottom edge jumps
 		if (!ImGui::BeginTable("envmodels", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY |
 			ImGuiTableFlags_SizingFixedFit, ImVec2(0.0f, 220.0f * DEBUG_MENU::Scale())))
 			return;
 		ImGui::TableSetupScrollFreeze(0, 1);
-		ImGui::TableSetupColumn("Rig");
-		ImGui::TableSetupColumn("Clip");
-		ImGui::TableSetupColumn("Time");
-		ImGui::TableSetupColumn("State");
-		ImGui::TableSetupColumn("Distance");
-		ImGui::TableSetupColumn("Script entity");
+		ImGui::TableSetupColumn("Rig", ImGuiTableColumnFlags_WidthFixed, g_rigWidth);
+		ImGui::TableSetupColumn("Clip", ImGuiTableColumnFlags_WidthFixed, g_clipWidth);
+		ImGui::TableSetupColumn("Time", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("000.00 / 000.00 s").x);
+		ImGui::TableSetupColumn("State", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("paused, attached, a character's").x);
+		ImGui::TableSetupColumn("Distance", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("0000.0 m").x);
+		ImGui::TableSetupColumn("Script entity", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("Script entity").x);
 		ImGui::TableHeadersRow();
 		for (const Row& row : rows)
 		{

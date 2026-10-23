@@ -1,5 +1,6 @@
 ﻿using CATHODE;
 using OpenCAGE.Popups.Base;
+using OpenCAGE.RuntimeUtilsConnection;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -100,6 +101,9 @@ namespace OpenCAGE.ConfigEditors
                 }
             }
             classSelection.SelectedIndex = 0;
+
+            //The game reads these when it starts; with Live Link connected each edit has it read them again
+            LiveSettings.AttachReload(this, liveStatus, LiveSettings.ReloadableConfig.DifficultySettings);
         }
 
         private void DifficultyEditor_FormClosing(object sender, FormClosingEventArgs e)
@@ -229,6 +233,10 @@ namespace OpenCAGE.ConfigEditors
             _selectedDifficulty[0].Content = doc;
             _selectedDifficulty[0].Save();
 
+            //Only an edit goes to the game: the saves made as the editor opens, and as another difficulty is picked, change nothing it reads
+            if (sender != null)
+                LiveSettings.ReloadAfterEdit(LiveSettings.ReloadableConfig.DifficultySettings);
+
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
         }
 
@@ -249,6 +257,10 @@ namespace OpenCAGE.ConfigEditors
             _selectedDifficulty[0].Content = doc;
             _selectedDifficulty[0].Save();
 
+            //(as above; picking another character type saves too)
+            if (sender != null && sender != characterTypesSense)
+                LiveSettings.ReloadAfterEdit(LiveSettings.ReloadableConfig.DifficultySettings);
+
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
         }
 
@@ -267,6 +279,10 @@ namespace OpenCAGE.ConfigEditors
             _selectedDifficulty[0].Content = doc;
             _selectedDifficulty[0].Save();
 
+            //(as above; picking another character type saves too)
+            if (sender != null && sender != characterTypesAttribute)
+                LiveSettings.ReloadAfterEdit(LiveSettings.ReloadableConfig.DifficultySettings);
+
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
         }
 
@@ -283,6 +299,10 @@ namespace OpenCAGE.ConfigEditors
 
             _selectedDifficulty[0].Content = doc;
             _selectedDifficulty[0].Save();
+
+            //(as above)
+            if (sender != null)
+                LiveSettings.ReloadAfterEdit(LiveSettings.ReloadableConfig.DifficultySettings);
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
         }

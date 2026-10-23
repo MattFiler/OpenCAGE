@@ -49,6 +49,34 @@ namespace
 		return name ? std::string(name) + " (" + LIVE_DEBUGGER::IdText(method) + ")" : LIVE_DEBUGGER::IdText(method);
 	}
 
+	// An entity's name as OpenCAGE gave it when it set a breakpoint on it - the part of the breakpoint's label after the
+	// composite, without the id OpenCAGE puts after it - or "" (the game itself keeps no entity names)
+	std::string EntityName(uint32_t entity, const std::vector<LIVE_DEBUGGER::BreakpointView>& breakpoints)
+	{
+		for (const LIVE_DEBUGGER::BreakpointView& bp : breakpoints)
+		{
+			if (bp.entity != entity || bp.label.empty())
+				continue;
+			std::string name = bp.label;
+			const size_t split = name.find(" : ");
+			if (split != std::string::npos)
+				name = name.substr(split + 3);
+			const size_t id = name.rfind(" [");
+			if (id != std::string::npos && name.back() == ']')
+				name = name.substr(0, id);
+			if (!name.empty() && name.front() != '[')
+				return name;
+		}
+		return std::string();
+	}
+
+	// An entity as words when its name is known, with its id (as MethodText)
+	std::string EntityText(uint32_t entity, const std::vector<LIVE_DEBUGGER::BreakpointView>& breakpoints)
+	{
+		const std::string name = EntityName(entity, breakpoints);
+		return name.empty() ? LIVE_DEBUGGER::IdText(entity) : name + " (" + LIVE_DEBUGGER::IdText(entity) + ")";
+	}
+
 	std::string PathText(const std::vector<uint32_t>& path, bool any)
 	{
 		if (any)
@@ -100,9 +128,10 @@ namespace
 			return;
 		}
 		ImGui::SeparatorText(hit.atBreakpoint ? "The held call" : "The last breakpoint hit");
+		const std::vector<LIVE_DEBUGGER::BreakpointView> breakpoints = LIVE_DEBUGGER::Breakpoints();
 		// Its lines wrap to the window (a composite's path can be long)
 		ImGui::PushTextWrapPos(0.0f);
-		ImGui::Text("Method %s on entity %s", MethodText(hit.method).c_str(), LIVE_DEBUGGER::IdText(hit.entity).c_str());
+		ImGui::Text("Method %s on entity %s", MethodText(hit.method).c_str(), EntityText(hit.entity, breakpoints).c_str());
 		ImGui::Text("In %s (instance %s)", CompositeText(hit.composite, hit.compositeName).c_str(), LIVE_DEBUGGER::IdText(hit.instance).c_str());
 		ImGui::TextDisabled("Path: %s", PathText(hit.path, false).c_str());
 		ImGui::TextDisabled("Breakpoint %d, hit %u, due at %.3f s on the scripts' clock, %u step(s) since", hit.breakpoint, hit.sequence, hit.time, hit.steps);
@@ -113,7 +142,7 @@ namespace
 			{
 				// A bullet, then text that wraps as the lines above do (a bulleted text line does not wrap)
 				ImGui::Bullet();
-				ImGui::Text("%s on %s in %s", MethodText(link.method).c_str(), LIVE_DEBUGGER::IdText(link.entity).c_str(), CompositeText(link.composite, link.compositeName).c_str());
+				ImGui::Text("%s on %s in %s", MethodText(link.method).c_str(), EntityText(link.entity, breakpoints).c_str(), CompositeText(link.composite, link.compositeName).c_str());
 			}
 		}
 		else
@@ -235,10 +264,14 @@ namespace
 			return;
 		const LIVE_DEBUGGER::HitView hit = LIVE_DEBUGGER::Hit();
 		char text[256];
-		// The method by its name alone when known (its id otherwise), so the line stays clear of the notes at the screen's corners
+		// The method and the entity by their names alone when known (their ids otherwise), so the line stays clear of the
+		// notes at the screen's corners
 		if (hit.atBreakpoint)
+		{
+			const std::string name = EntityName(hit.entity, LIVE_DEBUGGER::Breakpoints());
 			snprintf(text, sizeof(text), "Scripts held at breakpoint %d (%s on %s) - Continue in OpenCAGE, or the Debug Menu's Scripts > Debugger", hit.breakpoint,
-				SCRIPT_DEBUG::MethodText(hit.method).c_str(), LIVE_DEBUGGER::IdText(hit.entity).c_str());
+				SCRIPT_DEBUG::MethodText(hit.method).c_str(), name.empty() ? LIVE_DEBUGGER::IdText(hit.entity).c_str() : name.c_str());
+		}
 		else
 			snprintf(text, sizeof(text), "Scripts held by the debugger - Continue in OpenCAGE, or the Debug Menu's Scripts > Debugger");
 		const float size = 18.0f * DEBUG_MENU::Scale();

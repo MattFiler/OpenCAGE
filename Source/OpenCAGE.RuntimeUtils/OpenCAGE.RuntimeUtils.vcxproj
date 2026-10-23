@@ -75,6 +75,7 @@
     <ClCompile Include="CINEMATIC_TRACKS.cpp" />
     <ClCompile Include="CINEMATIC_VISUALS.cpp" />
     <ClCompile Include="CINEMATIC_TOOLS.cpp" />
+    <ClCompile Include="CINEMATIC_CAPTURE.cpp" />
     <ClCompile Include="LIVE_SETTINGS.cpp" />
     <ClCompile Include="DEBUG_MENU.cpp" />
     <ClCompile Include="BT_DEBUG.cpp" />
@@ -86,6 +87,10 @@
     <ClCompile Include="AI_SQUADS.cpp" />
     <ClCompile Include="AI_STATE_LOG.cpp" />
     <ClCompile Include="AI_TUNING.cpp" />
+    <ClCompile Include="AI_DAMAGE_EFFECTS.cpp" />
+    <ClCompile Include="AI_RAGDOLL.cpp" />
+    <ClCompile Include="PLAYER_SCREEN_EFFECTS.cpp" />
+    <ClCompile Include="AI_CONFIGS.cpp" />
     <ClCompile Include="RENDER_SWITCHES.cpp" />
     <ClCompile Include="RENDER_COMMON.cpp" />
     <ClCompile Include="RENDER_DEBUG_VIEW.cpp" />
@@ -100,6 +105,8 @@
     <ClCompile Include="GAME_SAVES.cpp" />
     <ClCompile Include="GAME_DEBUG.cpp" />
     <ClCompile Include="GAME_ACHIEVEMENTS.cpp" />
+    <ClCompile Include="GAME_TIME_STEP.cpp" />
+    <ClCompile Include="GAME_SNAPSHOTS.cpp" />
     <ClCompile Include="ANIM_NAMES.cpp" />
     <ClCompile Include="ANIM_DEBUG.cpp" />
     <ClCompile Include="ANIM_DEBUG_VIEWS.cpp" />
@@ -110,7 +117,11 @@
     <ClCompile Include="PLAYER_DEBUG.cpp" />
     <ClCompile Include="PLAYER_CHEATS.cpp" />
     <ClCompile Include="PLAYER_INVENTORY.cpp" />
+    <ClCompile Include="PLAYER_ESCAPE.cpp" />
+    <ClCompile Include="PLAYER_KILL_GUARD.cpp" />
     <ClCompile Include="PLAYER_VIEWS.cpp" />
+    <ClCompile Include="PLAYER_STENCH.cpp" />
+    <ClCompile Include="AI_COMBAT.cpp" />
     <ClCompile Include="SCRIPT_PROFILER.cpp" />
     <ClCompile Include="SCRIPT_ENTITIES.cpp" />
     <ClCompile Include="SCRIPT_ANIMATIONS.cpp" />
@@ -134,6 +145,7 @@
     <ClCompile Include="PERF_MEMORY.cpp" />
     <ClCompile Include="PERF_STREAMING.cpp" />
     <ClCompile Include="SOUND_TOOLS.cpp" />
+    <ClCompile Include="SOUND_HEARING.cpp" />
     <ClCompile Include="LIVE_LINK.cpp">
       <!-- Faults inside game calls are caught (Guarded): /EHa runs the destructors that release what was held -->
       <ExceptionHandling>Async</ExceptionHandling>
@@ -183,14 +195,18 @@
     <ClInclude Include="CINEMATIC_VISUALS.h" />
     <ClInclude Include="LIVE_SETTINGS.h" />
     <ClInclude Include="DEBUG_MENU.h" />
+    <ClInclude Include="TABLE_ORDER.h" />
     <ClInclude Include="BT_DEBUG.h" />
     <ClInclude Include="AI_DEBUG.h" />
     <ClInclude Include="AI_STATE.h" />
+    <ClInclude Include="AI_COMBAT.h" />
     <ClInclude Include="RENDER_SWITCHES.h" />
     <ClInclude Include="RENDER_COMMON.h" />
     <ClInclude Include="DEBUG_ACTIONS.h" />
     <ClInclude Include="GAME_SAVES.h" />
     <ClInclude Include="GAME_DEBUG.h" />
+    <ClInclude Include="GAME_TIME_STEP.h" />
+    <ClInclude Include="GAME_SNAPSHOTS.h" />
     <ClInclude Include="ANIM_NAMES.h" />
     <ClInclude Include="ANIM_DEBUG.h" />
     <ClInclude Include="SOUND_DEBUG.h" />

@@ -2,6 +2,8 @@
 
 #include "DevTools.h"
 
+#include <string>
+
 /*
 	The debug menu's Game group, beyond the saves (GAME_SAVES.h) and the achievements: the game's own flow and time.
 
@@ -40,4 +42,8 @@ namespace GAME_DEBUG
 
 	// Whether the game is held by the debug menu's pause now.
 	bool Paused();
+
+	// Asks the game to load a level by any of the names above (a level made with OpenCAGE's Create Level has no
+	// "Production\"), as Live Link's load level and "game.load_level" do. The message says what happened (render thread).
+	bool RequestLevelLoad(const std::string& level, std::string& message);
 }

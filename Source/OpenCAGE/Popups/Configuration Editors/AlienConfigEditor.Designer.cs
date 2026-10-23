@@ -93,6 +93,7 @@ namespace OpenCAGE.ConfigEditors
             this.meance_deemed_time = new System.Windows.Forms.NumericUpDown();
             this.max_menaces = new System.Windows.Forms.NumericUpDown();
             this.menace_gauge_seconds_to_fill = new System.Windows.Forms.NumericUpDown();
+            this.liveStatus = new System.Windows.Forms.Label();
             this.groupBox3.SuspendLayout();
             this.groupBox5.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.min_idle_time)).BeginInit();
@@ -961,11 +962,19 @@ namespace OpenCAGE.ConfigEditors
             this.menace_gauge_seconds_to_fill.Size = new System.Drawing.Size(187, 20);
             this.menace_gauge_seconds_to_fill.TabIndex = 437;
             // 
+            // liveStatus
+            // 
+            this.liveStatus.Location = new System.Drawing.Point(488, 337);
+            this.liveStatus.Name = "liveStatus";
+            this.liveStatus.Size = new System.Drawing.Size(227, 114);
+            this.liveStatus.TabIndex = 451;
+            // 
             // AlienConfigEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(724, 461);
+            this.Controls.Add(this.liveStatus);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.label22);
@@ -1090,5 +1099,6 @@ namespace OpenCAGE.ConfigEditors
         private System.Windows.Forms.NumericUpDown ambush_timeout;
         private System.Windows.Forms.NumericUpDown killtrap_time;
         private System.Windows.Forms.NumericUpDown Vent_Attract_Time_Min;
+        private System.Windows.Forms.Label liveStatus;
     }
 }

@@ -1,6 +1,7 @@
 #include "COVER_DEBUG.h"
 #include "DEBUG_MENU.h"
 #include "NAV_DEBUG.h"
+#include "TABLE_ORDER.h"
 
 #include <algorithm>
 #include <atomic>
@@ -530,7 +531,7 @@ namespace
 				Middle(segment, middle);
 				rows.push_back({ &segment, Distance(centre, middle) });
 			}
-			std::stable_sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.distance < b.distance; });
+			TABLE_ORDER::Nearest("cover.segments", rows, [](const Row& row) { return static_cast<uint64_t>(static_cast<uint32_t>(row.segment->uid)); }, [](const Row& row) { return row.distance; });
 			// The script entity column only when a segment has one (the shipped levels' cover is baked, none has). 14 rows, the
 			// header and a sideways scroll bar for when the columns are wider than the window (the uid kept in view)
 			const float rowHeight = ImGui::GetTextLineHeight() + ImGui::GetStyle().CellPadding.y * 2.0f + 1.0f;
@@ -677,7 +678,13 @@ namespace
 		std::vector<Row> rows;
 		for (const COVER_DEBUG::AutoJob& job : jobs.autoJobs)
 			rows.push_back({ &job, Distance(centre, job.position) });
-		std::stable_sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.distance < b.distance; });
+		// A position by where it is and its kind (positions have no id of their own)
+		TABLE_ORDER::Nearest("cover.positions", rows, [](const Row& row)
+		{
+			uint32_t bits[3];
+			memcpy(bits, row.job->position, sizeof(bits));
+			return (static_cast<uint64_t>(bits[0]) << 32 ^ static_cast<uint64_t>(bits[1]) << 16 ^ bits[2]) ^ static_cast<uint64_t>(row.job->kind) << 58;
+		}, [](const Row& row) { return row.distance; });
 		const ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit;
 		if (!ImGui::BeginTable("positions", 5, flags, ImVec2(0.0f, 180.0f * DEBUG_MENU::Scale())))
 			return;

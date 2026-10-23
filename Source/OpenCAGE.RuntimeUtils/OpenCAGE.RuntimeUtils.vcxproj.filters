@@ -120,6 +120,9 @@
     <ClCompile Include="CINEMATIC_TOOLS.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CINEMATIC_CAPTURE.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="LIVE_SETTINGS.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -151,6 +154,18 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AI_TUNING.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AI_DAMAGE_EFFECTS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AI_RAGDOLL.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PLAYER_SCREEN_EFFECTS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AI_CONFIGS.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="RENDER_SWITCHES.cpp">
@@ -195,6 +210,12 @@
     <ClCompile Include="GAME_ACHIEVEMENTS.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GAME_TIME_STEP.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GAME_SNAPSHOTS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="ANIM_NAMES.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -225,7 +246,19 @@
     <ClCompile Include="PLAYER_INVENTORY.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PLAYER_ESCAPE.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PLAYER_KILL_GUARD.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="PLAYER_VIEWS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PLAYER_STENCH.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AI_COMBAT.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SCRIPT_PROFILER.cpp">
@@ -295,6 +328,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SOUND_TOOLS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SOUND_HEARING.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="LIVE_ANIMATION.cpp">
@@ -419,6 +455,9 @@
     <ClInclude Include="DEBUG_MENU.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="TABLE_ORDER.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="BT_DEBUG.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -426,6 +465,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="AI_STATE.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AI_COMBAT.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="RENDER_SWITCHES.h">
@@ -441,6 +483,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GAME_DEBUG.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GAME_TIME_STEP.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GAME_SNAPSHOTS.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ANIM_NAMES.h">

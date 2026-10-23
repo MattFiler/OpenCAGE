@@ -1502,6 +1502,13 @@ bool GAME_DEBUG::Paused()
 	return ReadPaused(paused) && paused;
 }
 
+bool GAME_DEBUG::RequestLevelLoad(const std::string& level, std::string& message)
+{
+	const DEBUG_MENU::CommandResult result = LoadLevel(level);
+	message = result.message;
+	return result.ok;
+}
+
 void GAME_DEBUG::DrawTimeControls()
 {
 	Apply();

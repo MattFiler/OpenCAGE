@@ -35,6 +35,7 @@
             this.tabPage1 = new System.Windows.Forms.TabPage();
             this.viewCone1 = new ViewCone();
             this.tabPage2 = new System.Windows.Forms.TabPage();
+            this.liveStatus = new System.Windows.Forms.Label();
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
             this.SuspendLayout();
@@ -94,11 +95,19 @@
             this.tabPage2.TabIndex = 1;
             this.tabPage2.Text = "tabPage2";
             this.tabPage2.UseVisualStyleBackColor = true;            // 
+            // liveStatus
+            // 
+            this.liveStatus.Location = new System.Drawing.Point(12, 424);
+            this.liveStatus.Name = "liveStatus";
+            this.liveStatus.Size = new System.Drawing.Size(446, 39);
+            this.liveStatus.TabIndex = 467;
+            // 
             // ViewconeEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(468, 427);
+            this.ClientSize = new System.Drawing.Size(468, 467);
+            this.Controls.Add(this.liveStatus);
             this.Controls.Add(this.tabControl1);
             this.Controls.Add(this.label22);
             this.Controls.Add(this.viewconeSets);
@@ -122,6 +131,7 @@
         private System.Windows.Forms.TabControl tabControl1;
         private System.Windows.Forms.TabPage tabPage1;
         private System.Windows.Forms.TabPage tabPage2;
+        private System.Windows.Forms.Label liveStatus;
         private ViewCone viewCone1;
     }
 }

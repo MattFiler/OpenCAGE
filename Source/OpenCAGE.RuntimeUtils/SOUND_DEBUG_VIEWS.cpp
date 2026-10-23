@@ -1,5 +1,6 @@
 #include "SOUND_DEBUG.h"
 #include "DEBUG_MENU.h"
+#include "TABLE_ORDER.h"
 
 #include <algorithm>
 #include <atomic>
@@ -762,7 +763,7 @@ namespace
 				continue;
 			rows.push_back(std::move(row));
 		}
-		std::stable_sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.distance < b.distance; });
+		TABLE_ORDER::Nearest("sound.playing", rows, [](const Row& row) { return static_cast<uint64_t>(row.playing->playingId); }, [](const Row& row) { return row.distance; });
 		if (rows.empty())
 		{
 			ImGui::TextDisabled("Nothing playing%s.", g_playingFilter[0] ? " that matches" : "");

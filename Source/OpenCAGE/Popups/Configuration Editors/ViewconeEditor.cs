@@ -1,5 +1,6 @@
 ﻿using CATHODE;
 using OpenCAGE.Popups.Base;
+using OpenCAGE.RuntimeUtilsConnection;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -53,6 +54,9 @@ namespace OpenCAGE.ConfigEditors
         private void ViewconeEditor_Load(object sender, EventArgs e)
         {
             viewconeSets.SelectedIndex = 0;
+
+            //The game reads these when it starts; with Live Link connected each edit has it read them again
+            LiveSettings.AttachReload(this, liveStatus, LiveSettings.ReloadableConfig.Viewcones);
         }
 
         private void ViewconeEditor_FormClosing(object sender, FormClosingEventArgs e)
@@ -102,6 +106,10 @@ namespace OpenCAGE.ConfigEditors
 
             _activeSet.Content = doc;
             _activeSet.Save();
+
+            //Only an edit goes to the game: the saves made as another set is picked (or to repair a file) change nothing it reads
+            if (sender != null && sender != viewconeSets)
+                LiveSettings.ReloadAfterEdit(LiveSettings.ReloadableConfig.Viewcones);
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
         }

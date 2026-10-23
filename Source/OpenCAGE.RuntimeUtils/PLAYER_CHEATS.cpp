@@ -8,7 +8,6 @@
 #include <memory>
 #include <mutex>
 #include <string>
-#include <vector>
 
 #include <detours.h>
 #include <imgui.h>
@@ -19,9 +18,9 @@
 	- God mode and untargetable set the game's own debug bit in two of the character's per-owner flag sets: one the
 	  game's damage checks read (any bit set and no damage is taken), one its choice of whom to attack reads. The bit is
 	  put back every frame on the AI thread, as the game clears the whole set on some deaths and when a level script turns
-	  its own invincibility off. The alien's grab kill and the facehugger don't hurt the player, they kill outright, so god
-	  mode doesn't stop them; "the alien can't grab the player" sets the alien's own "prevent grapples" logic flag.
-	- Infinite sprint holds the sprint's time left at its limit every frame (and clears its cooldown).
+	  its own invincibility off. The alien's grab and a facehugger's leap don't hurt the player: they clear the whole set
+	  themselves and kill outright in the same call, before the bit can come back. So god mode also keeps them from
+	  starting, as "the alien can't grab the player" does for the alien on its own (both in PLAYER_KILL_GUARD.cpp).
 	- Health: a full heal heals by the maximum, times its modifier, less the health now; setting
 	  the health uses the game's own forced set, and the kill is the game's own
 	  forced kill (as its scripted deaths are), on the AI thread.
@@ -49,14 +48,6 @@ namespace
 	constexpr uint32_t kMaxHealthModifier = 0x340;
 	constexpr uint32_t kOnFire = 0x354;
 
-	// The sprint: its time limit, the time left, whether its cooldown has started and is running, and whether sprinting
-	constexpr uint32_t kSprint = 0x3E18;
-	constexpr uint32_t kSprintLimit = 0x00;
-	constexpr uint32_t kSprintLeft = 0x0C;
-	constexpr uint32_t kSprintCooldownPassed = 0x10;
-	constexpr uint32_t kSprintCooldownActive = 0x11;
-	constexpr uint32_t kSprintSprinting = 0x12;
-
 	// Its current action (a pointer), its position, and the index of its physics controller (-1: none)
 	constexpr uint32_t kCharacterAction = 0x36C;
 	constexpr uint32_t kCharacterPosition = 0x70;
@@ -68,18 +59,12 @@ namespace
 	constexpr uint32_t kControllerSize = 0xB0;
 	constexpr uint32_t kControllerReady = 0xA8;
 
-	// The alien's logic flag that keeps it from grabbing the player
-	constexpr int kFlagPreventGrapples = 0x1E;
-	constexpr int kAlienClass = 1;
-
 	typedef void(__thiscall* t_heal)(void* health, uint16_t amount);
 	const auto heal = reinterpret_cast<t_heal>(DEVTOOLS_RELATIVE_ADDRESS(0x003BBBB0));
 	typedef void(__thiscall* t_force_set_health)(void* health, uint16_t value);
 	const auto force_set_health = reinterpret_cast<t_force_set_health>(DEVTOOLS_RELATIVE_ADDRESS(0x003B4B50));
 	typedef void(__thiscall* t_force_kill)(void* character, const void* killer);
 	const auto force_kill = reinterpret_cast<t_force_kill>(DEVTOOLS_RELATIVE_ADDRESS(0x003D0C10));
-	typedef void(__thiscall* t_set_flag)(void* character, int flag, bool value);
-	const auto set_flag = reinterpret_cast<t_set_flag>(DEVTOOLS_RELATIVE_ADDRESS(0x00385B10));
 	typedef void(__thiscall* t_reposition)(void* controller, const float* position);
 	const auto reposition_into_world = reinterpret_cast<t_reposition>(DEVTOOLS_RELATIVE_ADDRESS(0x003ECCA0));
 	typedef void(__thiscall* t_action_call)(void* action);
@@ -91,14 +76,10 @@ namespace
 
 	std::atomic<bool> g_god = false;
 	std::atomic<bool> g_untargetable = false;
-	std::atomic<bool> g_sprint = false;
-	std::atomic<bool> g_noGrabs = false;
 
 	// The AI thread's own record of what it changed, to undo (ids of the characters), and whether a frame's work is queued
 	std::atomic<uint32_t> g_godOn = 0;
 	std::atomic<uint32_t> g_untargetableOn = 0;
-	std::vector<uint32_t> g_grabsPrevented; // AI thread only
-	std::atomic<bool> g_anyGrabsPrevented = false;
 	std::atomic<bool> g_tickQueued = false;
 
 	// ---- The health ----
@@ -113,8 +94,6 @@ namespace
 		uint16_t lastHit = 0;
 		float lastHitTime = 0.0f;
 		uint8_t wontTakeDamage = 0, untargetable = 0;
-		float sprintLimit = 0.0f, sprintLeft = 0.0f;
-		bool sprintCooldown = false, sprinting = false;
 	};
 
 	Health ReadHealth(const uint8_t* player)
@@ -130,10 +109,6 @@ namespace
 		Read(player + kLastHitTime, health.lastHitTime);
 		Read(player + kWontTakeDamage, health.wontTakeDamage);
 		Read(player + kUntargetable, health.untargetable);
-		Read(player + kSprint + kSprintLimit, health.sprintLimit);
-		Read(player + kSprint + kSprintLeft, health.sprintLeft);
-		Read(player + kSprint + kSprintCooldownActive, health.sprintCooldown);
-		Read(player + kSprint + kSprintSprinting, health.sprinting);
 		if (!std::isfinite(health.modifier) || health.modifier <= 0.0f)
 			health.modifier = 1.0f;
 		return health;
@@ -297,71 +272,11 @@ namespace
 		}
 	}
 
-	// Holds the sprint's time left at its limit, its cooldown off
-	void FillSprint(uint8_t* player)
-	{
-		uint8_t* sprint = player + kSprint;
-		float limit = 0.0f;
-		if (!Read(sprint + kSprintLimit, limit) || !std::isfinite(limit) || limit <= 0.0f)
-			return;
-		Write<float>(sprint + kSprintLeft, limit);
-		Write<uint8_t>(sprint + kSprintCooldownPassed, 0);
-		Write<uint8_t>(sprint + kSprintCooldownActive, 0);
-	}
-
-	bool SetFlag(uint8_t* character, int flag, bool value)
-	{
-		__try
-		{
-			set_flag(character, flag, value);
-			return true;
-		}
-		__except (EXCEPTION_EXECUTE_HANDLER)
-		{
-			return false;
-		}
-	}
-
-	// Every alien gets its "prevent grapples" flag while wanted (noting those that didn't have it); once not, the flag
-	// comes off those again
-	void ApplyNoGrabs()
-	{
-		if (!set_flag)
-			return;
-		if (g_noGrabs)
-		{
-			uint8_t* characters[36];
-			const int count = Characters(characters, 36);
-			for (int i = 0; i < count; i++)
-			{
-				if (CharacterClass(characters[i]) != kAlienClass || LogicFlag(characters[i], kFlagPreventGrapples))
-					continue;
-				const uint32_t id = CharacterId(characters[i]);
-				if (id && SetFlag(characters[i], kFlagPreventGrapples, true) && std::find(g_grabsPrevented.begin(), g_grabsPrevented.end(), id) == g_grabsPrevented.end())
-					g_grabsPrevented.push_back(id);
-			}
-		}
-		else
-		{
-			for (uint32_t id : g_grabsPrevented)
-			{
-				uint8_t* character = FindCharacter(id);
-				if (character && LogicFlag(character, kFlagPreventGrapples))
-					SetFlag(character, kFlagPreventGrapples, false);
-			}
-			g_grabsPrevented.clear();
-		}
-		g_anyGrabsPrevented = !g_grabsPrevented.empty();
-	}
-
 	void Tick()
 	{
 		uint8_t* player = Player();
 		ApplyBit(player, kWontTakeDamage, g_god, g_godOn);
 		ApplyBit(player, kUntargetable, g_untargetable, g_untargetableOn);
-		if (g_sprint && player)
-			FillSprint(player);
-		ApplyNoGrabs();
 		g_tickQueued = false;
 	}
 
@@ -531,10 +446,8 @@ namespace
 		g_registered = true;
 		DEBUG_MENU::AddSwitch("player.god_mode", &g_god);
 		DEBUG_MENU::AddSwitch("player.untargetable", &g_untargetable);
-		DEBUG_MENU::AddSwitch("player.infinite_sprint", &g_sprint);
-		DEBUG_MENU::AddSwitch("player.no_grabs", &g_noGrabs);
 
-		DEBUG_MENU::AddCommand("player.status", "the player's health, flags, sprint and position", [](const std::string&) -> DEBUG_MENU::CommandResult
+		DEBUG_MENU::AddCommand("player.status", "the player's health, flags and position", [](const std::string&) -> DEBUG_MENU::CommandResult
 		{
 			return DEBUG_MENU::AnswerOnRenderThread([]() -> DEBUG_MENU::CommandResult
 			{
@@ -547,10 +460,9 @@ namespace
 					Read(player + kCharacterPosition + i * 4, position[i]);
 				char text[512];
 				snprintf(text, sizeof(text), "health=%d\nmax=%d\nstate=%s\non_fire=%d\nwont_take_damage=0x%02X\nuntargetable=0x%02X\n"
-					"sprint_left=%.2f\nsprint_limit=%.2f\nsprint_cooldown=%d\nposition=%s\nid=%u",
+					"position=%s\nid=%u",
 					health.health, FullHealth(health), HealthStateName(health.state), health.onFire ? 1 : 0, health.wontTakeDamage,
-					health.untargetable, health.sprintLeft, health.sprintLimit, health.sprintCooldown ? 1 : 0, Vector(position).c_str(),
-					CharacterId(player));
+					health.untargetable, Vector(position).c_str(), CharacterId(player));
 				return { true, text };
 			});
 		});
@@ -606,7 +518,7 @@ namespace
 	void Apply(ImDrawList* /*drawList*/)
 	{
 		Register();
-		const bool wanted = g_god || g_untargetable || g_sprint || g_noGrabs || g_godOn || g_untargetableOn || g_anyGrabsPrevented;
+		const bool wanted = g_god || g_untargetable || g_godOn || g_untargetableOn;
 		if (!wanted || g_tickQueued)
 			return;
 		g_tickQueued = true;
@@ -637,11 +549,13 @@ namespace
 	};
 
 	const Cheat kCheats[] = {
-		{ "God mode", &g_god, nullptr, "The player takes no damage (the game's own debug switch, kept on every frame). The alien's grab kill and the facehugger still kill: turn on \"The alien can't grab the player\" for the alien." },
+		{ "God mode", &g_god, nullptr, "The player takes no damage (the game's own debug switch, kept on every frame). The alien's grab and a facehugger's leap kill without doing damage, so while it's on the alien can't grab the player either (as \"The alien can't grab the player\") and facehuggers don't leap at them: both still hunt the player. Deaths the level's own scripts cause still happen." },
 		{ "Untargetable", &g_untargetable, nullptr, "The AI doesn't choose the player as a target to attack (the game's own debug switch). They can still see and hear the player; \"Invisible to the AI\" stops that." },
 		{ "Invisible to the AI", nullptr, "tools.invisible", "The AI's senses no longer pick up the player. One already hunting the player keeps what it last sensed until it loses track. To keep the AI from attacking the player too, turn on Untargetable." },
-		{ "The alien can't grab the player", &g_noGrabs, nullptr, "Sets every alien's \"prevent grapples\" logic flag (and takes it off again when turned off): its grab kills even in god mode." },
-		{ "Infinite sprint", &g_sprint, nullptr, "The sprint never runs out (its time left is held at its limit every frame)." },
+		{ "Invisible but audible", nullptr, "tools.invisible_but_audible", "The AI can't see the player, nor the player's torch light, but still hears them (footsteps, gunfire, thrown items, noise makers) and still feels being touched, hit or burned: for testing what the AI hears on its own. Invisible to the AI stops every sense." },
+		{ "The alien can't grab the player", nullptr, "player.no_grabs", "Every alien, those that appear later too, still sees, hunts and chases the player, but finds no attack it can make on them (as when it can't get at them), so it never grabs them, and doesn't drop on them from a vent. The player still takes damage from everything else. God mode does this too." },
+		{ "Break free of strangles", nullptr, "player.auto_grapple_escape", "A human or android that grabs and strangles the player lets go, as if the player pressed the button to break free five times a second (the game's grapple icon fills as it counts the presses). The alien's grab is a kill, not a strangle: \"The alien can't grab the player\" is for that." },
+		{ "Stench of evil", nullptr, "player.stench_of_evil", "Every enemy of the player within 5 m dies, every frame while it's on, through walls and floors (the radius and options are in Stench of evil, at the bottom of this tab). The kills count as the player's (achievements and stats): turn on Block awards and stat writes and Don't write saves (Game > Saves) first. The alien and showroom dummies are left out." },
 		{ "Infinite ammo", nullptr, "tools.infinite_ammo", "The player's weapons use no ammo from the clip when fired (turn it on with ammo in the clip). Thrown items: Infinite items." },
 		{ "Infinite items", nullptr, "player.infinite_items", "Throwing, placing or using an item (flares, IEDs, medikits...) leaves as many in the inventory (Inventory tab)." },
 		{ "Never run out of torch batteries", nullptr, "player.torch_batteries", "Keeps the inventory full of torch batteries (Inventory tab). The battery in the torch still drains: that is the level's scripts." } };
@@ -670,7 +584,7 @@ namespace
 			{
 				ImGui::TableNextColumn();
 				if (cheat.value)
-					Box(cheat.label, *cheat.value, cheat.value != &g_noGrabs || set_flag != nullptr, cheat.tooltip);
+					Box(cheat.label, *cheat.value, true, cheat.tooltip);
 				else
 					SwitchBox(cheat.label, cheat.name, cheat.tooltip);
 			}
@@ -726,15 +640,6 @@ namespace
 		Tooltip("The game's own forced kill (as its scripted deaths use): the death and game-over flow follows. God mode is lifted for it.");
 		ImGui::EndDisabled();
 		DrawStatus(StatusArea::Health);
-
-		// Sprint
-		if (health.sprintLimit > 0.0f)
-		{
-			if (health.sprintCooldown)
-				ImGui::Text("Sprint: exhausted, cooling down (%.1f s of %.1f s)", health.sprintLeft, health.sprintLimit);
-			else
-				ImGui::Text("Sprint: %.1f s of %.1f s left%s", health.sprintLeft, health.sprintLimit, health.sprinting ? ", sprinting" : "");
-		}
 	}
 
 	float g_to[3] = {};

@@ -1,5 +1,6 @@
 using CATHODE;
 using OpenCAGE.Popups.Base;
+using OpenCAGE.RuntimeUtilsConnection;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -41,6 +42,9 @@ namespace OpenCAGE.ConfigEditors
                 Save(null, EventArgs.Empty);
             }
             classSelection.SelectedIndex = 0;
+
+            //The game reads these when it starts; with Live Link connected each edit has it read them again
+            LiveSettings.AttachReload(this, liveStatus, LiveSettings.ReloadableConfig.AlienConfigs);
         }
 
         private void AlienConfigEditor_FormClosing(object sender, FormClosingEventArgs e)
@@ -127,6 +131,10 @@ namespace OpenCAGE.ConfigEditors
 
             _selectedConfig[0].Content = doc;
             _selectedConfig[0].Save();
+
+            //Only an edit goes to the game: the saves made as the editor opens, and as another setup is picked, change nothing it reads
+            if (sender != null && sender != classSelection)
+                LiveSettings.ReloadAfterEdit(LiveSettings.ReloadableConfig.AlienConfigs);
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
         }
