@@ -179,5 +179,11 @@
 
 <br>
 
-<p align="center"><i>OpenCAGE is a hobby project developed by <a href="http://mattfiler.co.uk">Matt Filer</a> &ndash; it is not affiliated with Creative Assembly, SEGA, or Feral Interactive.<br>Alien: Isolation must be purchased and installed to use OpenCAGE.<br>Please see <a href="THIRD-PARTY-NOTICES.md">THIRD-PARTY-NOTICES.md</a> for any embedded library/code licenses.</i></p>
+<p align="center">
+  <i>
+    OpenCAGE is a hobby project and is not affiliated with Creative Assembly, SEGA, or Feral Interactive.<br>
+    Alien: Isolation must be purchased and installed to use OpenCAGE.<br>
+    Please see <a href="THIRD-PARTY-NOTICES.md">THIRD-PARTY-NOTICES.md</a> for any embedded library/code licenses.
+  </i>
+</p>
 
