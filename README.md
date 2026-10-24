@@ -25,6 +25,8 @@
   <p>Download for free from <a href="https://store.steampowered.com/app/3367530/OpenCAGE/">Steam</a>, and explore the <a href="https://opencage.co.uk/docs/">documentation</a> to learn more.</p>
 </div>
 
+<br>
+
 ---
 
 <div>
@@ -128,7 +130,6 @@
 
 <div>
   <img align="left" width="55%" src="https://github.com/user-attachments/assets/22f6cb8e-c3c2-48a8-a799-50dbe44f8279" alt="Creating and playing back a smooth camera track on the Torrens bridge using the Cinematic Camera">
-  <br>
   <h3>Film the Game with a Cinematic Camera</h3>
   <p>With the Debug Menu ticked in Launch Game, fly its free camera anywhere in the level, drop camera track nodes along the way and play them back as one smooth move. The Cinematic group also sets depth of field and colour, hides the HUD and takes screenshots.</p>
   <p><a href="https://opencage.co.uk/docs/debug-menu/#free-camera"><b>Free camera &rarr;</b></a> &nbsp;&middot;&nbsp; <a href="https://opencage.co.uk/docs/debug-menu/#camera-tracks"><b>Camera tracks &rarr;</b></a></p>
@@ -138,7 +139,6 @@
 
 <div>
   <img align="right" width="55%" src="https://github.com/user-attachments/assets/4f2d355e-f86e-4a8d-8da3-3c69d7a6b317" alt="The in-game Debug Menu drawing character view cones, awareness labels, navmesh, and model/collision inspection">
-  <br>
   <h3>See Inside the Game with the Debug Menu</h3>
   <p>With Debug Menu ticked in Launch Game (it is by default), press <code>F7</code> in game. Draw every character&rsquo;s view cones and alertness over the game, show the nav mesh the AI walks on, and point a crosshair at anything to read its collision, materials and model.</p>
   <p><a href="https://opencage.co.uk/docs/debug-menu/"><b>Debug Menu &rarr;</b></a></p>
@@ -176,6 +176,8 @@
 <br clear="all" />
 
 ---
+
+<br>
 
 <p align="center"><i>OpenCAGE is a hobby project developed by <a href="http://mattfiler.co.uk">Matt Filer</a> &ndash; it is not affiliated with Creative Assembly, SEGA, or Feral Interactive.<br>Alien: Isolation must be purchased and installed to use OpenCAGE.<br>Please see <a href="THIRD-PARTY-NOTICES.md">THIRD-PARTY-NOTICES.md</a> for any embedded library/code licenses.</i></p>
 
