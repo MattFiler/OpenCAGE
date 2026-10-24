@@ -369,6 +369,34 @@ namespace OpenCAGE.Theming
         /// <summary>Switch the whole app over, applying to everything already on screen.</summary>
         public static void SetDark(bool dark)
         {
+            SetDark(dark, null);
+        }
+
+        /// <summary>
+        /// Bring one control, and everything inside it, into the current theme - a panel a switch left alone
+        /// (see <see cref="SetDark(bool, ICollection{Control})"/>) that is staying after all.
+        /// </summary>
+        public static void ApplyCurrent(Control control)
+        {
+            if (control == null || control.IsDisposed)
+                return;
+
+            if (IsDark && control is Form form)
+                ApplyToForm(form);
+            else
+                ThemeEngine.Apply(control, IsDark);
+            control.Invalidate(true);
+        }
+
+        /// <summary>
+        /// Switch the whole app over, applying to everything already on screen except <paramref name="leave"/> and
+        /// what is inside them: panels the caller closes and makes again in the new theme straight after. Theming
+        /// them first was wasted, and the dearest part of a switch - every text box and number box in them takes its
+        /// new border by having its window made again, in both directions. Any of them the caller keeps after all
+        /// goes through <see cref="ApplyCurrent"/>.
+        /// </summary>
+        public static void SetDark(bool dark, ICollection<Control> leave)
+        {
             if (_initialised && IsDark == dark)
                 return;
 
@@ -394,13 +422,21 @@ namespace OpenCAGE.Theming
             for (int i = 0; i < Application.OpenForms.Count; i++)
                 open.Add(Application.OpenForms[i]);
 
-            for (int i = 0; i < open.Count; i++)
+            ThemeEngine.Leave = leave;
+            try
             {
-                if (open[i] == null || open[i].IsDisposed)
-                    continue;
+                for (int i = 0; i < open.Count; i++)
+                {
+                    if (open[i] == null || open[i].IsDisposed || IsLeft(open[i], leave))
+                        continue;
 
-                ThemeEngine.Apply(open[i], dark);
-                open[i].Invalidate(true);
+                    ThemeEngine.Apply(open[i], dark);
+                    open[i].Invalidate(true);
+                }
+            }
+            finally
+            {
+                ThemeEngine.Leave = null;
             }
 
             /* Leaving dark has to be unconditional. Everything above works from what ThemeEngine
@@ -412,11 +448,24 @@ namespace OpenCAGE.Theming
              * renderer, whatever anyone remembered. */
             if (!dark)
                 for (int i = 0; i < open.Count; i++)
-                    ForceLightChrome(open[i]);
+                    if (!IsLeft(open[i], leave))
+                        ForceLightChrome(open[i]);
 
             Action handler = ThemeChanged;
             if (handler != null)
                 handler();
+        }
+
+        /* One of the left controls, or inside one: a docked page's own window is open in its own right, but sits in its panel */
+        private static bool IsLeft(Control control, ICollection<Control> leave)
+        {
+            if (leave == null || leave.Count == 0)
+                return false;
+
+            for (Control c = control; c != null; c = c.Parent)
+                if (leave.Contains(c))
+                    return true;
+            return false;
         }
     }
 }

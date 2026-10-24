@@ -991,8 +991,29 @@ namespace OpenCAGE.DockPanels
              * no input pin that takes a value, so the gate above lets the pass run again, and one saved without points by
              * an earlier build gains them the first time it is shown. */
             bool hasDeleteMe = entity.GetParameter("delete_me") != null;
+            Parameter resourceBefore = entity.GetParameter(ShortGuids.resource);
+            ParameterData resourceContent = resourceBefore?.content;
+            ParameterVariant resourceVariant = resourceBefore?.variant ?? ParameterVariant.PARAMETER;
             commands.Utils.AddAllDefaultParameters(entity, composite, false, ParameterVariant.STATE_PARAMETER | ParameterVariant.PARAMETER | ParameterVariant.INPUT_PIN);
             if (!hasDeleteMe) entity.RemoveParameter("delete_me");
+
+            /* Looking at an entity must not change its resources. CathodeLib takes an empty 'resource' parameter for a missing
+             * one and replaces it, giving the resource a new id (retail's are often name hashes: 29 RadiosityProxies on
+             * BSP_LV426_PT02), so one the entity had is put back as it was. And most entities that draw or mark something keep
+             * their resources on their own list with no parameter (particle, ribbon, fog, surface effect and light emitters,
+             * traversal segments, sound barriers: 2,000+ on BSP_LV426_PT02); the parameter the pass gives them only repeats a
+             * type that list holds, as an empty default the save then writes beside the real one, so it is taken off again. */
+            if (resourceBefore != null)
+            {
+                resourceBefore.content = resourceContent;
+                resourceBefore.variant = resourceVariant;
+            }
+            else if (entity is FunctionEntity function && entity.GetParameter(ShortGuids.resource)?.content is cResource added
+                && added.value != null && added.value.Count != 0
+                && added.value.All(o => o != null && function.resources != null && function.resources.Any(r => r != null && r.resource_type == o.resource_type)))
+            {
+                entity.RemoveParameter(ShortGuids.resource);
+            }
         }
 #endif
 
@@ -1764,7 +1785,7 @@ namespace OpenCAGE.DockPanels
             if (proxy.function.IsFunctionType)
                 return proxy.function.AsFunctionType.ToString();
             Composite composite = Content.Level.Commands.GetComposite(proxy.function);
-            return composite != null ? System.IO.Path.GetFileName(composite.name) : null;
+            return composite != null ? EditorUtils.GetCompositeName(composite) : null;
         }
 
         /* A proxy's or alias's stored path, hop by hop, naming what each hop reaches and marking the

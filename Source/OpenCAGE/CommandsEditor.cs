@@ -343,6 +343,14 @@ namespace OpenCAGE
 
         private void CommandsEditor_FormClosing(object sender, FormClosingEventArgs e)
         {
+            //A save still writing the level (a build pumps messages as it runs, with this window disabled - the taskbar can
+            //still ask it to close): the editor isn't taken down under it. Windows shutting down, or a crash, still close it.
+            if (_saveInProgress && e.CloseReason != CloseReason.WindowsShutDown && e.CloseReason != CloseReason.TaskManagerClosing && !Program.ExitingAfterCriticalError)
+            {
+                e.Cancel = true;
+                return;
+            }
+
             //An AI assistant part-way through a tool call is asked about first (see CommandsEditor.Mcp.cs)
             if (!ConfirmCloseWhileAiAssistantWorks() || !TryConfirmCloseWithOptionalSave())
             {
@@ -556,16 +564,29 @@ namespace OpenCAGE
         }
         private void OnCompositeSelectedForDiscord(Composite composite)
         {
-            RichPresence newPresence = _discord.CurrentPresence.Copy();
-            newPresence.Details = "Level: " + (_compositeBrowser?.Content?.Level?.Name ?? "No Level");
-            newPresence.State = "Composite: " + EditorUtils.GetCompositeName(composite);
-            _discord.SetPresence(newPresence);
-            _discord.UpdateStartTime();
+            //The presence is never worth losing the editor over (Discord throws on a line over 128 bytes, and names can be longer)
+            try
+            {
+                RichPresence newPresence = _discord.CurrentPresence.Copy();
+                newPresence.Details = PresenceText("Level: " + (_compositeBrowser?.Content?.Level?.Name ?? "No Level"));
+                newPresence.State = PresenceText("Composite: " + EditorUtils.GetCompositeName(composite));
+                _discord.SetPresence(newPresence);
+                _discord.UpdateStartTime();
+            }
+            catch { }
 
             if (_compositeBrowser?.Content?.Level == null)
                 Steam.UpdatePresence(Steam.RichPresences.NO_PRESENCE);
             else
                 Steam.UpdatePresence(Steam.RichPresences.EditingLevel, _compositeBrowser.Content.Level.Name);
+        }
+        /* Discord takes at most 128 bytes (UTF-8) a line: anything longer is cut short, ending in "..." */
+        private static string PresenceText(string text)
+        {
+            if (System.Text.Encoding.UTF8.GetByteCount(text) <= 128) return text;
+            while (text.Length > 0 && System.Text.Encoding.UTF8.GetByteCount(text) > 125)
+                text = text.Substring(0, text.Length - 1);
+            return text + "...";
         }
 
         private void OnDirtyChanged(bool dirty) => UpdateTitle();
@@ -595,7 +616,7 @@ namespace OpenCAGE
                         title += " - Epic Games Store";
                         break;
                     case PatchManager.Platform.GOG:
-                        title += " - GoG";
+                        title += " - GOG";
                         break;
                     case PatchManager.Platform.WINDOWS_STORE:
                         title += " - Windows Store";
@@ -638,6 +659,52 @@ namespace OpenCAGE
             OnLevelSelected(level);
         }
 
+        /// <summary>
+        /// Load a level the user chose to open (the Load Level menu and picker, Create Level), first offering to save the open
+        /// level when it has unsaved changes. False when they cancelled, or the save they asked for didn't happen (it said why).
+        /// <see cref="LoadLevel"/> doesn't ask: a reload after the level's files changed on disk (the Mod Manager, a backup
+        /// restore, an import) must not save the old copy over them, and an assistant's load_level has its own check.
+        /// </summary>
+        public bool LoadLevelAskingToSave(string level)
+        {
+            if (!ConfirmSaveBeforeLevelChange(level))
+                return false;
+            OnLevelSelected(level);
+            return true;
+        }
+
+        /* Loading a level closes the one open, and its unsaved changes go with it: offered a save first, as Launch Game and
+           the viewport offer one. True to go ahead with the load. */
+        private bool ConfirmSaveBeforeLevelChange(string nextLevel)
+        {
+            //FRONTEND is refused by the load itself, which leaves the open level as it is
+            if (nextLevel == null || EditorUtils.IsFrontend(nextLevel.ToUpper()) || _compositeBrowser?.Content?.Level == null)
+                return true;
+            if (!DirtyTracker.IsDirty)
+                return true;
+
+            string levelName = _compositeBrowser.Content.Level.Name;
+            bool sameLevel = string.Equals(levelName.Replace('\\', '/'), nextLevel.Replace('\\', '/'), StringComparison.OrdinalIgnoreCase);
+            //Asked as the user's own box: an AI assistant's call may still be running underneath it
+            DialogResult answer = MCP.McpDialogs.AskUser(
+                "\"" + levelName + "\" has unsaved changes. " +
+                (sameLevel ? "Loading it again from disk will lose them." : "Loading " + nextLevel.ToUpper() + " closes it, and they will be lost.") +
+                "\n\nSave \"" + levelName + "\" first?",
+                "Save level?",
+                MessageBoxButtons.YesNoCancel,
+                MessageBoxIcon.Warning);
+            if (answer == DialogResult.Cancel)
+                return false;
+            if (answer == DialogResult.Yes)
+            {
+                SaveLevel(false, successMsg: false, allowLaunchGame: false);
+                //Not saved after all (a backup running, or the save failed - it said why): stay on this level
+                if (DirtyTracker.IsDirty)
+                    return false;
+            }
+            return true;
+        }
+
         /// <summary>Close the Load Level picker if it is open - before something that must not race a level load.</summary>
         public void CloseLevelPicker()
         {
@@ -667,14 +734,14 @@ namespace OpenCAGE
         }
 
         /// <summary>
-        /// Save the open level as File > Save Level does, without the messages after. A save that fails part-way throws, as
-        /// SaveLevel does, but doesn't leave its progress window up.
+        /// Save the open level as File > Save Level does, without the messages after. A save that fails throws (saying why)
+        /// instead of showing its box, and doesn't leave its progress window up.
         /// </summary>
         internal void SaveLevelQuietly()
         {
             try
             {
-                SaveLevel(false, false, false);
+                SaveLevelCore(false, false, false, throwOnFailure: true);
             }
             catch
             {
@@ -699,7 +766,7 @@ namespace OpenCAGE
                 _levelSelect = new SelectLevel();
                 _levelSelect.Show();
                 _levelSelect.FormClosed += OnLevelSelectClosed;
-                _levelSelect.OnLevelSelected += OnLevelSelected;
+                _levelSelect.OnLevelSelected += level => LoadLevelAskingToSave(level);
             }
         }
         private void OnLevelSelectClosed(object sender, FormClosedEventArgs e)
@@ -807,7 +874,7 @@ namespace OpenCAGE
             //What came of it
             List<EnvironmentMapCapture.Outcome> captured = results.Where(o => o.outcome.Ok).Select(o => o.outcome).ToList();
             List<string> failed = results.Where(o => !o.outcome.Ok)
-                .Select(o => level.Commands.Utils.GetEntityName(o.target.Composite, o.target.Entity) + " in " + Path.GetFileName(o.target.Composite.name.Replace('\\', '/')) + ": " + o.outcome.Message).ToList();
+                .Select(o => level.Commands.Utils.GetEntityName(o.target.Composite, o.target.Entity) + " in " + EditorUtils.GetCompositeName(o.target.Composite) + ": " + o.outcome.Message).ToList();
             bool needsBuild = captured.Any(o => o.NeedsBuild);
             string summary = "Captured " + captured.Count + " of " + targets.Count + " cubemaps"
                 + (captured.Count(o => o.PreviousDeleted) is int deleted && deleted != 0 ? ", deleting " + deleted + " old one" + (deleted == 1 ? "" : "s") + " nothing else used" : "") + ".";
@@ -818,7 +885,7 @@ namespace OpenCAGE
             if (captured.Any(o => o.Capture?.ZonesStillStreaming == true))
                 summary += "\n\nThe zones round " + captured.Count(o => o.Capture?.ZonesStillStreaming == true) + " of them were still streaming in, so parts may be missing: capture those again from their Capture buttons.";
             if (captured.Count != 0)
-                summary += "\n\n" + (needsBuild ? "Save & Build" : "Save") + ", then load the level again in the game to see them there.";
+                summary += "\n\n" + (needsBuild ? "Use File > Save and Build Level" : "Save") + ", then load the level again in the game to see them there.";
             ShowLiveLinkActivity("Live Link: captured " + captured.Count + " of " + targets.Count + " cubemaps");
             MessageBox.Show(summary, "Recapture All Cubemaps", MessageBoxButtons.OK, failed.Count != 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
             if (_entityInspector != null && !_entityInspector.IsDisposed)
@@ -863,13 +930,21 @@ namespace OpenCAGE
         }
         private void OnLevelSelected(object sender, EventArgs e)
         {
-            OnLevelSelected(((ToolStripMenuItem)sender).Text);
+            LoadLevelAskingToSave(((ToolStripMenuItem)sender).Text);
         }
         private void OnLevelSelected(string level)
         {
             if (level == null)
                 return;
             level = level.ToUpper();
+
+            //Not on top of a level still being read: closing it would pull its content out from under the loader thread
+            //(a backup restore or package import asking for a reload while one runs)
+            if (IsLevelLoaderRunning)
+            {
+                MessageBox.Show("A level is still loading. Wait for it to finish, then load " + level + " again.", "Level still loading", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
 
             //A level picker still open beside the loading level could start a second load on top of it
             CloseLevelPicker();
@@ -1805,7 +1880,18 @@ namespace OpenCAGE
         /// <summary>A save is writing the level (a build pumps messages while it does, so a second could otherwise start).</summary>
         private bool _saveInProgress = false;
 
+        /// <summary>
+        /// Save the open level, and build it too when <paramref name="doInstancing"/>. A save that fails (a file that can't be
+        /// written, or the save throwing) says why in a box, and leaves the level unsaved here - still marked as changed, and
+        /// <see cref="Singleton.OnSaved"/> not raised - and on disk as it was.
+        /// </summary>
         public void SaveLevel(bool doInstancing, bool successMsg = true, bool allowLaunchGame = true)
+        {
+            SaveLevelCore(doInstancing, successMsg, allowLaunchGame, throwOnFailure: false);
+        }
+
+        /* SaveLevel; with throwOnFailure a failed save throws (an IOException saying why) instead of showing its box */
+        private void SaveLevelCore(bool doInstancing, bool successMsg, bool allowLaunchGame, bool throwOnFailure)
         {
             if (_compositeBrowser == null) return;
 
@@ -1838,13 +1924,22 @@ namespace OpenCAGE
             statusText.Text = "Saving...";
             statusStrip.Update();
 
+            string levelName = _compositeBrowser.Content.Level.Name;
             CloseProgressUI();
             EnsureProgressUI();
-            _progressUI.ShowLevelSaving(_compositeBrowser.Content.Level, doInstancing);
-            StartProgressKeepOnTop();
 
             if (_compositeDisplay != null)
                 _compositeDisplay.SaveAllFlowgraphs();
+
+            //Whatever changes the level from here on isn't in what is written: it must not be marked saved along with it
+            int modificationsBefore = DirtyTracker.Modifications;
+
+            /* A build pumps the message loop for minutes while a worker reads and writes the live level, so every window that
+               could edit, load, restore or close the level is disabled until it is done, as Import from Disk disables the
+               editor (the viewport's own edits are held by ViewerInboundDispatcher.HoldForSave). The progress window stays. */
+            List<Form> disabledForSave = new List<Form>();
+            if (doInstancing)
+                DisableWindowsForSave(disabledForSave);
 
             //The instanced save pumps the message loop from here; an undo underneath it would edit
             //the level while it is being written
@@ -1855,8 +1950,31 @@ namespace OpenCAGE
             //...and so would anything the viewport asks for while the build pumps messages (see ViewerInboundDispatcher.HoldForSave) - released in the finally
             if (doInstancing)
                 UnityConnection.ViewerInboundDispatcher.HoldForSave();
+            Exception thrown = null;
             try
             {
+                /* The first save of a level in an install keeps a pristine copy of each of its files first (for the Mod
+                   Manager), hashing and compressing the whole level: a minute or more on a big one. It runs on a worker while
+                   the message loop is pumped, as a build does, with the windows disabled meanwhile; the save itself finds it
+                   done (and a later save finds nothing to do). */
+                Task capture = Task.Run(() => Modding.ModServices.CaptureLevelBeforeSave(levelName));
+                //Not Task.Wait: waiting on a task that hasn't started yet runs it right here, on this thread
+                if (!SpinWait.SpinUntil(() => capture.IsCompleted, 150))
+                {
+                    _progressUI?.ShowTransferring("Preparing the first save of " + levelName + "...");
+                    StartProgressKeepOnTop();
+                    if (!doInstancing)
+                        DisableWindowsForSave(disabledForSave);
+                    while (!capture.IsCompleted)
+                    {
+                        Application.DoEvents();
+                        Thread.Sleep(16);
+                    }
+                }
+                capture.GetAwaiter().GetResult();
+                _progressUI?.ShowLevelSaving(_compositeBrowser.Content.Level, doInstancing);
+                StartProgressKeepOnTop();
+
                 if (doInstancing)
                 {
                     Task saveTask = Task.Run(() => _compositeBrowser.Content.Save(true));
@@ -1872,12 +1990,33 @@ namespace OpenCAGE
                     _compositeBrowser.Content.Save(false);
                 }
             }
+            catch (Exception e)
+            {
+                //Reported below as the save failing: the level stays open with its changes, rather than going with the app
+                thrown = e;
+            }
             finally
             {
                 _saveInProgress = false;
                 OpenCAGE.Undo.UndoStack.Current.Blocked = false;
                 CompositePreviewManager.EndSave();
                 UnityConnection.ViewerInboundDispatcher.ReleaseAfterSave();
+                EnableWindowsAfterSave(disabledForSave);
+            }
+
+            //A file that couldn't be written, or the save throwing: nothing is marked saved, and the user is told
+            IReadOnlyList<CathodeFile.SaveFailure> notWritten = _compositeBrowser.Content.LastSaveFailures;
+            if (thrown != null || (notWritten != null && notWritten.Count != 0))
+            {
+                statusText.Text = "";
+                Cursor.Current = Cursors.Default;
+                CloseProgressUI();
+                Debug.Log("Save", "Saving " + levelName + " failed: " + (thrown != null ? thrown.ToString() : "") +
+                    string.Concat((notWritten ?? new CathodeFile.SaveFailure[0]).Select(f => "\n  " + f.Path + ": " + (f.Error?.ToString() ?? f.Reason))));
+                if (throwOnFailure)
+                    throw new IOException(DescribeSaveFailure(thrown, notWritten, false), thrown);
+                MessageBox.Show(DescribeSaveFailure(thrown, notWritten, true), "Save failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
             }
 
             //A baker that threw was caught so one bad system could not cost the whole save, which
@@ -1919,9 +2058,12 @@ namespace OpenCAGE
 
                 //The scripting helpers, Possess Characters and the Debug Menu (runtime utils ASI and its config) go in or come out as
                 //the Launch Game window's settings ask, as they do when launched from there
-                string runtimeUtilsProblem = LaunchGame.ApplyRuntimeUtils();
+                string runtimeUtilsProblem = LaunchGame.ApplyRuntimeUtils(out string keptAside);
                 if (runtimeUtilsProblem != null)
                     MessageBox.Show(runtimeUtilsProblem, "Runtime utils error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                //Another mod's d3d11.dll was just moved aside for the loader: said once, as that mod won't run in this game
+                else if (keptAside != null)
+                    MessageBox.Show(keptAside, "Another mod's d3d11.dll", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 //...and a Cinematic Tools injector an older OpenCAGE left waiting (its game never came up) would put them in this
                 //game: closed before the game starts (the save closed the game itself)
                 LaunchGame.CloseGameAndOldInjector();
@@ -1949,6 +2091,10 @@ namespace OpenCAGE
             CloseProgressUI();
 
             Singleton.OnSaved?.Invoke();
+            //The level changed after it was written (viewport edits held during a build, applied while a box above was up):
+            //those changes are not on disk, so it is still unsaved
+            if (DirtyTracker.Modifications != modificationsBefore)
+                DirtyTracker.MarkLevelDataModified();
             int saveCount = Steam.CountTowards(Steam.Achievements.ONE_HUNDRED_SAVES);
 
 #if SHIP_BUILD
@@ -1964,13 +2110,92 @@ namespace OpenCAGE
             }
 #endif
 
-            //if (saved)
-            //{
-                if (SettingsManager.GetBool(Settings.ShowSavedMsgOpt) && successMsg)
-                    MessageBox.Show("Saved changes!", "Saved.", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            //}
-            //else
-            //    MessageBox.Show("Failed to save changes!", "Failed!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            if (SettingsManager.GetBool(Settings.ShowSavedMsgOpt) && successMsg)
+                MessageBox.Show("Saved changes!", "Saved.", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        /* For a save that pumps the message loop: every open window but the progress window disabled, as a modal window
+           disables the others - a disabled window, and everything in it, takes no input and can't be closed - and added to
+           the list for EnableWindowsAfterSave. Disabled in Windows only: setting Enabled would repaint every control in each
+           window, seconds of the UI thread with a big level open. */
+        private void DisableWindowsForSave(List<Form> disabled)
+        {
+            foreach (Form form in Application.OpenForms.Cast<Form>().ToList())
+            {
+                if (form == null || form == _progressUI || form.IsDisposed || !form.TopLevel || !form.IsHandleCreated || form.InvokeRequired || !IsWindowEnabled(form.Handle))
+                    continue;
+                EnableWindow(form.Handle, false);
+                disabled.Add(form);
+            }
+        }
+        private static void EnableWindowsAfterSave(List<Form> disabled)
+        {
+            foreach (Form form in disabled)
+                if (!form.IsDisposed && form.IsHandleCreated)
+                    EnableWindow(form.Handle, true);
+            disabled.Clear();
+        }
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool EnableWindow(IntPtr hWnd, bool enable);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool IsWindowEnabled(IntPtr hWnd);
+
+        /* What a failed save says: the files it could not write and why, or what stopped it, and that the level on disk is as
+           it was. forBox: the whole message for its box; otherwise one line, for a caller that puts it in its own words. */
+        private string DescribeSaveFailure(Exception thrown, IReadOnlyList<CathodeFile.SaveFailure> notWritten, bool forBox)
+        {
+            LevelContent content = _compositeBrowser?.Content;
+            string levelName = content?.Level?.Name ?? "The level";
+            string levelFolder = content?.Level?.Filepath == null ? null : content.Level.Filepath.Replace('/', '\\').TrimEnd('\\') + "\\";
+            List<string> files = new List<string>();
+            foreach (CathodeFile.SaveFailure failure in notWritten ?? new CathodeFile.SaveFailure[0])
+            {
+                string path = (failure.Path ?? "").Replace('/', '\\');
+                if (levelFolder != null && path.StartsWith(levelFolder, StringComparison.OrdinalIgnoreCase))
+                    path = path.Substring(levelFolder.Length);
+                files.Add(path + " - " + SaveFailureReason(failure.Error, failure.Reason));
+            }
+            //After every file was swapped in, the save itself is on disk: only what came after it (the build's bookkeeping) failed
+            bool written = content != null && content.LastSaveWritten;
+
+            if (!forBox)
+            {
+                string line = files.Count != 0
+                    ? files.Count + " file" + (files.Count == 1 ? "" : "s") + " could not be written: " + string.Join("; ", files.Take(3)) + (files.Count > 3 ? "; ..." : "")
+                    : SaveFailureReason(thrown, thrown?.Message);
+                return line + (written ? "" : " - nothing on disk was changed");
+            }
+
+            string text = written ? "\"" + levelName + "\" was written to disk, but the save did not finish." : "\"" + levelName + "\" was not saved.";
+            if (files.Count != 0)
+            {
+                text += "\n\n" + files.Count + " file" + (files.Count == 1 ? "" : "s") + " could not be written:\n  " + string.Join("\n  ", files.Take(10)) +
+                    (files.Count > 10 ? "\n  ...and " + (files.Count - 10) + " more" : "");
+            }
+            if (thrown != null)
+                text += "\n\nThe save stopped: " + SaveFailureReason(thrown, thrown.Message) + (thrown is IOException || thrown is UnauthorizedAccessException ? "" : " (" + thrown.GetType().Name + ")") + ".";
+            if (written)
+                return text + "\n\nSave again to be sure it all finishes. Your changes are still here in the editor.";
+            return text + "\n\nNothing on disk was changed: the level is as it was before this save." +
+                "\n\nCheck the level's files aren't read-only or open in another program (the game, or a backup or sync tool), and that the drive has space, then save again. " +
+                "Your changes are still here in the editor.";
+        }
+
+        /* Why a file could not be written, in plain words where the error is a common one */
+        private static string SaveFailureReason(Exception error, string fallback)
+        {
+            const int SharingViolation = unchecked((int)0x80070020), LockViolation = unchecked((int)0x80070021);
+            const int DiskFull = unchecked((int)0x80070070), HandleDiskFull = unchecked((int)0x80070027);
+            if (error is UnauthorizedAccessException)
+                return "it is read-only, or OpenCAGE isn't allowed to change it";
+            if (error is IOException)
+            {
+                if (error.HResult == SharingViolation || error.HResult == LockViolation)
+                    return "it is open in another program";
+                if (error.HResult == DiskFull || error.HResult == HandleDiskFull)
+                    return "the drive is full";
+            }
+            return string.IsNullOrEmpty(fallback) ? "unknown error" : fallback.TrimEnd('.');
         }
 
         /* Status text for background work nobody asked for: it may only write when the bar is idle,
@@ -3381,19 +3606,27 @@ namespace OpenCAGE
 
         private void darkModeToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            //The docked panels are closed and made again in the new theme below (RebuildDockChromeForTheme), so the switch
+            //itself leaves them alone: theming them first, only to close them, was the bulk of what it cost - every text box
+            //and number box in them is made again to take its new border. Any of them still open after goes through it then.
+            List<Control> remade = PanelsRemadeForTheme();
+
             //ThemeManager writes the setting itself, so this goes through it rather than ToggleBoolSetting
-            Theming.ThemeManager.SetDark(!Theming.ThemeManager.IsDark);
+            Theming.ThemeManager.SetDark(!Theming.ThemeManager.IsDark, remade);
             ApplySettingEffects(new[] { Settings.DarkMode });
 
             //DockPanelSuite builds its panes from the theme, so the docking chrome can only change while
             //nothing is docked. Rather than making that the user's problem, rebuild the panels in place -
             //the level, the open composite and the 3D viewer all carry across.
             if (!Theming.ThemeManager.DockChromeNeedsRestart)
+            {
+                ThemePanelsKept(remade);
                 return;
+            }
 
             Cursor previous = Cursor;
             Cursor = Cursors.WaitCursor;
-            bool rebuilt;
+            bool rebuilt = false;
             try
             {
                 rebuilt = RebuildDockChromeForTheme();
@@ -3401,6 +3634,7 @@ namespace OpenCAGE
             finally
             {
                 Cursor = previous;
+                ThemePanelsKept(remade);
             }
 
             if (rebuilt)
@@ -3415,6 +3649,30 @@ namespace OpenCAGE
 
             if (result == DialogResult.Yes)
                 RestartApplication();
+        }
+
+        /* The docked panels a theme switch closes and makes again (RebuildDockChromeForTheme) while a level is open; none
+           otherwise. The level viewer's panel is kept while the viewer runs. */
+        private List<Control> PanelsRemadeForTheme()
+        {
+            List<Control> panels = new List<Control>();
+            if (_compositeBrowser == null)
+                return panels;
+
+            Control[] docked = { _compositeBrowser, _compositeDisplay, _entityInspector, _entityList, _entityBrowser, _entitySearch, _renderFiltersPanel,
+                _levelViewerPanel?.IsRunning == true ? null : _levelViewerPanel };
+            foreach (Control panel in docked)
+                if (panel != null && !panel.IsDisposed)
+                    panels.Add(panel);
+            return panels;
+        }
+
+        /* Those of them still open - the rebuild couldn't be done, or stopped part way - take the theme now */
+        private static void ThemePanelsKept(List<Control> panels)
+        {
+            foreach (Control panel in panels)
+                if (!panel.IsDisposed)
+                    Theming.ThemeManager.ApplyCurrent(panel);
         }
 
         /* Application.Restart starts the new copy whether or not the exit went through - it drops the
@@ -3556,6 +3814,9 @@ namespace OpenCAGE
             List<Entity> selected = _compositeDisplay?.CaptureSelection();
             LevelContent content = _compositeBrowser.Content;
             bool levelDataLoaded = content?.IsLevelDataLoaded == true;
+            //Reopening the composite brings the entity list's tab forward in the pane it shares with the browser: the
+            //browser's tab is put back after if it was the one showing
+            bool browserTabShown = _compositeBrowser.Pane != null && _compositeBrowser.Pane.ActiveContent == _compositeBrowser;
 
             try
             {
@@ -3570,11 +3831,13 @@ namespace OpenCAGE
                 {
                     _compositeBrowser = new CompositeBrowser(retained);
                     RestoreDockLayoutAfterRebuild(loadedComposite, navigation, selected, levelDataLoaded, preserveLevelViewer);
+                    if (browserTabShown) ShowCompositeBrowserTab();
                     return false;
                 }
 
                 _compositeBrowser = new CompositeBrowser(retained);
                 RestoreDockLayoutAfterRebuild(loadedComposite, navigation, selected, levelDataLoaded, preserveLevelViewer);
+                if (browserTabShown) ShowCompositeBrowserTab();
 
                 //The inner panel inside the composite display is new, and picked the theme up when it
                 //was built; this settles whether anything is still outstanding
@@ -3586,6 +3849,18 @@ namespace OpenCAGE
                 Debug.Log("Theme", "Rebuilding the dock layout for a theme change failed: " + ex);
                 return false;
             }
+        }
+
+        /* Bring the composite browser's tab forward in its pane, without failing a theme switch if the pane can't show it */
+        private void ShowCompositeBrowserTab()
+        {
+            try
+            {
+                DockPane pane = _compositeBrowser?.Pane;
+                if (pane != null && pane.DisplayingContents.Contains(_compositeBrowser))
+                    pane.ActiveContent = _compositeBrowser;
+            }
+            catch (InvalidOperationException) { }
         }
 
         private void RestoreDockLayoutAfterRebuild(Composite loadedComposite, CompositePath.Snapshot navigation, List<Entity> selected, bool levelDataLoaded, bool preserveLevelViewer)
@@ -4013,6 +4288,9 @@ namespace OpenCAGE
             {
                 animTreeEditor.FormClosed -= animTreeEditor_FormClosed;
                 animTreeEditor.Close();
+
+                //Kept open (its unsaved changes' prompt was cancelled): brought forward rather than a second editor opened beside it
+                if (!animTreeEditor.IsDisposed) { animTreeEditor.FormClosed += animTreeEditor_FormClosed; animTreeEditor.Activate(); return; }
             }
 
             animTreeEditor = new AnimTreeEditor();

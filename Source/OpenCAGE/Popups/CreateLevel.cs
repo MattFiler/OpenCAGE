@@ -146,7 +146,7 @@ namespace OpenCAGE
             MessageBox.Show(summary + "!" + (warnings == "" ? "" : "\n\n" + warnings), "Complete", MessageBoxButtons.OK, warnings == "" ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
 
             this.Close();
-            Singleton.Editor.LoadLevel(levelId);
+            Singleton.Editor.LoadLevelAskingToSave(levelId);
         }
 
         private CompositeImporter.Result Create(string levelId, string path)

@@ -50,11 +50,8 @@ namespace
 		if (!packFile || packed == 0xFFFFFFFF)
 			return 0;
 		const uint8_t* composite = reinterpret_cast<const uint8_t*>(packFile + packed * 4u);
-		const char* text = *reinterpret_cast<const char* const*>(composite + kTemplateName);
-		size_t i = 0;
-		for (; text && i + 1 < size && text[i]; i++)
-			name[i] = text[i];
-		name[i] = '\0';
+		// The name as UTF-8, for drawing and for replies (the game's text is Windows-1252)
+		DevTools::GameTextToUtf8(*reinterpret_cast<const char* const*>(composite + kTemplateName), name, size);
 		return *reinterpret_cast<const uint32_t*>(composite + kTemplateGuid);
 	}
 

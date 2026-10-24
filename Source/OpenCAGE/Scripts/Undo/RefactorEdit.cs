@@ -36,6 +36,8 @@ namespace OpenCAGE.Undo
         private RefactorResult _result;
         private readonly Dictionary<Composite, PageState> _pagesBefore = new Dictionary<Composite, PageState>();
         private readonly Dictionary<Composite, PageState> _pagesAfter = new Dictionary<Composite, PageState>();
+        //The pin table rows of the composites this step added, as they were when it was last undone (see Revert)
+        private Dictionary<Composite, List<CompositePinInfoTable.PinInfo>> _addedPins = null;
 
         public string Label { get; }
         public ShortGuid CompositeId => _parent.shortGUID;
@@ -116,6 +118,7 @@ namespace OpenCAGE.Undo
             {
                 RequireLive(context, "redone");
                 _result.Transaction.Reapply();
+                RestoreAddedPins(context);
                 foreach (KeyValuePair<Composite, PageState> state in _pagesAfter)
                     state.Value.Restore(state.Key);
                 AnnounceComposites(context, reverted: false);
@@ -135,12 +138,44 @@ namespace OpenCAGE.Undo
             if (removing.Count != 0)
                 context.Ui?.BeforeCompositesRemoved(new HashSet<ShortGuid>(removing.Select(o => o.shortGUID)));
 
+            /* The transaction empties the pin rows of a composite it added, and redo puts back the rows it had straight
+               after the refactor: a row given to one of its variables since, by anything outside this step, would not
+               come back with it. What it has now is kept, for redo to put back. */
+            if (context.Commands != null)
+                _addedPins = removing.ToDictionary(o => o, o => context.Commands.Utils.GetAllCustomPinInfo(o).Where(p => p != null).Select(CopyPin).ToList());
+
             _result.Transaction.Revert();
             foreach (KeyValuePair<Composite, PageState> state in _pagesBefore)
                 state.Value.Restore(state.Key);
             AnnounceComposites(context, reverted: true);
             _afterEach?.Invoke(_result, true);
             AfterChange(context, reverted: true);
+        }
+
+        /// <summary>
+        /// The pin rows the composites it added had when it was undone, back on the variables they still have: any that
+        /// the redone transaction left without its row, or with a different one, gets the kept row.
+        /// </summary>
+        private void RestoreAddedPins(UndoContext context)
+        {
+            if (_addedPins == null || context.Commands == null)
+                return;
+            foreach (KeyValuePair<Composite, List<CompositePinInfoTable.PinInfo>> kept in _addedPins)
+            {
+                foreach (CompositePinInfoTable.PinInfo pin in kept.Value)
+                {
+                    if (!(kept.Key.GetEntityByID(pin.VariableGUID) is VariableEntity))
+                        continue;
+                    CompositePinInfoTable.PinInfo now = context.Commands.Utils.GetAllCustomPinInfo(kept.Key).FirstOrDefault(o => o != null && o.VariableGUID == pin.VariableGUID);
+                    if (now == null || now.PinTypeGUID != pin.PinTypeGUID || now.PinEnumTypeGUID != pin.PinEnumTypeGUID)
+                        context.Commands.Utils.SetPinInfo(kept.Key, CopyPin(pin));
+                }
+            }
+        }
+
+        private static CompositePinInfoTable.PinInfo CopyPin(CompositePinInfoTable.PinInfo pin)
+        {
+            return new CompositePinInfoTable.PinInfo() { VariableGUID = pin.VariableGUID, PinTypeGUID = pin.PinTypeGUID, PinEnumTypeGUID = pin.PinEnumTypeGUID };
         }
 
         /// <summary>

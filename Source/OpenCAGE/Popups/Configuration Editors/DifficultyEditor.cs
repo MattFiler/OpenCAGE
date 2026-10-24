@@ -127,6 +127,24 @@ namespace OpenCAGE.ConfigEditors
             }
 
             ConfigEditorUtils.Unsubscribe(tabPage1.Controls, SaveAlienConfig);
+            //Each file in the template chain is read once for all the fields, not once per field
+            using (ConfigEditorUtils.ReadOnce())
+                ShowAlienFields();
+            ConfigEditorUtils.Subscribe(tabPage1.Controls, SaveAlienConfig);
+
+            characterTypesSense.SelectedIndex = 0;
+            characterTypesSense_SelectedIndexChanged(null, null);
+
+            characterTypesAttribute.SelectedIndex = 0;
+            characterTypesAttribute_SelectedIndexChanged(null, null);
+
+            viewconeSets.SelectedIndex = 0;
+            viewconeSet_SelectedIndexChanged(null, null);
+        }
+
+        /* Fill the Alien tab from the selected difficulty, falling back through its templates */
+        private void ShowAlienFields()
+        {
             ConfigEditorUtils.SetNumber(_selectedDifficulty, decrease_sweep_duration_modifier, "DifficultySetting", "Alien", "AlienConfig", "decrease_sweep_duration_modifier");
             ConfigEditorUtils.SetNumber(_selectedDifficulty, increase_sweep_duration_modifier, "DifficultySetting", "Alien", "AlienConfig", "increase_sweep_duration_modifier");
             ConfigEditorUtils.SetNumber(_selectedDifficulty, near_target_exclusion_radius_first_stalk_min_modifier, "DifficultySetting", "Alien", "AlienConfig", "near_target_exclusion_radius_first_stalk_min_modifier");
@@ -152,22 +170,20 @@ namespace OpenCAGE.ConfigEditors
             ConfigEditorUtils.SetNumber(_selectedDifficulty, sweep_box_half_width_modifier, "DifficultySetting", "Alien", "AlienConfig", "sweep_box_half_width_modifier");
             ConfigEditorUtils.SetNumber(_selectedDifficulty, Vent_Attract_Time_Min, "DifficultySetting", "Alien", "AlienConfig", "Vent_Attract_Time_Min");
             ConfigEditorUtils.SetNumber(_selectedDifficulty, Vent_Attract_Time_Max, "DifficultySetting", "Alien", "AlienConfig", "Vent_Attract_Time_Max");
-            ConfigEditorUtils.Subscribe(tabPage1.Controls, SaveAlienConfig);
-
-            characterTypesSense.SelectedIndex = 0;
-            characterTypesSense_SelectedIndexChanged(null, null);
-
-            characterTypesAttribute.SelectedIndex = 0;
-            characterTypesAttribute_SelectedIndexChanged(null, null);
-
-            viewconeSets.SelectedIndex = 0;
-            viewconeSet_SelectedIndexChanged(null, null);
         }
 
         private void characterTypesSense_SelectedIndexChanged(object sender, EventArgs e)
         {
             ConfigEditorUtils.Unsubscribe(tabPage2.Controls, SaveSenseConfig);
-            ConfigEditorUtils.SetNumber(_selectedDifficulty, max_hearing_distance_modifier, "DifficultySetting", "NPC_Generic", characterTypesSense.Text, "Senses", "max_hearing_distance_modifier");
+            using (ConfigEditorUtils.ReadOnce())
+                ShowSenseFields();
+            ConfigEditorUtils.Subscribe(tabPage2.Controls, SaveSenseConfig);
+        }
+
+        /* Fill the Senses tab for the selected character type */
+        private void ShowSenseFields()
+        {
+            ConfigEditorUtils.SetNumber(_selectedDifficulty, max_hearing_distance_modifier,"DifficultySetting", "NPC_Generic", characterTypesSense.Text, "Senses", "max_hearing_distance_modifier");
             ConfigEditorUtils.SetNumber(_selectedDifficulty, weapon_sound_sense_activation_modifier, "DifficultySetting", "NPC_Generic", characterTypesSense.Text, "Senses", "weapon_sound_sense_activation_modifier");
             ConfigEditorUtils.SetNumber(_selectedDifficulty, weapon_sound_combined_sense_activation_modifier, "DifficultySetting", "NPC_Generic", characterTypesSense.Text, "Senses", "weapon_sound_combined_sense_activation_modifier");
             ConfigEditorUtils.SetNumber(_selectedDifficulty, movement_sound_sense_activation_modifier, "DifficultySetting", "NPC_Generic", characterTypesSense.Text, "Senses", "movement_sound_sense_activation_modifier");
@@ -176,26 +192,33 @@ namespace OpenCAGE.ConfigEditors
             ConfigEditorUtils.SetNumber(_selectedDifficulty, flash_light_combined_sense_activation_modifier, "DifficultySetting", "NPC_Generic", characterTypesSense.Text, "Senses", "flash_light_combined_sense_activation_modifier");
             ConfigEditorUtils.SetNumber(_selectedDifficulty, visual_sense_activation_modifier, "DifficultySetting", "NPC_Generic", characterTypesSense.Text, "Senses", "visual_sense_activation_modifier");
             ConfigEditorUtils.SetNumber(_selectedDifficulty, visual_combined_sense_activation_modifier, "DifficultySetting", "NPC_Generic", characterTypesSense.Text, "Senses", "visual_combined_sense_activation_modifier");
-            ConfigEditorUtils.Subscribe(tabPage2.Controls, SaveSenseConfig);
         }
 
         private void characterTypesAttribute_SelectedIndexChanged(object sender, EventArgs e)
         {
             ConfigEditorUtils.Unsubscribe(tabPage4.Controls, SaveAttributeConfig);
-            ConfigEditorUtils.SetNumber(_selectedDifficulty, damage_dealt_scalar, "DifficultySetting", "NPC_Generic", characterTypesAttribute.Text, "General", "damage_dealt_scalar");
+            using (ConfigEditorUtils.ReadOnce())
+                ShowAttributeFields();
+            ConfigEditorUtils.Subscribe(tabPage4.Controls, SaveAttributeConfig);
+        }
+
+        /* Fill the Attributes tab for the selected character type */
+        private void ShowAttributeFields()
+        {
+            ConfigEditorUtils.SetNumber(_selectedDifficulty, damage_dealt_scalar,"DifficultySetting", "NPC_Generic", characterTypesAttribute.Text, "General", "damage_dealt_scalar");
             ConfigEditorUtils.SetNumber(_selectedDifficulty, damage_received_scalar, "DifficultySetting", "NPC_Generic", characterTypesAttribute.Text, "General", "damage_received_scalar");
             ConfigEditorUtils.SetNumber(_selectedDifficulty, attack_pace_modifier_per_npc, "DifficultySetting", "NPC_Generic", characterTypesAttribute.Text, "General", "attack_pace_modifier_per_npc");
             ConfigEditorUtils.SetNumber(_selectedDifficulty, attack_pace_modifier_max, "DifficultySetting", "NPC_Generic", characterTypesAttribute.Text, "General", "attack_pace_modifier_max");
             ConfigEditorUtils.SetNumber(_selectedDifficulty, shooting_in_cover_duration_modifier, "DifficultySetting", "NPC_Generic", characterTypesAttribute.Text, "General", "shooting_in_cover_duration_modifier");
             ConfigEditorUtils.SetNumber(_selectedDifficulty, time_between_shots_scalar, "DifficultySetting", "NPC_Generic", characterTypesAttribute.Text, "General", "time_between_shots_scalar");
             ConfigEditorUtils.SetNumber(_selectedDifficulty, suspicious_item_loop_scalar, "DifficultySetting", "NPC_Generic", characterTypesAttribute.Text, "General", "suspicious_item_loop_scalar");
-            ConfigEditorUtils.Subscribe(tabPage4.Controls, SaveAttributeConfig);
         }
 
         private void viewconeSet_SelectedIndexChanged(object sender, EventArgs e)
         {
             ConfigEditorUtils.Unsubscribe(viewconeDifficultySet1.Controls, SaveViewconeConfig);
-            viewconeDifficultySet1.Populate(_selectedDifficulty, viewconeSets.Text);
+            using (ConfigEditorUtils.ReadOnce())
+                viewconeDifficultySet1.Populate(_selectedDifficulty, viewconeSets.Text);
             ConfigEditorUtils.Subscribe(viewconeDifficultySet1.Controls, SaveViewconeConfig);
         }
         

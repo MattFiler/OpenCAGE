@@ -52,7 +52,7 @@ namespace OpenCAGE.ConfigEditors
 
             if (_config == null)
             {
-                MessageBox.Show("Could not read DATA/FONT_CONFIG.XML.\n\nUse Options -> Reset Configs to restore it, or Manage Game Directories to point OpenCAGE at a valid install.",
+                MessageBox.Show("Could not read DATA/FONT_CONFIG.XML.\n\nUse Manage Backups -> Revert Configs to restore it, or Options -> Manage Game Directories to point OpenCAGE at a valid install.",
                     "Font config missing", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 _loadFailed = true;
                 return;

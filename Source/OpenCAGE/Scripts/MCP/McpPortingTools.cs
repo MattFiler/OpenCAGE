@@ -517,10 +517,14 @@ namespace OpenCAGE.MCP
             string openLevel = McpEditor.UI(() => McpEditor.RequireLevel().Level.Name);
             if (string.Equals(openLevel, level, StringComparison.OrdinalIgnoreCase))
                 throw new McpError(level + " is the level that is open: its composites are already here.");
+            //Checked before the source level is loaded: an empty list would leave nothing to port (or to place)
+            List<string> wanted = call.StrList("composites", required: true);
+            if (wanted.Count == 0)
+                throw McpError.Invalid("'composites' is empty: name the composites of " + level + " to port (search_level finds them).");
 
             Level source = McpLevelCache.Get(call, level);
             Commands sourceCommands = source.Commands;
-            List<Composite> roots = call.StrList("composites", required: true).Select(o => McpScript.FindComposite(sourceCommands, o)).Distinct().ToList();
+            List<Composite> roots = wanted.Select(o => McpScript.FindComposite(sourceCommands, o)).Distinct().ToList();
             //GLOBAL and PAUSEMENU are the destination's own. Another level's root can be ported (it arrives as an ordinary
             //composite), but never over one of this level's entry points.
             List<ShortGuid> ownEntryPoints = McpEditor.UI(() => McpEditor.RequireCommands().EntryPoints.Where(o => o != null).Select(o => o.shortGUID).ToList());
@@ -1160,7 +1164,7 @@ namespace OpenCAGE.MCP
             });
             JArray written = new JArray();
             string failedLevel = null, failure = null;
-            bool cancelled = false;
+            bool cancelled = false, untouched = false;
             try
             {
                 for (int i = 0; i < destinations.Count; i++)
@@ -1180,9 +1184,11 @@ namespace OpenCAGE.MCP
                     }
                     catch (Exception e)
                     {
-                        //Levels before this one are saved; this one may be part-written. Stop, as the Export window does.
+                        //Levels before this one are saved; this one may be part-written (unless its script could not be read,
+                        //which stops it before anything is written). Stop, as the Export window does.
                         failedLevel = level;
                         failure = e.Message;
+                        untouched = e is CompositeArchive.ScriptNotLoadedException;
                         break;
                     }
                 }
@@ -1201,7 +1207,7 @@ namespace OpenCAGE.MCP
             if (failedLevel != null)
                 throw new McpError(McpErrorCodes.Failed, "The port failed on " + failedLevel + ": " + failure + " " +
                     (written.Count == 0 ? "No level was written before it." : "Written and saved before it: " + string.Join(", ", written.Select(o => (string)o["level"])) + ".") +
-                    " " + failedLevel + " may be part-written on disk: " + (backups.TryGetValue(failedLevel, out long id) ? "restore_backup level '" + failedLevel + "' id " + id + " puts it back as it was before this call." : "restore it from a backup (list_backups), or verify the game files."));
+                    (untouched ? "" : " " + failedLevel + " may be part-written on disk: " + (backups.TryGetValue(failedLevel, out long id) ? "restore_backup level '" + failedLevel + "' id " + id + " puts it back as it was before this call." : "restore it from a backup (list_backups), or verify the game files.")));
             result["written"] = written;
             if (gameWasRunning && !EditorUtils.ThisInstallsGameRunning())
                 result["closed_game"] = true;

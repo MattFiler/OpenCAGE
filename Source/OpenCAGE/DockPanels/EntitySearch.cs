@@ -348,6 +348,7 @@ namespace OpenCAGE.DockPanels
             if (IsDisposed
                 || Content == null
                 || !HasActiveQuery()
+                || _currentMode == SearchMode.ByComposite //searches every composite, whichever is open
                 || !GlobalEntitySearchHelper.ShouldRefreshSearchForCompositeChange(GlobalEntitySearchScopeSettings.Scope))
             {
                 return;
@@ -365,7 +366,7 @@ namespace OpenCAGE.DockPanels
 
         private void OnSearchScopeChanged()
         {
-            if (IsDisposed || Content == null || !HasActiveQuery())
+            if (IsDisposed || Content == null || !HasActiveQuery() || _currentMode == SearchMode.ByComposite)
                 return;
 
             QueueRefresh();
@@ -631,13 +632,19 @@ namespace OpenCAGE.DockPanels
 
             GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Settings.ShowShortGuids));
             _searchedAtAsk = _searchAsks;
-            int count = GlobalEntitySearchHelper.SearchByComposite(Content, _selectedComposite.shortGUID, entityList, _entityComposites);
+            int count = GlobalEntitySearchHelper.SearchByComposite(Content, _selectedComposite.shortGUID, entityList, _entityComposites, CompositeSearchScope);
             UpdateResultTitle(count);
         }
 
+        /* The instances of a composite are looked for in every composite, whatever the panel's scope: Find Uses and Find
+           References search for the composite that is open, and its instances are never inside it - a scope rooted at the
+           open composite listed none of them. The scope still applies to the name and function searches. */
+        private const GlobalEntitySearchScope CompositeSearchScope = GlobalEntitySearchScope.AllComposites;
+
         private void UpdateResultTitle(int count)
         {
-            string scopeSuffix = " [In " + GlobalEntitySearchScopeSettings.Scope.ToDisplayName() + "]";
+            GlobalEntitySearchScope scope = _currentMode == SearchMode.ByComposite ? CompositeSearchScope : GlobalEntitySearchScopeSettings.Scope;
+            string scopeSuffix = " [In " + scope.ToDisplayName() + "]";
             switch (_currentMode)
             {
                 case SearchMode.ByName:

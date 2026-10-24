@@ -68,6 +68,9 @@ namespace OpenCAGE
         public const string LiveLinkAnimateInGame = "LiveLinkAnimateInGame";
         //The composite display's "Show Activity": flowgraph links light up as the running game uses them (live link)
         public const string LiveLinkShowActivity = "LiveLinkShowActivity";
+        //The script debugger turned the game's breakpoints switch off as Live Link went off or OpenCAGE closed: turned on again
+        //at the next connection that has the open level's breakpoints in it (LiveLinkDebugger)
+        public const string LiveLinkDebuggerDisarmed = "LiveLinkDebuggerDisarmed";
         public const string NumericStep = "NumericStep";
         public const string NumericStepRot = "NumericStepRot";
         public const string PrevEntNameSearch = "PrevEntNameSearch";

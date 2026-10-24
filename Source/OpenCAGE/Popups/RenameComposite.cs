@@ -46,6 +46,20 @@ namespace OpenCAGE
                 }
             }
 
+            //A composite's name is used as a path: a character a path can't hold breaks the editor's handling of it
+            char bad = path.FirstOrDefault(c => Path.GetInvalidPathChars().Contains(c));
+            if (bad != default(char))
+            {
+                MessageBox.Show("Failed to rename composite: its name can't contain " + (char.IsControl(bad) ? "control characters" : "'" + bad + "'") + ".", "Composite path/name invalid", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            string nameProblem = EditorUtils.UnstorableTextProblem(path, "This composite name");
+            if (nameProblem != null)
+            {
+                MessageBox.Show(nameProblem, "Composite path/name invalid", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             for (int i = 0; i < Content.Level.Commands.Entries.Count; i++)
             {
                 if (Content.Level.Commands.Entries[i].name.Replace("\\", "/") == path)

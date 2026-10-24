@@ -36,6 +36,10 @@ namespace OpenCAGE.Backups
         private string _level;
 
         private string LevelFolder;
+        /* A Nostromo level's WORLD is read and written in the "_PATCH" folder beside it (by the game and the editor): part of
+           the level, held in its backups as "_PATCH\..." files. Null for every other level. */
+        private string PatchFolder;
+        private const string PatchPrefix = "_PATCH\\";
         private string BackupFolder;
         private string BackupFile;
 
@@ -46,6 +50,8 @@ namespace OpenCAGE.Backups
             _level = level;
 
             LevelFolder = Singleton.PathToAI + "/DATA/ENV/" + level;
+            if (level.Replace('\\', '/').StartsWith("PRODUCTION/DLC/BSPNOSTROMO", StringComparison.OrdinalIgnoreCase))
+                PatchFolder = LevelFolder + "_PATCH";
             BackupFolder = Singleton.PathToAI + "/DATA/MODTOOLS/BACKUPS/" + level;
 
             // This is a bit of a hack - when this logic was used in the old external tool it always removed 'PRODUCTION' from the filepath.
@@ -71,49 +77,171 @@ namespace OpenCAGE.Backups
         /* Create a new backup */
         public void CreateBackup(string name)
         {
-            Directory.CreateDirectory(BackupFolder);
-            //Another window (or tool) may have written the archive since this one read it
-            MergeFromDisk();
-
-            //IDs are seconds: a second backup within the same second would share the first's ID, and only one could ever be restored
-            long id = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            if (Backups.Any(o => o.ID == id))
-                id = Backups.Max(o => o.ID) + 1;
-            AlienBackup Backup = new AlienBackup() { Name = name, Date = DateTime.Now.ToString("dd-MM-yy HH:mm:ss"), ID = id, GUIDs = new List<string>() };
-            Dictionary<string, string> paths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-            string[] files = Directory.GetFiles(LevelFolder, "*.*", SearchOption.AllDirectories);
-            for (int i = 0; i < files.Length; i++)
+            try
             {
-                string fileName = files[i].Substring(LevelFolder.Length + 1);
-                string fileHash = GenerateFileHash(files[i]);
+                Directory.CreateDirectory(BackupFolder);
+                //Another window (or tool) may have written the archive since this one read it
+                MergeFromDisk();
+                RemovePartialRevisions();
 
-                AlienFile file = Files.FirstOrDefault(o => o.Name == fileName);
-                if (file == null)
-                {
-                    file = new AlienFile() { Name = fileName, Revisions = new List<string>() };
-                    Files.Add(file);
-                }
+                //IDs are seconds: a second backup within the same second would share the first's ID, and only one could ever be restored
+                long id = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                if (Backups.Any(o => o.ID == id))
+                    id = Backups.Max(o => o.ID) + 1;
+                AlienBackup Backup = new AlienBackup() { Name = name, Date = DateTime.Now.ToString("dd-MM-yy HH:mm:ss"), ID = id, GUIDs = new List<string>() };
+                Dictionary<string, string> paths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-                string revisionFile = BackupFolder + "/" + fileHash + ".gz";
-                if (!File.Exists(revisionFile))
+                List<KeyValuePair<string, string>> files = LevelFiles();
+                for (int i = 0; i < files.Count; i++)
                 {
-                    using (GZipStream gzipStream = new GZipStream(File.Create(revisionFile), CompressionMode.Compress))
+                    string fileName = files[i].Key;
+                    //Read once: what is stored is exactly what its name (the MD5 of it) was worked out from
+                    byte[] content = File.ReadAllBytes(files[i].Value);
+                    string fileHash = GenerateHash(content);
+
+                    AlienFile file = Files.FirstOrDefault(o => o.Name == fileName);
+                    if (file == null)
                     {
-                        byte[] content = File.ReadAllBytes(files[i]);
-                        gzipStream.Write(content, 0, content.Length);
+                        file = new AlienFile() { Name = fileName, Revisions = new List<string>() };
+                        Files.Add(file);
                     }
+
+                    //A revision already stored is reused, unless an older OpenCAGE was cut off writing it: that one is written again
+                    string revisionFile = BackupFolder + "/" + fileHash + ".gz";
+                    if (!RevisionLooksWhole(revisionFile, content.LongLength))
+                        StoreRevision(revisionFile, content);
+                    if (!file.Revisions.Contains(fileHash))
+                        file.Revisions.Add(fileHash);
+
+                    Backup.GUIDs.Add(fileHash);
+                    paths[fileName] = fileHash;
                 }
-                if (!file.Revisions.Contains(fileHash))
-                    file.Revisions.Add(fileHash);
 
-                Backup.GUIDs.Add(fileHash);
-                paths[fileName] = fileHash;
+                //Listed only once every file it holds is stored: a backup cut off before this point is not one at all
+                Backups.Add(Backup);
+                PathMaps[id] = paths;
+                try
+                {
+                    Save();
+                }
+                catch
+                {
+                    Backups.Remove(Backup);
+                    PathMaps.Remove(id);
+                    throw;
+                }
             }
+            catch (IOException e) when (IsOutOfSpace(e))
+            {
+                throw new IOException("There is not enough free space on " + DriveOf(BackupFolder) + " to back up " + _level + ". Nothing was added to its backups (the ones made before are unaffected): free up some space, then try again.", e.HResult);
+            }
+        }
 
-            Backups.Add(Backup);
-            PathMaps[id] = paths;
-            Save();
+        /* The level's files, by their name in a backup and where they are: its folder's, then a Nostromo level's _PATCH folder's */
+        private List<KeyValuePair<string, string>> LevelFiles()
+        {
+            List<KeyValuePair<string, string>> files = Directory.GetFiles(LevelFolder, "*.*", SearchOption.AllDirectories)
+                .Select(o => new KeyValuePair<string, string>(o.Substring(LevelFolder.Length + 1), o)).ToList();
+            if (PatchFolder != null && Directory.Exists(PatchFolder))
+                files.AddRange(Directory.GetFiles(PatchFolder, "*.*", SearchOption.AllDirectories)
+                    .Select(o => new KeyValuePair<string, string>(PatchPrefix + o.Substring(PatchFolder.Length + 1), o)));
+            return files;
+        }
+
+        private bool IsPatchFile(string name) => PatchFolder != null && name.Replace('/', '\\').StartsWith(PatchPrefix, StringComparison.OrdinalIgnoreCase);
+
+        /* Where a file a backup names (either separator) is on disk */
+        private string PathOf(string name)
+        {
+            if (IsPatchFile(name))
+                return PatchFolder + "/" + name.Replace('/', '\\').Substring(PatchPrefix.Length).Replace('\\', '/');
+            return LevelFolder + "/" + name.Replace('\\', '/');
+        }
+
+        /* Whether a stored revision of content this long is whole. Gzip ends with the length of what it holds: a revision an
+           older OpenCAGE was cut off writing (the disk filling up, OpenCAGE closed or killed part way) does not. */
+        private static bool RevisionLooksWhole(string path, long length)
+        {
+            if (!File.Exists(path)) return false;
+            using (FileStream stream = File.OpenRead(path))
+            {
+                if (stream.Length == 0) return length == 0;
+                if (stream.Length < 18) return false;
+                byte[] size = new byte[4];
+                stream.Seek(-4, SeekOrigin.End);
+                return stream.Read(size, 0, 4) == 4 && BitConverter.ToUInt32(size, 0) == (uint)length;
+            }
+        }
+
+        /* Store a revision: written aside, flushed to the disk, and only then given its name. A write cut off part way never
+           leaves a short revision under the name every later backup reuses and every restore reads. */
+        private static void StoreRevision(string path, byte[] content)
+        {
+            string partial = path + ".tmp";
+            try
+            {
+                using (FileStream stream = File.Create(partial))
+                {
+                    using (GZipStream gzipStream = new GZipStream(stream, CompressionMode.Compress, true))
+                        gzipStream.Write(content, 0, content.Length);
+                    stream.Flush(true);
+                }
+                MoveIntoPlace(partial, path);
+            }
+            catch
+            {
+                try { File.Delete(partial); } catch { }
+                throw;
+            }
+        }
+
+        /* Give a file written aside the name it was written for, replacing what had it */
+        private static void MoveIntoPlace(string partial, string path)
+        {
+            if (!File.Exists(path))
+            {
+                File.Move(partial, path);
+                return;
+            }
+            try
+            {
+                File.Replace(partial, path, null);
+            }
+            catch (IOException) when (File.Exists(partial) && File.Exists(path))
+            {
+                //A drive that can't swap files in one go (some network shares): the old one goes first
+                File.Delete(path);
+                File.Move(partial, path);
+            }
+        }
+
+        /* Revisions a backup was cut off writing are left as ".tmp" files: their space is freed (one another OpenCAGE is
+           writing at this moment is held open, and stays) */
+        private void RemovePartialRevisions()
+        {
+            foreach (string partial in Directory.GetFiles(BackupFolder, "*.gz.tmp"))
+            {
+                try { File.Delete(partial); } catch { }
+            }
+        }
+
+        /// <summary>Whether an error is the drive running out of space (or the user's quota on it running out).</summary>
+        public static bool IsOutOfSpace(Exception error)
+        {
+            for (Exception e = error; e != null; e = e.InnerException)
+            {
+                //ERROR_DISK_FULL, ERROR_HANDLE_DISK_FULL, ERROR_DISK_QUOTA_EXCEEDED
+                if (e is IOException && (e.HResult == unchecked((int)0x80070070) || e.HResult == unchecked((int)0x80070027) || e.HResult == unchecked((int)0x8007050F)))
+                    return true;
+            }
+            return false;
+        }
+
+        /* The drive a path is on, for messages */
+        private static string DriveOf(string path)
+        {
+            try { return Path.GetPathRoot(Path.GetFullPath(path)); }
+            catch { return "the drive"; }
         }
 
         /* The ID of the backup CreateBackup made last (null before one) */
@@ -145,6 +273,9 @@ namespace OpenCAGE.Backups
             List<KeyValuePair<AlienFile, List<string>>> several = new List<KeyValuePair<AlienFile, List<string>>>();
             foreach (AlienFile file in Files)
             {
+                //A backup with no path map was taken before backups held a _PATCH folder: matching one of its files by hash
+                //(the same content as a file of the level folder) would have a restore clear that folder down to it
+                if (IsPatchFile(file.Name)) continue;
                 List<string> candidates = file.Revisions.Where(o => left.ContainsKey(o)).Distinct().ToList();
                 if (candidates.Count == 1)
                 {
@@ -170,15 +301,16 @@ namespace OpenCAGE.Backups
             return paths;
         }
 
-        /// <summary>The files on disk now, by level-relative path ('\' separated) and hash.</summary>
+        /// <summary>The files on disk now, by level-relative path ('\' separated; a Nostromo level's _PATCH folder's as
+        /// "_PATCH\...") and hash.</summary>
         public Dictionary<string, string> CurrentPaths()
         {
-            string[] files = Directory.GetFiles(LevelFolder, "*.*", SearchOption.AllDirectories);
-            string[] hashes = new string[files.Length];
-            Parallel.For(0, files.Length, (i) => { hashes[i] = GenerateFileHash(files[i]); });
+            List<KeyValuePair<string, string>> files = LevelFiles();
+            string[] hashes = new string[files.Count];
+            Parallel.For(0, files.Count, (i) => { hashes[i] = GenerateFileHash(files[i].Value); });
             Dictionary<string, string> paths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            for (int i = 0; i < files.Length; i++)
-                paths[files[i].Substring(LevelFolder.Length + 1)] = hashes[i];
+            for (int i = 0; i < files.Count; i++)
+                paths[files[i].Key] = hashes[i];
             return paths;
         }
 
@@ -197,41 +329,87 @@ namespace OpenCAGE.Backups
             Damaged,
         }
         public RestoreFailure LastRestoreFailure { get; private set; } = RestoreFailure.None;
+        /// <summary>What made the last <see cref="RestoreBackup"/> fail (null when it succeeded), e.g. the drive filling up.</summary>
+        public Exception LastRestoreError { get; private set; } = null;
         public string SafetyCopyFolder => LevelFolder + "_COPY";
 
+        /// <summary>
+        /// Thrown by <see cref="RestoreBackup"/>, before anything is changed, when files the backup holds are missing from
+        /// its folder or were not stored completely (the disk filled up, or OpenCAGE was closed, while it was being made).
+        /// </summary>
+        public class DamagedBackupException : Exception
+        {
+            public List<string> DamagedFiles { get; }
+            public DamagedBackupException(string backupName, List<string> damagedFiles)
+                : base("The backup '" + backupName + "' is damaged, so it can't be restored: " + damagedFiles.Count + " of the files it holds " + (damagedFiles.Count == 1 ? "is" : "are") + " missing or incomplete ("
+                      + string.Join(", ", damagedFiles.Take(5)) + (damagedFiles.Count > 5 ? ", ..." : "") + "). It may have been cut off while it was made (the disk filling up, or OpenCAGE closing). Nothing in the level was changed.")
+            {
+                DamagedFiles = damagedFiles;
+            }
+        }
+
         /* Restore a backup. With onlyPaths (level-relative, either separator), only those files are put back as the backup
-           holds them: written if it has them, deleted if it does not; the rest of the folder is left alone. */
+           holds them: written if it has them, deleted if it does not; the rest of the folder is left alone. Throws a
+           DamagedBackupException, changing nothing, if any file it would put back is missing or incomplete in the backup. */
         public bool RestoreBackup(Int64 ID, ICollection<string> onlyPaths = null)
         {
             LastRestoreFailure = RestoreFailure.Untouched;
+            LastRestoreError = null;
             AlienBackup backup = Backups.FirstOrDefault(o => o.ID == ID);
             if (backup == null) return false;
             Dictionary<string, string> paths = PathsOf(backup, out _);
+
+            //Every file it puts back is checked first: one cut off while it was stored would otherwise read back short without
+            //complaint, and the restore would write it into the level and report success
+            List<string> damaged = DamagedFiles(paths, onlyPaths);
+            if (damaged.Count != 0)
+                throw new DamagedBackupException(backup.Name, damaged);
+
             if (onlyPaths != null)
                 return RestoreSome(paths, onlyPaths);
 
-            //First, try keep a version of the current folder
+            //The folders it replaces: the level's, and a Nostromo level's _PATCH folder when the backup holds it (a backup
+            //taken before backups held it leaves it as it is)
+            List<string> folders = new List<string>() { LevelFolder };
+            if (paths.Keys.Any(IsPatchFile))
+                folders.Add(PatchFolder);
+
+            //First, try keep a version of the current folders
             try
             {
-                if (Directory.Exists(LevelFolder + "_COPY"))
-                    Directory.Delete(LevelFolder + "_COPY", true);
-                CopyDirectory(LevelFolder, LevelFolder + "_COPY", true);
+                foreach (string folder in folders)
+                {
+                    if (Directory.Exists(folder + "_COPY"))
+                        Directory.Delete(folder + "_COPY", true);
+                    if (folder == PatchFolder) Directory.CreateDirectory(folder); //One the backup holds may have been deleted since
+                    CopyDirectory(folder, folder + "_COPY", true);
+                }
             }
-            catch
+            catch (Exception e)
             {
+                //Nothing is changed yet: a copy made part way (the disk filling up) is only taking space
+                LastRestoreError = e;
+                foreach (string folder in folders)
+                {
+                    try { if (Directory.Exists(folder + "_COPY")) Directory.Delete(folder + "_COPY", true); } catch { }
+                }
                 return false;
             }
 
-            //Now, try clear the current folder
+            //Now, try clear the current folders
             try
             {
-                Directory.Delete(LevelFolder, true);
-                Directory.CreateDirectory(LevelFolder);
+                foreach (string folder in folders)
+                {
+                    Directory.Delete(folder, true);
+                    Directory.CreateDirectory(folder);
+                }
             }
-            catch
+            catch (Exception e)
             {
                 //Part of the folder may be gone already: put it back from the copy rather than throwing the copy away
-                LastRestoreFailure = RollBackRestore() ? RestoreFailure.RolledBack : RestoreFailure.Damaged;
+                LastRestoreError = e;
+                LastRestoreFailure = RollBackRestore(folders) ? RestoreFailure.RolledBack : RestoreFailure.Damaged;
                 return false;
             }
 
@@ -241,19 +419,22 @@ namespace OpenCAGE.Backups
                 foreach (KeyValuePair<string, string> file in paths)
                     WriteRevision(file.Key, file.Value);
             }
-            catch
+            catch (Exception e)
             {
-                LastRestoreFailure = RollBackRestore() ? RestoreFailure.RolledBack : RestoreFailure.Damaged;
+                LastRestoreError = e;
+                LastRestoreFailure = RollBackRestore(folders) ? RestoreFailure.RolledBack : RestoreFailure.Damaged;
                 return false;
             }
 
-            //Clear the copy
+            //Clear the copies
             try
             {
-                Directory.Delete(LevelFolder + "_COPY", true);
+                foreach (string folder in folders)
+                    Directory.Delete(folder + "_COPY", true);
             }
-            catch
+            catch (Exception e)
             {
+                LastRestoreError = e;
                 LastRestoreFailure = RestoreFailure.CopyLeftBehind;
                 return false;
             }
@@ -262,22 +443,70 @@ namespace OpenCAGE.Backups
             return true;
         }
 
-        /* One stored revision's bytes (compressed, or a legacy uncompressed one) */
-        public byte[] ReadRevision(string hash)
+        /* The files of a backup (of those named, when only some are restored) whose stored copy is missing or does not read
+           back whole. Each stored revision is read once, however many files share it. */
+        private List<string> DamagedFiles(Dictionary<string, string> paths, ICollection<string> onlyPaths)
+        {
+            List<KeyValuePair<string, string>> checking = paths.ToList();
+            if (onlyPaths != null)
+            {
+                HashSet<string> wanted = new HashSet<string>(onlyPaths.Select(o => o.Replace('/', '\\').Trim('\\')), StringComparer.OrdinalIgnoreCase);
+                checking = checking.Where(o => wanted.Contains(o.Key.Replace('/', '\\'))).ToList();
+            }
+            string[] hashes = checking.Select(o => o.Value).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            bool[] whole = new bool[hashes.Length];
+            Parallel.For(0, hashes.Length, (i) => { whole[i] = RevisionIsWhole(hashes[i]); });
+            HashSet<string> bad = new HashSet<string>(hashes.Where((hash, i) => !whole[i]), StringComparer.OrdinalIgnoreCase);
+            return checking.Where(o => bad.Contains(o.Value)).Select(o => o.Key).OrderBy(o => o, StringComparer.OrdinalIgnoreCase).ToList();
+        }
+
+        /* Whether a stored revision is there and reads back to what it was stored from: its name is that content's MD5 */
+        private bool RevisionIsWhole(string hash)
+        {
+            try
+            {
+                using (Stream stored = OpenRevision(hash))
+                using (MD5 md5 = MD5.Create())
+                {
+                    string read = BitConverter.ToString(md5.ComputeHash(stored)).Replace("-", "").ToLower();
+                    return !IsContentHash(hash) || string.Equals(read, hash, StringComparison.OrdinalIgnoreCase);
+                }
+            }
+            catch (IOException) { return false; } //Missing (FileNotFoundException), or unreadable
+            catch (InvalidDataException) { return false; } //Not gzip data
+            catch (UnauthorizedAccessException) { return false; }
+        }
+
+        /* A revision's name is the MD5 of its content, as 32 hex digits */
+        private static bool IsContentHash(string hash) => hash != null && hash.Length == 32 && hash.All(Uri.IsHexDigit);
+
+        /* One stored revision, to read (compressed, or a legacy uncompressed one) */
+        private Stream OpenRevision(string hash)
         {
             if (File.Exists(BackupFolder + "/" + hash))
-                return File.ReadAllBytes(BackupFolder + "/" + hash);
+                return File.OpenRead(BackupFolder + "/" + hash);
+            return new GZipStream(File.OpenRead(BackupFolder + "/" + hash + ".gz"), CompressionMode.Decompress);
+        }
+
+        /* One stored revision's bytes (compressed, or a legacy uncompressed one). Throws if they are not what was stored. */
+        public byte[] ReadRevision(string hash)
+        {
+            byte[] content;
+            using (Stream stored = OpenRevision(hash))
             using (MemoryStream stream = new MemoryStream())
-            using (GZipStream compressedStream = new GZipStream(File.OpenRead(BackupFolder + "/" + hash + ".gz"), CompressionMode.Decompress))
             {
-                compressedStream.CopyTo(stream);
-                return stream.ToArray();
+                stored.CopyTo(stream);
+                content = stream.ToArray();
             }
+            //A revision cut off while it was written reads back short without complaint: its name (the MD5 of it) shows it
+            if (IsContentHash(hash) && !string.Equals(GenerateHash(content), hash, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("The backup's copy of this file (" + hash + ") is damaged: it was not stored completely.");
+            return content;
         }
 
         private void WriteRevision(string name, string hash)
         {
-            string target = LevelFolder + "/" + name.Replace('\\', '/');
+            string target = PathOf(name);
             Directory.CreateDirectory(Path.GetDirectoryName(target));
             File.WriteAllBytes(target, ReadRevision(hash));
         }
@@ -287,21 +516,26 @@ namespace OpenCAGE.Backups
         {
             string copy = LevelFolder + "_COPY";
             List<string> wanted = onlyPaths.Select(o => o.Replace('/', '\\').Trim('\\')).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            //A backup taken before backups held the _PATCH folder knows nothing of it: its files are left alone, never deleted
+            if (!paths.Keys.Any(IsPatchFile))
+                wanted.RemoveAll(IsPatchFile);
             try
             {
                 if (Directory.Exists(copy))
                     Directory.Delete(copy, true);
                 foreach (string name in wanted)
                 {
-                    string current = LevelFolder + "/" + name.Replace('\\', '/');
+                    string current = PathOf(name);
                     if (!File.Exists(current)) continue;
                     string aside = copy + "/" + name.Replace('\\', '/');
                     Directory.CreateDirectory(Path.GetDirectoryName(aside));
                     File.Copy(current, aside, true);
                 }
             }
-            catch
+            catch (Exception e)
             {
+                LastRestoreError = e;
+                try { if (Directory.Exists(copy)) Directory.Delete(copy, true); } catch { }
                 return false;
             }
             try
@@ -311,18 +545,19 @@ namespace OpenCAGE.Backups
                     string stored = paths.FirstOrDefault(o => string.Equals(o.Key, name, StringComparison.OrdinalIgnoreCase)).Value;
                     if (stored != null)
                         WriteRevision(name, stored);
-                    else if (File.Exists(LevelFolder + "/" + name.Replace('\\', '/')))
-                        File.Delete(LevelFolder + "/" + name.Replace('\\', '/'));
+                    else if (File.Exists(PathOf(name)))
+                        File.Delete(PathOf(name));
                 }
             }
-            catch
+            catch (Exception e)
             {
+                LastRestoreError = e;
                 //Write back what was copied aside, and remove what the backup added
                 try
                 {
                     foreach (string name in wanted)
                     {
-                        string current = LevelFolder + "/" + name.Replace('\\', '/');
+                        string current = PathOf(name);
                         string aside = copy + "/" + name.Replace('\\', '/');
                         if (File.Exists(aside)) File.Copy(aside, current, true);
                         else if (File.Exists(current)) File.Delete(current);
@@ -341,8 +576,9 @@ namespace OpenCAGE.Backups
                 if (Directory.Exists(copy))
                     Directory.Delete(copy, true);
             }
-            catch
+            catch (Exception e)
             {
+                LastRestoreError = e;
                 LastRestoreFailure = RestoreFailure.CopyLeftBehind;
                 return false;
             }
@@ -350,17 +586,24 @@ namespace OpenCAGE.Backups
             return true;
         }
 
-        /* Put the level folder back from the copy a restore took before it began; the copy is kept if that fails */
-        private bool RollBackRestore()
+        /* Put each folder back from the copy a restore took before it began; a copy is kept if that fails */
+        private bool RollBackRestore(List<string> folders)
         {
-            string copy = LevelFolder + "_COPY";
+            bool all = true;
+            foreach (string folder in folders)
+                all &= RollBackRestore(folder);
+            return all;
+        }
+        private bool RollBackRestore(string folder)
+        {
+            string copy = folder + "_COPY";
             if (!Directory.Exists(copy))
                 return false;
             try
             {
-                if (Directory.Exists(LevelFolder))
-                    Directory.Delete(LevelFolder, true);
-                Directory.Move(copy, LevelFolder);
+                if (Directory.Exists(folder))
+                    Directory.Delete(folder, true);
+                Directory.Move(copy, folder);
                 return true;
             }
             catch { }
@@ -369,7 +612,7 @@ namespace OpenCAGE.Backups
             {
                 foreach (string file in Directory.GetFiles(copy, "*.*", SearchOption.AllDirectories))
                 {
-                    string target = LevelFolder + file.Substring(copy.Length);
+                    string target = folder + file.Substring(copy.Length);
                     Directory.CreateDirectory(Path.GetDirectoryName(target));
                     File.Copy(file, target, true);
                 }
@@ -414,6 +657,7 @@ namespace OpenCAGE.Backups
             DeletedHere.Add(ID);
 
             List<AlienFile> trimmedFiles = new List<AlienFile>();
+            HashSet<string> unused = new HashSet<string>();
             for (int i = 0; i < Files.Count; i++)
             {
                 List<string> trimmedRevisions = new List<string>();
@@ -430,10 +674,7 @@ namespace OpenCAGE.Backups
                     }
                     if (!used)
                     {
-                        if (File.Exists(BackupFolder + "/" + Files[i].Revisions[x]))
-                            File.Delete(BackupFolder + "/" + Files[i].Revisions[x]);
-                        if (File.Exists(BackupFolder + "/" + Files[i].Revisions[x] + ".gz"))
-                            File.Delete(BackupFolder + "/" + Files[i].Revisions[x] + ".gz");
+                        unused.Add(Files[i].Revisions[x]);
                         continue;
                     }
                     trimmedRevisions.Add(Files[i].Revisions[x]);
@@ -445,6 +686,15 @@ namespace OpenCAGE.Backups
 
             Files = trimmedFiles;
             Save();
+
+            //Only once the archive no longer lists the backup: a save that failed would leave it listed with its files gone
+            foreach (string revision in unused)
+            {
+                if (File.Exists(BackupFolder + "/" + revision))
+                    File.Delete(BackupFolder + "/" + revision);
+                if (File.Exists(BackupFolder + "/" + revision + ".gz"))
+                    File.Delete(BackupFolder + "/" + revision + ".gz");
+            }
         }
 
         /* Get the number of files changed between backups - leave 2nd arg null to calculate current state */
@@ -494,7 +744,8 @@ namespace OpenCAGE.Backups
         private void Load()
         {
             if (!File.Exists(BackupFile)) return;
-            Read(BackupFile, Backups, Files, PathMaps);
+            try { Read(BackupFile, Backups, Files, PathMaps); }
+            catch (Exception e) { throw new InvalidDataException(Path.GetFullPath(BackupFile) + " could not be read: " + e.Message, e); }
             SeenOnDisk = new HashSet<long>(Backups.Select(o => o.ID));
         }
 
@@ -591,12 +842,27 @@ namespace OpenCAGE.Backups
             }
         }
 
-        /* Save the backup archive out to disk */
+        /* Save the backup archive out to disk: written aside and swapped in, as an archive cut off part way would not read (and
+           its level's backups could not be opened) */
         private void Save()
         {
-            using (BinaryWriter writer = new BinaryWriter(File.OpenWrite(BackupFile)))
+            string partial = BackupFile + ".tmp";
+            try
             {
-                writer.BaseStream.SetLength(0);
+                WriteArchive(partial);
+                MoveIntoPlace(partial, BackupFile);
+            }
+            catch
+            {
+                try { File.Delete(partial); } catch { }
+                throw;
+            }
+            SeenOnDisk = new HashSet<long>(Backups.Select(o => o.ID));
+        }
+        private void WriteArchive(string archive)
+        {
+            using (BinaryWriter writer = new BinaryWriter(File.Create(archive)))
+            {
                 writer.Write(Version);
 
                 writer.Write(Backups.Count);
@@ -639,23 +905,21 @@ namespace OpenCAGE.Backups
                         writer.Write(path.Value);
                     }
                 }
+
+                writer.Flush();
+                ((FileStream)writer.BaseStream).Flush(true);
             }
-            SeenOnDisk = new HashSet<long>(Backups.Select(o => o.ID));
         }
 
         /* Generate a hash for a given file */
         private string GenerateFileHash(string path)
         {
-            string hash = "";
-            {
-                byte[] content = File.ReadAllBytes(path);
-
-                MD5 md5 = MD5.Create();
-                md5.TransformBlock(content, 0, content.Length, content, 0);
-                md5.TransformFinalBlock(new byte[0], 0, 0);
-                hash = BitConverter.ToString(md5.Hash);
-            }
-            return hash.Replace("-", "").ToLower();
+            return GenerateHash(File.ReadAllBytes(path));
+        }
+        private static string GenerateHash(byte[] content)
+        {
+            using (MD5 md5 = MD5.Create())
+                return BitConverter.ToString(md5.ComputeHash(content)).Replace("-", "").ToLower();
         }
 
 

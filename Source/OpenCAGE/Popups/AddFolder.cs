@@ -45,6 +45,12 @@ namespace OpenCAGE
                     return;
                 }
             }
+            string nameProblem = EditorUtils.UnstorableTextProblem(path, "This folder name");
+            if (nameProblem != null)
+            {
+                MessageBox.Show(nameProblem, "Folder path invalid", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
 
             path += "/";
 

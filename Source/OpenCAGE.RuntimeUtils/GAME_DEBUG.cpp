@@ -4,6 +4,7 @@
 #include "DEBUG_MENU.h"
 #include "LIVE_DEBUGGER.h"
 #include "LIVE_LINK.h"
+#include "PLAYER_DEBUG.h"
 
 #include <algorithm>
 #include <atomic>
@@ -1035,6 +1036,11 @@ namespace
 			flow.state, NAMED(kFlowStates, flow.state), flow.restart, NAMED(kRestartModes, flow.restart), flow.playMode, flow.pendingLevel, flow.level,
 			flow.levelDisplay, flow.root);
 		text += line;
+		// Whether the player's character exists: the flow says gameplay and the scripts run a while before it does after a
+		// level load, so this is what says the level can be played
+		const bool player = PLAYER_DEBUG::Player() != nullptr;
+		snprintf(line, sizeof(line), "player=%d %s\n", player ? 1 : 0, player ? "in the level" : "not in the level (yet)");
+		text += line;
 		if (flow.haveEntities)
 		{
 			snprintf(line, sizeof(line), "transport=%d %s\ncommand=%d %s\ncheckpoint_load_pending=%d\nsave_waiting=%08X:%08X\ncheckpoints=%u\ndebug_checkpoints=%u\nspawn_point=%s%.2f,%.2f,%.2f\n",
@@ -1122,7 +1128,7 @@ namespace
 		DEBUG_MENU::AddSwitch("game.paused", &g_paused);
 		DEBUG_MENU::AddSwitch("game.pause_while_open", &g_pauseWhileOpen);
 		DEBUG_MENU::AddSwitch("game.keep_lowest_difficulty", &g_keepLowest);
-		DEBUG_MENU::AddCommand("game.status", "the game's flow, level, script transport, pause bits, checkpoint in memory and difficulty, a line each", [](const std::string&)
+		DEBUG_MENU::AddCommand("game.status", "the game's flow, level, whether the player's character is in it yet, script transport, pause bits, checkpoint in memory and difficulty, a line each", [](const std::string&)
 		{
 			return DEBUG_MENU::CommandResult{ true, StatusText() };
 		});

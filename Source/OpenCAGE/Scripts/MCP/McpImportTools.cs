@@ -42,7 +42,7 @@ namespace OpenCAGE.MCP
                     McpSchema.String("path", "The model file's full path.", required: true),
                     McpSchema.Boolean("preview", "Report the meshes, source materials, generated-material plans and rig without importing anything."),
                     McpSchema.String("name", "The model's name in the level (backslash folders allowed), default the file's name."),
-                    McpSchema.Number("scale", "Resize it on the way in (default 1)."),
+                    McpSchema.Number("scale", "Resize it on the way in (default 1). Without an OpenCAGE sidecar, OBJ, DAE and FBX files are read as centimetres and glTF/GLB as metres (as the Model Editor imports them): an OBJ or DAE made in metres needs scale 100. The result's 'units' gives the unit used and the size it comes in."),
                     McpSchema.Strings("exclude", "Meshes of the file to leave out (names or indexes, from preview)."),
                     McpSchema.Map("materials", "Mesh name or the file's material name -> a level material to draw it with: {\"Body\": \"MYMOD\\\\METAL\"}."),
                     McpSchema.String("material", "Use this level material for every mesh not named in 'materials', instead of generating."),
@@ -500,6 +500,8 @@ namespace OpenCAGE.MCP
                     };
                     if (picked.Count != 0)
                         result["materials_picked"] = new JArray(picked.Where(o => o.Key.Include).Select(o => level.Materials.GetMaterialName(o.Value)).Distinct());
+                    McpAssets.ModelBounds(model, out System.Numerics.Vector3 boundsMin, out System.Numerics.Vector3 boundsMax);
+                    result["units"] = DescribeUnits(plan, path, boundsMin, boundsMax, notes);
 
                     if (call.Bool("create_composite", true))
                     {
@@ -693,6 +695,7 @@ namespace OpenCAGE.MCP
                 ["structure"] = plan.Components.Count + " component(s), " + plan.Components.Sum(o => o.LODs.Count) + " LOD(s), " + planned.Count + " mesh(es)",
                 ["meshes"] = meshes,
                 ["file_materials"] = new JArray(scene.Materials.Select(o => o.Name)),
+                ["units"] = DescribeUnits(plan, call.Str("path"), PlannedMin(scene, plan, planned, out System.Numerics.Vector3 plannedMax), plannedMax, notes),
                 ["generated_materials"] = generation,
                 ["rig"] = new JObject()
                 {
@@ -706,6 +709,60 @@ namespace OpenCAGE.MCP
             AddAnimationHint(result, rig, skeleton, call.Str("path"), notes);
             foreach (string note in notes) call.Note(note);
             return result;
+        }
+
+        /// <summary>
+        /// The unit the file is read in and the size that makes the model, so one in the wrong unit is noticed: without an
+        /// OpenCAGE sidecar, OBJ, COLLADA and FBX files are read as centimetres and glTF as metres (as the Model Editor's import
+        /// reads them), and 'scale' applies after. A size that looks like the wrong unit gets a note.
+        /// </summary>
+        private static JObject DescribeUnits(ModelIO.ImportPlan plan, string path, System.Numerics.Vector3 min, System.Numerics.Vector3 max, List<string> notes)
+        {
+            float unit = plan.UnitScale > 0 ? plan.UnitScale : ModelIO.UnitScale;
+            float scale = plan.Scale > 0 ? plan.Scale : 1.0f;
+            string read = Math.Abs(unit - 100) < 0.001f ? "centimetres" : Math.Abs(unit - 1) < 0.001f ? "metres" : (1 / unit).ToString("0.######") + " m per file unit";
+            string format = (Path.GetExtension(path ?? "") ?? "").TrimStart('.').ToUpperInvariant();
+            JObject units = new JObject()
+            {
+                ["file_unit"] = read,
+                ["unit_from"] = plan.HasMetadata ? "the file's OpenCAGE sidecar" : "the file's format (" + format + ")",
+                ["scale"] = scale,
+            };
+            if (min.X > max.X)
+                return units;
+            System.Numerics.Vector3 size = max - min;
+            units["size_metres"] = McpCollision.V(size);
+            float largest = Math.Max(size.X, Math.Max(size.Y, size.Z));
+            string across = (largest < 0.01f ? largest.ToString("0.#####") : largest.ToString("0.###")) + " m across";
+            if (largest > 0 && largest < 0.05f)
+                notes.Add("The model comes in only " + across + " (read as " + read + ", scale " + scale + ")." + (read == "centimetres" && !plan.HasMetadata
+                    ? " " + format + " files are read as centimetres, as OpenCAGE exports them: one made in metres needs scale 100."
+                    : " If it should be bigger, import it again with a larger 'scale'."));
+            else if (largest > 500)
+                notes.Add("The model comes in " + across + " (read as " + read + ", scale " + scale + "). If it should be smaller, import it again with a smaller 'scale'.");
+            return units;
+        }
+
+        /// <summary>The corners of the box the included meshes fill once imported (metres, 'scale' applied), worked out as the import does; min above max if none.</summary>
+        private static System.Numerics.Vector3 PlannedMin(Scene scene, ModelIO.ImportPlan plan, List<ModelIO.PlannedSubmesh> planned, out System.Numerics.Vector3 max)
+        {
+            System.Numerics.Vector3 min = new System.Numerics.Vector3(float.MaxValue);
+            max = new System.Numerics.Vector3(float.MinValue);
+            float unit = plan.UnitScale > 0 ? plan.UnitScale : ModelIO.UnitScale;
+            float scale = plan.Scale > 0 ? plan.Scale : 1.0f;
+            foreach (ModelIO.PlannedSubmesh submesh in planned)
+            {
+                if (!submesh.Include || submesh.MeshIndex < 0 || submesh.MeshIndex >= scene.MeshCount) continue;
+                Mesh mesh = scene.Meshes[submesh.MeshIndex];
+                System.Numerics.Matrix4x4 transform = ModelIO.VertexTransform(mesh, submesh.Transform, submesh.Metadata, unit);
+                foreach (Vector3D vertex in mesh.Vertices)
+                {
+                    System.Numerics.Vector3 at = System.Numerics.Vector3.Transform(new System.Numerics.Vector3(vertex.X, vertex.Y, vertex.Z), transform) * scale / unit;
+                    min = System.Numerics.Vector3.Min(min, at);
+                    max = System.Numerics.Vector3.Max(max, at);
+                }
+            }
+            return min;
         }
 
         /// <summary>The meshes of the file a name (or index) picks out.</summary>
@@ -1041,8 +1098,10 @@ namespace OpenCAGE.MCP
                 ["roots"] = new JArray(manifest.Composites.Where(o => o != null && o.IsRoot).Select(o => o.Name)),
             };
             if (failed != null)
-                throw new McpError(McpErrorCodes.Failed, "The import failed on " + failed.Level + ": " + failed.Error + ". " + (done.Count == 0 ? "No level was written." : "Written and saved: " + string.Join(", ", done.Select(o => o.Level)) + ".") + " " + failed.Level + " may be part-written on disk: " +
-                    (backups[failed.Level] != null ? "restore_backup level '" + failed.Level + "' id " + backups[failed.Level] + " puts it back as it was before this call." : "restore it from a backup (list_backups), or verify the game files."));
+                throw new McpError(McpErrorCodes.Failed, "The import failed on " + failed.Level + ": " + (failed.Error ?? "").TrimEnd('.', ' ') + ". " + (done.Count == 0 ? "No level was written." : "Written and saved: " + string.Join(", ", done.Select(o => o.Level)) + ".") +
+                    //Failed before anything of it was written (its script could not be read): it is as it was
+                    (failed.Untouched ? "" : " " + failed.Level + " may be part-written on disk: " +
+                    (backups[failed.Level] != null ? "restore_backup level '" + failed.Level + "' id " + backups[failed.Level] + " puts it back as it was before this call." : "restore it from a backup (list_backups), or verify the game files.")));
             if (backups.Count != 0)
                 summary["backups"] = backups;
             if (gameWasRunning && !EditorUtils.ThisInstallsGameRunning())
@@ -1249,8 +1308,13 @@ namespace OpenCAGE.MCP
         /// <summary>A path under DATA, refused if it leaves it or is not BML/XML.</summary>
         private static string ConfigPath(string relative)
         {
+            const string notAPath = "'file' is not a file path (it has characters a path can't hold, or is far too long): give a path under DATA as list_config_files lists them, e.g. 'WEAPON_INFO/AMMO/AMMOTYPES.BML'.";
+            if (relative.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
+                throw McpError.Invalid(notAPath);
             string data = DataFolder();
-            string full = Path.GetFullPath(Path.Combine(data, relative.Replace('/', '\\').TrimStart('\\')));
+            string full;
+            try { full = Path.GetFullPath(Path.Combine(data, relative.Replace('/', '\\').TrimStart('\\'))); }
+            catch (Exception e) when (e is ArgumentException || e is NotSupportedException || e is PathTooLongException) { throw McpError.Invalid(notAPath); }
             if (!full.StartsWith(data + "\\", StringComparison.OrdinalIgnoreCase))
                 throw new McpError("Configuration files have to be inside the install's DATA folder.");
             if (!full.EndsWith(".BML", StringComparison.OrdinalIgnoreCase) && !full.EndsWith(".XML", StringComparison.OrdinalIgnoreCase))
@@ -1258,7 +1322,7 @@ namespace OpenCAGE.MCP
             if (full.IndexOf("\\ENV\\", data.Length, StringComparison.OrdinalIgnoreCase) >= 0)
                 throw new McpError("Level files are not configuration files.");
             if (!File.Exists(full))
-                throw new McpError("There is no " + relative + " (list_config_files shows them).");
+                throw new McpError("There is no " + McpError.Shown(relative) + " (list_config_files shows them).");
             return full;
         }
 

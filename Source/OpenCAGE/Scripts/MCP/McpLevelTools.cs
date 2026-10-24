@@ -969,7 +969,7 @@ namespace OpenCAGE.MCP
         {
             string action = (call.Str("action") ?? "status").Trim().ToLowerInvariant();
             if (action != "load_level" && call.Has("level"))
-                throw new McpError("'level' is for action load_level.");
+                throw McpError.Invalid("'level' is for action load_level.");
             switch (action)
             {
                 case "status":
@@ -1237,9 +1237,8 @@ namespace OpenCAGE.MCP
                             level = EditorUtils.FrontendLevel;
                         else
                             level = McpLevels.Resolve(level, call: call);
-                        if (!global::OpenCAGE.RuntimeUtilsConnection.Send.Connected)
-                            throw new McpError("Not connected to the runtime utils link: runtime_utils {action: 'connect'} first, with the game running.");
-                        //The live link's own request, which the game answers (the old text message had no reply, so a level
+                        RequireLiveLink();
+                        //Live Link's own request, which the game answers (the old text message had no reply, so a level
                         //the game could not load looked the same as one it did)
                         LiveLink.Reply reply = LiveLink.LoadLevel(level).Result;
                         if (!reply.Ok)

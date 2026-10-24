@@ -70,6 +70,12 @@ namespace OpenCAGE
                 MessageBox.Show("Please enter an entity name!", "No name.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+            string nameProblem = EditorUtils.UnstorableTextProblem(entityName.Text, "This name");
+            if (nameProblem != null)
+            {
+                MessageBox.Show(nameProblem, "Can't use this name", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
             if (functionTypeList1.SelectedItem == null)
             {
                 MessageBox.Show("Please select a function type!", "No type.", MessageBoxButtons.OK, MessageBoxIcon.Warning);

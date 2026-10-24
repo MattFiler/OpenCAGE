@@ -33,6 +33,9 @@ namespace OpenCAGE.Popups
             AddControl(FlowgraphControls, "Manage Pins", "F6");
             AddControl(FlowgraphControls, "Set / Clear Pin Delay", "F1 / F2 (over a pin)");
             AddControl(FlowgraphControls, "Find References", "F2 (on a node)");
+            AddControl(FlowgraphControls, "Go To Entity's Next Node", "F3 (on a node)");
+            AddControl(FlowgraphControls, "Set / Remove Breakpoint (Live Link)", "F9 (on a node, or the selected nodes)");
+            AddControl(FlowgraphControls, "Continue / Step Held Scripts (Live Link)", "F8 / F10");
             AddControl(FlowgraphControls, "Focus Selected Entity", "Z");
             AddControl(FlowgraphControls, "Step Inside", "Ctrl + Middle Mouse (on node)");
             AddControl(FlowgraphControls, "Step Back", "Minus");
@@ -107,7 +110,7 @@ namespace OpenCAGE.Popups
             AddControl(BehaviourTreeControls, "Zoom In/Out", "Scrollwheel Up/Down");
             AddControl(BehaviourTreeControls, "Pan Graph", "Drag While Holding Left Mouse");
             AddControl(BehaviourTreeControls, "Select Node", "Left Click");
-            AddControl(BehaviourTreeControls, "Open Referenced Behavior", "Double Click Node");
+            AddControl(BehaviourTreeControls, "Expand / Collapse Referenced Behaviour", "Double Click Referenced Behaviour Node");
             AddControl(BehaviourTreeControls, "Add Node From Palette", "Drag From Node List Onto Graph");
             AddControl(BehaviourTreeControls, "Move Node", "Right Drag Node Onto New Parent");
             AddControl(BehaviourTreeControls, "Duplicate Node", "Ctrl + Left Drag Node Onto New Parent");
@@ -120,8 +123,9 @@ namespace OpenCAGE.Popups
             AddControl(BehaviourTreeControls, "Paste Branch", "Ctrl + Shift + V, Then Left Click Target");
             AddControl(BehaviourTreeControls, "Delete Node (Keep Children)", "Delete");
             AddControl(BehaviourTreeControls, "Delete Branch", "Shift + Delete");
-            AddControl(BehaviourTreeControls, "Rename Behavior/Folder", "F2 (in file list)");
-            AddControl(BehaviourTreeControls, "Delete Behavior/Folder", "Delete (in file list)");
+            AddControl(BehaviourTreeControls, "Open Behaviour Tree", "Double Click (in tree list)");
+            AddControl(BehaviourTreeControls, "Rename Behaviour Tree", "F2 (in tree list)");
+            AddControl(BehaviourTreeControls, "Delete Behaviour Tree", "Delete (in tree list)");
 
             //CAGEAnimation editor controls
             AddControl(CAGEAnimationControls, "Pan Time + Value", "Drag While Holding Middle Mouse");

@@ -28,11 +28,12 @@ namespace OpenCAGE
         bool _revertingKeyPicker;
 
         //Key names the runtime utils ASI understands (see OpenCAGE.RuntimeUtils/Config.cpp), offered for its hot reload and
-        //unlock mouse keys
+        //unlock mouse keys. Not F10: Windows sends it to the game as a system key (the one that opens a window's menu), so a
+        //helper on it never reacts. A key saved before that is no longer offered falls back to the feature's default (HelperKey).
         internal static readonly string[] HelperKeys = new string[]
         {
             "INSERT", "DELETE", "HOME", "END", "PAGEUP", "PAGEDOWN",
-            "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
+            "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F11", "F12",
         };
         internal const string DefaultHotReloadKey = "INSERT";
         internal const string DefaultUnlockMouseKey = "F4";
@@ -325,7 +326,7 @@ namespace OpenCAGE
                 DialogResult answer = MessageBox.Show(
                     "\"" + level + "\" has unsaved changes. The game loads what is saved on disk, so it will not have them.\n\n" +
                     "Save the level before launching?\n\n" +
-                    "(If you have added models or other content that needs building, cancel and use File > Save & Build Level first.)",
+                    "(If you have added models or other content that needs building, cancel and use File > Save and Build Level first.)",
                     "Unsaved changes", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
                 if (answer == DialogResult.Cancel)
                     return;
@@ -338,9 +339,12 @@ namespace OpenCAGE
                 }
             }
 
-            string runtimeUtilsProblem = ApplyRuntimeUtils();
+            string runtimeUtilsProblem = ApplyRuntimeUtils(out string keptAside);
             if (runtimeUtilsProblem != null)
                 MessageBox.Show(runtimeUtilsProblem, "Runtime utils error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            //Another mod's d3d11.dll was just moved aside for the loader: said once, as that mod won't run in this game
+            else if (keptAside != null)
+                MessageBox.Show(keptAside, "Another mod's d3d11.dll", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
             //Work out what option was selected and launch to it - with no level chosen, the game starts at its menu
             string startingLevel = loadToLevel.Checked && levelList.SelectedIndex >= 0
@@ -354,11 +358,20 @@ namespace OpenCAGE
         /* Copy/delete the runtime utils ASI as the settings ask, for a game about to be launched - it is needed if any
            scripting helper, Possess Characters or the Debug Menu is on. A game that will serve Live Link is connected to by
            itself: the Live Link button is switched on (as the editor is told). Returns what went wrong, or null. */
-        internal static string ApplyRuntimeUtils()
+        internal static string ApplyRuntimeUtils() => ApplyRuntimeUtils(out _);
+
+        /* As above. The ASI loader that runs the ASI goes in the game folder as d3d11.dll: another mod's d3d11.dll there
+           (ReShade, Special K, DXVK...: anything but an Ultimate ASI Loader, which ours stands in for) is moved aside to
+           d3d11.dll.opencage_backup while the runtime utils are in, and put back when they come out. With one kept aside
+           already, neither is overwritten: the runtime utils stay out. keptAside is a message for the user when another mod's
+           d3d11.dll was moved aside just now, else null. */
+        internal static string ApplyRuntimeUtils(out string keptAside)
         {
             string rtUtilASI = Singleton.PathToAI + "\\OpenCAGE.RuntimeUtils.asi";
             string rtUtilDLL = Singleton.PathToAI + "\\d3d11.dll";
+            string keptDLL = rtUtilDLL + KeptAsideSuffix;
             bool liveLink = false;
+            keptAside = null;
 
             if (File.Exists(Singleton.PathToAI + "\\OpenCAGE_Utils.asi"))
             {
@@ -371,6 +384,21 @@ namespace OpenCAGE
 
             if (RuntimeUtilsNeeded())
             {
+                string blocked = MakeWayForLoader(rtUtilDLL, keptDLL, out bool movedAside);
+                if (blocked != null)
+                {
+                    //Not installed this time: an ASI an earlier launch left goes too, so nothing runs with an old config
+                    try
+                    {
+                        if (File.Exists(rtUtilASI)) File.Delete(rtUtilASI);
+                    }
+                    catch { }
+                    Singleton.Editor?.OnGameLaunching(false);
+                    return blocked;
+                }
+                if (movedAside)
+                    keptAside = "The game folder had another mod's d3d11.dll (ReShade, Special K or the like). OpenCAGE's runtime utils need that name for their loader, so it has been moved to d3d11.dll" + KeptAsideSuffix + " - that mod won't run in the game while the Debug Menu, Live Link or any other option that needs the runtime utils is on.\n\n" +
+                        "It is put back the next time the game is started from OpenCAGE with all of those options off.";
                 try
                 {
                     CopyIfChanged(Beside(RuntimeUtilsFolder + "/OpenCAGE.RuntimeUtils.asi"), rtUtilASI);
@@ -378,6 +406,14 @@ namespace OpenCAGE
                 }
                 catch
                 {
+                    //The loader never took its place: the other mod's d3d11.dll goes straight back, and nothing runs the ASI
+                    if (movedAside && !File.Exists(rtUtilDLL))
+                    {
+                        PutBackOtherD3D11(rtUtilDLL, keptDLL);
+                        keptAside = null;
+                        Singleton.Editor?.OnGameLaunching(false);
+                        return "Failed to install the runtime utils.";
+                    }
                     if (!File.Exists(rtUtilASI) && !File.Exists(rtUtilDLL))
                     {
                         Singleton.Editor?.OnGameLaunching(false);
@@ -400,8 +436,156 @@ namespace OpenCAGE
                     if (File.Exists(rtUtilASI)) File.Delete(rtUtilASI);
                 }
                 catch { }
+                //The other mod's d3d11.dll, kept aside while they were in, goes back in place of the loader
+                PutBackOtherD3D11(rtUtilDLL, keptDLL);
             }
             Singleton.Editor?.OnGameLaunching(liveLink);
+            return null;
+        }
+
+        //Another mod's d3d11.dll, moved aside for the runtime utils' loader, is kept beside it under this name
+        internal const string KeptAsideSuffix = ".opencage_backup";
+
+        /* The game folder's d3d11.dll made ready for the runtime utils' loader: another mod's (anything but an ASI loader) is
+           moved aside to the kept name, to go back when they come out. Nothing is overwritten: with one kept aside already, or
+           when the move fails, it says why (and the runtime utils stay out); otherwise null. movedAside: moved just now. */
+        private static string MakeWayForLoader(string dll, string kept, out bool movedAside)
+        {
+            movedAside = false;
+            if (!File.Exists(dll) || IsAsiLoader(dll))
+                return null;
+            //The same file kept aside already (copied back rather than moved): only the copy goes
+            try
+            {
+                if (File.Exists(kept) && new FileInfo(kept).Length == new FileInfo(dll).Length && FileHash(kept).SequenceEqual(FileHash(dll)))
+                {
+                    File.Delete(dll);
+                    movedAside = true;
+                    return null;
+                }
+            }
+            catch { }
+            if (File.Exists(kept))
+                return "The game folder has another mod's d3d11.dll, and also d3d11.dll" + KeptAsideSuffix + " (another mod's d3d11.dll that OpenCAGE moved aside at an earlier launch). OpenCAGE's runtime utils need d3d11.dll for their loader and won't overwrite either file, so they were not installed for this launch.\n\n" +
+                    "To use them, move one of the two out of " + Path.GetDirectoryName(dll) + ".";
+            try
+            {
+                File.Move(dll, kept);
+                movedAside = true;
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return "The game folder has another mod's d3d11.dll, which OpenCAGE's runtime utils need to move aside for their loader, and it could not be moved (" + ex.Message + "). The runtime utils were not installed for this launch.";
+            }
+        }
+
+        /* Another mod's d3d11.dll, kept aside while the runtime utils were in, put back in place of the loader. A d3d11.dll put
+           there since that is not an ASI loader is left as it is, and the kept one with it. */
+        private static void PutBackOtherD3D11(string dll, string kept)
+        {
+            try
+            {
+                if (!File.Exists(kept) || (File.Exists(dll) && !IsAsiLoader(dll)))
+                    return;
+                if (File.Exists(dll))
+                    File.Delete(dll);
+                File.Move(kept, dll);
+            }
+            catch { } //held open (the game still running, say): put back at the next launch with them all off
+        }
+
+        /* Whether a DLL is an Ultimate ASI Loader: the one OpenCAGE ships (any build of it, an older OpenCAGE's too), or one
+           another mod brought, which ours stands in for (it loads the same .asi files). Told by its contents, its version
+           information or the project its debug information names - never by loading it. Anything else is another mod's. */
+        internal static bool IsAsiLoader(string path)
+        {
+            try
+            {
+                string shipped = Beside(RuntimeUtilsFolder + "/winmm.dll");
+                if (File.Exists(shipped) && new FileInfo(shipped).Length == new FileInfo(path).Length && FileHash(shipped).SequenceEqual(FileHash(path)))
+                    return true;
+            }
+            catch { }
+            try
+            {
+                FileVersionInfo version = FileVersionInfo.GetVersionInfo(path);
+                if (new string[] { version.FileDescription, version.ProductName, version.InternalName, version.OriginalFilename }.Any(NamesAsiLoader))
+                    return true;
+            }
+            catch { }
+            return NamesAsiLoader(PdbPath(path));
+        }
+
+        private static bool NamesAsiLoader(string text)
+        {
+            return text != null && (text.IndexOf("ultimate-asi-loader", StringComparison.OrdinalIgnoreCase) >= 0 || text.IndexOf("ultimate asi loader", StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+
+        /* The PDB a DLL's debug information names (its CodeView entry), or null: read from the PE headers, not the whole file */
+        private static string PdbPath(string path)
+        {
+            try
+            {
+                using (FileStream stream = File.OpenRead(path))
+                using (BinaryReader reader = new BinaryReader(stream))
+                {
+                    if (stream.Length < 0x40 || reader.ReadUInt16() != 0x5A4D) //MZ
+                        return null;
+                    stream.Position = 0x3C;
+                    long pe = reader.ReadUInt32();
+                    if (pe + 24 > stream.Length)
+                        return null;
+                    stream.Position = pe;
+                    if (reader.ReadUInt32() != 0x00004550) //PE\0\0
+                        return null;
+                    stream.Position = pe + 6;
+                    int sections = reader.ReadUInt16();
+                    stream.Position = pe + 20;
+                    int optionalSize = reader.ReadUInt16();
+                    long optional = pe + 24;
+                    stream.Position = optional;
+                    bool wide = reader.ReadUInt16() == 0x20B; //PE32+
+                    stream.Position = optional + (wide ? 108 : 92);
+                    if (reader.ReadUInt32() <= 6) //no debug directory
+                        return null;
+                    stream.Position = optional + (wide ? 112 : 96) + 6 * 8;
+                    uint debugRva = reader.ReadUInt32(), debugSize = reader.ReadUInt32();
+                    if (debugRva == 0 || debugSize == 0)
+                        return null;
+                    //The debug directory's place in the file, from the section it is in
+                    long debugAt = -1;
+                    for (int i = 0; i < sections && debugAt < 0; i++)
+                    {
+                        stream.Position = optional + optionalSize + i * 40 + 8;
+                        uint virtualSize = reader.ReadUInt32(), virtualAddress = reader.ReadUInt32(), rawSize = reader.ReadUInt32(), rawAt = reader.ReadUInt32();
+                        if (debugRva >= virtualAddress && debugRva < virtualAddress + Math.Max(virtualSize, rawSize))
+                            debugAt = rawAt + (debugRva - virtualAddress);
+                    }
+                    if (debugAt < 0)
+                        return null;
+                    for (uint entry = 0; entry + 28 <= debugSize && entry < 28 * 32; entry += 28)
+                    {
+                        stream.Position = debugAt + entry + 12;
+                        uint type = reader.ReadUInt32(), size = reader.ReadUInt32();
+                        reader.ReadUInt32();
+                        uint dataAt = reader.ReadUInt32();
+                        if (type != 2 || size < 24 || dataAt + (long)size > stream.Length) //2: CodeView
+                            continue;
+                        stream.Position = dataAt;
+                        uint signature = reader.ReadUInt32();
+                        //RSDS: a GUID and an age before the name; NB10: an offset, a time stamp and an age
+                        int skip = signature == 0x53445352 ? 20 : signature == 0x3031424E ? 12 : -1;
+                        if (skip < 0)
+                            continue;
+                        stream.Position = dataAt + 4 + skip;
+                        byte[] name = reader.ReadBytes((int)Math.Min(size - 4 - skip, 1024));
+                        int end = Array.IndexOf(name, (byte)0);
+                        return System.Text.Encoding.UTF8.GetString(name, 0, end < 0 ? name.Length : end);
+                    }
+                }
+            }
+            catch { }
             return null;
         }
 

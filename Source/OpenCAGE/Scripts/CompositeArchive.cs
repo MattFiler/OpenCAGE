@@ -81,6 +81,52 @@ namespace OpenCAGE
             new ShortGuid("FE-7B-FE-B3"), //PAUSEMENU
         };
 
+        /// <summary>
+        /// What a composite brings into a package with it, for the export window's count: the composites it instances except
+        /// GLOBAL and PAUSEMENU (the export never descends into those), and the character composites ("DisplayModel:name")
+        /// a string in it names, which CompositePorter follows like instances. An NPC's accessory components
+        /// (CHARACTERACCESSORYSETS rows) are carried too, but not counted here.
+        /// </summary>
+        public static Func<ShortGuid, IEnumerable<ShortGuid>> ExportedWith(Commands commands)
+        {
+            const string displayModelPrefix = "DisplayModel:";
+            Dictionary<string, ShortGuid> displayModels = null;
+            return id =>
+            {
+                Composite composite = commands?.GetComposite(id);
+                if (composite == null)
+                    return Enumerable.Empty<ShortGuid>();
+
+                if (displayModels == null)
+                {
+                    displayModels = new Dictionary<string, ShortGuid>(StringComparer.OrdinalIgnoreCase);
+                    foreach (Composite candidate in commands.Entries)
+                    {
+                        if (candidate?.name == null || !candidate.name.StartsWith(displayModelPrefix, StringComparison.OrdinalIgnoreCase))
+                            continue;
+                        string character = candidate.name.Substring(displayModelPrefix.Length);
+                        if (!displayModels.ContainsKey(character))
+                            displayModels.Add(character, candidate.shortGUID);
+                    }
+                }
+
+                HashSet<ShortGuid> brought = new HashSet<ShortGuid>(composite.functions.Where(o => o != null && !o.function.IsFunctionType).Select(o => o.function));
+                if (displayModels.Count != 0)
+                {
+                    foreach (Entity entity in composite.GetEntities())
+                    {
+                        foreach (Parameter parameter in entity.parameters)
+                        {
+                            if (parameter?.content is cString text && !string.IsNullOrEmpty(text.value) && displayModels.TryGetValue(text.value, out ShortGuid displayModel))
+                                brought.Add(displayModel);
+                        }
+                    }
+                }
+                brought.ExceptWith(LevelEntryPoints);
+                return brought;
+            };
+        }
+
         public class Manifest
         {
             public int FormatVersion;
@@ -160,6 +206,8 @@ namespace OpenCAGE
             public Result Result;
             /// <summary>Why this level failed; the loop stops at the first failure.</summary>
             public string Error;
+            /// <summary>True when the level failed before anything of it was written (its script couldn't be read).</summary>
+            public bool Untouched;
         }
 
         #region EXPORT
@@ -729,6 +777,7 @@ namespace OpenCAGE
                     {
                         //Levels before this one are saved; this one may be part-written. Say so and stop.
                         entry.Error = e.Message;
+                        entry.Untouched = e is ScriptNotLoadedException;
                         break;
                     }
                     finally
@@ -745,6 +794,7 @@ namespace OpenCAGE
             ProgressUI loadProgress = OpenProgress(p => p.ShowLevelLoading(level));
             try { level.Load(); }
             finally { CloseProgress(loadProgress); }
+            RequireLoadedScript(level, levelName);
 
             LevelEditorTables tables = LevelEditorTables.Read(level.Commands.Filepath, level.Commands);
             HashSet<ShortGuid> had = new HashSet<ShortGuid>(level.Commands.Entries.Where(o => o != null).Select(o => o.shortGUID));
@@ -788,6 +838,22 @@ namespace OpenCAGE
                 catch (Exception e) { Debug.Log("Composite Archive", "Could not write the editor tables to " + levelName + ": " + e.Message); }
             }
             return result;
+        }
+
+        /// <summary>
+        /// Throws, before anything is ported or written, when a level on disk loaded without its script. Level.Load carries
+        /// on past a script it can't read, leaving an empty one: ported into and saved, that would replace the level's whole
+        /// script with just what arrived.
+        /// </summary>
+        internal static void RequireLoadedScript(Level level, string levelName)
+        {
+            if (level.Commands == null || !level.Commands.Loaded || level.Commands.EntryPoints == null || level.Commands.EntryPoints[0] == null)
+                throw new ScriptNotLoadedException(levelName + "'s script (" + Path.GetFileName(level.CommandsFilepath) + ") could not be read, so nothing was written to it. Verify the game files, or restore it from Manage Backups.");
+        }
+        /// <summary>From <see cref="RequireLoadedScript"/>: the level was left as it was, nothing of it written.</summary>
+        internal sealed class ScriptNotLoadedException : IOException
+        {
+            public ScriptNotLoadedException(string message) : base(message) { }
         }
         #endregion
 

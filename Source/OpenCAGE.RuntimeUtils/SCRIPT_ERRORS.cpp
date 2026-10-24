@@ -284,7 +284,8 @@ namespace
 		}
 	}
 
-	void Note(uintptr_t returnAddress, SiteKind kind, const void* entityRef, const char* format, va_list args)
+	// fromGame: the game's own message, whose text (and the string values put into it) is Windows-1252; ours is UTF-8
+	void Note(uintptr_t returnAddress, SiteKind kind, const void* entityRef, bool fromGame, const char* format, va_list args)
 	{
 		const ULONGLONG now = GetTickCount64();
 		const int site = SiteOf(returnAddress);
@@ -318,6 +319,11 @@ namespace
 			strcpy_s(text, "(the message could not be read)");
 		if (!strchr(text, '%') || !FormatValues(occurrence.message, sizeof(occurrence.message), text, args))
 			strcpy_s(occurrence.message, text);
+		if (fromGame)
+		{
+			strcpy_s(text, occurrence.message);
+			DevTools::GameTextToUtf8(text, occurrence.message, sizeof(occurrence.message));
+		}
 		SCRIPT_DEBUG::ReadEntityAt(entityRef, occurrence.entity);
 
 		bool first = false;
@@ -372,7 +378,7 @@ namespace
 		const uintptr_t returnAddress = reinterpret_cast<uintptr_t>(_ReturnAddress());
 		va_list args;
 		va_start(args, format);
-		Note(returnAddress, Check, entityRef, format, args);
+		Note(returnAddress, Check, entityRef, true, format, args);
 		va_end(args);
 	}
 
@@ -383,7 +389,7 @@ namespace
 		const uintptr_t returnAddress = reinterpret_cast<uintptr_t>(_ReturnAddress());
 		va_list args;
 		va_start(args, format);
-		Note(returnAddress, Error, entityRef, format, args);
+		Note(returnAddress, Error, entityRef, true, format, args);
 		va_end(args);
 	}
 
@@ -393,7 +399,7 @@ namespace
 		const uintptr_t returnAddress = reinterpret_cast<uintptr_t>(_ReturnAddress());
 		va_list args;
 		va_start(args, format);
-		Note(returnAddress, Error, entityRef, format, args);
+		Note(returnAddress, Error, entityRef, false, format, args);
 		va_end(args);
 	}
 

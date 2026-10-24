@@ -334,7 +334,7 @@ static void AttachHooks(bool attach)
 
 BOOL APIENTRY DllMain( HMODULE /*hModule*/,
                        DWORD  ul_reason_for_call,
-                       LPVOID /*lpReserved*/
+                       LPVOID lpReserved
                      )
 {
     if (DetourIsHelperProcess())
@@ -425,6 +425,11 @@ BOOL APIENTRY DllMain( HMODULE /*hModule*/,
     {
         // Nothing was hooked in a build these don't know
         if (DevTools::Build() == DevTools::GameBuild::Unknown)
+            return TRUE;
+
+        // The game is exiting: its other threads are already gone (one may have died holding a lock Stop would wait on
+        // forever, leaving the game running with no window) and nothing runs the game again, so nothing is put back
+        if (lpReserved != nullptr)
             return TRUE;
 
         if (Config::Get().liveLink)

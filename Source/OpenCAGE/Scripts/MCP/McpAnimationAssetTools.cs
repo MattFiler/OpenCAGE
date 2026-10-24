@@ -4622,6 +4622,9 @@ namespace OpenCAGE.MCP
         private static XmlElement FindBehaviour(List<XmlElement> files, string name)
         {
             name = (name ?? "").Trim();
+            //A name holding characters no path can is no tree's - and Path would throw on it ("Illegal characters in path")
+            if (name.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
+                return null;
             string stem = Path.GetFileNameWithoutExtension(name);
             return files.FirstOrDefault(o => Same(BehaviourName(o), name) || Same(o.GetAttribute("name"), name) || Same(BehaviourName(o), stem));
         }
@@ -4630,7 +4633,7 @@ namespace OpenCAGE.MCP
         {
             XmlElement file = FindBehaviour(files, name);
             if (file != null) return file;
-            throw new McpError("There is no behaviour tree '" + name + "'" + McpGlobalAssetChecks.DidYouMean(files.Select(BehaviourName), name, " (get_behaviour_tree without a name lists them)."));
+            throw new McpError(McpErrorCodes.NotFound, "There is no behaviour tree '" + McpError.Shown(name) + "'" + McpGlobalAssetChecks.DidYouMean(files.Select(BehaviourName), name, " (get_behaviour_tree without a name lists them)."));
         }
 
         private static List<string> References(XmlElement file)
@@ -5562,6 +5565,8 @@ namespace OpenCAGE.MCP
         {
             string wanted = Normalise(input);
             if (wanted.Length == 0 || candidates == null) return new List<string>();
+            //No name is this long, so nothing is a near miss of it; comparing it with every candidate (164,000 clips) took minutes
+            if (wanted.Length > 256) return new List<string>();
             int allowed = wanted.Length <= 4 ? 1 : wanted.Length <= 8 ? 2 : 3;
             List<Tuple<string, int, int>> scored = new List<Tuple<string, int, int>>();
             HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -5574,6 +5579,8 @@ namespace OpenCAGE.MCP
                 if (have.Contains(wanted) || (have.Length >= 3 && wanted.Contains(have))) score = 0;
                 else
                 {
+                    //Shorter than the input by more than the typos allowed: neither distance can be within them
+                    if (have.Length + allowed < wanted.Length) continue;
                     int whole = Distance(wanted, have, false);
                     int part = wanted.Length >= 3 ? Distance(wanted, have, true) : int.MaxValue;
                     score = Math.Min(whole, part);

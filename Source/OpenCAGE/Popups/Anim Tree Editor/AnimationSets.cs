@@ -69,11 +69,75 @@ namespace OpenCAGE.AnimTrees
                 animTrees.Columns[0].Width = Math.Max(50, animTrees.ClientSize.Width - 4);
         }
 
+        /// <summary>A value half-typed into an open tree's inspector goes into the tree.</summary>
+        public void CommitPendingEdits()
+        {
+            foreach (AnimationTreeGraph graph in _graphs)
+                graph.CommitPendingEdits();
+        }
+
+        /// <summary>
+        /// The tree sets whose trees in memory aren't what ANIMATION.PAK holds - their entries in the PAK in memory, which are
+        /// the file as it was last loaded or written: changed, and not saved.
+        /// </summary>
+        internal static List<AnimTreeDB> ChangedSets(CathodeLib.Animation animations)
+        {
+            List<AnimTreeDB> changed = new List<AnimTreeDB>();
+            if (animations?.PAK == null || !animations.ContentsLoaded)
+                return changed;
+            Dictionary<string, PAK2.File> entries = EntriesByName(animations);
+            foreach (AnimTreeDB database in animations.Trees)
+            {
+                entries.TryGetValue(database.Filepath ?? "", out PAK2.File entry);
+                byte[] content = null;
+                try { content = database.ToBytes(); }
+                catch { }
+                if (entry?.Content == null || content == null || !entry.Content.AsSpan().SequenceEqual(content))
+                    changed.Add(database);
+            }
+            return changed;
+        }
+
+        /// <summary>
+        /// Let go of tree changes that weren't saved: each of these tree sets is read again from its entry in the PAK in memory
+        /// (what the file holds) and takes its place in the animations, so no other write of ANIMATION.PAK can take the changes
+        /// out. The layouts waiting to be written go too, and the nodes copied from the trees as they were.
+        /// </summary>
+        internal static void LetGo(CathodeLib.Animation animations, List<AnimTreeDB> changed)
+        {
+            if (animations?.PAK == null)
+                return;
+            Dictionary<string, PAK2.File> entries = EntriesByName(animations);
+            foreach (AnimTreeDB database in changed)
+            {
+                if (!entries.TryGetValue(database.Filepath ?? "", out PAK2.File entry) || entry.Content == null)
+                    continue;
+                AnimTreeDB saved = null;
+                try { saved = new AnimTreeDB(entry.Content, animations.StringsDebug, database.Filepath); }
+                catch { }
+                if (saved == null || !saved.Loaded)
+                    continue;
+                int at = animations.Trees.IndexOf(database);
+                if (at >= 0)
+                    animations.Trees[at] = saved;
+            }
+            AnimTreeLayoutManager.Reset();
+            AnimTreeClipboard.Clear();
+        }
+
+        private static Dictionary<string, PAK2.File> EntriesByName(CathodeLib.Animation animations)
+        {
+            Dictionary<string, PAK2.File> entries = new Dictionary<string, PAK2.File>(StringComparer.OrdinalIgnoreCase);
+            foreach (PAK2.File entry in animations.PAK.Entries)
+                if (entry?.Filename != null && !entries.ContainsKey(entry.Filename))
+                    entries[entry.Filename] = entry;
+            return entries;
+        }
+
         public bool SaveAll()
         {
             // Commit any in-progress property grid edits before serialising
-            foreach (AnimationTreeGraph graph in _graphs)
-                graph.CommitPendingEdits();
+            CommitPendingEdits();
 
             CathodeLib.Animation animations = Singleton.Global.Animations;
             string error, layoutError = null;

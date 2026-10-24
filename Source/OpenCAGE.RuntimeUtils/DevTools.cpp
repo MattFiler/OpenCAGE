@@ -133,3 +133,68 @@ void DevTools::Log(const char* format, ...)
 	}
 	LeaveCriticalSection(&lock.section);
 }
+
+namespace
+{
+	// Windows-1252's 0x80-0x9F as Unicode; the five it leaves unused (0) keep their own value, as Windows converts them
+	constexpr uint16_t kCp1252High[32] = {
+		0x20AC, 0, 0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021, 0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, 0, 0x017D, 0,
+		0, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014, 0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0, 0x017E, 0x0178,
+	};
+
+	// One Windows-1252 byte as UTF-8 into out (room for 3); returns how many bytes
+	size_t Cp1252ToUtf8(unsigned char c, char* out)
+	{
+		uint32_t code = c;
+		if (c >= 0x80 && c < 0xA0 && kCp1252High[c - 0x80] != 0)
+			code = kCp1252High[c - 0x80];
+		if (code < 0x80)
+		{
+			out[0] = static_cast<char>(code);
+			return 1;
+		}
+		if (code < 0x800)
+		{
+			out[0] = static_cast<char>(0xC0 | (code >> 6));
+			out[1] = static_cast<char>(0x80 | (code & 0x3F));
+			return 2;
+		}
+		out[0] = static_cast<char>(0xE0 | (code >> 12));
+		out[1] = static_cast<char>(0x80 | ((code >> 6) & 0x3F));
+		out[2] = static_cast<char>(0x80 | (code & 0x3F));
+		return 3;
+	}
+}
+
+std::string DevTools::GameTextToUtf8(const char* text)
+{
+	if (!text)
+		return std::string();
+	const char* at = text;
+	while (*at && static_cast<unsigned char>(*at) < 0x80)
+		at++;
+	if (!*at)
+		return std::string(text, at - text); // plain ASCII: the same either way
+	std::string out(text, at - text);
+	char bytes[3];
+	for (; *at; at++)
+		out.append(bytes, Cp1252ToUtf8(static_cast<unsigned char>(*at), bytes));
+	return out;
+}
+
+void DevTools::GameTextToUtf8(const char* text, char* out, size_t size)
+{
+	if (!out || size == 0)
+		return;
+	size_t used = 0;
+	char bytes[3];
+	for (; text && *text; text++)
+	{
+		const size_t count = Cp1252ToUtf8(static_cast<unsigned char>(*text), bytes);
+		if (used + count + 1 > size)
+			break;
+		for (size_t i = 0; i < count; i++)
+			out[used++] = bytes[i];
+	}
+	out[used] = '\0';
+}

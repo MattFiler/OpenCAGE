@@ -127,6 +127,15 @@ namespace OpenCAGE
         /// <summary>The bakers the next instanced save runs (null: all of them). That save takes it and clears it.</summary>
         public BakeSelection NextSaveBakers;
 
+        /// <summary>
+        /// The files the last save could not write. The level's files are swapped in all together once every one of them is
+        /// written, so when this has any, none of them were and what was on disk is as it was.
+        /// </summary>
+        public IReadOnlyList<CathodeFile.SaveFailure> LastSaveFailures { get; private set; } = new CathodeFile.SaveFailure[0];
+
+        /// <summary>Whether the last save got as far as swapping its files in (a save that throws after that is on disk all the same).</summary>
+        public bool LastSaveWritten { get; private set; }
+
         public void Save(bool doInstancing)
         {
             BakeSelection bakers = NextSaveBakers;
@@ -158,41 +167,67 @@ namespace OpenCAGE
             Modding.ModServices.CaptureLevelBeforeSave(Level.Name);
             LastBakeWarnings = null;
             LastWarnings = null;
+            LastSaveFailures = new CathodeFile.SaveFailure[0];
+            LastSaveWritten = false;
 
-            if (doInstancing)
+            /* Every file the save writes is written beside where it belongs, and swapped in with the rest only once all of them
+               are: a file that fails (read-only, open in another program, a full drive, a writer that throws) leaves the whole
+               level on disk as it was, rather than half of it new. The exclusive master index is the one file the save writes
+               straight to disk, so it is put back by hand. */
+            string masterIndicesPath = Level.Filepath + (Level.Patched ? "_PATCH" : "") + "/WORLD/EXCLUSIVE_MASTER_RESOURCE_INDICES";
+            byte[] masterIndices = File.Exists(masterIndicesPath) ? File.ReadAllBytes(masterIndicesPath) : null;
+            bool committed = false;
+            using (CathodeFile.SaveTransaction transaction = CathodeFile.BeginSaveTransaction())
             {
-                Instancing pass;
-                if (bakers == null || bakers.All)
+                try
                 {
-                    pass = SaveInstancedWithOptions(Level);
+                    if (doInstancing)
+                    {
+                        Instancing pass;
+                        if (bakers == null || bakers.All)
+                        {
+                            pass = SaveInstancedWithOptions(Level);
+                        }
+                        else
+                        {
+                            //A baker is skipped by passing null for its settings - alphalight bakes regardless, so it has its own switch
+                            bool skippedAlphalight = Instancing.SkipAlphalightBake;
+                            Instancing.SkipAlphalightBake = skippedAlphalight || !bakers.Alphalight;
+                            try
+                            {
+                                pass = Level.SaveInstanced(
+                                    bakers.NavMesh ? new CathodeLib.NavMesh.NavMeshBakeSettings() : null,
+                                    bakers.Cover ? new CathodeLib.NavMesh.CoverBakeSettings() : null,
+                                    bakers.Radiosity ? RadiositySettingsFromOptions() : null,
+                                    bakers.JobPositions ? new CathodeLib.NavMesh.JobPositionBakeSettings() : null,
+                                    bakers.Alphalight ? new CathodeLib.Alphalight.AlphalightBakeSettings() : null,
+                                    bakers.SoundNetworks ? new CathodeLib.Sound.SoundNetworkBakeSettings() : null);
+                            }
+                            finally
+                            {
+                                Instancing.SkipAlphalightBake = skippedAlphalight;
+                            }
+                        }
+                        LastBakeWarnings = pass?.BakeWarnings;
+                        LastWarnings = pass?.Warnings;
+                    }
+                    else
+                    {
+                        Level.Save();
+                    }
+                    committed = transaction.Commit();
                 }
-                else
+                finally
                 {
-                    //A baker is skipped by passing null for its settings - alphalight bakes regardless, so it has its own switch
-                    bool skippedAlphalight = Instancing.SkipAlphalightBake;
-                    Instancing.SkipAlphalightBake = skippedAlphalight || !bakers.Alphalight;
-                    try
-                    {
-                        pass = Level.SaveInstanced(
-                            bakers.NavMesh ? new CathodeLib.NavMesh.NavMeshBakeSettings() : null,
-                            bakers.Cover ? new CathodeLib.NavMesh.CoverBakeSettings() : null,
-                            bakers.Radiosity ? RadiositySettingsFromOptions() : null,
-                            bakers.JobPositions ? new CathodeLib.NavMesh.JobPositionBakeSettings() : null,
-                            bakers.Alphalight ? new CathodeLib.Alphalight.AlphalightBakeSettings() : null,
-                            bakers.SoundNetworks ? new CathodeLib.Sound.SoundNetworkBakeSettings() : null);
-                    }
-                    finally
-                    {
-                        Instancing.SkipAlphalightBake = skippedAlphalight;
-                    }
+                    LastSaveFailures = transaction.Failures;
+                    LastSaveWritten = committed;
+                    if (!committed)
+                        RestoreFile(masterIndicesPath, masterIndices);
                 }
-                LastBakeWarnings = pass?.BakeWarnings;
-                LastWarnings = pass?.Warnings;
             }
-            else
-            {
-                Level.Save();
-            }
+            //Not saved: what the save would have settled (a build done, the level saved by OpenCAGE) stays as it was
+            if (!committed)
+                return;
 
             //The save generated the level's behaviour tree list from the character configs (the files were read just now, so
             //this is cached): a class whose tree can't be listed crashes the game when one of its characters spawns
@@ -214,6 +249,21 @@ namespace OpenCAGE
             BuildTracker.Saved(this, doInstancing, skipped);
 
             IsVanilla = false;
+        }
+
+        /* A file the save wrote straight to disk, put back as it was before it: the save was not swapped in */
+        private static void RestoreFile(string path, byte[] content)
+        {
+            if (content == null)
+                return;
+            try
+            {
+                File.WriteAllBytes(path, content);
+            }
+            catch (Exception e)
+            {
+                Debug.Log("LevelContent", "Could not put back " + path + " after a save that failed: " + e.Message);
+            }
         }
 
         public void Dispose()

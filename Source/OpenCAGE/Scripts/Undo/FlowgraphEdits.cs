@@ -120,13 +120,19 @@ namespace OpenCAGE.Undo
         public bool TryMerge(IEdit next) => false;
     }
 
-    /// <summary>A node added to or removed from a page. Removal refreshes the snapshot first, so a redo restores the node as it last was.</summary>
+    /// <summary>
+    /// A node added to or removed from a page. Removal refreshes the snapshot first, so a redo restores the node as it last was.
+    /// After a page rebuild the node is a new object: removal takes only a node it can tell is this one (see
+    /// Flowgraph.ResolveNodeToRemove), and otherwise leaves the page alone - the entity's other nodes carry their own links.
+    /// </summary>
     public sealed class NodePresenceEdit : IEdit
     {
         private readonly ShortGuid _composite;
         private readonly string _page;
         private NodeSnapshot _snapshot;
         private readonly bool _presentAfter;
+        //The last removal found no node it could be sure of and took nothing, so there is nothing to put back
+        private bool _leftInPlace = false;
 
         public string Label { get; }
         public ShortGuid CompositeId => _composite;
@@ -147,17 +153,27 @@ namespace OpenCAGE.Undo
         private void Set(UndoContext context, bool present)
         {
             Flowgraph page = FlowgraphEdits.RequirePage(context, _composite, _page);
-            STNode node = page.ResolveNode(_snapshot.Self, _snapshot.Location);
             if (present)
             {
+                if (_leftInPlace)
+                {
+                    _leftInPlace = false;
+                    return; //never taken away
+                }
+                STNode node = page.ResolveNode(_snapshot.Self, _snapshot.Location);
                 if (node != null && ReferenceEquals(node, _snapshot.Self.Node))
                     return; //still there
                 page.RestoreNode(_snapshot);
             }
-            else if (node != null)
+            else
             {
-                _snapshot = page.SnapshotNode(node);
-                page.RemoveNodeForUndo(node);
+                STNode node = page.ResolveNodeToRemove(_snapshot, out bool unsure);
+                if (node != null)
+                {
+                    _snapshot = page.SnapshotNode(node);
+                    page.RemoveNodeForUndo(node);
+                }
+                _leftInPlace = unsure;
             }
             context.Ui?.RefreshNodeMarkers();
         }

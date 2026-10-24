@@ -87,18 +87,47 @@ namespace OpenCAGE.Modding
 
         [JsonIgnore] private string _path;
 
+        /// <summary>
+        /// Set when this install's record couldn't be read though there was one (or originals are kept without one): what to
+        /// tell the user. Nothing is saved over it, and applying refuses, until <see cref="StartAfresh"/>.
+        /// </summary>
+        [JsonIgnore] public string Unreadable;
+
         public static ModState Load(string gameRoot)
         {
             string path = ModToolkit.StateFile(gameRoot);
+            //The record - or, when a save was stopped part-way or it's damaged, the newest whole one beside it (see Save)
+            string[] candidates = { path, path + ".tmp", path + ".bak" };
             ModState state = null;
-            try
+            foreach (string candidate in candidates)
             {
-                if (File.Exists(path))
-                    state = JsonConvert.DeserializeObject<ModState>(File.ReadAllText(path));
+                try
+                {
+                    if (File.Exists(candidate))
+                        state = JsonConvert.DeserializeObject<ModState>(File.ReadAllText(candidate));
+                }
+                catch { }
+                if (state != null)
+                    break;
             }
-            catch { }
+            string unreadable = null;
             if (state == null)
+            {
+                //None to read is a first run - unless there was one, or originals are kept that it would have recorded. Starting
+                //empty then would forget every installed mod and kept original, so that waits for the user to choose it
+                bool hadOne = candidates.Any(File.Exists);
+                string baselines = ModToolkit.BaselineDir(gameRoot);
+                if (hadOne || (Directory.Exists(baselines) && Directory.EnumerateFiles(baselines, "*.gz").Any()))
+                {
+                    unreadable = "OpenCAGE's record of the mods installed in this game (" + path + ") " + (hadOne ? "can't be read" : "is missing")
+                        + ", so it can't tell which game files your mods changed, or put them back. Nothing will be changed until you choose what to do: "
+                        + "to keep using mods, verify the game files in Steam (or your store) to put them back as they shipped, then start the Mod Manager afresh.";
+                    //Kept as it is, for anyone who can mend it
+                    if (File.Exists(path))
+                        try { File.Copy(path, path + ".unreadable", true); } catch { }
+                }
                 state = new ModState();
+            }
             if (state.Baseline == null) state.Baseline = new Dictionary<string, BaselineRecord>();
             if (state.Mods == null) state.Mods = new List<InstalledMod>();
             if (state.Composition == null) state.Composition = new Dictionary<string, ComposedFile>();
@@ -114,16 +143,42 @@ namespace OpenCAGE.Modding
             if (state.AppliedOrder == null)
                 state.AppliedOrder = state.ModsInPriorityOrder().Where(o => o.Enabled).Select(o => o.Id).ToList();
             state._path = path;
+            state.Unreadable = unreadable;
             return state;
+        }
+
+        /// <summary>Begin a new record in place of one that can't be read (<see cref="Unreadable"/>; a copy of it is kept as state.json.unreadable).</summary>
+        public void StartAfresh()
+        {
+            Unreadable = null;
+            Save();
         }
 
         public void Save()
         {
+            //Never over a record that couldn't be read: the user chooses first (StartAfresh)
+            if (Unreadable != null)
+                throw new Exception(Unreadable);
             Directory.CreateDirectory(Path.GetDirectoryName(_path));
+            //Written beside it and swapped in, the one before kept as .bak: wherever this stops, a whole record is left to load
             string temp = _path + ".tmp";
             File.WriteAllText(temp, JsonConvert.SerializeObject(this, Formatting.Indented));
-            if (File.Exists(_path)) File.Delete(_path);
-            File.Move(temp, _path);
+            if (!File.Exists(_path))
+            {
+                File.Move(temp, _path);
+                return;
+            }
+            try
+            {
+                File.Replace(temp, _path, _path + ".bak", true);
+            }
+            catch (Exception e) when (e is IOException || e is PlatformNotSupportedException)
+            {
+                //A drive that can't swap files in one go: the old one's copied aside first, then the new one put in its place
+                File.Copy(_path, _path + ".bak", true);
+                File.Delete(_path);
+                File.Move(temp, _path);
+            }
         }
 
         public InstalledMod FindMod(string id)

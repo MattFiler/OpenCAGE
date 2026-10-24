@@ -41,6 +41,9 @@ namespace OpenCAGE
 
         MaterialInfoWPF _controls = null;
 
+        //The material to select when the list is first filled, in Load
+        Materials.Material _initialMaterial = null;
+
         public Action<Materials.Material> OnMaterialSelected;
 
         public EditMaterial(Materials.Material material = null, bool showSelectBtn = true) : base(EditorOrPicker(showSelectBtn))
@@ -55,13 +58,18 @@ namespace OpenCAGE
             _controls.OnSamplerSelected += OnSamplerSelected;
             _controls.OnPickTexture += OnPickTexture;
 
-            PopulateUI(material);
+            _initialMaterial = material;
 
             selectMaterialBtn.Visible = showSelectBtn;
         }
 
         private void EditMaterial_Load(object sender, EventArgs e)
         {
+            //Filled here, once the list's window exists, not in the constructor: items added before that are inserted one at
+            //a time while the window is being created, which took minutes for a big level's materials
+            PopulateUI(_initialMaterial);
+            _initialMaterial = null;
+
             if (materialList.SelectedItems.Count > 0)
             {
                 materialList.SelectedItems[0].EnsureVisible();
@@ -126,11 +134,9 @@ namespace OpenCAGE
             }
             else
             {
-                if (material.Shader.SamplerRemaps.Count <= samplerIndex)
-                {
-                    while (material.Shader.SamplerRemaps.Count <= samplerIndex)
-                        material.Shader.SamplerRemaps.Add(255);
-                }
+                Shaders.Shader shader = OwnShader(material);
+                while (shader.SamplerRemaps.Count <= samplerIndex)
+                    shader.SamplerRemaps.Add(255);
 
                 textureRefIndex = material.TextureReferences.Count;
                 TexturePtr texturePtr = new TexturePtr
@@ -139,7 +145,7 @@ namespace OpenCAGE
                     Location = TexturePtr.Source.LEVEL
                 };
                 material.TextureReferences.Add(texturePtr);
-                material.Shader.SamplerRemaps[samplerIndex] = textureRefIndex;
+                shader.SamplerRemaps[samplerIndex] = textureRefIndex;
 
                 _samplerInfo[samplerTabIndex] = new Tuple<string, int, int>(samplerInfo.Item1, samplerIndex, textureRefIndex);
             }
@@ -147,6 +153,27 @@ namespace OpenCAGE
             EditHistory.AssetChanged(Content?.Level, AssetKind.MATERIAL, material.Name);
             Singleton.OnResourceModified?.Invoke();
             materialList_SelectedIndexChanged(null, EventArgs.Empty);
+        }
+
+        /* The level's shader entries are shared by many materials, and a sampler's texture slot (its remap) lives on the
+           entry: before changing one for a material, it gets an entry of its own - otherwise every material sharing it
+           would lose or change that texture too. The copy shares the original's bytecode (as the permutation service's
+           clones do), so the save writes it once. */
+        private Shaders.Shader OwnShader(Materials.Material material)
+        {
+            if (!Content.Level.Materials.Entries.Any(o => !ReferenceEquals(o, material) && ReferenceEquals(o.Shader, material.Shader)))
+                return material.Shader;
+            Shaders.Shader original = material.Shader;
+            Shaders.Shader own = original.Copy();
+            own.VertexShader = original.VertexShader;
+            own.PixelShader = original.PixelShader;
+            own.HullShader = original.HullShader;
+            own.DomainShader = original.DomainShader;
+            own.GeometryShader = original.GeometryShader;
+            own.ComputeShader = original.ComputeShader;
+            Content.Level.Shaders.Entries.Add(own);
+            material.Shader = own;
+            return own;
         }
 
         private void ClearSamplerTexture()
@@ -172,7 +199,7 @@ namespace OpenCAGE
             }
 
             if (samplerIndex < material.Shader.SamplerRemaps.Count)
-                material.Shader.SamplerRemaps[samplerIndex] = 255;
+                OwnShader(material).SamplerRemaps[samplerIndex] = 255;
 
             _samplerInfo[samplerTabIndex] = new Tuple<string, int, int>(samplerInfo.Item1, samplerIndex, 255);
 
@@ -1152,12 +1179,19 @@ namespace OpenCAGE
 
             SHADER_LIST family;
             string name;
-            using (NewMaterialPicker picker = new NewMaterialPicker(options))
+            using (NewMaterialPicker picker = new NewMaterialPicker(options, o => Content.Level.Materials.GetMaterialName(MaterialCalled(o))))
             {
                 if (picker.ShowDialog(this) != DialogResult.OK)
                     return;
                 family = picker.Family;
                 name = picker.MaterialName;
+            }
+            Materials.Material clash = MaterialCalled(name);
+            if (clash != null)
+            {
+                System.Windows.Forms.MessageBox.Show("The level already has a material called '" + Content.Level.Materials.GetMaterialName(clash) + "'. Pick another name.",
+                    "New material", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
             }
 
             string error;
@@ -1183,6 +1217,18 @@ namespace OpenCAGE
                     break;
                 }
             }
+        }
+
+        /* The material already called this - by its stored name or the name it shows as, in any case - or null. Two of one
+         * name can't be told apart by what finds a material by name (a material mapping's target, an entity's material
+         * parameter, the MCP tools), so a new or copied material never takes a name in use */
+        private Materials.Material MaterialCalled(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name) || Content?.Level?.Materials?.Entries == null)
+                return null;
+            string tidy = name.Trim();
+            return Content.Level.Materials.Entries.FirstOrDefault(o => o != null &&
+                (string.Equals(o.Name, tidy, StringComparison.OrdinalIgnoreCase) || string.Equals(Content.Level.Materials.GetMaterialName(o), tidy, StringComparison.OrdinalIgnoreCase)));
         }
 
         /* Only a material nothing draws with can go - a save writes anything still pointing at a
@@ -1238,9 +1284,15 @@ namespace OpenCAGE
             if (material == null)
                 return;
 
+            //A second copy of the same material gets a number, never the first copy's name
+            string cloneOf = Content.Level.Materials.GetMaterialName(material) + " Clone";
+            string cloneName = cloneOf;
+            for (int i = 2; MaterialCalled(cloneName) != null; i++)
+                cloneName = cloneOf + " " + i;
+
             var newMaterial = new Materials.Material
             {
-                Name = Content.Level.Materials.GetMaterialName(material) + " Clone",
+                Name = cloneName,
                 EngineConstants = new List<float>(material.EngineConstants),
                 VertexShaderConstants = new List<float>(material.VertexShaderConstants),
                 PixelShaderConstants = new List<float>(material.PixelShaderConstants),

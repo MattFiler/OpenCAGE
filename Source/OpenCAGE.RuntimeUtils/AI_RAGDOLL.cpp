@@ -34,6 +34,9 @@
 	stands it up first (a script's ragdoll command being reset). Changes are made on the AI thread, the character found
 	again there by its unique id.
 
+	Not for the alien: its ragdoll reads as on while it is alive and well, so it can't be told apart from one a script or
+	its death turned on, and is not switched here.
+
 	Layouts and addresses are the Steam retail AI.exe's (see GameAddresses.h for the GOG and Epic Games Store builds).
 */
 namespace
@@ -49,6 +52,10 @@ namespace
 	constexpr int kHealthDead = 4;
 	constexpr uint32_t kCharacterMotivations = 0x3498;
 	constexpr uint32_t kMotivationFirst = 0x0C;
+
+	// The alien's class (as DEBUG_MENU::ClassName numbers them), and what it is told
+	constexpr int kAlienClass = 1;
+	const char* const kNotForAlien = "not for the alien: its ragdoll can't be switched from here";
 
 	// The animation system's ragdoll on (the velocity it starts with, a second vector the scripts' command leaves at nought,
 	// and false for a living character) and off (the pose blends back to the animation)
@@ -408,6 +415,8 @@ namespace
 			ImGui::TextDisabled("Select an NPC.");
 		else if (selected->player)
 			ImGui::TextDisabled("Not for the player.");
+		else if (selected->characterClass == kAlienClass)
+			ImGui::TextDisabled("Not for the alien: its ragdoll can't be switched from here.");
 		else
 		{
 			bool has = false, on = false;
@@ -493,6 +502,7 @@ namespace
 	struct Asked
 	{
 		bool found = false, player = false, dead = false;
+		int characterClass = -1;
 		uint32_t id = 0;
 		std::string name;
 		Velocity velocity;
@@ -513,6 +523,7 @@ namespace
 					shared->name = character.name;
 					shared->player = character.player;
 					shared->dead = character.dead;
+					shared->characterClass = character.characterClass;
 					shared->velocity = PushFor(character);
 					break;
 				}
@@ -557,6 +568,8 @@ namespace
 				return Fail(error);
 			if (target.player)
 				return Fail("not for the player");
+			if (target.characterClass == kAlienClass)
+				return Fail(target.name + ": " + kNotForAlien);
 			if (mode == "toggle")
 				mode = IsDown(target.id) ? "off" : "on";
 			const bool holdAi = g_holdAi;

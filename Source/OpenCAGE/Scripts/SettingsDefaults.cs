@@ -152,8 +152,8 @@ namespace OpenCAGE
         static void EnsureLaunchGameRedesign()
         {
             string[] debugEntities = { Settings.LegacyDebugText, Settings.LegacyDebugTextStacking, Settings.LegacyDebugEnvironmentMarker, Settings.LegacyDebugPositionMarker };
-            if (debugEntities.Any(o => SettingsManager.IsSet(o) && SettingsManager.GetBool(o)))
-                SettingsManager.SetBool(Settings.DebugEntities, true);
+            if (!SettingsManager.IsSet(Settings.DebugEntities) && debugEntities.Any(o => SettingsManager.IsSet(o)))
+                SettingsManager.SetBool(Settings.DebugEntities, debugEntities.Any(o => SettingsManager.IsSet(o) && SettingsManager.GetBool(o)));
 
             string[] removed = debugEntities.Concat(new[]
             {

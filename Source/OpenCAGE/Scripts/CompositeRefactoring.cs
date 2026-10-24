@@ -191,6 +191,7 @@ namespace OpenCAGE
         {
             _namePrompt?.Close();
             _namePrompt = new RenameGeneric(initial, new RenameGeneric.RenameGenericContent() { Title = title, Description = description, ButtonText = button });
+            _namePrompt.Validate = name => EditorUtils.UnstorableTextProblem(name, "This composite name");
             _namePrompt.OnRenamed += name => chosen(name);
             _namePrompt.FormClosed += (sender, e) => _namePrompt = null;
             _namePrompt.Show();

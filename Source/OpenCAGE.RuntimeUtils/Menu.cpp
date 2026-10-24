@@ -9,6 +9,7 @@
 #include "LIVE_CAMERA.h"
 #include "CUBEMAP_CAPTURE.h"
 #include "CINEMATIC_CAMERA.h"
+#include "CINEMATIC_CAPTURE.h"
 #include "DEBUG_MENU.h"
 #include "MOUSE_UNLOCK.h"
 #include "POSSESS.h"
@@ -182,6 +183,44 @@ bool Menu::UsePresentingSwapChain(IDXGISwapChain* pSwapChain)
     return pSwapChain == g_swapChain;
 }
 
+// The overlay's font: ImGui's own (ProggyClean), with Consolas (else Lucida Console) from Windows merged in for what it
+// lacks that text from the game can hold - Windows-1252's dashes, quotes, bullet, ellipsis, per mille, trademark and its
+// few extra letters (the game's text is turned into UTF-8 before it is drawn). Glyphs go into the atlas as first drawn.
+static void AddFonts(ImGuiIO& io)
+{
+    // ProggyClean as ImGui adds it by default, but with its size given, so the merged font can be given the same 1 px drop
+    ImFontConfig base;
+    base.SizePixels = 13.0f;
+    base.PixelSnapH = true;
+    io.Fonts->AddFontDefaultBitmap(&base);
+
+    static const ImWchar kRanges[] = {
+        0x0020, 0x00FF,                                                 // Basic Latin, Latin-1
+        0x0152, 0x0153, 0x0160, 0x0161, 0x0178, 0x0178, 0x017D, 0x017E, // Windows-1252's other letters
+        0x0192, 0x0192, 0x02C6, 0x02C6, 0x02DC, 0x02DC,
+        0x2010, 0x2027, 0x2030, 0x203A,                                 // General Punctuation
+        0x20AC, 0x20AC, 0x2122, 0x2122,                                 // euro, trademark
+        0,
+    };
+    ImFontConfig merge;
+    merge.MergeMode = true;
+    merge.PixelSnapH = true;
+    merge.GlyphOffset.y = 1.0f;
+    merge.GlyphRanges = kRanges; // read up front only by a renderer without dynamic font textures
+    merge.Flags |= ImFontFlags_NoLoadError;
+    char windows[MAX_PATH] = {};
+    const UINT length = GetWindowsDirectoryA(windows, MAX_PATH);
+    if (length == 0 || length >= MAX_PATH)
+        return;
+    const char* const kFiles[] = { "consola.ttf", "lucon.ttf" };
+    for (const char* file : kFiles)
+    {
+        const std::string path = std::string(windows) + "\\Fonts\\" + file;
+        if (io.Fonts->AddFontFromFileTTF(path.c_str(), 13.0f, &merge))
+            break;
+    }
+}
+
 void Menu::DrawMenu() {
     if (!g_menuInitialised) {
         if (FAILED(GetDeviceAndContextFromSwapChain(g_swapChain, &g_device, &g_context))) {
@@ -205,6 +244,7 @@ void Menu::DrawMenu() {
         }
 
         ImGui::StyleColorsDark();
+        AddFonts(io);
     	
         g_hWindow = dxgiSwapChainDesc.OutputWindow;
         // Replace the game's window handler with our own so we can intercept key press events in the game.
@@ -253,16 +293,23 @@ void Menu::DrawMenu() {
     if (Config::Get().possess)
         POSSESS::DrawOverlay();
 
-    // Live link: a quiet note in the top right while OpenCAGE is connected, with what it last did for a few seconds.
+    // The debug menu: its overlays over the game, and its window while open.
+    if (Config::Get().debugMenu)
+        DEBUG_MENU::Draw();
+
+    // Live Link: a quiet note in the top right while OpenCAGE is connected, with what it last did for a few seconds. Drawn
+    // after the debug menu, so it can start under the notes along the top of the screen while any shows (a long one, such
+    // as the scripts held at a breakpoint, runs right across).
     if (Config::Get().liveLink && LIVE_LINK_SERVER::Connected())
     {
         ImDrawList* drawList = ImGui::GetForegroundDrawList();
         const float width = ImGui::GetIO().DisplaySize.x;
         const float size = 16.0f;
+        const float top = Config::Get().debugMenu ? (std::max)(10.0f, DEBUG_MENU::BannersBottom()) : 10.0f;
         const char* label = "OpenCAGE Live Link";
         const float labelWidth = ImGui::GetFont()->CalcTextSizeA(size, FLT_MAX, 0.0f, label).x;
-        drawList->AddText(ImGui::GetFont(), size, ImVec2(width - labelWidth - 12.0f, 10.0f), IM_COL32(120, 220, 140, 220), label);
-        float line = 30.0f;
+        drawList->AddText(ImGui::GetFont(), size, ImVec2(width - labelWidth - 12.0f, top), IM_COL32(120, 220, 140, 220), label);
+        float line = top + 20.0f;
         // Camera sync: for as long as the game renders from OpenCAGE's viewport camera.
         if (LIVE_CAMERA::Applying())
         {
@@ -292,10 +339,6 @@ void Menu::DrawMenu() {
         }
     }
 
-    // The debug menu: its overlays over the game, and its window while open.
-    if (Config::Get().debugMenu)
-        DEBUG_MENU::Draw();
-
     if (g_showMenu)
     {
         const ImVec2 center = ImGui::GetMainViewport()->GetCenter();
@@ -312,6 +355,9 @@ void Menu::DrawMenu() {
     ImGui::EndFrame();
 
     ImGui::Render();
+    // The game's own capture takes its files from the frame as it ends up: nothing of ours is drawn while one is under way
+    if (CINEMATIC_CAPTURE::HideDrawing())
+        return;
     // Let go of when the game resized its back buffers (a new resolution): made again on the new one
     if (!g_renderTargetView && !CreateRenderTarget())
         return;

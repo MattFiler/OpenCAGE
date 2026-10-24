@@ -257,6 +257,14 @@ namespace OpenCAGE.UnityConnection
 
         private static void SyncNow()
         {
+            //Not while a save is writing the level (Save & Build pumps messages, so the timer can tick inside it): tried again
+            //once the save is over, which also resets the baseline when it reloads the viewer
+            if (ViewerInboundDispatcher.IsHeldForSave)
+            {
+                _timer?.Start();
+                return;
+            }
+
             LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
             Level level = content?.Level;
             if (level == null || !ReferenceEquals(content, _baselineContent))

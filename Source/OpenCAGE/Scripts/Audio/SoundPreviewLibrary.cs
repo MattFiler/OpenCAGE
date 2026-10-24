@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -102,6 +103,39 @@ namespace OpenCAGE.Audio
             {
                 _building = null;
                 _key = null;
+            }
+        }
+
+        /// <summary>
+        /// Bring the index back in line with soundbanks that have just been written to, so the audio that
+        /// moved inside them is read from where it is now. If they can't be read back, the index is dropped
+        /// instead and the next ask builds it again from the files.
+        /// </summary>
+        public static void Refresh(IEnumerable<string> files)
+        {
+            Task<WwiseSoundLibrary> building;
+            lock (_lock)
+                building = _building;
+
+            //Nothing indexed yet: the next ask reads the files as they are now anyway
+            if (building == null)
+                return;
+
+            //Still building (it may have read a bank before the write), or the build failed
+            if (!building.IsCompleted || building.IsFaulted || building.IsCanceled)
+            {
+                Invalidate();
+                return;
+            }
+
+            try
+            {
+                foreach (string file in files.Where(f => !string.IsNullOrEmpty(f)).Distinct(StringComparer.OrdinalIgnoreCase))
+                    building.Result.Refresh(file);
+            }
+            catch
+            {
+                Invalidate();
             }
         }
 

@@ -35,7 +35,7 @@ namespace OpenCAGE
                 return report;
             foreach (KeyValuePair<Composite, List<ProxyEntity>> dead in commands.Utils.GetDeadProxies(composites))
             {
-                Entry entry = new Entry() { Composite = Path.GetFileName(dead.Key.name) };
+                Entry entry = new Entry() { Composite = EditorUtils.GetCompositeName(dead.Key) };
                 foreach (ProxyEntity proxy in dead.Value)
                     entry.Proxies.Add(commands.Utils.GetEntityName(dead.Key, proxy));
                 report.Entries.Add(entry);

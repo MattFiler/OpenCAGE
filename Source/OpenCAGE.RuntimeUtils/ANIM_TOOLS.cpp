@@ -674,7 +674,7 @@ namespace
 		bool on = g_locatorOverlay;
 		if (ImGui::Checkbox("Draw the reference locator", &on))
 			g_locatorOverlay = on;
-		Tooltip("While a matched animation (a kill, a door, a ladder...) lines the character up with a point, its axes are drawn there, with a line from the character (every character with All characters on).");
+		Tooltip("While a matched animation (a kill, a door, a ladder...) lines the character up with a point, its axes are drawn there, with a line from the character (every character's with \"For every character\" on, above).");
 		LocatorView locator;
 		if (character && ReadLocator(character->object, locator))
 			ImGui::Text("%s: %s, weight %.2f, at %.2f, %.2f, %.2f", character->name.c_str(), LocatorUsage(locator.usage), locator.weight, locator.matrix[12], locator.matrix[13], locator.matrix[14]);

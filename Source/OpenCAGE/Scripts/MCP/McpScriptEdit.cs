@@ -487,10 +487,30 @@ namespace OpenCAGE.MCP
         }
         #endregion
 
+        #region Text the level can store
+        /// <summary>
+        /// Why <paramref name="text"/> cannot be saved into the level as it is, or null if it can. The level stores its script
+        /// text (entity names, string values, composite paths) as Windows-1252: accented letters, curly quotes, dashes and the
+        /// euro sign fit, but other characters (emoji, CJK, arrows and most symbols) would be saved as '?', and a NUL would end
+        /// the text there. <paramref name="what"/> says what the text is, e.g. "The name". The rule is the editor's own
+        /// (<see cref="EditorUtils.UnstorableTextProblem"/>), so the assistant and the editor's dialogs refuse the same text.
+        /// </summary>
+        public static string TextProblem(string text, string what) => EditorUtils.UnstorableTextProblem(text, what);
+
+        /// <summary>Refuse text <see cref="TextProblem"/> finds a problem with.</summary>
+        public static void RequireStorableText(string text, string what)
+        {
+            string problem = TextProblem(text, what);
+            if (problem != null)
+                throw new McpError(McpErrorCodes.InvalidArgument, problem);
+        }
+        #endregion
+
         #region Composites
         public Composite AddComposite(string path)
         {
             string name = McpScript.NormalisePath(path);
+            RequireStorableText(name, "The composite's path");
             string problem = CreateCompositePlan.CheckName(Commands, name);
             if (problem != null)
                 throw new McpError(problem);
@@ -511,6 +531,7 @@ namespace OpenCAGE.MCP
 
         public FunctionEntity AddFunction(Composite composite, FunctionType type, string name)
         {
+            RequireStorableText(name, "The entity's name");
             TouchContents(composite);
             if (_onePerComposite.Contains(type) && composite.functions.Any(o => o.function == type))
                 throw new McpError(composite.name + " already has a " + type + ", and a composite can only have one.");
@@ -535,6 +556,7 @@ namespace OpenCAGE.MCP
                 throw new McpError(McpErrorCodes.Refused, instanced.name + " is one of the level's entry points (root, GLOBAL, PAUSEMENU), which the game starts itself: it cannot be placed as an instance.");
             if (McpScriptTools.IsFolderPlaceholder(instanced))
                 throw new McpError(McpErrorCodes.Refused, "'" + instanced.name + "' is a folder placeholder (made by manage_composites create_folder), not a composite: it cannot be placed.");
+            RequireStorableText(name, "The entity's name");
             TouchContents(composite);
             if (Commands.Utils.WouldCreateCompositeInstanceCycle(composite, instanced))
                 throw new McpError("An instance of " + instanced.name + " cannot go in " + composite.name + ": " + (composite == instanced ? "a composite cannot contain itself." : instanced.name + " already contains " + composite.name + ", so it would contain itself."));
@@ -610,6 +632,7 @@ namespace OpenCAGE.MCP
         /// <summary>An alias in <paramref name="composite"/>; <paramref name="path"/> is from it, ending in the target and Invalid.</summary>
         public AliasEntity AddAlias(Composite composite, ShortGuid[] path, string name)
         {
+            RequireStorableText(name, "The alias's name");
             TouchContents(composite);
             AliasEntity alias = composite.AddAlias(path);
             if (!string.IsNullOrWhiteSpace(name))
@@ -621,6 +644,7 @@ namespace OpenCAGE.MCP
         /// <summary>A proxy in <paramref name="composite"/>; <paramref name="pathFromRoot"/> starts in the root composite (without the root's own id).</summary>
         public ProxyEntity AddProxy(Composite composite, ShortGuid[] pathFromRoot, string name)
         {
+            RequireStorableText(name, "The proxy's name");
             TouchContents(composite);
             ShortGuid[] path = new[] { Commands.EntryPoints[0].shortGUID }.Concat(pathFromRoot).ToArray();
             (Composite targetComposite, Entity target) = Commands.Utils.GetResolvedTarget(Commands.Utils.ResolveProxy(path));
@@ -792,6 +816,7 @@ namespace OpenCAGE.MCP
         {
             if (entity is VariableEntity)
                 throw new McpError(McpErrorCodes.Refused, "A composite's variable (pin) is named by its instances, their links and overrides: rename it with rename_pin, which changes all of those with it.");
+            RequireStorableText(name, "The name");
             Touch(composite, entity, look: false);
             if (string.IsNullOrWhiteSpace(name))
                 Commands.Utils.ClearEntityName(entity);
@@ -1197,6 +1222,8 @@ namespace OpenCAGE.MCP
             }
 
             ParameterData data = McpValues.FromJson(value, template, name, Commands);
+            if (data is cString text)
+                RequireStorableText(text.value, "The value for '" + name + "'");
             Touch(composite, entity);
             //Always a new value object: the undo snapshot holds the old one by reference, so writing into it would change the "before" too
             if (existing != null)

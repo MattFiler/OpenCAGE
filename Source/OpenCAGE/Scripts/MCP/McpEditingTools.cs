@@ -983,6 +983,14 @@ namespace OpenCAGE.MCP
                 return "The new path is empty.";
             if (path.Split('\\').Any(o => o.Trim().Length == 0))
                 return "The path has an empty folder in it.";
+            //As CathodeLib's name check for new composites: a composite's name is used as a path
+            char bad = path.FirstOrDefault(c => System.IO.Path.GetInvalidPathChars().Contains(c));
+            if (bad != default(char))
+                return "A composite's path can't contain " + (char.IsControl(bad) ? "control characters" : "'" + bad + "'") + ".";
+            //The level saves the path as Windows-1252: anything else in it would come back as '?'
+            string unstorable = McpScriptEdit.TextProblem(path, "The path");
+            if (unstorable != null)
+                return unstorable;
             string upper = path.ToUpperInvariant();
             if (upper.Contains("REQUIRED_ASSETS") || upper.Contains("TEMPLATE") || upper.Contains("\\PHYSICS\\") || upper.StartsWith("PHYSICS\\"))
                 return "Composites named with REQUIRED_ASSETS, TEMPLATE or a PHYSICS folder are never shown in the level; pick another path.";

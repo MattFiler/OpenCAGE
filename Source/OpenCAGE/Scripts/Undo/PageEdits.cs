@@ -66,6 +66,14 @@ namespace OpenCAGE.Undo
             STNode node = page.ResolveNode(_node, from.Location);
             if (node == null)
                 throw new InvalidOperationException("The node whose pins changed is no longer on the page");
+            /* After a page rebuild the node is a new object, and ResolveNode's pick is a guess when the entity has more than
+               one node here: setting pins on the wrong one would strip pins (and the links on them) from another node of the
+               same entity. That step is left out instead, as NodePresenceEdit does (see Flowgraph.ResolveNodeToRemove). */
+            if (!ReferenceEquals(node, _node.Node) && page.Nodegraph.Nodes.Cast<STNode>().Count(o => o?.Entity != null && o.ShortGUID == _node.Entity) >= 2)
+            {
+                Debug.Log("Undo", "WARNING: Left the pins of " + node.Title + " on '" + _page + "' as they are: its entity has several nodes here and none is certainly the node this step changed");
+                return;
+            }
             page.SetNodePins(node, to);
             _node.Node = node;
             _node.Location = to.Location;

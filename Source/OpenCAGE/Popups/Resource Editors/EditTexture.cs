@@ -647,7 +647,15 @@ namespace OpenCAGE
                 return;
 
             string nodeVal = ((TreeItem)FileTree.SelectedNode.Tag).String_Value;
-            if (MessageBox.Show("Remove '" + nodeVal + "'?", "Delete texture", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            List<string> uses = TextureUses(nodeVal);
+            if (uses.Count == 0)
+            {
+                if (MessageBox.Show("Remove '" + nodeVal + "'?", "Delete texture", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                    return;
+            }
+            else if (MessageBox.Show("'" + nodeVal + "' is still used by:\n\n" + string.Join("\n", uses.Select(o => "    " + o))
+                    + "\n\nThey will be left pointing at a missing texture. Delete it anyway?",
+                    "Texture in use", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
                 return;
 
             Cursor = Cursors.WaitCursor;
@@ -671,6 +679,36 @@ namespace OpenCAGE
             {
                 Cursor = Cursors.Default;
             }
+        }
+
+        /* What still uses the texture(s) listed under this name, as lines to show (as the material delete names what
+         * draws with a material): the materials binding it and the script entities naming it. A save writes a material
+         * slot still pointing at a removed texture as -1. Empty when nothing uses it. */
+        private List<string> TextureUses(string nodeVal)
+        {
+            List<string> uses = new List<string>();
+            if (Content?.Level == null || _activeTextures?.Entries == null)
+                return uses;
+
+            string norm = nodeVal.Replace('\\', '/');
+            List<Materials.Material> materials = new List<Materials.Material>();
+            HashSet<Materials.Material> seenMaterials = new HashSet<Materials.Material>(BulkExport.ByReference<Materials.Material>.Instance);
+            HashSet<CATHODE.Scripting.Internal.Entity> entities = new HashSet<CATHODE.Scripting.Internal.Entity>(BulkExport.ByReference<CATHODE.Scripting.Internal.Entity>.Instance);
+            foreach (Textures.TEX4 texture in _activeTextures.Entries.Where(o => o.Name.Replace('\\', '/') == norm))
+            {
+                AssetUsage.TextureUsers(Content.Level, texture, out List<Materials.Material> binding, out List<CATHODE.Scripting.Internal.Entity> naming);
+                materials.AddRange(binding.Where(o => seenMaterials.Add(o)));
+                entities.UnionWith(naming);
+            }
+
+            if (materials.Count != 0)
+            {
+                List<string> names = materials.Select(o => Content.Level.Materials.GetMaterialName(o) ?? "(unnamed)").ToList();
+                uses.Add((names.Count == 1 ? "the material " : names.Count + " materials: ") + string.Join(", ", names.Take(5)) + (names.Count > 5 ? ", ..." : ""));
+            }
+            if (entities.Count != 0)
+                uses.Add(entities.Count + (entities.Count == 1 ? " script entity" : " script entities") + ", by name (an EnvironmentMap's cubemap, a light's gobo...)");
+            return uses;
         }
 
         private void exportTextureBtn_Click(object sender, EventArgs e)

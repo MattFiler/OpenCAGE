@@ -116,6 +116,23 @@ namespace OpenCAGE
             previewBtn.Click += PreviewBtn_Click;
             exportBtn.Click += ExportBtn_Click;
             importBtn.Click += ImportBtn_Click;
+            replaceBtn.Click += ReplaceBtn_Click;
+            eventsBtn.Click += EventsBtn_Click;
+            deleteBtn.Click += DeleteBtn_Click;
+
+            //Changing animations is for the browser: a picker only chooses one
+            replaceBtn.Visible = eventsBtn.Visible = deleteBtn.Visible = _picking == PickMode.None;
+            _tips.SetToolTip(importBtn, "Bring an animation in from a model or animation file, as a new animation in this set.");
+            _tips.SetToolTip(replaceBtn, "Rebuild the selected animation from a file. It keeps its name, so the scripts, animation trees and blend sets that play it keep working.");
+            _tips.SetToolTip(eventsBtn, "See and edit the selected animation's metadata: the tracks of moments it fires (footsteps, sounds, flags) and the settings they use.");
+            _tips.SetToolTip(deleteBtn, "Take the selected animation out of this set and ANIMATION.PAK. Only animations imported with OpenCAGE, and only once nothing here plays them.");
+            BuildClipMenu();
+            clipList.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode != Keys.Delete || !deleteBtn.Visible || !deleteBtn.Enabled) return;
+                e.Handled = true;
+                deleteBtn.PerformClick();
+            };
 
             _searchDelay.Tick += (s, e) => { _searchDelay.Stop(); FillSets(); };
             setSearchBox.TextChanged += (s, e) => { _searchDelay.Stop(); _searchDelay.Start(); };
@@ -126,7 +143,41 @@ namespace OpenCAGE
             splitLists.SplitterMoved += (s, e) => SettingsManager.SetInteger(Settings.AnimationEditorSplitter, splitLists.SplitterDistance);
 
             Load += EditAnimations_Load;
-            FormClosed += (s, e) => _searchDelay.Dispose();
+            FormClosed += (s, e) => { _searchDelay.Dispose(); _tips.Dispose(); };
+        }
+
+        private readonly ToolTip _tips = new ToolTip();
+
+        /* Right-click on the animations: what the buttons below them do, for the animation clicked */
+        private void BuildClipMenu()
+        {
+            ContextMenuStrip menu = new ContextMenuStrip();
+            List<Tuple<ToolStripMenuItem, Button>> items = new List<Tuple<ToolStripMenuItem, Button>>();
+            void Add(string text, Button button)
+            {
+                ToolStripMenuItem item = new ToolStripMenuItem(text);
+                item.Click += (s, e) => button.PerformClick();
+                menu.Items.Add(item);
+                items.Add(Tuple.Create(item, button));
+            }
+            Add("Preview...", previewBtn);
+            Add("Events...", eventsBtn);
+            Add("Replace...", replaceBtn);
+            Add("Delete", deleteBtn);
+            ToolStripSeparator separator = new ToolStripSeparator();
+            menu.Items.Add(separator);
+            Add("Export...", exportBtn);
+            menu.Opening += (s, e) =>
+            {
+                foreach (Tuple<ToolStripMenuItem, Button> item in items)
+                {
+                    item.Item1.Visible = item.Item2.Visible;
+                    item.Item1.Enabled = item.Item2.Enabled;
+                }
+                items[items.Count - 1].Item1.Text = exportBtn.Text;
+                if (clipList.SelectedItems.Count == 0) e.Cancel = true;
+            };
+            clipList.ContextMenuStrip = menu;
         }
 
         /* The two "Find:" labels double as counters, and "12 of 340:" is wider than the word. Keep
@@ -658,6 +709,11 @@ namespace OpenCAGE
             previewBtn.Enabled = clip != null && clip.Playable;
             if (_picking == PickMode.Animation) pickBtn.Enabled = clip != null;
 
+            //One animation at a time; why one can't be replaced or deleted is said when asked, rather than left to a grey button
+            bool one = clip != null && clipList.SelectedItems.Count == 1;
+            replaceBtn.Enabled = deleteBtn.Enabled = one;
+            eventsBtn.Enabled = one && clip.Metadata != null;
+
             //picking a set with one of its animations selected hands that animation back too
             if (_picking == PickMode.AnimationSet) pickBtn.Text = clip != null ? "Use Set + Animation" : "Use This Set";
 
@@ -787,6 +843,8 @@ namespace OpenCAGE
             }
 
             _preview = new AnimationPreview(_animations);
+            //It closes with this window: left open, it showed animations of a window that was gone, and kept that window alive
+            _preview.CloseWith(this);
             _preview.FormClosed += (s, args) => _preview = null;
             _preview.Show();
             //Paint it before the mesh and rig load on this thread: until then the new window sat there unpainted - white,
@@ -824,6 +882,9 @@ namespace OpenCAGE
                 if (import.ShowDialog(this) != DialogResult.OK) return;
                 imported = import.ImportedName;
             }
+            //The pick lists are built once from what the PAK held, so they are told about the new animation (as a delete takes one out)
+            Singleton.RegisterAnimation(_set.Name, imported);
+            Singleton.OnAnimationsModified?.Invoke();
 
             //rebuild the lists so the new clip is there, and put the cursor on it
             FillContexts();
@@ -839,6 +900,225 @@ namespace OpenCAGE
              * has done nothing at all, and the write takes about a second and a half - it used to be
              * ten, which is what the question was really for. */
             Save("'" + imported + "' added to " + _set.Name);
+        }
+
+        /* Rebuild the selected animation from a file, in place: what plays it - by name, from scripts, trees and blend sets -
+         * keeps playing it, now the new one. Written straight away, as an import is. */
+        private void ReplaceBtn_Click(object sender, EventArgs e)
+        {
+            CathodeLib.Animation.ClipReference clip = Selected();
+            if (clip == null || _set == null || _animations == null) return;
+
+            string why = WhyNotRebuilt(clip);
+            if (why != null)
+            {
+                MessageBox.Show("'" + NameOf(clip) + "' can't be replaced: " + why, "Can't replace", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            //Saved straight after, so not even started when it can't be: the PAK changed on disk since it was loaded
+            string changedOnDisk = AnimationPakWrite.Stale(_animations);
+            if (changedOnDisk != null)
+            {
+                MessageBox.Show(changedOnDisk, "Can't replace", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            string file;
+            using (OpenFileDialog dialog = new OpenFileDialog())
+            {
+                dialog.Title = "Replace '" + NameOf(clip) + "' with an animation from";
+                dialog.Filter = AnimationImport.FileFilter;
+                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                file = dialog.FileName;
+            }
+            ReplaceFrom(clip, file);
+        }
+
+        /* The rest of a replace, once the file is chosen: the import window, as for an import, but rebuilding this animation */
+        private void ReplaceFrom(CathodeLib.Animation.ClipReference clip, string file)
+        {
+            string name = NameOf(clip);
+            using (ImportAnimation import = new ImportAnimation(_animations, clip, file))
+            {
+                if (import.ShowDialog(this) != DialogResult.OK) return;
+            }
+            Singleton.OnAnimationsModified?.Invoke();
+
+            //Every reference to it reads the new animation now: the list is filled again, with the cursor back on it
+            FillClips();
+            CathodeLib.Animation.ClipReference rebuilt = SelectClip(clip.Name, clip.Context);
+            if (rebuilt != null && rebuilt.Playable && _preview != null && !_preview.IsDisposed) _preview.Show(rebuilt);
+
+            Save("'" + name + "' replaced in " + _set.Name);
+        }
+
+        /* Why an animation can't be rebuilt in place, or null when it can (CathodeLib's ReplaceClip says the same, later) */
+        private static string WhyNotRebuilt(CathodeLib.Animation.ClipReference clip)
+        {
+            if (clip.Section == null)
+                return "its animation isn't in ANIMATION.PAK.";
+            int clips = clip.Section.GetAnimations().Count;
+            if (clip.Section.Metadata.Count != 1 || clips != 1)
+                return "it is stored together with " + (Math.Max(clips, clip.Section.Metadata.Count) - 1) + " other animations, and only an animation stored on its own can be rebuilt in place. "
+                    + "Import the new one under another name, and point what plays this one at it.";
+            if (clip.Section.Metadata[0].Instances.Count > 1)
+                return "its metadata has " + clip.Section.Metadata[0].Instances.Count + " uses, which its set chooses between by number, and a rebuild keeps only the first. "
+                    + "Import the new one under another name, and point what plays this one at it.";
+            return null;
+        }
+
+        /* See and edit the selected animation's metadata - its tracks of timed moments and the settings they fire - in a
+         * window working on a copy. What it saves goes into the animation, and ANIMATION.PAK is written straight away. */
+        private void EventsBtn_Click(object sender, EventArgs e)
+        {
+            CathodeLib.Animation.ClipReference clip = Selected();
+            if (clip == null || _set == null || _animations == null) return;
+            if (clip.Metadata == null)
+            {
+                MessageBox.Show("'" + NameOf(clip) + "' has no metadata in ANIMATION.PAK to show.", "Events", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            bool changed;
+            using (EditAnimationEvents events = new EditAnimationEvents(_animations, clip))
+                changed = events.ShowDialog(this) == DialogResult.OK;
+            if (!changed) return;
+            Singleton.OnAnimationsModified?.Invoke();
+
+            FillClips();
+            SelectClip(clip.Name, clip.Context);
+            Save("The events of '" + NameOf(clip) + "' changed");
+        }
+
+        /* Take an animation imported with OpenCAGE back out: its line in its set's clip database, its entry in the PAK's index
+         * of clips and its stored animation (see CathodeLib's RemoveClip). Not while anything here still plays it, and never
+         * one that ships with the game: the game itself and every level's scripts may ask for that by name, and none of that
+         * can be checked from here. Written straight away. */
+        private void DeleteBtn_Click(object sender, EventArgs e)
+        {
+            CathodeLib.Animation.ClipReference clip = Selected();
+            if (clip == null || _set == null || _animations == null) return;
+            string name = NameOf(clip);
+
+            if (!(clip.Path ?? "").StartsWith(@"ANIMATION\OPENCAGE\", StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show("'" + name + "' ships with the game, so it can't be deleted: the game itself, and the scripts of every level, may ask for it by name. "
+                    + "Only animations imported with OpenCAGE (stored under ANIMATION\\OPENCAGE\\) can be.\n\nTo change what it plays, replace it instead.",
+                    "Can't delete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            string changedOnDisk = AnimationPakWrite.Stale(_animations);
+            if (changedOnDisk != null)
+            {
+                MessageBox.Show(changedOnDisk, "Can't delete", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            List<string> users = UsersOf(clip);
+            if (users.Count != 0)
+            {
+                MessageBox.Show("'" + name + "' can't be deleted while these still play it:\n\n"
+                    + string.Join("\n", users.Take(12).Select(o => "  • " + o)) + (users.Count > 12 ? "\n  ... and " + (users.Count - 12) + " more" : "")
+                    + "\n\nPoint them at another animation first.", "Still in use", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (MessageBox.Show("Delete '" + name + "' from " + _set.Name + "?\n\nIt is taken out of ANIMATION.PAK, which is written straight away, for every level. This can't be undone.\n\n"
+                    + "Nothing in the animation trees, the blend sets or the open level plays it. Other levels' scripts aren't checked: one that still asks for it plays nothing.",
+                    "Delete animation", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                return;
+
+            if (!_animations.RemoveClip(clip, out string problem))
+            {
+                MessageBox.Show("'" + name + "' couldn't be deleted: " + problem, "Can't delete", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            //The pick lists hold the names the PAK had at startup: this one goes, unless another of the set's animations has it too
+            if (Singleton.AllAnimations.TryGetValue(_set.Name, out HashSet<string> names)
+                && !_set.Contexts.SelectMany(o => o.Clips).Any(o => string.Equals(o.Name, clip.Name, StringComparison.OrdinalIgnoreCase)))
+                names.RemoveWhere(o => string.Equals(o, clip.Name, StringComparison.OrdinalIgnoreCase));
+            Singleton.OnAnimationsModified?.Invoke();
+
+            //The set's row counts it no more, and its context is shown again (or the first one, if that was its last animation)
+            foreach (ListViewItem row in setList.Items)
+            {
+                if (row.Tag != _set) continue;
+                row.SubItems[2].Text = _set.Contexts.Count(x => x.Clips.Count != 0).ToString();
+                row.SubItems[3].Text = _set.ClipCount.ToString("N0");
+            }
+            CathodeLib.Animation.AnimationContext context = _context;
+            FillContexts();
+            for (int i = 0; i < contextBox.Items.Count; i++)
+            {
+                if ((contextBox.Items[i] as ContextEntry)?.Context != context) continue;
+                contextBox.SelectedIndex = i;
+                break;
+            }
+
+            Save("'" + name + "' deleted from " + _set.Name);
+        }
+
+        /* What plays an animation by name here: animation tree nodes, blend sets its set's character can reach, and entities
+         * of the open level asking for it from its set. Other levels' scripts aren't looked at - each is a file of its own. */
+        private List<string> UsersOf(CathodeLib.Animation.ClipReference clip)
+        {
+            List<string> users = new List<string>();
+            string name = clip.Name ?? "";
+            CathodeLib.Animation.AnimationSet set = clip.Context?.Set;
+            bool Same(string a, string b) => string.Equals(a ?? "", b ?? "", StringComparison.OrdinalIgnoreCase);
+
+            //Trees name the animations their nodes play by the name alone, so any tree naming it counts
+            foreach (AnimTreeDB database in _animations.Trees)
+                foreach (CATHODE.Animations.AnimationTree tree in database.Entries)
+                    foreach (CATHODE.Animations.AnimationNode node in tree.Nodes)
+                    {
+                        bool plays = (node is CATHODE.Animations.LeafNode leaf && Same(leaf.AnimationName, name))
+                            || (node is CATHODE.Animations.RandomisedLeafNode pool && pool.AnimationPool != null && pool.AnimationPool.Any(o => o != null && Same(o.AnimationName, name)));
+                        if (plays) users.Add("animation tree " + AnimTrees.AnimTreeCanvas.SetNameOf(database) + "\\" + tree.Name + ", node " + node.Name);
+                    }
+
+            AnimClipDB character = set?.Database;
+            if (character != null && _animations.ClipIndex != null)
+                foreach (GlobalAnimClipDB.BlendSet blend in _animations.ClipIndex.BlendSets)
+                {
+                    if (!blend.Clips.Any(o => Same(o.Name, name))) continue;
+                    string key = blend.ToString();
+                    if (character.BlendSets.Any(o => Same(o.Filename, key)) || character.Contexts.Any(c => c.BlendSets.Any(o => Same(o.Filename, key))))
+                        users.Add("blend set " + key);
+                }
+
+            CATHODE.Commands commands = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Commands;
+            if (commands != null)
+                foreach (CATHODE.Scripting.Composite composite in commands.Entries)
+                    foreach (CATHODE.Scripting.FunctionEntity function in composite.functions)
+                        if (Same(TextOf(function, "Animation"), name) && Same(TextOf(function, "AnimationSet"), set?.Name))
+                            users.Add("entity '" + commands.Utils.GetEntityName(composite, function) + "' in " + EditorUtils.GetCompositeName(composite));
+            return users;
+        }
+
+        private static string TextOf(CATHODE.Scripting.Internal.Entity entity, string parameter)
+        {
+            return (entity?.GetParameter(parameter)?.content as CATHODE.Scripting.cString)?.value;
+        }
+
+        private static string NameOf(CathodeLib.Animation.ClipReference clip)
+        {
+            return string.IsNullOrEmpty(clip.Name) ? Path.GetFileName(clip.Path ?? "") : clip.Name;
+        }
+
+        /* Put the cursor on an animation by name (in a context, when given): the reference in the list, as it is now */
+        private CathodeLib.Animation.ClipReference SelectClip(string name, CathodeLib.Animation.AnimationContext context)
+        {
+            foreach (ListViewItem item in clipList.Items)
+            {
+                if (!(item.Tag is CathodeLib.Animation.ClipReference clip)) continue;
+                if (!string.Equals(clip.Name, name, StringComparison.OrdinalIgnoreCase)) continue;
+                if (context != null && clip.Context != context) continue;
+                clipList.SelectedItems.Clear();
+                Select(item);
+                return clip;
+            }
+            return null;
         }
 
         /* Write ANIMATION.PAK back, saying so in the status bar rather than in a dialog. Only a

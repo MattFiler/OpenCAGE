@@ -636,9 +636,9 @@ namespace
 		int flag;            // the game's number for it
 	};
 
+	// The flags that only matter on the player (prevent all attacks 0x1F, prevent grapples 0x1E) are not here: these act on
+	// the selected NPC or the alien, never the player
 	const Flag kFlags[] = {
-		{ "prevent_all_attacks", "Prevent all attacks", "Only matters on the player: humans and androids don't hit or grab them, and facehuggers don't leap at them. The alien ignores it.", 0x1F },
-		{ "prevent_grapples", "Prevent grapples", "Only matters on the player: humans and androids don't grab and strangle them. The alien ignores it.", 0x1E },
 		{ "block_ambush_and_killtraps", "Block ambushes and kill traps", "The alien doesn't lie in wait or spring kill traps.", 0x1D },
 		{ "never_aggressive", "Never aggressive", "It never turns aggressive.", 0x19 },
 		{ "totally_blind_in_dark", "Totally blind in the dark", "It sees nothing in the dark.", 0x14 },

@@ -48,12 +48,26 @@ namespace OpenCAGE.Theming
             /// </summary>
             public ToolStripRenderMode? RenderMode;
 
+            /// <summary>
+            /// The renderer a strip came with when its mode was already Custom (the PropertyGrid's own
+            /// toolbar). Custom can't be set through RenderMode - it throws - so for those strips this
+            /// renderer is what gets put back instead.
+            /// </summary>
+            public ToolStripRenderer Renderer;
+
             public FlatStyle? FlatStyle;
             public Color? FlatBorderColor;
             public Color? FlatMouseOverBackColor;
             public Color? FlatMouseDownBackColor;
             public bool? UseVisualStyleBackColor;
             public BorderStyle? BorderStyle;
+
+            /// <summary>
+            /// The window last handed one of the shell's dark classes, and which (see SetNativeTheme). Zero
+            /// for a control never given one, which then has no native theme to put back in light mode.
+            /// </summary>
+            public IntPtr NativeThemeHandle;
+            public ThemeNative.ThemeClass NativeThemeClass;
         }
 
         private static readonly Dictionary<Control, OriginalState> _originals = new Dictionary<Control, OriginalState>();
@@ -91,9 +105,17 @@ namespace OpenCAGE.Theming
                 || ns.StartsWith("ST.Library.UI", StringComparison.Ordinal);
         }
 
+        /// <summary>
+        /// Set by ThemeManager.SetDark for its pass only: controls the pass leaves alone, with everything inside them.
+        /// </summary>
+        internal static ICollection<Control> Leave = null;
+
         public static void Apply(Control control, bool dark)
         {
             if (control == null || control.IsDisposed)
+                return;
+
+            if (Leave != null && Leave.Contains(control))
                 return;
 
             //Isolated per control, and deliberately so. A single control that objects to being themed
@@ -163,6 +185,11 @@ namespace OpenCAGE.Theming
             Control control = sender as Control;
             if (control == null || control.IsDisposed || !ThemeManager.IsDark || IsExcluded(control))
                 return;
+
+            //A new window has no class yet, whatever the old one was given
+            OriginalState state;
+            if (_originals.TryGetValue(control, out state))
+                state.NativeThemeHandle = IntPtr.Zero;
 
             try
             {
@@ -295,6 +322,48 @@ namespace OpenCAGE.Theming
             property.SetValue(control, flat, null);
         }
 
+        /// <summary>
+        /// Hand a control's window one of the shell's dark classes, once. Each hand-over sends the window
+        /// WM_THEMECHANGED and repaints it there and then, and one switch passes over a control several
+        /// times - themed, again as its handle is made, again as the docking moves it - so a switch with a
+        /// big level open spent seconds giving windows the class they already had.
+        /// </summary>
+        private static void SetNativeTheme(Control control, OriginalState state, ThemeNative.ThemeClass themeClass)
+        {
+            if (!control.IsHandleCreated)
+                return;
+
+            IntPtr handle = control.Handle;
+            if (state.NativeThemeHandle == handle && state.NativeThemeClass == themeClass)
+                return;
+
+            ThemeNative.SetControlTheme(control, themeClass, true);
+            state.NativeThemeHandle = handle;
+            state.NativeThemeClass = themeClass;
+        }
+
+        /// <summary>
+        /// Whether the generic dark class can show on a control the type checks in ApplyDark didn't place.
+        /// It reaches a window's scrollbars and whatever Windows draws for it, never a control that paints
+        /// itself - but our own drawn controls, WPF hosts and the spin buttons beside every number box got
+        /// it anyway, a theme message and a repaint each on every switch, hundreds in the inspector alone.
+        /// </summary>
+        private static bool TakesGenericTheme(Control control)
+        {
+            //Scroll bar controls (a grid's, a property grid's), containers that scroll, and any window
+            //showing scrollbars of its own
+            if (control is ScrollBar || control is ScrollableControl || control is MdiClient || ThemeNative.HasScrollBarStyle(control))
+                return true;
+
+            //The spin buttons are painted over whole while dark (ThemePainters.AttachSpinButtons)
+            if (control.Parent is UpDownBase)
+                return false;
+
+            //Windows Forms' own controls are drawn by Windows, so they keep it as they always had it; a
+            //control from anywhere else draws itself
+            return control.GetType().Assembly == typeof(Control).Assembly;
+        }
+
         private static void RestoreBorder(Control control, OriginalState state)
         {
             if (!state.BorderStyle.HasValue)
@@ -366,7 +435,7 @@ namespace OpenCAGE.Theming
 
                 SetBack(comboBox, state, ThemeColours.Input);
                 comboBox.ForeColor = ThemeColours.Text;
-                ThemeNative.SetControlTheme(comboBox, ThemeNative.ThemeClass.Edit, true);
+                SetNativeTheme(comboBox, state, ThemeNative.ThemeClass.Edit);
                 return;
             }
 
@@ -390,7 +459,7 @@ namespace OpenCAGE.Theming
                 //left by this point (they all start Fixed3D or None), so they take the explorer class instead,
                 //which is the one that reaches scrollbars.
                 bool scrolls = plain != null && plain.Multiline && plain.ScrollBars != ScrollBars.None;
-                ThemeNative.SetControlTheme(textBox, scrolls ? ThemeNative.ThemeClass.Explorer : ThemeNative.ThemeClass.Edit, true);
+                SetNativeTheme(textBox, state, scrolls ? ThemeNative.ThemeClass.Explorer : ThemeNative.ThemeClass.Edit);
                 return;
             }
 
@@ -401,7 +470,7 @@ namespace OpenCAGE.Theming
                 FlattenBorder(upDown, state);
                 SetBack(upDown, state, ThemeColours.Input);
                 upDown.ForeColor = ThemeColours.Text;
-                ThemeNative.SetControlTheme(upDown, ThemeNative.ThemeClass.Edit, true);
+                SetNativeTheme(upDown, state, ThemeNative.ThemeClass.Edit);
                 ThemePainters.AttachSpinButtons(upDown);
                 return;
             }
@@ -423,7 +492,7 @@ namespace OpenCAGE.Theming
                 SetBack(treeView, state, ThemeColours.Input);
                 treeView.ForeColor = ThemeColours.Text;
                 treeView.LineColor = ThemeColours.BorderStrong;
-                ThemeNative.SetControlTheme(treeView, ThemeNative.ThemeClass.Explorer, true);
+                SetNativeTheme(treeView, state, ThemeNative.ThemeClass.Explorer);
                 return;
             }
 
@@ -433,7 +502,7 @@ namespace OpenCAGE.Theming
                 FlattenBorder(listBox, state);
                 SetBack(listBox, state, ThemeColours.Input);
                 listBox.ForeColor = ThemeColours.Text;
-                ThemeNative.SetControlTheme(listBox, ThemeNative.ThemeClass.Explorer, true);
+                SetNativeTheme(listBox, state, ThemeNative.ThemeClass.Explorer);
                 return;
             }
 
@@ -493,7 +562,7 @@ namespace OpenCAGE.Theming
                 //colours to apply at all, and the colours themselves have to go through PBM_SETBKCOLOR /
                 //PBM_SETBARCOLOR - BackColor and ForeColor do nothing on a ProgressBar, which is why an
                 //empty bar sat there as a white trough until it filled up and covered it.
-                ThemeNative.SetControlTheme(progressBar, ThemeNative.ThemeClass.None, true);
+                SetNativeTheme(progressBar, state, ThemeNative.ThemeClass.None);
                 ThemeNative.SetProgressBarColours(progressBar, ThemeColours.Input, ThemeColours.Accent);
                 SetBack(progressBar, state, ThemeColours.Input);
                 progressBar.ForeColor = ThemeColours.Accent;
@@ -519,12 +588,13 @@ namespace OpenCAGE.Theming
                 //light scrollbars beside the dark ones on every tree and list
                 ScrollableControl scrollable = control as ScrollableControl;
                 if (scrollable != null && scrollable.AutoScroll)
-                    ThemeNative.SetControlTheme(control, ThemeNative.ThemeClass.Explorer, true);
+                    SetNativeTheme(control, state, ThemeNative.ThemeClass.Explorer);
                 return;
             }
 
-            //Anything else keeps the surface treatment above, and gets dark scrollbars
-            ThemeNative.SetControlTheme(control, ThemeNative.ThemeClass.Explorer, true);
+            //Anything else keeps the surface treatment above, and gets dark scrollbars if it can show any
+            if (TakesGenericTheme(control))
+                SetNativeTheme(control, state, ThemeNative.ThemeClass.Explorer);
         }
 
         private static void ApplyForm(Form form, OriginalState state)
@@ -561,7 +631,7 @@ namespace OpenCAGE.Theming
             //but a DISABLED label ignores ForeColor and renders system-etched, so it gets repainted
             if (control is CheckBox || control is RadioButton)
             {
-                ThemeNative.SetControlTheme(control, ThemeNative.ThemeClass.Explorer, true);
+                SetNativeTheme(control, state, ThemeNative.ThemeClass.Explorer);
                 ThemePainters.AttachDisabledCheckText((ButtonBase)control);
             }
         }
@@ -605,7 +675,11 @@ namespace OpenCAGE.Theming
         {
             //Has to be read before the renderer is handed over, since assigning one forces Custom
             if (!state.RenderMode.HasValue)
+            {
                 state.RenderMode = strip.RenderMode;
+                if (state.RenderMode.Value == ToolStripRenderMode.Custom)
+                    state.Renderer = strip.Renderer;
+            }
 
             //The renderer comes from the docking theme, so menus and toolbars match the chrome exactly
             ToolStripRenderer renderer = ThemeManager.ToolStripRenderer;
@@ -735,7 +809,12 @@ namespace OpenCAGE.Theming
             ToolStrip strip = control as ToolStrip;
             if (strip != null && state.RenderMode.HasValue)
             {
-                strip.RenderMode = state.RenderMode.Value;
+                //A strip that came with a renderer of its own gets that renderer back: the RenderMode
+                //setter refuses Custom, and throwing there skipped the rest of this strip's restore
+                if (state.RenderMode.Value == ToolStripRenderMode.Custom)
+                    strip.Renderer = state.Renderer ?? new ToolStripProfessionalRenderer();
+                else
+                    strip.RenderMode = state.RenderMode.Value;
 
                 //The overflow was coloured alongside the strip, so it goes back alongside it. Looked up
                 //rather than asked for, so a strip that never had one doesn't gain one on the way out.
@@ -751,7 +830,10 @@ namespace OpenCAGE.Theming
                 ThemeNative.SetTitleBarDarkMode(form.Handle, false);
             }
 
-            ThemeNative.SetControlTheme(control, ThemeNative.ThemeClass.Explorer, false);
+            //Only a window that was handed a dark class has one to give back. Every other control's native
+            //theme was never touched, and resetting it anyway cost a theme message and a repaint per control.
+            if (state.NativeThemeHandle != IntPtr.Zero)
+                ThemeNative.SetControlTheme(control, ThemeNative.ThemeClass.Explorer, false);
 
             //Only put the original back if nothing else has claimed the colour since
             if (!state.LastAppliedBack.HasValue || control.BackColor == state.LastAppliedBack.Value)

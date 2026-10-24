@@ -112,7 +112,8 @@ namespace OpenCAGE
                 PopulateItems((EnumStringType)enumString.enumID.AsUInt32);
             }
 
-            Search();
+            //The list is filled in Load, once its window exists. Items added before that are inserted one at a time while
+            //the window is being created, which took most of a minute for a big level's sound events.
             clearSearchBtn.Visible = false;
             strings.ListViewItemSorter = _sorter;
 
@@ -257,6 +258,8 @@ namespace OpenCAGE
 
         private void SelectSpecialString_Load(object sender, EventArgs e)
         {
+            Search();
+
             int selectedIndex = -1;
             for (int i = 0; i < strings.Items.Count; i++)
             {
@@ -312,6 +315,9 @@ namespace OpenCAGE
 
         private void Search()
         {
+            if (_filteredItems == null)
+                return; //Nothing listed for this type
+
             strings.BeginUpdate();
             strings.SuspendLayout();
             strings.Items.Clear();

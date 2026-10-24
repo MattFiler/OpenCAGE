@@ -618,9 +618,9 @@ namespace OpenCAGE
             _destPinSelector.PopulateOptions(e.ToNode, e.FromPin);
         }
 
-        private STNode AddNodeForEntity(Entity entity)
+        private STNode AddNodeForEntity(Entity entity, Point at)
         {
-            STNode node = EntityToNode(entity);
+            STNode node = EntityToNode(entity, at);
             if (SettingsManager.GetBool(Settings.PopulateAllPinsOnCreateNode))
                 AddAllPins(node);
             return node;
@@ -628,8 +628,7 @@ namespace OpenCAGE
 
         public STNode PlaceEntityAt(Entity entity, PointF canvasPosition)
         {
-            STNode node = AddNodeForEntity(entity);
-            node.SetPosition(new Point((int)canvasPosition.X, (int)canvasPosition.Y));
+            STNode node = AddNodeForEntity(entity, new Point((int)canvasPosition.X, (int)canvasPosition.Y));
             SelectNewNode(node);
             RefreshNodeMarkers();
             return node;
@@ -1024,7 +1023,11 @@ namespace OpenCAGE
             return base.ProcessCmdKey(ref msg, keyData);
         }
 
-        private STNode EntityToNode(Entity entity)
+        /* A node for the entity, at the given point or else the next spot down the left edge. It is recorded
+           as added where it sits, so a node the user places must be given its place here rather than moved
+           there afterwards: once the page has been rebuilt, undo finds the node again by that position, and
+           a node recorded at the spawn point was not found - undo took the entity's other node, links and all */
+        private STNode EntityToNode(Entity entity, Point? at = null)
         {
             if (entity == null)
                 return null;
@@ -1033,8 +1036,15 @@ namespace OpenCAGE
             node.Entity = entity;
             RegenerateNodeStyle(node);
             stNodeEditor1.Nodes.Add(node);
-            node.SetPosition(new Point(0, _spawnOffset));
-            _spawnOffset += node.Height + 10;
+            if (at.HasValue)
+            {
+                node.SetPosition(at.Value);
+            }
+            else
+            {
+                node.SetPosition(new Point(0, _spawnOffset));
+                _spawnOffset += node.Height + 10;
+            }
             RecordNodeAdded(node);
 
             return node;
@@ -1072,7 +1082,7 @@ namespace OpenCAGE
                             if (function.function.IsFunctionType)
                                 node.SetName(entName, node.Entity.variant + " TO: " + function.function.AsFunctionType.ToString());
                             else
-                                node.SetName(entName, node.Entity.variant + " TO: " + Path.GetFileName(_commands.GetComposite(function.function)?.name ?? function.function.ToByteString()));
+                                node.SetName(entName, node.Entity.variant + " TO: " + (_commands.GetComposite(function.function) is Composite proxied ? EditorUtils.GetCompositeName(proxied) : function.function.ToByteString()));
                             break;
                         case EntityVariant.VARIABLE:
                             node.SetName(node.Entity.variant + " TO: " + ((VariableEntity)ent).name.ToString());
@@ -1084,7 +1094,7 @@ namespace OpenCAGE
                     if (funcEnt.function.IsFunctionType)
                         node.SetName(_commands.Utils.GetEntityName(_composite, node.Entity), funcEnt.function.AsFunctionType.ToString());
                     else
-                        node.SetName(_commands.Utils.GetEntityName(_composite, node.Entity), Path.GetFileName(_commands.GetComposite(funcEnt.function).name));
+                        node.SetName(_commands.Utils.GetEntityName(_composite, node.Entity), EditorUtils.GetCompositeName(_commands.GetComposite(funcEnt.function)));
                     break;
                 case EntityVariant.VARIABLE:
                     VariableEntity varEnt = (VariableEntity)node.Entity;
@@ -1109,7 +1119,7 @@ namespace OpenCAGE
             if (proxy.function.IsFunctionType)
                 return proxy.function.AsFunctionType.ToString();
             Composite composite = _commands.GetComposite(proxy.function);
-            return composite != null ? Path.GetFileName(composite.name) : null;
+            return composite != null ? EditorUtils.GetCompositeName(composite) : null;
         }
 
         //Saves the Flowgraph's layout, and compiles the links back to commands
@@ -1299,11 +1309,8 @@ namespace OpenCAGE
         {
             for (int i = 0; i < ent.Count; i++)
             {
-                STNode node = EntityToNode(ent[i]);
                 Point offsetSpawnPos = new Point(_nodeSpawnPosition.X + (i * 20), _nodeSpawnPosition.Y + (i * 20));
-                node.SetPosition(offsetSpawnPos);
-                if (SettingsManager.GetBool(Settings.PopulateAllPinsOnCreateNode))
-                    AddAllPins(node);
+                AddNodeForEntity(ent[i], offsetSpawnPos);
             }
             RefreshNodeMarkers();
         }
@@ -1313,8 +1320,7 @@ namespace OpenCAGE
         {
             Entity selectedEntity = Singleton.Editor?.CompositeDisplay?.EntityDisplay?.Entity;
             if (selectedEntity == null) return;
-            STNode node = AddNodeForEntity(selectedEntity);
-            node.SetPosition(new Point((int)stNodeEditor1.MousePositionInCanvas.X, (int)stNodeEditor1.MousePositionInCanvas.Y));
+            STNode node = AddNodeForEntity(selectedEntity, new Point((int)stNodeEditor1.MousePositionInCanvas.X, (int)stNodeEditor1.MousePositionInCanvas.Y));
             SelectNewNode(node);
             RefreshNodeMarkers();
         }
@@ -1765,9 +1771,8 @@ namespace OpenCAGE
                 if (firstNodeByEntity.ContainsKey(pair.Item2.shortGUID.AsUInt32))
                     continue;
 
-                STNode node = EntityToNode(pair.Item2);
+                STNode node = EntityToNode(pair.Item2, PastePosition(canvasPos, pair.Item1, newNodes.Count, cascade));
                 ApplyCopiedPins(node, PinsForClipboardEntry(pair.Item1));
-                node.SetPosition(PastePosition(canvasPos, pair.Item1, newNodes.Count, cascade));
                 newNodes.Add(node);
                 firstNodeByEntity.Add(pair.Item2.shortGUID.AsUInt32, node);
             }
@@ -1872,9 +1877,8 @@ namespace OpenCAGE
                     if (entity == null)
                         continue;
 
-                    STNode node = EntityToNode(entity);
+                    STNode node = EntityToNode(entity, PastePosition(canvasPos, entry, placedHere++, cascadeHere));
                     ApplyCopiedPins(node, PinsForClipboardEntry(entry));
-                    node.SetPosition(PastePosition(canvasPos, entry, placedHere++, cascadeHere));
                     SelectNode(node, centerCanvas: false);
                     pastedHere.Add(node);
                 }
@@ -1921,9 +1925,8 @@ namespace OpenCAGE
                     Singleton.OnEntityAdded?.Invoke(alias);
                 }
 
-                STNode node = EntityToNode(alias);
+                STNode node = EntityToNode(alias, PastePosition(canvasPos, entry, placedAliases++, cascadeAliases));
                 ApplyCopiedPins(node, PinsForClipboardEntry(entry));
-                node.SetPosition(PastePosition(canvasPos, entry, placedAliases++, cascadeAliases));
                 SelectNode(node, centerCanvas: false);
                 pastedAliases.Add(node);
             }
@@ -2096,8 +2099,7 @@ namespace OpenCAGE
         private void OnEntityAddedViaPopup(Entity entity)
         {
             EntityCreationPopupClosed(null, null);
-            STNode node = AddNodeForEntity(entity);
-            node.SetPosition(new Point((int)_createEntViaPopupPos.X, (int)_createEntViaPopupPos.Y));
+            STNode node = AddNodeForEntity(entity, new Point((int)_createEntViaPopupPos.X, (int)_createEntViaPopupPos.Y));
             SelectNewNode(node);
             RefreshNodeMarkers();
         }

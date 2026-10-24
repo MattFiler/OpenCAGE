@@ -214,15 +214,13 @@ namespace OpenCAGE.Scripts
                 return;
 
             CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
-            Composite currentComposite = GetActiveHierarchyRootComposite();
             Composite displayedComposite = display?.Populated == true ? display.Composite : null;
             Commands commands = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Commands;
 
             if (scope == GlobalEntitySearchScope.CurrentComposite
-                && currentComposite != null
-                && display != null)
+                && displayedComposite != null)
             {
-                if (displayedComposite != null && composite.shortGUID == displayedComposite.shortGUID)
+                if (composite.shortGUID == displayedComposite.shortGUID)
                 {
                     display.LoadEntity(selected, true);
                     return;
@@ -232,11 +230,25 @@ namespace OpenCAGE.Scripts
                 return;
             }
 
+            //Where the hierarchy is entered (kept, so the breadcrumb stays as it is), the steps already taken from there, and the
+            //composite the result is looked for under: for "current and nested" that is the composite on show, so the jump carries
+            //on down from where the user is standing
             Composite nestedEntry = null;
-            if (scope == GlobalEntitySearchScope.CurrentCompositeAndNested && currentComposite != null)
-                nestedEntry = GetHierarchyEntryComposite(display, currentComposite);
+            Composite searchRoot = null;
+            List<uint> pathGuids = new List<uint>();
+            if (scope == GlobalEntitySearchScope.CurrentCompositeAndNested && displayedComposite != null)
+            {
+                nestedEntry = GetHierarchyEntryComposite(display, displayedComposite);
+                searchRoot = displayedComposite;
+                if (display.Path?.AllEntities != null && nestedEntry != displayedComposite)
+                    foreach (Entity step in display.Path.AllEntities)
+                        pathGuids.Add(step.shortGUID.AsUInt32);
+            }
             else if (scope == GlobalEntitySearchScope.RootCompositeAndNested && commands?.EntryPoints != null && commands.EntryPoints.Length > 0)
+            {
                 nestedEntry = commands.EntryPoints[0];
+                searchRoot = nestedEntry;
+            }
 
             if (nestedEntry != null && commands != null && display != null)
             {
@@ -250,11 +262,9 @@ namespace OpenCAGE.Scripts
                     }
                 }
 
-                List<uint> pathGuids = new List<uint>();
-
-                if (composite.shortGUID != nestedEntry.shortGUID)
+                if (composite.shortGUID != searchRoot.shortGUID)
                 {
-                    if (!TryFindCompositeInstancePath(nestedEntry, composite, commands, out List<Entity> instancePath))
+                    if (!TryFindCompositeInstancePath(searchRoot, composite, commands, out List<Entity> instancePath))
                     {
                         Singleton.Editor?.CompositeBrowser?.LoadCompositeAndEntity(composite, selected);
                         return;
@@ -319,19 +329,14 @@ namespace OpenCAGE.Scripts
         }
 
         /// <summary>
-        /// The composite at the root of the currently active hierarchy (the composite originally
-        /// entered from the browser). When the path is empty this is simply the displayed composite.
-        /// This is the shared definition of "current composite" used by both global search and find references.
+        /// The composite on show - after stepping into instances, the one stepped into, not the one first opened from the
+        /// browser. This is the shared definition of "current composite" for the search scopes and find references.
         /// </summary>
-        public static Composite GetActiveHierarchyRootComposite()
+        public static Composite GetCurrentComposite()
         {
             CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
             if (display == null || !display.Populated)
                 return null;
-
-            if (display.Path?.AllComposites != null && display.Path.AllComposites.Count > 0)
-                return display.Path.AllComposites[0];
-
             return display.Composite;
         }
 
@@ -408,7 +413,7 @@ namespace OpenCAGE.Scripts
             if (content?.Level?.Commands == null)
                 yield break;
 
-            Composite currentComposite = GetActiveHierarchyRootComposite();
+            Composite currentComposite = GetCurrentComposite();
 
             if (scope == GlobalEntitySearchScope.AllComposites || currentComposite == null && scope != GlobalEntitySearchScope.RootCompositeAndNested)
             {

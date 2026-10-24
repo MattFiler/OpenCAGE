@@ -39,7 +39,7 @@ namespace OpenCAGE.ConfigEditors
             string viewcone = null;
             foreach (BML config in configs)
             {
-                XmlNode node = config.Content;
+                XmlNode node = ConfigEditorUtils.ContentOf(config);
                 foreach (string name in viewconePath)
                     node = node?[name];
                 if (node == null)

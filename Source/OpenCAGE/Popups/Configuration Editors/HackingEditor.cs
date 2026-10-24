@@ -99,13 +99,13 @@ namespace OpenCAGE.ConfigEditors
         {
             var doc = _gblItem.Content;
 
+            //Each level's entry is updated where it is rather than rebuilt: tool level 99's also carries min_difficulty="24", which the game reads
             var gatingLevels = doc["item_database"]["hacking_gating_levels"];
-            gatingLevels.RemoveAll();
-            CreateMaxDifficulty(doc, "0", lvl0Max.Text, gatingLevels);
-            CreateMaxDifficulty(doc, "1", lvl1Max.Text, gatingLevels);
-            CreateMaxDifficulty(doc, "2", lvl2Max.Text, gatingLevels);
-            CreateMaxDifficulty(doc, "3", lvl3Max.Text, gatingLevels);
-            CreateMaxDifficulty(doc, "99", lvl99Max.Text, gatingLevels);
+            SetMaxDifficulty(doc, "0", lvl0Max.Text, gatingLevels);
+            SetMaxDifficulty(doc, "1", lvl1Max.Text, gatingLevels);
+            SetMaxDifficulty(doc, "2", lvl2Max.Text, gatingLevels);
+            SetMaxDifficulty(doc, "3", lvl3Max.Text, gatingLevels);
+            SetMaxDifficulty(doc, "99", lvl99Max.Text, gatingLevels);
 
             var difficulites = doc["item_database"]["hacking_game_difficulties"];
             foreach (XmlElement difficulty in difficulites)
@@ -128,9 +128,26 @@ namespace OpenCAGE.ConfigEditors
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
         }
 
-        private void CreateMaxDifficulty(XmlDocument doc, string toolLvl, string maxDiff, XmlElement parent)
+        private void SetMaxDifficulty(XmlDocument doc, string toolLvl, string maxDiff, XmlElement parent)
         {
-            XmlElement max = doc.CreateElement("hack_max_difficulty");
+            //A list showing nothing (the file's value isn't one of the difficulties) leaves the file's value alone
+            if (string.IsNullOrEmpty(maxDiff))
+                return;
+
+            //Only max_difficulty is the editor's: the entry's other attributes stay as they are
+            bool found = false;
+            foreach (XmlNode node in parent.ChildNodes)
+            {
+                if (!(node is XmlElement level) || level.Name != "hack_max_difficulty" || level.GetAttribute("tool_level") != toolLvl)
+                    continue;
+                level.SetAttribute("max_difficulty", maxDiff);
+                found = true;
+            }
+            if (found)
+                return;
+
+            //In the file's namespace, as its other entries are (a bare CreateElement writes xmlns="" on it)
+            XmlElement max = doc.CreateElement("hack_max_difficulty", parent.NamespaceURI);
             max.SetAttribute("tool_level", toolLvl);
             max.SetAttribute("max_difficulty", maxDiff);
             parent.AppendChild(max);

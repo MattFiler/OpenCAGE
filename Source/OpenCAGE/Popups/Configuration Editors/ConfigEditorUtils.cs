@@ -325,6 +325,48 @@ namespace OpenCAGE.ConfigEditors
             return updown.Value.ToString("0.############################", CultureInfo.InvariantCulture);
         }
 
+        /* Every read of a BML's Content converts the whole binary file into a new XmlDocument. Showing an entry reads the
+         * same few files (the entry and its templates) once for every field - several hundred times per character in the
+         * Senses editor, and again for every entry in the save-on-open loop - which made opening it take most of a minute.
+         * Inside a ReadOnce() block each file is converted once and that copy answers every later read in the block.
+         * Only for filling controls: the copies are never edited, and Save still takes a fresh Content to edit and write
+         * back, so a block must not span a Save of the same files. */
+        [ThreadStatic] static Dictionary<BML, XmlDocument> _readOnceContent;
+        [ThreadStatic] static int _readOnceDepth;
+
+        public static IDisposable ReadOnce()
+        {
+            if (_readOnceDepth++ == 0)
+                _readOnceContent = new Dictionary<BML, XmlDocument>();
+            return new ReadOnceBlock();
+        }
+
+        sealed class ReadOnceBlock : IDisposable
+        {
+            bool _ended;
+            public void Dispose()
+            {
+                if (_ended)
+                    return;
+                _ended = true;
+                if (--_readOnceDepth == 0)
+                    _readOnceContent = null;
+            }
+        }
+
+        /* A BML's Content, converted once per ReadOnce() block (or every time outside one) */
+        public static XmlDocument ContentOf(BML config)
+        {
+            if (_readOnceContent == null)
+                return config.Content;
+            if (!_readOnceContent.TryGetValue(config, out XmlDocument content))
+            {
+                content = config.Content;
+                _readOnceContent.Add(config, content);
+            }
+            return content;
+        }
+
         public static void SetCheckbox(List<BML> configs, CheckBox checkbox, params string[] elementPath)
         {
             if (elementPath == null || elementPath.Length == 0)
@@ -333,7 +375,7 @@ namespace OpenCAGE.ConfigEditors
             bool foundValue = false;
             for (int i = 0; i < configs.Count; i++)
             {
-                XmlElement leaf = TryGetDescendant(configs[i].Content, elementPath);
+                XmlElement leaf = TryGetDescendant(ContentOf(configs[i]), elementPath);
                 if (leaf?.InnerText == null)
                     continue;
                 checkbox.Checked = leaf.InnerText.ToUpper() == "TRUE";
@@ -359,7 +401,7 @@ namespace OpenCAGE.ConfigEditors
             bool foundValue = false;
             for (int i = 0; i < configs.Count; i++)
             {
-                XmlElement leaf = TryGetDescendant(configs[i].Content, elementPath);
+                XmlElement leaf = TryGetDescendant(ContentOf(configs[i]), elementPath);
                 if (leaf?.InnerText == null)
                     continue;
 
@@ -394,7 +436,7 @@ namespace OpenCAGE.ConfigEditors
             bool foundValue = false;
             for (int i = 0; i < configs.Count; i++)
             {
-                XmlElement leaf = TryGetDescendant(configs[i].Content, elementPath);
+                XmlElement leaf = TryGetDescendant(ContentOf(configs[i]), elementPath);
                 if (leaf?.InnerText == null)
                     continue;
                 if (combo.DropDownStyle == ComboBoxStyle.DropDownList)
@@ -458,7 +500,7 @@ namespace OpenCAGE.ConfigEditors
             bool foundValue = false;
             for (int i = 0; i < configs.Count; i++)
             {
-                XmlElement leaf = TryGetDescendant(configs[i].Content, elementPath);
+                XmlElement leaf = TryGetDescendant(ContentOf(configs[i]), elementPath);
                 if (leaf?.InnerText == null)
                     continue;
                 textbox.Text = leaf.InnerText;

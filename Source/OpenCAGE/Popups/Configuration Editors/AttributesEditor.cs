@@ -237,6 +237,16 @@ namespace OpenCAGE.ConfigEditors
                 Debug.Log("AttributesEditor", "Template chain failed: " + ex.Message);
             }
 
+            //Each file in the template chain is read once for all the fields, not once per field
+            using (ConfigEditorUtils.ReadOnce())
+                ShowCharacterFields();
+
+            ConfigEditorUtils.Subscribe(this.Controls, Save);
+        }
+
+        /* Fill every field from the selected character, falling back through its templates */
+        private void ShowCharacterFields()
+        {
             ConfigEditorUtils.SetNumber(_selectedCharacter, Max_Health, "Attribute", "Health", "Max_Health");
             ConfigEditorUtils.SetNumber(_selectedCharacter, Injured_State_1, "Attribute", "Health", "Injured_State_1");
             ConfigEditorUtils.SetNumber(_selectedCharacter, Injured_State_2, "Attribute", "Health", "Injured_State_2");
@@ -247,7 +257,7 @@ namespace OpenCAGE.ConfigEditors
             if (_missingBehaviourTree != null)
                 Behavior_Tree.Items.Remove(_missingBehaviourTree);
             _missingBehaviourTree = null;
-            _loadedBehaviourTree = _selectedCharacter.Select(c => c.Content?["Attribute"]?["Behavior"]?["Behavior_Tree"]?.InnerText).FirstOrDefault(t => t != null);
+            _loadedBehaviourTree = _selectedCharacter.Select(c => ConfigEditorUtils.ContentOf(c)?["Attribute"]?["Behavior"]?["Behavior_Tree"]?.InnerText).FirstOrDefault(t => t != null);
             if (_loadedBehaviourTree != null && !Behavior_Tree.Items.Contains(_loadedBehaviourTree))
             {
                 Behavior_Tree.Items.Add(_loadedBehaviourTree);
@@ -300,8 +310,6 @@ namespace OpenCAGE.ConfigEditors
             ConfigEditorUtils.SetCombo(_selectedCharacter, Character_Sound, "Attribute", "Sound_Attributes", "Character_Sound");
             ConfigEditorUtils.SetNumber(_selectedCharacter, max_range_to_search_for_IDLE_job, "Attribute", "Job_Behaviour", "max_range_to_search_for_IDLE_job");
             ConfigEditorUtils.SetNumber(_selectedCharacter, min_time_between_idles_for_stalk, "Attribute", "Job_Behaviour", "min_time_between_idles_for_stalk");
-
-            ConfigEditorUtils.Subscribe(this.Controls, Save);
         }
 
         private void Save(object sender, EventArgs e)

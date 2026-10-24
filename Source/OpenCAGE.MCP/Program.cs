@@ -148,32 +148,145 @@ namespace OpenCAGE.MCP
             while ((line = stdin.ReadLine()) != null)
             {
                 if (string.IsNullOrWhiteSpace(line)) continue;
-                JObject message;
+                JToken parsed;
                 try
                 {
-                    message = ParseObject(line);
+                    parsed = ParseMessage(line);
                 }
                 catch (Exception e)
                 {
                     WriteOut(Error(null, -32700, "Parse error: " + e.Message));
                     continue;
                 }
-                try
-                {
-                    Handle(message);
-                }
-                catch (Exception e)
-                {
-                    Log("Failed to handle a message: " + e);
-                    if (message["id"] != null && message["method"] != null)
-                        WriteOut(Error(message["id"], -32603, e.Message));
-                }
+                if (parsed is JArray batch)
+                    HandleBatch(batch);
+                else
+                    HandleOne(parsed, null);
             }
 
             Log("The client closed stdin; exiting");
             _outbox.CompleteAdding();
             lock (_pipeLock) { try { _pipe?.Dispose(); } catch { } }
             return 0;
+        }
+
+        /// <summary>
+        /// One message, alone or from a batch. One that is not a valid request is answered -32600 (when it has an id), and
+        /// one this program fails on -32603. A request from a batch is noted, so its answer (from wherever it comes) waits
+        /// for the batch's array.
+        /// </summary>
+        private static void HandleOne(JToken token, Batch batch)
+        {
+            if (!(token is JObject message))
+            {
+                Reply(Error(null, -32600, "Invalid request: a message is a JSON object."), batch);
+                return;
+            }
+            JToken id = message["id"];
+            JToken named = message["method"];
+            //A request with no method (that is not a response), or one whose method is not a name: answered, or its client
+            //would wait for ever
+            if (named == null ? id != null && message["result"] == null && message["error"] == null : named.Type != JTokenType.String)
+            {
+                if (id != null)
+                    Reply(Error(id, -32600, "Invalid request: " + (named == null ? "it has no 'method'." : "'method' must be a string.")), batch);
+                return;
+            }
+            if (batch != null && id != null && named != null && !((string)named).StartsWith("notifications/"))
+            {
+                //Its answer is found by its id: a null id, or one a request still waiting has, could not be told apart
+                if (id.Type == JTokenType.Null || !_batchOf.TryAdd(id.ToString(Formatting.None), batch))
+                {
+                    Reply(Error(id, -32600, "Invalid request: " + (id.Type == JTokenType.Null ? "'id' must not be null." : "another request still waiting has the same id.")), batch);
+                    return;
+                }
+                batch.Expect();
+            }
+            try
+            {
+                Handle(message);
+            }
+            catch (Exception e)
+            {
+                Log("Failed to handle a message: " + e);
+                if (id != null && named != null)
+                    WriteOut(Error(id, -32603, e.Message));
+            }
+        }
+
+        /// <summary>
+        /// A JSON-RPC batch (the 2025-03-26 protocol has them): each message in it is handled as if sent alone, and the
+        /// answers go back together as one array once every request in it is answered (a cancelled one adds none). A batch
+        /// of notifications gets no answer.
+        /// </summary>
+        private static void HandleBatch(JArray items)
+        {
+            if (items.Count == 0)
+            {
+                WriteOut(Error(null, -32600, "Invalid request: the batch is empty."));
+                return;
+            }
+            Batch batch = new Batch();
+            foreach (JToken item in items)
+                HandleOne(item, batch);
+            batch.Release();
+        }
+
+        /// <summary>One batch's answers: written as one array once the last of its requests is answered.</summary>
+        private sealed class Batch
+        {
+            private readonly List<string> _answers = new List<string>();
+            //One for each request still waiting, and one held until every message in the batch has been handled
+            private int _waiting = 1;
+
+            /// <summary>A request in it is under way: its answer is waited for.</summary>
+            public void Expect() => Interlocked.Increment(ref _waiting);
+
+            /// <summary>An answer given straight away (to a message that was not a valid request).</summary>
+            public void Add(string answer)
+            {
+                lock (_answers) _answers.Add(answer);
+            }
+
+            /// <summary>A request it waited for is over: its answer, or null when it was cancelled.</summary>
+            public void Answer(string answer)
+            {
+                if (answer != null) Add(answer);
+                Release();
+            }
+
+            /// <summary>One wait over (the last writes the answers out; with none, nothing is written).</summary>
+            public void Release()
+            {
+                if (Interlocked.Decrement(ref _waiting) != 0)
+                    return;
+                lock (_answers)
+                {
+                    if (_answers.Count != 0)
+                        WriteOutRaw("[" + string.Join(",", _answers) + "]");
+                }
+            }
+        }
+
+        //The batch each request still waiting came in, by id (only requests that came in one)
+        private static readonly ConcurrentDictionary<string, Batch> _batchOf = new ConcurrentDictionary<string, Batch>();
+
+        /// <summary>Whether this answer to the request <paramref name="id"/> was taken for the batch the request came in.</summary>
+        private static bool ForBatch(JToken id, string answer)
+        {
+            if (id == null || id.Type == JTokenType.Null || _batchOf.IsEmpty || !_batchOf.TryRemove(id.ToString(Formatting.None), out Batch batch))
+                return false;
+            batch.Answer(answer);
+            return true;
+        }
+
+        /// <summary>An answer given straight away: kept for its batch's array if the message came in one, else written now.</summary>
+        private static void Reply(JObject answer, Batch batch)
+        {
+            if (batch != null)
+                batch.Add(answer.ToString(Formatting.None));
+            else
+                WriteOutRaw(answer.ToString(Formatting.None));
         }
 
         private static bool Connected
@@ -189,11 +302,12 @@ namespace OpenCAGE.MCP
         {
             string method = (string)message["method"];
             JToken id = message["id"];
+            JObject parameters = message["params"] as JObject;
             switch (method)
             {
                 case "initialize":
                     {
-                        string requested = (string)message["params"]?["protocolVersion"];
+                        string requested = (string)parameters?["protocolVersion"];
                         JObject cache = ReadCache(out bool current);
                         JObject capabilities = new JObject()
                         {
@@ -220,8 +334,10 @@ namespace OpenCAGE.MCP
                 case "notifications/cancelled":
                     {
                         //The client has stopped waiting: the editor never answers a cancelled request, and nor do we
-                        string cancelled = message["params"]?["requestId"]?.ToString(Formatting.None);
+                        string cancelled = parameters?["requestId"]?.ToString(Formatting.None);
                         if (cancelled != null) _pending.TryRemove(cancelled, out _);
+                        //...so a batch it came in stops waiting for it
+                        if (cancelled != null && _batchOf.TryRemove(cancelled, out Batch batch)) batch.Answer(null);
                         break;
                     }
                 case "tools/list":
@@ -242,9 +358,9 @@ namespace OpenCAGE.MCP
                     }
                 case "tools/call":
                     {
-                        if ((string)message["params"]?["name"] == LoadToolsetsTool && _toolsets != null)
+                        if (parameters?["name"]?.Type == JTokenType.String && (string)parameters["name"] == LoadToolsetsTool && _toolsets != null)
                         {
-                            WriteOut(Result(id, LoadToolsets(message["params"]?["arguments"] as JObject)));
+                            WriteOut(Result(id, LoadToolsets(parameters["arguments"] as JObject)));
                             return;
                         }
                         Forward(message, launch: true);
@@ -264,7 +380,7 @@ namespace OpenCAGE.MCP
                             WriteOut(Result(id, new JObject() { ["prompts"] = ListPrompts(prompts) }));
                             return;
                         }
-                        JObject prompt = GetPrompt(prompts, (string)message["params"]?["name"], message["params"]?["arguments"] as JObject, out string problem);
+                        JObject prompt = GetPrompt(prompts, parameters?["name"]?.Type == JTokenType.String ? (string)parameters["name"] : null, parameters?["arguments"] as JObject, out string problem);
                         WriteOut(prompt != null ? Result(id, prompt) : Error(id, -32602, problem));
                         return;
                     }
@@ -552,6 +668,7 @@ namespace OpenCAGE.MCP
                 while ((line = reader.ReadLine()) != null)
                 {
                     if (string.IsNullOrWhiteSpace(line)) continue;
+                    JToken answerTo = null;
                     try
                     {
                         JObject message = ParseObject(line);
@@ -561,6 +678,7 @@ namespace OpenCAGE.MCP
                             //An answer to a request nobody waits for (cancelled, or already answered with an error) is dropped
                             if (!_pending.TryRemove(id.ToString(Formatting.None), out Pending pending))
                                 continue;
+                            answerTo = id;
                             string rewritten = Rewrite(message, pending);
                             if (rewritten != null) line = rewritten;
                         }
@@ -569,7 +687,9 @@ namespace OpenCAGE.MCP
                     {
                         Log("Could not read OpenCAGE's message: " + e.Message);
                     }
-                    WriteOutRaw(line);
+                    //An answer to a request that came in a batch waits for the batch's array
+                    if (!ForBatch(answerTo, line))
+                        WriteOutRaw(line);
                 }
             }
             catch (Exception e)
@@ -857,12 +977,26 @@ namespace OpenCAGE.MCP
                 return JObject.Load(reader);
         }
 
+        /// <summary>A line from the client as sent, whatever JSON it holds: a message (an object), or a batch of them (an array).</summary>
+        private static JToken ParseMessage(string line)
+        {
+            using (JsonTextReader reader = new JsonTextReader(new StringReader(line)) { DateParseHandling = DateParseHandling.None })
+                return JToken.ReadFrom(reader);
+        }
+
         private static string Quote(string argument) => argument.Contains(" ") && !argument.StartsWith("\"") ? "\"" + argument + "\"" : argument;
 
         private static JObject Result(JToken id, JObject result) => new JObject() { ["jsonrpc"] = "2.0", ["id"] = id, ["result"] = result };
         private static JObject Error(JToken id, int code, string message) => new JObject() { ["jsonrpc"] = "2.0", ["id"] = id, ["error"] = new JObject() { ["code"] = code, ["message"] = message } };
 
-        private static void WriteOut(JObject message) => WriteOutRaw(message.ToString(Formatting.None));
+        private static void WriteOut(JObject message)
+        {
+            string line = message.ToString(Formatting.None);
+            //An answer to a request that came in a batch waits for the batch's array
+            if (message["method"] == null && ForBatch(message["id"], line))
+                return;
+            WriteOutRaw(line);
+        }
         private static void WriteOutRaw(string line)
         {
             lock (_stdoutLock)

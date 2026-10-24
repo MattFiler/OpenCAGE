@@ -26,6 +26,8 @@ namespace OpenCAGE
         private AnimationImport.Reading _reading;
         private AnimationPreview _preview;
         private bool _filling = true;
+        //The animation being rebuilt from the file, in place, rather than one added beside it (null for an import)
+        private CathodeLib.Animation.ClipReference _replacing;
 
         /// <summary>The name the set will play the imported clip by, once it has been imported.</summary>
         public string ImportedName { get; private set; }        /// <summary>The set it went into, which the window may have been the one to choose.</summary>        public string ImportedSet { get; private set; }
@@ -88,6 +90,27 @@ namespace OpenCAGE
 
             _filling = false;
             Reread();
+        }
+
+        /// <summary>
+        /// Rebuild an animation already in a set from a file, in place: it keeps its name, where it is stored and every
+        /// reference to it - scripts, trees and blend sets keep working (see <see cref="AnimationImport.Replace"/>). The
+        /// file is read against the rig the animation was built on, unless another is picked. Nothing changes until Replace.
+        /// </summary>
+        public ImportAnimation(CathodeLib.Animation animations, CathodeLib.Animation.ClipReference replacing, string file)
+            : this(animations, replacing.Context.Set, file, string.IsNullOrEmpty(replacing.Skeleton) ? null : replacing.Skeleton, 0, replacing.Name)
+        {
+            _replacing = replacing;
+            Text = "Replace '" + replacing.Name + "' in " + _set.Name;
+            nameBox.Text = replacing.Name;
+            nameBox.ReadOnly = true;
+            pathBox.Text = replacing.Path;
+            pathBox.ReadOnly = true;
+            importBtn.Text = "Replace";
+            //An additive animation stays one unless told otherwise: what plays it expects a layer
+            additiveCheck.Checked = replacing.Additive;
+            summaryBox.Text = Describe();
+            UpdateButtons();
         }
 
         /* The row the retarget tick used to sit on, which is free now that the conversion decides
@@ -220,6 +243,17 @@ namespace OpenCAGE
                 ? "The root bone moves over the clip, so this animation carries the character with it."
                 : "The root bone holds still, so where the character stands is left to the game.");
 
+            if (_replacing != null)
+            {
+                text.AppendLine().AppendLine("This replaces what '" + _replacing.Name + "' plays. It keeps its name, where it is stored and "
+                    + "everything that plays it - scripts, animation trees and blend sets - and its events inside the new length.");
+                if (!string.IsNullOrEmpty(_replacing.Skeleton) && !string.Equals(_options.Rig, _replacing.Skeleton, StringComparison.OrdinalIgnoreCase))
+                    text.AppendLine("It was built against " + _replacing.Skeleton + ": the new animation is built against " + _options.Rig + " instead.");
+                List<string> kept = CathodeLib.Animation.KeptSettings(_replacing.Section);
+                if (kept.Count != 0)
+                    text.AppendLine("Kept from the old animation as they were, as the game chooses and blends it by them: " + string.Join(", ", kept) + ".");
+            }
+
             if (!string.Equals(_options.Rig, _set.Skeleton, StringComparison.OrdinalIgnoreCase))
                 text.AppendLine().AppendLine("Built against " + _options.Rig + " rather than " + _set.Skeleton
                     + ", so the game retargets it onto " + _set.Skeleton + " as it plays - which is how most of "
@@ -285,16 +319,18 @@ namespace OpenCAGE
             string problem;
             try
             {
-                added = AnimationImport.Add(_animations, _set, _reading, name, path, _options, out problem);
+                added = _replacing != null
+                    ? AnimationImport.Replace(_animations, _replacing, _reading, _options, out problem)
+                    : AnimationImport.Add(_animations, _set, _reading, name, path, _options, out problem);
             }
             catch (Exception ex)
             {
                 added = false;
-                problem = "The clip could not be added to the animation database: " + ex.Message;
+                problem = (_replacing != null ? "The clip could not be rebuilt: " : "The clip could not be added to the animation database: ") + ex.Message;
             }
             if (!added)
             {
-                MessageBox.Show(problem, "Import", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(problem, _replacing != null ? "Replace" : "Import", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 

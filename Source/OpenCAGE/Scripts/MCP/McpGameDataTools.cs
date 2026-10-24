@@ -2595,7 +2595,13 @@ namespace OpenCAGE.MCP
         private static string ElementsPath(string relative)
         {
             string file = Relative(relative);
-            string full = Path.GetFullPath(DataPath(file));
+            //Refused before Path sees it, which throws "Illegal characters in path" (as read_config's ConfigPath does)
+            const string notAPath = "'file' is not a file path (it has characters a path can't hold, or is far too long): give a path under DATA as list_config_files lists them, e.g. 'WEAPON_INFO/AMMO/AMMOTYPES.BML'.";
+            if (file.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
+                throw McpError.Invalid(notAPath);
+            string full;
+            try { full = Path.GetFullPath(DataPath(file)); }
+            catch (Exception e) when (e is ArgumentException || e is NotSupportedException || e is PathTooLongException) { throw McpError.Invalid(notAPath); }
             if (!full.StartsWith(DataFolder + "\\", StringComparison.OrdinalIgnoreCase))
                 throw new McpError("Configuration files have to be inside the install's DATA folder.");
             if (full.IndexOf("\\ENV\\", DataFolder.Length, StringComparison.OrdinalIgnoreCase) >= 0)
@@ -2604,7 +2610,7 @@ namespace OpenCAGE.MCP
             if (!voices && !full.EndsWith(".BML", StringComparison.OrdinalIgnoreCase) && !full.EndsWith(".XML", StringComparison.OrdinalIgnoreCase))
                 throw new McpError("Only .BML and .XML configuration files (and " + VoiceFile + ", which is XML) can be edited here; set_config_record covers the TXT and binary ones.");
             if (!File.Exists(full))
-                throw new McpError("There is no DATA/" + file + " (list_config_files shows them).");
+                throw new McpError("There is no DATA/" + McpError.Shown(file) + " (list_config_files shows them).");
             return full;
         }
 

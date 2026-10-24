@@ -100,17 +100,24 @@ namespace OpenCAGE
             AddItems(EnumStringType.DISPLAY_MODEL, _levelSpecificEntries);
 
             //Only populate other entries if this is a new level
-            if (_loadedLevel == content.Level.Name)
+            string levelName = content.Level?.Name;
+            if (levelName == null || _loadedLevel == levelName)
                 return;
-            _loadedLevel = content.Level.Name;
 
             _levelSpecificEntries.Clear();
             foreach (EnumStringType type in Enum.GetValues(typeof(EnumStringType)))
             {
                 if (type == EnumStringType.MATERIAL) continue;
                 if (IsTypeGlobal(type)) continue;
+                //Stopped once the level is closed: the lists are read from whichever level is open now
+                if (!ReferenceEquals(Singleton.Editor?.CompositeBrowser?.Content, content)) return;
                 AddItems(type, _levelSpecificEntries);
             }
+
+            //Noted as done only once every list is filled, and only for the level still open: a fill cut short (another
+            //level loaded part way through) is done again for whichever level asks next
+            if (ReferenceEquals(Singleton.Editor?.CompositeBrowser?.Content, content))
+                _loadedLevel = levelName;
             Debug.Log("Asset Loader - Level", "Finished populating");
         }
 

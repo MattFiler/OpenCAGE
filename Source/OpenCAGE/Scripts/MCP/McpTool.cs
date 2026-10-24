@@ -48,6 +48,12 @@ namespace OpenCAGE.MCP
         /// </summary>
         public const int MaxResultCharacters = 80000;
 
+        /// <summary>
+        /// Past this an error's text is cut in the middle, keeping its start and end (and saying how much went): a tool
+        /// quoting a huge argument back would otherwise send all of it again.
+        /// </summary>
+        public const int MaxErrorCharacters = 10000;
+
         public JObject Describe()
         {
             //The spec's defaults (readOnly false, idempotent false) are left out to keep the list small;
@@ -147,9 +153,21 @@ namespace OpenCAGE.MCP
                 text += "\n\nOpenCAGE showed these messages, which were dismissed:\n- " + string.Join("\n- ", call.Dialogs);
             return new JObject()
             {
-                ["content"] = new JArray(new JObject() { ["type"] = "text", ["text"] = text }),
+                ["content"] = new JArray(new JObject() { ["type"] = "text", ["text"] = CutMiddle(text, MaxErrorCharacters) }),
                 ["isError"] = true,
             };
+        }
+
+        /// <summary>Text no longer than <paramref name="limit"/>: a longer one keeps its first two thirds and last third, saying how much was cut between.</summary>
+        private static string CutMiddle(string text, int limit)
+        {
+            if (text.Length <= limit)
+                return text;
+            int head = limit * 2 / 3, tail = limit - head;
+            //Never half a character made of two
+            if (char.IsHighSurrogate(text[head - 1])) head--;
+            if (char.IsLowSurrogate(text[text.Length - tail])) tail--;
+            return text.Substring(0, head) + "\n... (" + (text.Length - head - tail) + " characters cut) ...\n" + text.Substring(text.Length - tail);
         }
     }
 
@@ -222,7 +240,7 @@ namespace OpenCAGE.MCP
         public static McpError NotFound(string what, string query, IEnumerable<string> names, string hint = null)
         {
             List<string> near = names == null ? new List<string>() : McpNames.Similar(names, query, 6);
-            string message = "There is no " + what + " '" + query + "'." + (near.Count == 0 ? "" : " Did you mean " + McpNames.Quote(near) + "?") + (hint == null ? "" : " " + hint);
+            string message = "There is no " + what + " '" + Shown(query) + "'." + (near.Count == 0 ? "" : " Did you mean " + McpNames.Quote(near) + "?") + (hint == null ? "" : " " + hint);
             return new McpError(McpErrorCodes.NotFound, message) { Candidates = near.Count == 0 ? null : new JArray(near) };
         }
 
@@ -236,8 +254,17 @@ namespace OpenCAGE.MCP
             List<JObject> all = candidates.ToList();
             const int shown = 12;
             string list = string.Join("; ", all.Take(shown).Select(Describe));
-            string message = "'" + query + "' matches " + all.Count + " " + what + ": " + list + (all.Count > shown ? "; and " + (all.Count - shown) + " more" : "") + "." + (hint == null ? "" : " " + hint);
+            string message = "'" + Shown(query) + "' matches " + all.Count + " " + what + ": " + list + (all.Count > shown ? "; and " + (all.Count - shown) + " more" : "") + "." + (hint == null ? "" : " " + hint);
             return new McpError(McpErrorCodes.Ambiguous, message);
+        }
+
+        /// <summary>A name or query as an error quotes it: one over 200 characters is cut short, saying how long it was (the caller has it whole).</summary>
+        public static string Shown(string query)
+        {
+            if (query == null || query.Length <= 200)
+                return query;
+            int keep = char.IsHighSurrogate(query[159]) ? 159 : 160;
+            return query.Substring(0, keep) + "... (" + query.Length + " characters)";
         }
 
         private static string Describe(JObject candidate)
@@ -318,6 +345,10 @@ namespace OpenCAGE.MCP
                 if (required) throw new McpError("'" + name + "' is required.");
                 return fallback;
             }
+            //A number or true/false is taken as its text (ids and values are often sent as numbers); an object or a list never
+            //is: its JSON would become a name or path as it stands
+            if (token is JContainer)
+                throw McpError.Invalid("'" + name + "' must be text, not " + (token is JArray ? "a list" : "an object") + ".");
             string value = token.Type == JTokenType.String ? (string)token : token.ToString(Formatting.None);
             if (required && string.IsNullOrWhiteSpace(value))
                 throw new McpError("'" + name + "' is required.");
@@ -811,12 +842,19 @@ namespace OpenCAGE.MCP
         //How many typos a word of this length may have
         private static int Tolerance(int length) => length <= 3 ? 0 : length <= 5 ? 1 : length <= 9 ? 2 : 3;
 
+        //Past this a query is matched exactly only, never fuzzily (see Score)
+        private const int MaxFuzzyQuery = 256;
+
         /// <summary>
         /// How well a name fits what was typed, 0 (not at all) to 1 (the same, ignoring case and separators). Above
         /// about 0.5 it is a likely meaning; 0.3-0.5 a loose one worth listing.
         /// </summary>
         public static double Score(string candidate, string query)
         {
+            //No name is this long, so nothing is a near miss of it: only the very same text counts. Scoring it against every
+            //name of a long list (164,000 clips) took minutes, and lookups run on the UI thread
+            if (query != null && query.Length > MaxFuzzyQuery)
+                return string.Equals(candidate, query, StringComparison.OrdinalIgnoreCase) ? 1 : 0;
             string q = Squash(query), c = Squash(candidate);
             if (q.Length == 0 || c.Length == 0) return 0;
             if (c == q) return 1;

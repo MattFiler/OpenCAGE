@@ -231,6 +231,7 @@ namespace OpenCAGE
                 if (fbd.ShowDialog() != DialogResult.OK) return;
 
                 string root = fbd.SelectedPath;
+                int exported = 0;
                 foreach (var entry in _archive.Entries)
                 {
                     if (entry.Content == null || (_hideOwned && UiMovieOverrides.IsOwnedEntry(entry.Filename))) continue;
@@ -240,8 +241,10 @@ namespace OpenCAGE
                     if (!string.IsNullOrEmpty(dir))
                         Directory.CreateDirectory(dir);
                     File.WriteAllBytes(outPath, entry.Content);
+                    exported++;
                 }
-                MessageBox.Show("Exported " + _archive.Entries.Count + " entries.", "Export all", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                //Only what was written: entries with no content, and OpenCAGE's own (while hidden), are skipped above
+                MessageBox.Show("Exported " + exported + (exported == 1 ? " entry." : " entries."), "Export all", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 

@@ -35,21 +35,23 @@
 	  shave it, and the next frame finishes the job), the death reaction is forced, and the death is a normal one - the
 	  level's scripts hear of it and the kill is the player's.
 
-	What is different: the alien is left out unless "Include the alien" is ticked (the game keeps it at 1 health whatever
-	the damage, so it can't die of this, and the death reaction is forced on it every frame it stays within the radius);
-	androids marked as showroom dummies (which the game never lets die) are left out; the radius is a value; "Spare the
-	script-invincible" leaves characters whose "takes no damage" flags are set alone instead of clearing them; characters
-	made invulnerable in Characters > Control are always spared; nothing is sent while the NPC damage choice there keeps a
-	hit from killing outright (the death reaction would be forced on characters the hit left alive); and a character whose
-	flags were cleared and is still alive when this is turned off (the alien, say) gets them back.
+	What is different: the alien is always left out (the game keeps it at 1 health whatever the damage, so it can't die of
+	this, and hitting it anyway showed nothing in game); androids marked as showroom dummies (which the game never lets
+	die) are left out; the radius is a value; "Spare the script-invincible" leaves characters whose "takes no damage" flags
+	are set alone instead of clearing them; characters made invulnerable in Characters > Control are always spared;
+	nothing is sent while the NPC damage choice there keeps a hit from killing outright (the death reaction would be forced
+	on characters the hit left alive); and a character whose flags were cleared and is still alive when this is turned off
+	gets them back.
+
+	The game takes the damage after the message is handled, so a kill is counted when a character hit here is seen dying or
+	dead in a later frame (within 10 s of its last hit, in the same level).
 
 	A faint ring on the ground round the player shows the radius while it is on.
 
 	Addresses and layouts are from the Steam retail AI.exe (see GameAddresses.h for the GOG and Epic Games Store builds).
 
-	Named for OpenCAGE and testing: switches "player.stench_of_evil", "player.stench_include_alien",
-	"player.stench_spare_invincible" and "player.stench_ring"; value "player.stench_radius"; command
-	"player.stench_status". A level change turns it off.
+	Named for OpenCAGE and testing: switches "player.stench_of_evil", "player.stench_spare_invincible" and
+	"player.stench_ring"; value "player.stench_radius"; command "player.stench_status". A level change turns it off.
 */
 namespace
 {
@@ -112,11 +114,11 @@ namespace
 	constexpr float kMaxRadius = 50.0f;
 	constexpr int kMaxCharacters = 36;
 	constexpr size_t kKilledKept = 8;
+	constexpr ULONGLONG kHitKeptMs = 10000;
 
 	// ---- The switches ----
 
 	std::atomic<bool> g_on = false;
-	std::atomic<bool> g_includeAlien = false;
 	std::atomic<bool> g_spareInvincible = false;
 	std::atomic<bool> g_ring = true;
 	std::atomic<float> g_radius = kDefaultRadius;
@@ -203,6 +205,20 @@ namespace
 	std::vector<Cleared> g_cleared;
 	std::atomic<bool> g_anyCleared = false;
 
+	// The characters hit and not yet seen dying (AI thread only), each with when it was last hit and the level it was hit
+	// in: counted as a kill once seen dying or dead, forgotten after kHitKeptMs or in another level. The render thread
+	// counts the levels.
+	struct Hit
+	{
+		uint32_t id;
+		ULONGLONG at;
+		uint32_t level;
+	};
+	std::vector<Hit> g_hits;
+	std::atomic<bool> g_anyHits = false;
+	std::atomic<uint32_t> g_level = 0;
+	uint32_t g_countedLevel = 0; // AI thread: the level the counted ids are of
+
 	// ---- Reads and the send, guarded ----
 
 	struct Candidate
@@ -287,6 +303,46 @@ namespace
 			g_killed.erase(g_killed.begin());
 	}
 
+	void NoteHit(const Candidate& them)
+	{
+		const ULONGLONG now = GetTickCount64();
+		const uint32_t level = g_level;
+		for (Hit& hit : g_hits)
+			if (hit.id == them.id)
+			{
+				hit.at = now;
+				hit.level = level;
+				return;
+			}
+		g_hits.push_back({ them.id, now, level });
+		g_anyHits = true;
+	}
+
+	// The characters hit that are now dying or dead counted as kills (AI thread, each frame while any is waiting: the game
+	// takes the damage after the message, so the character the message killed is not dead yet when it is sent). Its body
+	// may be among the dead by then, so it is found among all the game's characters.
+	void SettleHits()
+	{
+		const ULONGLONG now = GetTickCount64();
+		const uint32_t level = g_level;
+		for (auto it = g_hits.begin(); it != g_hits.end();)
+		{
+			bool done = it->level != level || now - it->at > kHitKeptMs;
+			if (!done)
+			{
+				Candidate them;
+				const uint8_t* character = AI_STATE::FindCharacter(it->id);
+				if (character && ReadCandidate(character, them) && (them.dying || them.health == 0))
+				{
+					NoteKill(them);
+					done = true;
+				}
+			}
+			it = done ? g_hits.erase(it) : it + 1;
+		}
+		g_anyHits = !g_hits.empty();
+	}
+
 	void NoteCleared(const Candidate& them)
 	{
 		if (!(them.noDamageFlags & ~kDebugBit))
@@ -346,7 +402,6 @@ namespace
 		}
 		const void* sender = messages + kDamageWithReaction;
 		const float radius = Radius();
-		const bool includeAlien = g_includeAlien;
 		const bool spare = g_spareInvincible;
 		const bool keptAlive = AI_COMBAT::NpcsKeptAlive();
 
@@ -374,15 +429,16 @@ namespace
 			const bool enemy = them.alliance >= 0 && them.alliance < kAlliances && Read(table + them.alliance * 4, enemies) &&
 				(enemies & (1u << me.alliance)) != 0;
 			const uint8_t noDamage = static_cast<uint8_t>(them.noDamageFlags & 0xFF);
-			if (!enemy)
+			// A body first: a character's alliance changes as it dies, so the enemy test would call it no enemy
+			if (them.started && (them.dying || them.health == 0))
+				entry.verdict = Verdict::Dying;
+			else if (!enemy)
 				entry.verdict = Verdict::NotEnemy;
 			else if (!them.started)
 				entry.verdict = Verdict::NotStarted;
-			else if (them.dying || them.health == 0)
-				entry.verdict = Verdict::Dying;
 			else if (them.playerControlled)
 				entry.verdict = Verdict::PlayerControlled;
-			else if (them.characterClass == kAlienClass && !includeAlien)
+			else if (them.characterClass == kAlienClass)
 				entry.verdict = Verdict::Alien;
 			else if (them.dummy)
 				entry.verdict = Verdict::Dummy;
@@ -403,22 +459,33 @@ namespace
 				message.damage = static_cast<uint16_t>(them.health);
 				NoteCleared(them);
 				entry.verdict = Send(character, sender, message, true) ? Verdict::Hit : Verdict::Failed;
+				// A kill counted now when the damage is taken already, else once it is seen dying (it usually is taken later)
 				uint16_t health = 1;
 				if (entry.verdict == Verdict::Hit && Read(character + kHealth, health) && health == 0)
 					NoteKill(them);
+				else if (entry.verdict == Verdict::Hit)
+					NoteHit(them);
 			}
 			pass.inRange.push_back(entry);
 		}
 		Store(pass);
 	}
 
-	// AI thread, every frame while it is on (or has flags to give back)
+	// AI thread, every frame while it is on (or has flags to give back, or hits to count)
 	void Tick()
 	{
+		// Another level: its characters' ids are new, so those counted before don't stand in the way
+		if (g_countedLevel != g_level)
+		{
+			g_countedLevel = g_level;
+			g_countedIds.clear();
+		}
 		if (g_on)
 			RunPass();
 		else if (g_anyCleared)
 			GiveFlagsBack();
+		if (g_anyHits)
+			SettleHits();
 		g_tickQueued = false;
 	}
 
@@ -427,8 +494,8 @@ namespace
 	std::string StatusLines()
 	{
 		std::ostringstream out;
-		out << "on=" << (g_on ? 1 : 0) << "\nradius=" << Radius() << "\ninclude_alien=" << (g_includeAlien ? 1 : 0)
-			<< "\nspare_invincible=" << (g_spareInvincible ? 1 : 0) << "\nkills=" << g_kills << "\n";
+		out << "on=" << (g_on ? 1 : 0) << "\nradius=" << Radius() << "\nspare_invincible=" << (g_spareInvincible ? 1 : 0)
+			<< "\nkills=" << g_kills << "\n";
 		if (AI_COMBAT::NpcsKeptAlive())
 			out << "held=the NPC damage choice keeps a hit from killing\n";
 		std::lock_guard<std::mutex> lock(g_passMutex);
@@ -454,7 +521,6 @@ namespace
 			return;
 		g_registered = true;
 		DEBUG_MENU::AddSwitch("player.stench_of_evil", &g_on);
-		DEBUG_MENU::AddSwitch("player.stench_include_alien", &g_includeAlien);
 		DEBUG_MENU::AddSwitch("player.stench_spare_invincible", &g_spareInvincible);
 		DEBUG_MENU::AddSwitch("player.stench_ring", &g_ring);
 		DEBUG_MENU::AddValue("player.stench_radius", &g_radius, kMinRadius, kMaxRadius);
@@ -480,7 +546,7 @@ namespace
 	bool g_wasOn = false; // render thread
 
 	// Render thread, every frame: a level change turns it off; the AI thread's pass queued while it is on (or has flags to
-	// give back); the ring round the player
+	// give back, or hits to count); the ring round the player
 	void DrawOverlay(ImDrawList* drawList)
 	{
 		Register();
@@ -489,6 +555,7 @@ namespace
 			if (g_on)
 				SetStatus("stench of evil off: the level changed");
 			g_on = false;
+			g_level++;
 			std::lock_guard<std::mutex> lock(g_passMutex);
 			g_pass = Pass();
 		}
@@ -501,7 +568,7 @@ namespace
 			if (on)
 				SetStatus("stench of evil on");
 		}
-		if ((on || g_anyCleared) && !g_tickQueued)
+		if ((on || g_anyCleared || g_anyHits) && !g_tickQueued)
 		{
 			g_tickQueued = true;
 			DEBUG_MENU::OnAiThread(Tick);
@@ -541,18 +608,12 @@ namespace
 			g_radius = radius;
 		Tooltip("How far from the player it reaches (the game's own is 5 m).");
 
-		bool includeAlien = g_includeAlien;
-		if (ImGui::Checkbox("Include the alien", &includeAlien))
-			g_includeAlien = includeAlien;
-		Tooltip("Off by default. The alien can't die from it: the game never takes it below 1 health. It is still hit, and the death reaction is forced on it every "
-			"frame it stays within the radius, which hasn't been seen in game: it may be stuck in a death pose or ragdoll while near the player.");
-		ImGui::SameLine();
 		bool spare = g_spareInvincible;
 		if (ImGui::Checkbox("Spare the script-invincible", &spare))
 			g_spareInvincible = spare;
 		Tooltip("Off by default, which is how the game's own does it: every \"takes no damage\" flag on its targets is cleared, invincibility the level's scripts "
-			"set included, so they die too (a character that survives, such as the alien, gets its flags back when this is turned off). On: characters set to "
-			"take no damage are left alone. Characters made invulnerable in Characters > Control are always left alone.");
+			"set included, so they die too (a character still alive when this is turned off gets its flags back). On: characters set to take no damage are left "
+			"alone. Characters made invulnerable in Characters > Control are always left alone, and so is the alien (the game never lets it die of this).");
 		ImGui::SameLine();
 		bool ring = g_ring;
 		if (ImGui::Checkbox("Show the ring", &ring))

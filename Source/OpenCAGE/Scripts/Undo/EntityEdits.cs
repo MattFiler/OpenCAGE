@@ -1,6 +1,7 @@
 using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
+using CathodeLib;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -61,6 +62,8 @@ namespace OpenCAGE.Undo
         private List<NodeSnapshot> _nodes;
         private bool _deletedOffScreen;
         private bool _hadVerdict;
+        //A variable's pin type (and enum) is not on the entity but in the level's pin table: its row leaves with it and comes back with it
+        private CompositePinInfoTable.PinInfo _pinInfo;
 
         public string Label { get; }
         public ShortGuid CompositeId => _composite;
@@ -101,6 +104,7 @@ namespace OpenCAGE.Undo
             _nodes = context.Ui?.CaptureNodes(composite, _entity);
             foreach (AliasRecord alias in _aliases)
                 alias.Nodes = context.Ui?.CaptureNodes(commands.GetComposite(alias.Composite), alias.Alias);
+            _pinInfo = CapturePinInfo(commands, composite);
 
             /* The saved layouts lose the entity and the aliases going with it in one pass, while the capture is open.
                A pass per entity kept each page's lists as that pass found them, so a page two passes trimmed was put
@@ -119,7 +123,25 @@ namespace OpenCAGE.Undo
             }
             using (together)
                 Remove(composite, commands, throughEntries, throughConnections, reachingOwners);
+            //Once everything told of the deletion has seen it go: left behind, the row outlived an undone Add as an orphan
+            if (_pinInfo != null)
+                commands.Utils.ReplaceCustomPinInfos(composite.shortGUID, commands.Utils.GetAllCustomPinInfo(composite).Where(o => o == null || o.VariableGUID != _entity.shortGUID).ToList());
             context.Ui?.RefreshNodeMarkers();
+        }
+
+        /// <summary>A copy of the variable's own row in the level's pin table; null for any other entity, or a variable without one (its type in the vanilla table, which is never changed).</summary>
+        private CompositePinInfoTable.PinInfo CapturePinInfo(Commands commands, Composite composite)
+        {
+            if (!(_entity is VariableEntity))
+                return null;
+            CompositePinInfoTable.PinInfo row = commands.Utils.GetAllCustomPinInfo(composite).FirstOrDefault(o => o != null && o.VariableGUID == _entity.shortGUID);
+            return row == null ? null : CopyPinInfo(row);
+        }
+
+        //Copied both ways, so the table and this record never share a row
+        private static CompositePinInfoTable.PinInfo CopyPinInfo(CompositePinInfoTable.PinInfo row)
+        {
+            return new CompositePinInfoTable.PinInfo() { VariableGUID = row.VariableGUID, PinTypeGUID = row.PinTypeGUID, PinEnumTypeGUID = row.PinEnumTypeGUID };
         }
 
         /// <summary>Take the entity, and what reaches through it, out of the level, recording each piece; then say they went.</summary>
@@ -323,6 +345,9 @@ namespace OpenCAGE.Undo
                     composite.AddProxy((ProxyEntity)_entity);
                     break;
             }
+            //Its pin type before anything below draws or sends it: without it a variable comes back (and saves) untyped
+            if (_pinInfo != null)
+                context.Commands.Utils.SetPinInfo(composite, CopyPinInfo(_pinInfo));
 
             //The aliases elsewhere that reached through it, before the links into them: those were taken after the
             //links into the entity, from the lists as they were then, so they go back first (the last alias first)

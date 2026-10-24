@@ -226,7 +226,11 @@ namespace
 		Recomputed out;
 		out.straight = Distance(heard.position, heard.listenerPosition);
 		float distance = out.straight;
-		if (!heard.network)
+		// While the AI hears in straight lines (Sound > AI hearing), the game took the straight distance whatever the record
+		// says it asked for, so this works it out the same way
+		bool straightLines = false;
+		DEBUG_MENU::GetSwitch("sound.straight_line_hearing", straightLines);
+		if (!heard.network || straightLines)
 			distance = out.straight * heard.scale;
 		else
 		{

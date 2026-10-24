@@ -35,8 +35,8 @@
 
 	Nothing is changed in the game; the switch goes off by itself when another level is loaded (a restart of the same
 	level, or a checkpoint, leaves it on). The Sound tab's own hearing hook (SOUND_DEBUG.h) is on the function that calls
-	this one, so its log still says what the game asked for: its "worked out again" column follows the network, and
-	differs for the sounds this let through.
+	this one, so its log still says what the game asked for (through the network); its "worked out again" column takes the
+	straight line too while this switch is on.
 */
 namespace
 {
@@ -339,7 +339,7 @@ namespace
 			ImGui::PopTextWrapPos();
 		}
 		if (on && !heard.empty())
-			Hint("What the AI hears, above, still works each sound out again through the network, so it says \"differs\" for these while this is on.");
+			Hint("What the AI hears, above, works each sound out again in a straight line too while this is on.");
 	}
 
 	const bool g_added = DEBUG_MENU::AddTab("Sound", 47, DrawSection, "Sound") && DEBUG_MENU::AddOverlay(42, Apply);

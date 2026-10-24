@@ -442,7 +442,7 @@ namespace OpenCAGE
                 + (outcome.PreviousDeleted ? " (deleted " + previous.Name + ", which nothing else used)" : previous != null ? " (kept " + previous.Name + ", which something else uses)" : "")
                 + (prepared.Capture.ZonesStillStreaming ? " - the zones around it were still streaming in, so parts may be missing: capture it again" : "")
                 + (prepared.Capture.FrameHeight > 0 && prepared.Capture.FrameHeight < prepared.Capture.Size ? " - the game's window is " + prepared.Capture.FrameHeight + " pixels tall, so its " + prepared.Capture.Size + " pixel faces were stretched up from that: make the window at least as tall for their full detail" : "")
-                + (outcome.NeedsBuild ? ". Save & Build, then reload the level in the game to see it there." : ". Save, then reload the level in the game to see it there.");
+                + (outcome.NeedsBuild ? ". Use File > Save and Build Level, then reload the level in the game to see it there." : ". Save, then reload the level in the game to see it there.");
             return outcome;
         }
         #region MANY AT ONCE
@@ -602,6 +602,18 @@ namespace OpenCAGE
         //Cubemaps another entity also named when one of their entities had a new cubemap captured: the movers carrying them
         //are lit by more than one entity, so giving them all one entity's new cubemap is only a stand-in until a build
         private static readonly HashSet<TEX4> _sharedAtCapture = new HashSet<TEX4>(BulkExport.ByReference<TEX4>.Instance);
+
+        static EnvironmentMapCapture()
+        {
+            //The closing level's cubemaps are let go; and a Save & Build gives every mover its cubemap afresh from the entities,
+            //so the movers still carrying one of these afterwards are only those of the entities still naming it (UI thread)
+            Singleton.OnLevelClosing += content => _sharedAtCapture.Clear();
+            Singleton.OnSaved += () =>
+            {
+                if (BuildTracker.LastBuiltUtc != null && BuildTracker.LastBuiltUtc == BuildTracker.LastSavedUtc)
+                    _sharedAtCapture.Clear();
+            };
+        }
 
         /// <summary>
         /// Puts the new cubemap in the level and points the entity at it, then clears up the old one, as one undo step

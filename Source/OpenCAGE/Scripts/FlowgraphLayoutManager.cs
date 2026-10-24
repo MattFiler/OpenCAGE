@@ -148,7 +148,7 @@ namespace OpenCAGE
                 EvaluateCompatibility(composite);
                 return;
             }
-            SaveLayout(null, composite, Path.GetFileName(composite.name)); //Add in a default empty flowgraph
+            SaveLayout(null, composite, EditorUtils.GetCompositeName(composite)); //Add in a default empty flowgraph
             _compatibility.compatibility_info.Add(new CompositeFlowgraphCompatibilityTable.CompatibilityInfo()
             {
                 composite_id = composite.shortGUID,
@@ -490,7 +490,7 @@ namespace OpenCAGE
                 {
                     Debug.Log("Flowgraph Manager", "No page exists, but composite has no links, so adding default page - supported!");
                     RemoveAllLayouts(composite);
-                    SaveLayout(null, composite, Path.GetFileName(composite.name));
+                    SaveLayout(null, composite, EditorUtils.GetCompositeName(composite));
                     SetCompatibilityInfo(composite, true);
                 }
                 else

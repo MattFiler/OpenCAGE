@@ -54,6 +54,7 @@ namespace
 		return reinterpret_cast<const void*>(DEVTOOLS_RELATIVE_ADDRESS(offset));
 	}
 
+	// A string parameter's text, as UTF-8 for drawing (the game keeps it as Windows-1252)
 	std::string ResolveString(uint32_t offset)
 	{
 		if (offset == kInvalidString)
@@ -61,8 +62,7 @@ namespace
 		void* table = *DEBUG_TEXT::string_table_instance;
 		if (!table)
 			return "";
-		const char* text = DEBUG_TEXT::string_from_offset(table, offset);
-		return text ? text : "";
+		return DevTools::GameTextToUtf8(DEBUG_TEXT::string_from_offset(table, offset));
 	}
 
 	std::string ReadText(void* entityInterface, const void* entity, const void* guid)

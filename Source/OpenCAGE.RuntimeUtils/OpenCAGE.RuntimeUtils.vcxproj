@@ -46,6 +46,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <AdditionalIncludeDirectories>$(SolutionDir)OpenCAGE.RuntimeUtils/libs/imgui/;$(SolutionDir)OpenCAGE.RuntimeUtils/libs/detours/src/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -196,6 +197,7 @@
     <ClInclude Include="LIVE_SETTINGS.h" />
     <ClInclude Include="DEBUG_MENU.h" />
     <ClInclude Include="TABLE_ORDER.h" />
+    <ClInclude Include="CINEMATIC_CAPTURE.h" />
     <ClInclude Include="BT_DEBUG.h" />
     <ClInclude Include="AI_DEBUG.h" />
     <ClInclude Include="AI_STATE.h" />

@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Xml;
 
 namespace OpenCAGE.Modding
@@ -56,6 +57,11 @@ namespace OpenCAGE.Modding
         /// a level they change. Some may be left as they are - this is for being ready, not for what changed.
         /// </summary>
         public HashSet<string> MayChange = new HashSet<string>();
+        /// <summary>
+        /// Files outside the levels several versions of are combined when applying, whose clashes weren't worked out here: big
+        /// archives, in a view of one mod (see <see cref="ModInstaller.Analyze(List{string}, string, System.Threading.CancellationToken)"/>).
+        /// </summary>
+        public List<string> CombinedFiles = new List<string>();
     }
 
     /// <summary>A replacement mod and the others changing something it replaces - which can't be on with it.</summary>
@@ -164,7 +170,7 @@ namespace OpenCAGE.Modding
             string libraryPath = Path.Combine(ModToolkit.LibraryDir(_gameRoot), libraryFileName);
             Directory.CreateDirectory(ModToolkit.LibraryDir(_gameRoot));
             if (!string.Equals(Path.GetFullPath(packagePath), Path.GetFullPath(libraryPath), StringComparison.OrdinalIgnoreCase))
-                File.Copy(packagePath, libraryPath, true);
+                Retrying(() => File.Copy(packagePath, libraryPath, true));
 
             lock (_mutex)
             {
@@ -234,9 +240,27 @@ namespace OpenCAGE.Modding
                     throw new Exception("'" + mod.Name + "' is currently installed - turn it off and apply before removing it.");
                 string libraryPath = Path.Combine(ModToolkit.LibraryDir(_gameRoot), mod.PackageFileName ?? "");
                 if (File.Exists(libraryPath))
-                    File.Delete(libraryPath);
+                    Retrying(() => File.Delete(libraryPath));
                 _state.Mods.Remove(mod);
                 _state.Save();
+            }
+        }
+
+        /* A mod's file in the library can be being read for a moment (the Mod Manager reads the selected mod's on a thread of its
+           own): replacing or deleting it is tried again for a couple of seconds before giving up */
+        private static void Retrying(Action action)
+        {
+            for (int attempt = 0; ; attempt++)
+            {
+                try
+                {
+                    action();
+                    return;
+                }
+                catch (IOException e) when (attempt < 20 && !(e is FileNotFoundException) && !(e is DirectoryNotFoundException))
+                {
+                    Thread.Sleep(100);
+                }
             }
         }
         #endregion
@@ -370,6 +394,23 @@ namespace OpenCAGE.Modding
             return files;
         }
 
+        /* The files of a level's folder(s) as they are on disk: LevelFiles without the ones only the state knows of */
+        private IEnumerable<string> LevelFilesOnDisk(string level)
+        {
+            foreach (string folder in new[] { level, level + "_PATCH" })
+            {
+                string dir = ModToolkit.Denormalise(_gameRoot, ModToolkit.LevelFolder(folder));
+                if (!Directory.Exists(dir))
+                    continue;
+                foreach (string file in Directory.GetFiles(dir, "*", SearchOption.AllDirectories))
+                {
+                    string normalised = ModToolkit.NormaliseFull(_gameRoot, file);
+                    if (normalised != null && !ModToolkit.IsExcluded(normalised))
+                        yield return normalised;
+                }
+            }
+        }
+
         /// <summary>
         /// The game files applying these mods, in this order, may write - for anything holding them open to be ready (see
         /// <see cref="ModAnalysis.MayChange"/>). Mods that can't be read are left out: applying refuses them.
@@ -431,43 +472,81 @@ namespace OpenCAGE.Modding
         /// </summary>
         public ModAnalysis Analyze(List<string> enabledIdsInOrder)
         {
+            return Analyze(enabledIdsInOrder, null, CancellationToken.None);
+        }
+
+        /// <summary>
+        /// <see cref="Analyze(List{string})"/>, from any thread. With <paramref name="onlyMod"/> (a mod's name, as conflicts name
+        /// mods) only the files and levels a mod of that name changes are looked at - what the Mod Manager shows of the selected
+        /// mod - so only its clashes, the conflicts it's in and the combined levels it's part of are whole, and
+        /// <see cref="ModAnalysis.MayChange"/> and <see cref="ModAnalysis.EditedFiles"/> are left empty. The slow part, combining
+        /// each shared file's versions to see what clashes, doesn't hold the installer (an editor keeping an original needn't wait
+        /// for it), and what it finds is kept by exactly what was combined: the same versions again are only looked up.
+        /// Throws <see cref="OperationCanceledException"/> once <paramref name="cancel"/> is cancelled.
+        /// </summary>
+        public ModAnalysis Analyze(List<string> enabledIdsInOrder, string onlyMod, CancellationToken cancel)
+        {
             ModAnalysis analysis = new ModAnalysis();
+            List<ModState.InstalledMod> mods;
+            List<string> composed = new List<string>();
             lock (_mutex)
             {
-                List<ModState.InstalledMod> mods = enabledIdsInOrder.Select(o => _state.FindMod(o)).Where(o => o != null).ToList();
-                Dictionary<ModState.InstalledMod, ModPackage> packages = new Dictionary<ModState.InstalledMod, ModPackage>();
-                foreach (ModState.InstalledMod mod in mods)
+                mods = enabledIdsInOrder.Select(o => _state.FindMod(o)).Where(o => o != null).ToList();
+                if (onlyMod == null)
+                    composed.AddRange(_state.Composition.Keys);
+            }
+            //The mods' files are read without holding the installer: a big one takes a moment
+            Dictionary<ModState.InstalledMod, ModPackage> packages = new Dictionary<ModState.InstalledMod, ModPackage>();
+            foreach (ModState.InstalledMod mod in mods)
+            {
+                cancel.ThrowIfCancellationRequested();
+                try { packages[mod] = OpenPackage(mod); }
+                catch (Exception e) { analysis.Problems.Add("'" + mod.Name + "' can't be read: " + e.Message); }
+            }
+            mods = mods.Where(packages.ContainsKey).ToList();
+            //Which mod changes what is the packages' to say (and the list of shipped files'), not the state's
+            Plan plan = BuildPlan(mods, packages);
+            analysis.Clashes = ReplacementClashes(plan);
+            if (analysis.Clashes.Count != 0)
+                analysis.Problems.Add(ClashesText(analysis.Clashes));
+
+            //For one mod: the files and levels it changes, with every mod's version of them
+            Dictionary<string, List<Planned>> files = onlyMod == null ? plan.Files
+                : plan.Files.Where(o => o.Value.Any(p => p.Mod.Name == onlyMod)).ToDictionary(o => o.Key, o => o.Value);
+            Dictionary<string, List<List<Planned>>> levels = onlyMod == null ? plan.Levels
+                : plan.Levels.Where(o => o.Value.Any(p => p[0].Mod.Name == onlyMod)).ToDictionary(o => o.Key, o => o.Value);
+
+            //The hashes of what's looked at below, read now if a file needs reading (it changed since the game files were last
+            //checked) - not while holding the installer
+            foreach (string path in files.Keys.Concat(levels.Keys.SelectMany(LevelFilesOnDisk)).Concat(composed))
+            {
+                cancel.ThrowIfCancellationRequested();
+                _cache.Hash(path);
+            }
+
+            List<FileCheck> checks = new List<FileCheck>();
+            List<MergeConflict> levelConflicts = new List<MergeConflict>();
+            List<string> levelProblems = new List<string>();
+            lock (_mutex)
+            {
+                if (onlyMod == null)
                 {
-                    try { packages[mod] = OpenPackage(mod); }
-                    catch (Exception e) { analysis.Problems.Add("'" + mod.Name + "' can't be read: " + e.Message); }
+                    analysis.MayChange = MayChange(plan);
+                    analysis.EditedFiles = EditedSinceApplied();
                 }
-                mods = mods.Where(packages.ContainsKey).ToList();
-                Plan plan = BuildPlan(mods, packages);
-                analysis.MayChange = MayChange(plan);
-                analysis.EditedFiles = EditedSinceApplied();
-                analysis.Clashes = ReplacementClashes(plan);
-                if (analysis.Clashes.Count != 0)
-                    analysis.Problems.Add(ClashesText(analysis.Clashes));
 
                 //The user's own versions, as they'll be when applying starts: what's recorded, updated by what's on disk now
                 Dictionary<string, string> own = new Dictionary<string, string>(_state.Own);
-                HashSet<string> touched = new HashSet<string>(plan.Files.Keys);
-                foreach (string level in plan.Levels.Keys)
+                HashSet<string> touched = new HashSet<string>(files.Keys);
+                foreach (string level in levels.Keys)
                     touched.UnionWith(LevelFiles(level));
                 foreach (KeyValuePair<string, string> found in OwnChangesOnDisk(touched))
                 {
                     if (found.Value == _state.Baseline[found.Key].Sha256Hex) own.Remove(found.Key);
                     else own[found.Key] = found.Value;
                 }
-                byte[] OwnBytes(string path)
-                {
-                    string sha = own[path];
-                    if (sha == null) return null;
-                    if (_state.Own.TryGetValue(path, out string kept) && kept == sha) return _store.Retrieve(sha);
-                    return ModToolkit.ReadContent(_gameRoot, path);
-                }
 
-                foreach (KeyValuePair<string, List<Planned>> file in plan.Files)
+                foreach (KeyValuePair<string, List<Planned>> file in files)
                 {
                     bool hasOwn = own.ContainsKey(file.Key);
                     //A replacement mod's file goes in exactly as it ships (shared, it's a clash): the user's own version waits.
@@ -479,34 +558,22 @@ namespace OpenCAGE.Modding
                     }
                     if (hasOwn) analysis.OwnChanges.Add(file.Key);
                     if (file.Value.Count + (hasOwn ? 1 : 0) < 2) continue;
-                    try
+                    //A view of one mod doesn't combine a big archive just to look (an animation archive is hundreds of megabytes,
+                    //and every mod's version of it is held whole): applying combines it, and lists what clashes in it then
+                    if (onlyMod != null && SizeOf(file.Key) > ViewCombineLimit)
                     {
-                        List<(string Name, byte[] Bytes)> sources = new List<(string, byte[])>();
-                        if (hasOwn) sources.Add((MergeConflict.OwnChanges, OwnBytes(file.Key)));
-                        foreach (Planned planned in file.Value)
-                            sources.Add((planned.Mod.Name, ModToolkit.ContentOf(file.Key, Resolve(planned)))); //as ComposeFile has them
-                        int lastDelete = sources.FindLastIndex(o => o.Bytes == null);
-                        List<Contribution> versions = sources.Skip(lastDelete + 1).Select(o => new Contribution() { ModName = o.Name, Bytes = o.Bytes }).ToList();
-                        if (lastDelete >= 0 && sources.Count > 1)
-                            analysis.Conflicts.Add(new MergeConflict()
-                            {
-                                Target = file.Key, Where = "the whole file", Kind = ConflictKind.RemovedVsChanged,
-                                Kept = versions.Count != 0 ? versions.Last().ModName : sources[lastDelete].Name,
-                                Lost = versions.Count != 0 ? sources[lastDelete].Name : sources.First(o => o.Bytes != null).Name,
-                                Detail = "one deletes it and another changes it",
-                            });
-                        if (versions.Count > 1)
-                            analysis.Conflicts.AddRange(FileMerger.Merge(file.Key, BaseBytes(file.Key), versions).Conflicts);
+                        analysis.CombinedFiles.Add(file.Key);
+                        continue;
                     }
-                    catch (Exception e) { analysis.Problems.Add(e.Message); }
+                    checks.Add(NewFileCheck(file.Key, file.Value, hasOwn, hasOwn ? own[file.Key] : null));
                 }
-                foreach (KeyValuePair<string, List<List<Planned>>> level in plan.Levels)
+                foreach (KeyValuePair<string, List<List<Planned>>> level in levels)
                 {
                     if (!ShipsLevel(level.Key))
                     {
                         //A level a mod adds: the last mod adding it is used whole
                         for (int i = 0; i < level.Value.Count - 1; i++)
-                            analysis.Conflicts.Add(new MergeConflict() { Target = level.Key, Where = "the whole level", Kind = ConflictKind.WholeFile, Kept = level.Value.Last()[0].Mod.Name, Lost = level.Value[i][0].Mod.Name, Detail = "both add a level of that name, which can't be combined" });
+                            levelConflicts.Add(new MergeConflict() { Target = level.Key, Where = "the whole level", Kind = ConflictKind.WholeFile, Kept = level.Value.Last()[0].Mod.Name, Lost = level.Value[i][0].Mod.Name, Detail = "both add a level of that name, which can't be combined" });
                         continue;
                     }
                     List<string> ownFiles = LevelFiles(level.Key).Where(own.ContainsKey).ToList();
@@ -525,10 +592,248 @@ namespace OpenCAGE.Modding
                     string missing = ownFiles.FirstOrDefault(o => !VanillaKnown(o)) ?? AdoptedLevelFiles(level.Key).FirstOrDefault()
                         ?? LevelFiles(level.Key).FirstOrDefault(o => !_state.Baseline.ContainsKey(o) && !_state.Composition.ContainsKey(o) && IsChangedShippedFile(o));
                     if (missing != null)
-                        analysis.Problems.Add(CantCombineOwnLevel(level.Key, level.Value.Select(o => o[0].Mod.Name).ToList()));
+                        levelProblems.Add(CantCombineOwnLevel(level.Key, level.Value.Select(o => o[0].Mod.Name).ToList()));
                 }
             }
+
+            //What clashes inside each file several versions of are combined: the slow part, worked out from what was taken above
+            foreach (FileCheck check in checks)
+            {
+                cancel.ThrowIfCancellationRequested();
+                try { analysis.Conflicts.AddRange(CheckFile(check, cancel)); }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception e) { analysis.Problems.Add(e.Message); }
+            }
+            analysis.Conflicts.AddRange(levelConflicts);
+            analysis.Problems.AddRange(levelProblems);
             return analysis;
+        }
+
+        /* One file several versions of are combined, with all that working out its clashes needs from the state - taken while
+           holding the installer, so the combining needn't */
+        private class FileCheck
+        {
+            public string Target;
+            /* Exactly what's combined: the original, the user's version and each mod's (see CheckKey) */
+            public string Key;
+            public bool HasOwn;
+            /* The user's version: null when it deletes the file; Stored when it's the one OpenCAGE keeps (else it's on disk) */
+            public string OwnSha;
+            public bool OwnStored;
+            /* The originals kept for it: as the game shipped it (when known), and what it holds with no mods */
+            public string VanillaSha;
+            public string BaselineSha;
+            /* None kept yet: what's on disk now, which applying keeps as its original (PrepareBaselines) */
+            public string OnDiskSha;
+            public List<CheckedVersion> Versions = new List<CheckedVersion>();
+        }
+
+        private class CheckedVersion
+        {
+            public string Name;
+            public Planned Planned;
+            /* The original of the other file a change also applies to (ModPackageEntry.SourceAlsoTarget) */
+            public string AlsoSha;
+        }
+
+        /* What combining each shared file's versions found, by exactly what was combined (FileCheck.Key): the Mod Manager works
+           out the selected mod's clashes on every tick, and combining an animation archive takes a while */
+        private readonly Dictionary<string, List<MergeConflict>> _checked = new Dictionary<string, List<MergeConflict>>();
+
+        /* The biggest file a view of one mod combines to see what clashes (UI.PAK is 17 MB; ANIMATION.PAK 451 MB isn't) */
+        private const long ViewCombineLimit = 64L * 1024 * 1024;
+
+        /* A game file's size: on disk, else as the game ships it, else nothing */
+        private long SizeOf(string path)
+        {
+            try
+            {
+                FileInfo info = new FileInfo(ModToolkit.Denormalise(_gameRoot, path));
+                if (info.Exists)
+                    return info.Length;
+            }
+            catch { }
+            return _manifest.Lookup(path)?.Size ?? 0;
+        }
+
+        /* Holding the installer: what working out one file's clashes needs from the state */
+        private FileCheck NewFileCheck(string target, List<Planned> contributors, bool hasOwn, string ownSha)
+        {
+            FileCheck check = new FileCheck() { Target = target, HasOwn = hasOwn, OwnSha = ownSha };
+            check.OwnStored = hasOwn && ownSha != null && _state.Own.TryGetValue(target, out string kept) && kept == ownSha;
+            if (_state.Baseline.TryGetValue(target, out ModState.BaselineRecord record))
+            {
+                check.BaselineSha = record.Sha256Hex;
+                check.VanillaSha = record.IsVanilla ? record.Sha256Hex : null;
+            }
+            else
+            {
+                //No original kept yet (nothing has changed the file in OpenCAGE): applying keeps the file as it is now - when it's
+                //as the game shipped it, or one the game doesn't ship - so that's what the mods are combined with
+                byte[] hash = _cache.Hash(target);
+                bool vanilla = hash != null && _manifest.IsVanilla(target, hash);
+                if (hash != null && (vanilla || !_manifest.Contains(target)))
+                {
+                    check.OnDiskSha = check.BaselineSha = ModToolkit.ToHex(hash);
+                    check.VanillaSha = vanilla ? check.OnDiskSha : null;
+                }
+            }
+            foreach (Planned planned in contributors)
+            {
+                string alsoSha = null;
+                if (planned.Entry.Kind == ModPackageEntry.KindDelta && planned.Entry.SourceAlsoTarget != null)
+                {
+                    //As applying does: the other file's original is kept now, if it's still as the game shipped it
+                    string alsoPath = ModToolkit.Normalise(planned.Entry.SourceAlsoTarget);
+                    CaptureVanillaBaseline(alsoPath);
+                    if (_state.Baseline.TryGetValue(alsoPath, out ModState.BaselineRecord also) && also.IsVanilla)
+                        alsoSha = also.Sha256Hex;
+                }
+                check.Versions.Add(new CheckedVersion() { Name = planned.Mod.Name, Planned = planned, AlsoSha = alsoSha });
+            }
+
+            System.Text.StringBuilder key = new System.Text.StringBuilder("check|" + FileCombineVersion + "|" + target + "|" + (check.VanillaSha ?? "-") + "|" + (check.BaselineSha ?? "-") + "|");
+            key.Append(hasOwn ? "own=" + (ownSha ?? "none") : "-").Append('|');
+            foreach (CheckedVersion version in check.Versions)
+                key.Append(version.Planned.Mod.Id).Append('=').Append(version.Name.Length).Append(':').Append(version.Name).Append('=').Append(EntryIdentity(version.Planned)).Append('=').Append(version.AlsoSha ?? "-").Append(';');
+            check.Key = Hash(key);
+            return check;
+        }
+
+        /* What combining one file's versions finds, as Analyze always worked it out - looked up when the very same versions were
+           combined before. Doesn't touch the state (see NewFileCheck). */
+        private List<MergeConflict> CheckFile(FileCheck check, CancellationToken cancel)
+        {
+            lock (_checked)
+                if (_checked.TryGetValue(check.Key, out List<MergeConflict> known))
+                    return new List<MergeConflict>(known);
+
+            //Each original is read once for all the versions (an animation archive is hundreds of megabytes). What's found is kept
+            //only when every original could be read (one put back later would change it) and the user's version isn't read from
+            //disk (it can change under it)
+            bool keep = !check.HasOwn || check.OwnSha == null || check.OwnStored;
+            Dictionary<string, byte[]> originals = new Dictionary<string, byte[]>();
+            byte[] Stored(string sha)
+            {
+                if (sha == null) return null;
+                if (!originals.TryGetValue(sha, out byte[] bytes))
+                {
+                    bytes = _store.Retrieve(sha);
+                    //Not kept yet: the file itself, while it still holds just that
+                    if (bytes == null && sha == check.OnDiskSha)
+                    {
+                        bytes = ModToolkit.ReadContent(_gameRoot, check.Target);
+                        if (ModToolkit.ToHex(ModToolkit.Sha256(bytes)) != sha)
+                            bytes = null;
+                    }
+                    originals[sha] = bytes;
+                }
+                if (bytes == null) keep = false;
+                return bytes;
+            }
+
+            List<(string Name, byte[] Bytes)> sources = new List<(string, byte[])>();
+            if (check.HasOwn)
+                sources.Add((MergeConflict.OwnChanges, check.OwnSha == null ? null : check.OwnStored ? Stored(check.OwnSha) : ModToolkit.ReadContent(_gameRoot, check.Target)));
+            foreach (CheckedVersion version in check.Versions)
+            {
+                cancel.ThrowIfCancellationRequested();
+                sources.Add((version.Name, ModToolkit.ContentOf(check.Target, ResolveChecked(check, version, Stored)))); //as ComposeFile has them
+            }
+            List<MergeConflict> conflicts = new List<MergeConflict>();
+            int lastDelete = sources.FindLastIndex(o => o.Bytes == null);
+            List<Contribution> versions = sources.Skip(lastDelete + 1).Select(o => new Contribution() { ModName = o.Name, Bytes = o.Bytes }).ToList();
+            if (lastDelete >= 0 && sources.Count > 1)
+                conflicts.Add(new MergeConflict()
+                {
+                    Target = check.Target, Where = "the whole file", Kind = ConflictKind.RemovedVsChanged,
+                    Kept = versions.Count != 0 ? versions.Last().ModName : sources[lastDelete].Name,
+                    Lost = versions.Count != 0 ? sources[lastDelete].Name : sources.First(o => o.Bytes != null).Name,
+                    Detail = "one deletes it and another changes it",
+                });
+            if (versions.Count > 1)
+            {
+                cancel.ThrowIfCancellationRequested();
+                conflicts.AddRange(FileMerger.Merge(check.Target, Stored(check.VanillaSha) ?? Stored(check.BaselineSha), versions).Conflicts);
+            }
+            if (keep)
+                lock (_checked)
+                {
+                    //A few files' worth is all that's looked at at once: never let it grow without end
+                    if (_checked.Count >= 256)
+                        _checked.Clear();
+                    _checked[check.Key] = conflicts;
+                }
+            return new List<MergeConflict>(conflicts);
+        }
+
+        /* Resolve, from what NewFileCheck took of the state: the same version of the file. Stored reads an original by its sha
+           (null for none) - what the store hands back always has that sha. */
+        private static byte[] ResolveChecked(FileCheck check, CheckedVersion version, Func<string, byte[]> stored)
+        {
+            Planned planned = version.Planned;
+            ModPackageEntry entry = planned.Entry;
+            string target = check.Target;
+            byte[] produced;
+            switch (entry.Kind)
+            {
+                case ModPackageEntry.KindDelete:
+                    return null;
+
+                case ModPackageEntry.KindFile:
+                    produced = ReadPayload(planned);
+                    break;
+
+                case ModPackageEntry.KindDelta:
+                    {
+                        byte[] original = stored(check.VanillaSha);
+                        if (original == null || (entry.SourceShaHex != null && entry.SourceAlsoTarget == null && check.VanillaSha != entry.SourceShaHex))
+                        {
+                            byte[] baseline = stored(check.BaselineSha);
+                            if (baseline != null && (entry.SourceShaHex == null || check.BaselineSha == entry.SourceShaHex))
+                                original = baseline;
+                        }
+                        if (original == null)
+                            throw new Exception("'" + planned.Mod.Name + "' changes " + target + ", but this game's copy of that file isn't the original "
+                                + "and no original is stored to apply the change to. Verify the game files in Steam, then try again.");
+                        if (entry.SourceAlsoTarget != null)
+                        {
+                            byte[] also = stored(version.AlsoSha);
+                            if (also == null)
+                                throw new Exception("'" + planned.Mod.Name + "' needs the original " + ModToolkit.Normalise(entry.SourceAlsoTarget) + ", and this game's copy has been changed. Verify the game files in Steam, then try again.");
+                            original = ModExportBuilder.Concat(original, also);
+                        }
+                        byte[] patch = ReadPayload(planned);
+                        try
+                        {
+                            produced = DeltaCodec.Apply(patch, original);
+                        }
+                        catch (Exception e)
+                        {
+                            throw new Exception("'" + planned.Mod.Name + "' could not be applied to " + target + ": " + e.Message
+                                + " (it was made against a different version of that file)");
+                        }
+                        break;
+                    }
+
+                case ModPackageEntry.KindBml:
+                    {
+                        byte[] vanilla = stored(check.VanillaSha) ?? stored(check.BaselineSha);
+                        if (vanilla == null)
+                            throw new Exception("'" + planned.Mod.Name + "' changes config values in " + target + ", which this install doesn't have.");
+                        BML bml = new BML(vanilla);
+                        XmlDocument document = bml.Content;
+                        BmlPatch.Apply(document, BmlPatch.Deserialise(System.Text.Encoding.UTF8.GetString(ReadPayload(planned))));
+                        return FileMerger.WriteBml(vanilla, document);
+                    }
+
+                default:
+                    throw new Exception("'" + planned.Mod.Name + "' contains a change of an unknown kind ('" + entry.Kind + "'). Update OpenCAGE.");
+            }
+
+            if (entry.TargetShaHex != null && ModToolkit.ToHex(ModToolkit.Sha256(produced)) != entry.TargetShaHex)
+                throw new Exception("'" + planned.Mod.Name + "' is damaged: its copy of " + target + " doesn't match its own checksum. Download it again.");
+            return produced;
         }
         #endregion
 
@@ -1305,6 +1610,9 @@ namespace OpenCAGE.Modding
         {
             if (_manifest.Unsupported != null)
                 return new TransactionResult() { Error = _manifest.Unsupported };
+            //Without the record of what's installed nothing can be put back: the user chooses first (ModState.StartAfresh)
+            if (_state.Unreadable != null)
+                return new TransactionResult() { Error = _state.Unreadable };
             lock (_mutex)
             {
                 _sources = new Dictionary<string, byte[]>();

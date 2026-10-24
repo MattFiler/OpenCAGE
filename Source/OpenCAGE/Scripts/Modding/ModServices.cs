@@ -216,12 +216,19 @@ namespace OpenCAGE.Modding
                 string levelDir = Path.Combine(_gameRoot, "DATA", "ENV", levelName.Replace('/', Path.DirectorySeparatorChar));
                 if (!Directory.Exists(levelDir))
                     return;
+                //A Nostromo level's WORLD is saved into the _PATCH folder beside it (the game reads it from there): its originals
+                //are kept too, as the rest of the mod system counts that folder as part of the level
                 List<string> files = new List<string>();
-                foreach (string file in Directory.GetFiles(levelDir, "*", SearchOption.AllDirectories))
+                foreach (string dir in new[] { levelDir, levelDir + "_PATCH" })
                 {
-                    string normalised = ModToolkit.NormaliseFull(_gameRoot, file);
-                    if (normalised != null && !ModToolkit.IsExcluded(normalised))
-                        files.Add(normalised);
+                    if (!Directory.Exists(dir))
+                        continue;
+                    foreach (string file in Directory.GetFiles(dir, "*", SearchOption.AllDirectories))
+                    {
+                        string normalised = ModToolkit.NormaliseFull(_gameRoot, file);
+                        if (normalised != null && !ModToolkit.IsExcluded(normalised))
+                            files.Add(normalised);
+                    }
                 }
                 //Read as many at once as the drive reads well (one on a spinning disk), compressed four at once at most: each is
                 //held whole to be stored, and a level's biggest files are a good part of a gigabyte between them

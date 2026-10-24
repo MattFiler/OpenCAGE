@@ -93,6 +93,7 @@ namespace OpenCAGE
             List<string> written = new List<string>();
             List<KeyValuePair<string, DeadProxyReport>> deadProxiesPerLevel = new List<KeyValuePair<string, DeadProxyReport>>();
             string failedLevel = null, failure = null;
+            bool failedUntouched = false;
             int portedPerLevel = 0;
             Enabled = false;
             Cursor.Current = Cursors.WaitCursor;
@@ -115,6 +116,7 @@ namespace OpenCAGE
                             //Levels before this one are saved; this one may be part-written. Say so and stop.
                             failedLevel = levelName;
                             failure = ex.Message;
+                            failedUntouched = ex is CompositeArchive.ScriptNotLoadedException;
                             return;
                         }
                         written.Add(levelName);
@@ -141,7 +143,7 @@ namespace OpenCAGE
             {
                 string saved = written.Count == 0 ? "No level was written." : "Written and saved: " + string.Join(", ", written) + ".";
                 MessageBox.Show("The port failed on " + failedLevel + ":\n\n" + failure + "\n\n" + saved
-                    + "\n\n" + failedLevel + " may be part-written on disk - restore it from Manage Backups, or verify the game files.",
+                    + (failedUntouched ? "" : "\n\n" + failedLevel + " may be part-written on disk - restore it from Manage Backups, or verify the game files."),
                     "Port failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Enabled = true;
                 return;
@@ -164,6 +166,7 @@ namespace OpenCAGE
             ProgressUI loadProgress = CompositeArchive.OpenProgress(p => p.ShowLevelLoading(lvl));
             try { lvl.Load(); }
             finally { CompositeArchive.CloseProgress(loadProgress); }
+            CompositeArchive.RequireLoadedScript(lvl, levelName);
 
             //The editor's own tables in the destination - pages, modified-parameter marks - do not
             //survive Commands.Save on their own; read them now, write them back after

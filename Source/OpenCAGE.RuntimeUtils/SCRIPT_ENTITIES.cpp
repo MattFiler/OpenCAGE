@@ -95,13 +95,14 @@ namespace
 	std::atomic<bool> g_graphOn = false, g_toggleOn = false, g_markerOn = false, g_screenshotOn = false;
 
 	// ---- Shared ----
+	// A string parameter's text as UTF-8 (the game keeps it as Windows-1252): drawn, and the screenshot name, which
+	// SCREENSHOT reads as UTF-8
 	std::string ResolveString(uint32_t offset)
 	{
 		if (offset == kInvalidString)
 			return std::string();
 		void* table = DEBUG_TEXT::string_table_instance ? *DEBUG_TEXT::string_table_instance : nullptr;
-		const char* text = table ? DEBUG_TEXT::string_from_offset(table, offset) : nullptr;
-		return text ? text : "";
+		return DevTools::GameTextToUtf8(table ? DEBUG_TEXT::string_from_offset(table, offset) : nullptr);
 	}
 
 	bool ReadStringOffset(void* methods, const void* entity, uint32_t guid, uint32_t& offset)

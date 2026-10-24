@@ -28,7 +28,7 @@ namespace OpenCAGE
             _tree.AttachSearch(filterBox, searchButton);
             _tree.Load(
                 Content.Level.Commands.Entries.Where(o => o != null).Select(o => new CompositeTree.Item() { Id = o.shortGUID, Name = o.name, Kind = CompositeTree.KindOf(Content.EditorUtils.GetCompositeType(o)) }),
-                CompositeNesting.InstancesOf(Content.Level.Commands),
+                CompositeArchive.ExportedWith(Content.Level.Commands),
                 composite == null ? null : new[] { composite.shortGUID });
 
             if (composite != null)

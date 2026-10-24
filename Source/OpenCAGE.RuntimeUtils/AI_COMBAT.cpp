@@ -141,31 +141,62 @@ namespace
 		return Normal;
 	}
 
+	// When each choice was last turned on (a count that goes up each time; 0: never), stamped just before its switch is set
+	// - by its named switch (any thread) or SetMode - so a frame that sees the switch on sees its stamp too
+	std::atomic<uint32_t> g_modeOrder[kModes];
+	std::atomic<uint32_t> g_modeOrderNext = 0;
+
+	void StampMode(int mode)
+	{
+		g_modeOrder[mode] = ++g_modeOrderNext;
+	}
+
+	// Told of each set of a choice's named switch (DEBUG_MENU::AddSwitch), before it is set
+	template <int mode>
+	void BeforeModeSet(bool on)
+	{
+		if (on)
+			StampMode(mode);
+	}
+
 	void SetMode(int mode)
 	{
 		for (int other = Kill; other < kModes; other++)
 			if (other != mode)
 				*kModeSwitches[other] = false;
 		if (mode > Normal && mode < kModes)
+		{
+			StampMode(mode);
 			*kModeSwitches[mode] = true;
+		}
 	}
 
-	// Render thread, every frame: a switch newly turned on (from the window or the Live Link) turns the others off
+	// Render thread, every frame: with more than one choice on (two switches set in the same frame, or one set while
+	// another was on), the one turned on last is kept and the others turned off
 	bool g_modeWas[kModes] = {};
 
 	void KeepOneMode()
 	{
+		// The switches as they read now, once, then when each was turned on (stamped before it is set, so a switch seen on
+		// has its stamp seen too). Only switches seen on are turned off, so one set from a Live Link thread while this runs
+		// is never turned off unseen; one seen on but set again meanwhile is put back on, for the next frame to weigh.
+		bool now[kModes] = {};
+		uint32_t order[kModes] = {};
+		for (int mode = Kill; mode < kModes; mode++)
+			now[mode] = *kModeSwitches[mode];
+		for (int mode = Kill; mode < kModes; mode++)
+			order[mode] = g_modeOrder[mode];
+		// The latest turned on; between two never stamped, one newly on before one on already, else the first
 		int keep = Normal;
-		for (int mode = Kill; mode < kModes && keep == Normal; mode++)
-			if (*kModeSwitches[mode] && !g_modeWas[mode])
+		for (int mode = Kill; mode < kModes; mode++)
+			if (now[mode] && (keep == Normal || order[mode] > order[keep] || (order[mode] == order[keep] && !g_modeWas[mode] && g_modeWas[keep])))
 				keep = mode;
-		if (keep == Normal)
-			keep = CurrentMode();
 		for (int mode = Kill; mode < kModes; mode++)
 		{
-			if (mode != keep && *kModeSwitches[mode])
-				*kModeSwitches[mode] = false;
-			g_modeWas[mode] = *kModeSwitches[mode];
+			bool expected = true;
+			if (mode != keep && now[mode] && kModeSwitches[mode]->compare_exchange_strong(expected, false) && g_modeOrder[mode] != order[mode])
+				*kModeSwitches[mode] = true;
+			g_modeWas[mode] = now[mode] && mode == keep;
 		}
 	}
 
@@ -647,10 +678,10 @@ namespace
 		if (g_registered)
 			return;
 		g_registered = true;
-		DEBUG_MENU::AddSwitch("ai.one_shot_kill", &g_kill);
-		DEBUG_MENU::AddSwitch("ai.one_shot_maim", &g_maim);
-		DEBUG_MENU::AddSwitch("ai.max_damage_1", &g_maxOne);
-		DEBUG_MENU::AddSwitch("ai.nobody_dies", &g_nobodyDies);
+		DEBUG_MENU::AddSwitch("ai.one_shot_kill", &g_kill, BeforeModeSet<Kill>);
+		DEBUG_MENU::AddSwitch("ai.one_shot_maim", &g_maim, BeforeModeSet<Maim>);
+		DEBUG_MENU::AddSwitch("ai.max_damage_1", &g_maxOne, BeforeModeSet<MaxOne>);
+		DEBUG_MENU::AddSwitch("ai.nobody_dies", &g_nobodyDies, BeforeModeSet<NobodyDies>);
 		DEBUG_MENU::AddSwitch("ai.no_ally_kill_fail", &g_noAllyFail);
 
 		DEBUG_MENU::AddCommand("ai.damage_mode", "[normal|kill|maim|max1|nobody_dies] - the damage every NPC takes (no argument: which, and the hits it changed)", [](const std::string& argument)

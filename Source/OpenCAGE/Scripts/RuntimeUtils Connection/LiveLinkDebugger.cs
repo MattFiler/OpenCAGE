@@ -148,8 +148,31 @@ namespace OpenCAGE.RuntimeUtilsConnection
         private static readonly HashSet<string> _dirty = new HashSet<string>();
         private static volatile bool _pendingSync;
 
-        /// <summary>The game's breakpoints were switched off when Live Link went off (or OpenCAGE closed): on again at the next sync.</summary>
-        internal static volatile bool DisarmedOnLeave;
+        /// <summary>
+        /// The game's breakpoints switch was turned off here as Live Link went off or OpenCAGE closed (DisarmOnLeave). Kept in
+        /// the settings, so the next OpenCAGE puts right a game left running too: the switch is turned on again at the next
+        /// connection that has the open level's breakpoints in the game (Rearm). Any thread.
+        /// </summary>
+        internal static bool DisarmedOnLeave
+        {
+            get => SettingsManager.GetBool(Settings.LiveLinkDebuggerDisarmed);
+            private set
+            {
+                if (DisarmedOnLeave != value)
+                    SettingsManager.SetBool(Settings.LiveLinkDebuggerDisarmed, value);
+            }
+        }
+
+        //The game's breakpoints switch (debugger.breakpoints, the Debug Menu's "Stop at breakpoints") as the last report gave
+        //it - 1 on, 0 off, -1 not given - and the connection that report came on (pump thread writes, DisarmOnLeave reads)
+        private static volatile int _switchState = -1;
+        private static volatile int _switchConnection = -1;
+        //The connection DisarmOnLeave turned the switch off on: the pump never turns it on again there. Both take the lock to
+        //send, so a switch on can't follow a switch off on its way out.
+        private static readonly object _switchLock = new object();
+        private static int _leftConnection = -1;
+        //Pump thread: the switch is to be turned on again on this connection once the open level has breakpoints in the game
+        private static bool _rearm;
 
         /// <summary>The breakpoints of the level open here (UI thread).</summary>
         public static IReadOnlyCollection<ScriptBreakpoint> Breakpoints => _set.Values;
@@ -498,28 +521,36 @@ namespace OpenCAGE.RuntimeUtilsConnection
         /// <summary>
         /// Live Link is being switched off, or OpenCAGE is closing: a game left with breakpoints set from here would stop at
         /// them with nothing to let it go on, so its breakpoints switch is turned off and the held scripts let go (the
-        /// breakpoints themselves are kept, and switched on again at the next sync). Sent now, the answers not waited for.
-        /// UI thread.
+        /// breakpoints themselves are kept, and the switch turned on again at the next connection that has them - this
+        /// OpenCAGE's or the next one's - unless it was off already: then it was switched off in the game, and stays as the
+        /// game has it). Sent now, the answers not waited for. UI thread.
         /// </summary>
         internal static void DisarmOnLeave()
         {
             if (!LiveLink.Connected || (_set.Count == 0 && !_held))
                 return;
+            int connection = Volatile.Read(ref _connection);
+            bool offInGame = _switchConnection == connection && _switchState == 0;
             //The answers come back on the thread pool, not to this thread (it may be closing): each request is sent before
             //it first waits
             SynchronizationContext context = SynchronizationContext.Current;
             SynchronizationContext.SetSynchronizationContext(null);
             try
             {
-                //Switched off first, so the scripts let go are not stopped again at once
-                LiveLink.DebugMenu(LiveLink.DebugMenuOp.SetSwitch, "debugger.breakpoints", false);
+                lock (_switchLock)
+                {
+                    _leftConnection = connection;
+                    //Switched off first, so the scripts let go are not stopped again at once
+                    LiveLink.DebugMenu(LiveLink.DebugMenuOp.SetSwitch, "debugger.breakpoints", false);
+                }
                 LiveLink.DebugMenuCommand("debugger.continue", "", 1.0);
             }
             finally
             {
                 SynchronizationContext.SetSynchronizationContext(context);
             }
-            DisarmedOnLeave = true;
+            if (!offInGame)
+                DisarmedOnLeave = true;
         }
         #endregion
 
@@ -777,6 +808,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
                 _lastHeld = false;
                 _stateWanted = false;
                 _unavailable = null;
+                _rearm = false;
             }
             LiveLink.Reply report = await LiveLink.DebugMenuReport(PollTimeoutSeconds);
             if (!report.Ok)
@@ -800,6 +832,9 @@ namespace OpenCAGE.RuntimeUtilsConnection
             _lookOnce = false;
             values.TryGetValue("debugger.held", out string heldText);
             bool held = heldText == "1";
+            int switchState = Fields(report.Message).TryGetValue("debugger.breakpoints", out string switchText) ? (switchText == "1" ? 1 : 0) : -1;
+            _switchConnection = connection;
+            _switchState = switchState;
 
             //The flag is cleared before the sync: a change made while it runs asks for another
             if (!_synced || _pendingSync)
@@ -809,14 +844,10 @@ namespace OpenCAGE.RuntimeUtilsConnection
                 _pendingSync = false;
                 await RunOnUiThreadAsync(SendKept);
                 _lastVersion = null;
-                //The breakpoints switched off in the game when Live Link went off here (or OpenCAGE closed) stop the scripts
-                //again, once the ones kept here are back in it (a switch turned off in the game itself is left off)
-                if (firstSync && DisarmedOnLeave)
-                {
-                    DisarmedOnLeave = false;
-                    if (Volatile.Read(ref _setCount) > 0)
-                        await LiveLink.DebugMenu(LiveLink.DebugMenuOp.SetSwitch, "debugger.breakpoints", true);
-                }
+                //The breakpoints switched off in the game when Live Link went off here or OpenCAGE closed (in this session or
+                //an earlier one) stop the scripts again, once the open level's are read back from the game below
+                if (firstSync)
+                    _rearm = DisarmedOnLeave;
             }
             bool versionMoved = version != _lastVersion;
             if (versionMoved)
@@ -824,6 +855,8 @@ namespace OpenCAGE.RuntimeUtilsConnection
                 _lastVersion = version;
                 await RefreshList();
             }
+            if (_rearm)
+                await Rearm(connection, switchState);
             //Held, a step (or a pause) moves the version without a hit: where it is held is read again too (and after a
             //read of it failed)
             if (_stateWanted || hitCount != _lastHit || held != _lastHeld || (held && versionMoved))
@@ -853,6 +886,38 @@ namespace OpenCAGE.RuntimeUtilsConnection
                         Singleton.Editor?.ShowLiveLinkActivity("Live Link: scripts held at a breakpoint - " + HitText(state) + " (Continue: F8, Step: F10 on a flowgraph)");
                     }
                 });
+            }
+        }
+
+        /// <summary>
+        /// The breakpoints switch DisarmOnLeave turned off (here or in an earlier OpenCAGE) turned on again, once the open
+        /// level has breakpoints in the game; until then it waits (for one set from here on this connection, or the next
+        /// connection). Never against the game's own switch: found on (a game restarted since, or switched on in it), it is
+        /// left as it is and nothing is owed any more. Pump thread.
+        /// </summary>
+        private static async Task Rearm(int connection, int switchState)
+        {
+            if (switchState != 0)
+            {
+                _rearm = false;
+                DisarmedOnLeave = false;
+                return;
+            }
+            if (Volatile.Read(ref _setCount) == 0)
+                return;
+            Task<LiveLink.Reply> sent;
+            lock (_switchLock)
+            {
+                //Live Link going off on this connection: the switch stays off
+                if (_leftConnection == connection || Volatile.Read(ref _connection) != connection)
+                    return;
+                sent = LiveLink.DebugMenu(LiveLink.DebugMenuOp.SetSwitch, "debugger.breakpoints", true);
+            }
+            //Not answered: tried again at the next poll
+            if ((await sent).Answered)
+            {
+                _rearm = false;
+                DisarmedOnLeave = false;
             }
         }
 

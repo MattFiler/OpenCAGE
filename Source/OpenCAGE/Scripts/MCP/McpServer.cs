@@ -258,6 +258,13 @@ namespace OpenCAGE.MCP
                 return JObject.Load(reader);
         }
 
+        /// <summary>A line from a client as sent, whatever JSON it holds: a message (an object), or a batch of them (an array).</summary>
+        private static JToken ParseMessage(string line)
+        {
+            using (JsonTextReader reader = new JsonTextReader(new StringReader(line)) { DateParseHandling = DateParseHandling.None })
+                return JToken.ReadFrom(reader);
+        }
+
         private static void RaiseStatus()
         {
             try { StatusChanged?.Invoke(); } catch { }
@@ -293,17 +300,20 @@ namespace OpenCAGE.MCP
                         while (!_closed && (line = reader.ReadLine()) != null)
                         {
                             if (string.IsNullOrWhiteSpace(line)) continue;
-                            JObject message;
+                            JToken parsed;
                             try
                             {
-                                message = ParseObject(line);
+                                parsed = ParseMessage(line);
                             }
                             catch (Exception e)
                             {
                                 Send(ErrorMessage(null, -32700, "Parse error: " + e.Message));
                                 continue;
                             }
-                            Receive(message);
+                            if (parsed is JArray batch)
+                                ReceiveBatch(batch);
+                            else
+                                ReceiveOne(parsed, null);
                         }
                     }
                 }
@@ -322,19 +332,69 @@ namespace OpenCAGE.MCP
                 RaiseStatus();
             }
 
-            private void Receive(JObject message)
+            /// <summary>
+            /// A JSON-RPC batch (the 2025-03-26 protocol has them): each message in it is handled as if sent alone, and the
+            /// answers go back together as one array once every request in it is answered. A batch of notifications gets none.
+            /// </summary>
+            private void ReceiveBatch(JArray items)
             {
-                string method = (string)message["method"];
+                if (items.Count == 0)
+                {
+                    Send(ErrorMessage(null, -32600, "Invalid request: the batch is empty."));
+                    return;
+                }
+                Batch batch = new Batch(this);
+                foreach (JToken item in items)
+                    ReceiveOne(item, batch);
+                batch.Release();
+            }
+
+            /// <summary>One message, alone or from a batch: one that is not a valid request is answered as such (when it has an id), never the end of the connection.</summary>
+            private void ReceiveOne(JToken token, Batch batch)
+            {
+                if (!(token is JObject message))
+                {
+                    Reply(ErrorMessage(null, -32600, "Invalid request: a message is a JSON object."), batch);
+                    return;
+                }
+                try
+                {
+                    Receive(message, batch);
+                }
+                catch (Exception e)
+                {
+                    JToken id = message["id"];
+                    if (id != null)
+                        Reply(ErrorMessage(id, -32600, "Invalid request: " + e.Message), batch);
+                }
+            }
+
+            private void Receive(JObject message, Batch batch)
+            {
                 JToken id = message["id"];
-                if (method == null)
-                    return; //a response to something we never ask
+                JToken named = message["method"];
+                if (named == null)
+                {
+                    //A response is to something we never ask, and is dropped. A request with no method is answered: its client
+                    //would otherwise wait for ever
+                    if (id != null && message["result"] == null && message["error"] == null)
+                        Reply(ErrorMessage(id, -32600, "Invalid request: it has no 'method'."), batch);
+                    return;
+                }
+                if (named.Type != JTokenType.String)
+                {
+                    if (id != null)
+                        Reply(ErrorMessage(id, -32600, "Invalid request: 'method' must be a string."), batch);
+                    return;
+                }
+                string method = (string)named;
 
                 if (id == null)
                 {
                     //Notifications: the only one that asks anything of us is a cancellation
                     if (method == "notifications/cancelled")
                     {
-                        string requestId = message["params"]?["requestId"]?.ToString(Formatting.None);
+                        string requestId = (message["params"] as JObject)?["requestId"]?.ToString(Formatting.None);
                         if (requestId != null && _inFlight.TryGetValue(requestId, out CancellationTokenSource cancel))
                             try { cancel.Cancel(); } catch { }
                     }
@@ -344,6 +404,7 @@ namespace OpenCAGE.MCP
                 string key = id.ToString(Formatting.None);
                 CancellationTokenSource source = new CancellationTokenSource();
                 _inFlight[key] = source;
+                batch?.Expect();
                 Task.Run(() =>
                 {
                     JObject response;
@@ -364,10 +425,61 @@ namespace OpenCAGE.MCP
                         _inFlight.TryRemove(key, out _);
                     }
                     //A cancelled request is not answered (the client has stopped waiting for it)
-                    if (!source.IsCancellationRequested && response != null)
+                    bool answered = !source.IsCancellationRequested && response != null;
+                    if (batch != null)
+                        batch.Answer(answered ? response : null);
+                    else if (answered)
                         Send(response);
                     source.Dispose();
                 });
+            }
+
+            /// <summary>An answer given straight away: kept for its batch's array if it came in one, else sent now.</summary>
+            private void Reply(JObject answer, Batch batch)
+            {
+                if (batch != null)
+                    batch.Add(answer);
+                else
+                    Send(answer);
+            }
+
+            /// <summary>One batch's answers: sent as one array once the last of its requests has finished (a cancelled one adds none).</summary>
+            private sealed class Batch
+            {
+                private readonly Connection _connection;
+                private readonly JArray _answers = new JArray();
+                //One for each request still running, and one held until every message in the batch has been handed out
+                private int _waiting = 1;
+
+                public Batch(Connection connection) { _connection = connection; }
+
+                /// <summary>A request in it has started: its answer is waited for.</summary>
+                public void Expect() => Interlocked.Increment(ref _waiting);
+
+                /// <summary>An answer given straight away (to a message that was not a valid request).</summary>
+                public void Add(JObject answer)
+                {
+                    lock (_answers) _answers.Add(answer);
+                }
+
+                /// <summary>A request it waited for has finished: its answer, or null when it was cancelled.</summary>
+                public void Answer(JObject answer)
+                {
+                    if (answer != null) Add(answer);
+                    Release();
+                }
+
+                /// <summary>One wait over (the last sends the answers; with none, nothing is sent).</summary>
+                public void Release()
+                {
+                    if (Interlocked.Decrement(ref _waiting) != 0)
+                        return;
+                    lock (_answers)
+                    {
+                        if (_answers.Count != 0)
+                            _connection.Send(_answers);
+                    }
+                }
             }
 
             private JObject Answer(string method, JToken id, JObject parameters, CancellationToken cancel)
@@ -447,7 +559,7 @@ namespace OpenCAGE.MCP
                 }
                 else
                     return McpTool.ErrorResult("'arguments' must be a JSON object of argument names to values (it was " + given.Type.ToString().ToLowerInvariant() + "). Nothing was done.", null, McpErrorCodes.InvalidArgument);
-                JToken progressToken = parameters["_meta"]?["progressToken"];
+                JToken progressToken = (parameters["_meta"] as JObject)?["progressToken"];
 
                 //The protocol wants each progress value above the last, whatever a tool reports
                 //...and none after the answer (a heartbeat timer can still be ticking as the tool returns)
@@ -626,7 +738,7 @@ namespace OpenCAGE.MCP
                 catch { return false; }
             }
 
-            private void Send(JObject message)
+            private void Send(JToken message)
             {
                 if (_closed) return;
                 string text = message.ToString(Formatting.None);

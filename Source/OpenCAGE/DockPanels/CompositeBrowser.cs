@@ -148,6 +148,7 @@ namespace OpenCAGE.DockPanels
             this.Resize += CompositeBrowser_Resize;
 
             _content = existing;
+            _adoptedLevel = true;
             _treeUtility = new TreeUtility(treeView1, TreeType.SCRIPTS);
             FinishConstruction();
         }
@@ -351,15 +352,16 @@ namespace OpenCAGE.DockPanels
 
         private void OnCompositeRenamed(Composite composite, string name)
         {
-            ReloadList();
+            UpdateBrowserInPlace();
         }
 
         /* Composites can come and go from outside the browser - an import that leaves the open composite
            where it is, the composite a model import makes - and nothing else would put them in the list
            until the panel was next shown. An import raises this once per composite, so the reload waits
-           until the change is done, and is skipped if the tree was rebuilt since (opening an imported
-           composite does that itself; the partial reloads that only redo the folder view don't count).
-           A hidden browser reloads when it is next shown anyway. */
+           until the change is done, and is skipped if the tree was brought up to date since (opening an
+           imported composite does that itself; the partial reloads that only redo the folder view don't
+           count), or already shows what the level holds (an undo step updates it before it announces the
+           composites). A hidden browser reloads when it is next shown anyway. */
         private bool _listReloadQueued = false;
         private int _listReloads = 0;
         private int _listReloadsAtChange = 0;
@@ -376,7 +378,9 @@ namespace OpenCAGE.DockPanels
                 _listReloadQueued = false;
                 if (IsDisposed || !Visible || _listReloads != _listReloadsAtChange)
                     return;
-                ReloadList();
+                if (Content?.Level?.Commands != null && Content.Level.Commands.Loaded && _populatedSignature.HasValue && _populatedSignature.Value == PopulationSignature())
+                    return;
+                UpdateBrowserInPlace();
             }));
         }
 
@@ -418,9 +422,35 @@ namespace OpenCAGE.DockPanels
                 return;
 
             Content.EnsureEditorUtils();
+            if (_adoptedLevel)
+            {
+                if (!_adoptedPopulateQueued)
+                {
+                    _adoptedPopulateQueued = true;
+                    Application.Idle += PopulateAdoptedLevel;
+                }
+                return;
+            }
             if (_openingLevel && _populatedSignature.HasValue && _populatedSignature.Value == PopulationSignature())
                 return;
             ReloadList();
+        }
+
+        /* A browser rebuilt around the level already open (a theme switch: CommandsEditor.RebuildDockChromeForTheme) makes its
+           tree and list once the rebuild is over and the window has drawn, rather than as it docks. Made as it docked, the
+           whole tree and preview list went in while the half-rebuilt window sat frozen - seconds on the biggest levels. Idle
+           comes after the paints the rebuild queued; the open composite is selected in the tree as it is made
+           (RestoreSelectionForLoadedComposite). */
+        private bool _adoptedLevel = false;
+        private bool _adoptedPopulateQueued = false;
+
+        private void PopulateAdoptedLevel(object sender, EventArgs e)
+        {
+            Application.Idle -= PopulateAdoptedLevel;
+            _adoptedLevel = false;
+            if (IsDisposed)
+                return;
+            EnsureCompositeTreePopulated();
         }
 
         /* What the last full reload of the tree and list was made from: the level's composites (each one, and its name),
@@ -506,6 +536,7 @@ namespace OpenCAGE.DockPanels
         private void CompositeBrowser_FormClosed(object sender, FormClosedEventArgs e)
         {
             Application.Idle -= EndOpeningLevel;
+            Application.Idle -= PopulateAdoptedLevel;
             this.FormClosed -= CompositeBrowser_FormClosed;
             this.Load -= CompositeBrowser_Load;
             this.VisibleChanged -= CompositeBrowser_VisibleChanged;
@@ -522,6 +553,7 @@ namespace OpenCAGE.DockPanels
             _treeSelectionDebounceTimer.Tick -= TreeSelectionDebounceTimer_Tick;
             _previewFillTimer.Stop();
             _previewFillTimer.Tick -= PreviewFillTimer_Tick;
+            _previewFillTimer.Dispose();
             if (_pathBreadcrumb != null)
                 _pathBreadcrumb.SegmentClicked -= PathSegmentClicked;
             if (treeView1 != null)
@@ -549,6 +581,7 @@ namespace OpenCAGE.DockPanels
                     }
                 }
                 listView1.Items.Clear();
+                _flatItems = null;
             }
             
             if (treeView1 != null)
@@ -589,14 +622,19 @@ namespace OpenCAGE.DockPanels
         {
             Content.EnsureEditorUtils();
             Content.Level.Commands.Entries = Content.Level.Commands.Entries.OrderBy(o => o.name).ToList();
-            EnsureCompositeTreePopulated(); //opening it selects it in the tree and list
+            //Opening it selects it in the tree and list. Once the level is open, a composite added or imported goes into
+            //the browser as it is rather than the browser being made again around it.
+            if (_openingLevel)
+                EnsureCompositeTreePopulated();
+            else
+                UpdateBrowserInPlace();
             LoadComposite(composite, false, path);
         }
 
         /* For undo: the browser after composites came or went */
         public void RefreshList()
         {
-            ReloadList();
+            UpdateBrowserInPlace();
         }
 
         /* For undo: what follows a rename, however many composites it touched */
@@ -618,7 +656,7 @@ namespace OpenCAGE.DockPanels
                 if (openComposite != null)
                     Singleton.OnCompositeRenamed?.Invoke(openComposite, NormalisePath(openComposite.name));
             }
-            ReloadList();
+            UpdateBrowserInPlace();
         }
 
         /* Reload the folder/composite display */
@@ -638,6 +676,57 @@ namespace OpenCAGE.DockPanels
                 _listReloads++;
             }
 
+            RebuildList();
+
+            if (!_suppressSelectionRestore)
+                RestoreSelectionForLoadedComposite(updateListViewToo);
+
+            if (updateListViewToo)
+                _populatedSignature = PopulationSignature();
+        }
+
+        /* Composites came, went or were renamed - an edit, its undo or redo, an import: the tree and the list are brought
+           into line with the level where they differ, rather than made again. Made again, a big level's tree and preview
+           list took seconds (the native controls emptied and refilled node by node, item by item), once or twice over for
+           one edit; in place it is the few nodes and items that changed, the folders the user has open stay open and the
+           list keeps its previews. A hidden browser is left alone: it is made again when it is next shown
+           (CompositeBrowser_VisibleChanged). */
+        private void UpdateBrowserInPlace()
+        {
+            if (Content?.Level?.Commands == null || !Content.Level.Commands.Loaded)
+                return;
+
+            if (treeView1 == null || treeView1.IsDisposed || _treeUtility == null || !Visible)
+                return;
+
+            Content.EnsureEditorUtils();
+            //A node taken out can move the view's selection; what the browser selects is put back below
+            bool suppressed = _suppressTreeSelectionDebounce;
+            _suppressTreeSelectionDebounce = true;
+            try
+            {
+                _treeUtility.UpdateFileTree(GetCompositeNamesForTree(), expandAll: _currentSearch.Length != 0, inPlace: true);
+            }
+            finally
+            {
+                _suppressTreeSelectionDebounce = suppressed;
+            }
+            _listReloads++;
+
+            //The flat list holds every composite and is matched item by item; the folder browser lists one folder, quick to make again
+            if (_mode != CompositeBrowserMode.TreeAndPreview || !UpdateFlatListInPlace())
+                RebuildList();
+
+            if (!_suppressSelectionRestore)
+                RestoreSelectionForLoadedComposite(true);
+
+            _populatedSignature = PopulationSignature();
+        }
+
+        /* The list under the tree, made again for the browser mode */
+        private void RebuildList()
+        {
+            _flatItems = null;
             listView1.BeginUpdate();
             try
             {
@@ -659,12 +748,6 @@ namespace OpenCAGE.DockPanels
                 listView1.EndUpdate();
             }
             _previewFillPending = true;
-
-            if (!_suppressSelectionRestore)
-                RestoreSelectionForLoadedComposite(updateListViewToo);
-
-            if (updateListViewToo)
-                _populatedSignature = PopulationSignature();
         }
 
         /* The folder being browsed: its subfolders, and the composites directly in it */
@@ -724,6 +807,114 @@ namespace OpenCAGE.DockPanels
         private void BuildFlatList()
         {
             Composite rootComposite = Content.Level.Commands.EntryPoints[0];
+            List<KeyValuePair<string, Composite>> composites = FlatListEntries();
+            ListViewItem[] items = new ListViewItem[composites.Count];
+            for (int i = 0; i < composites.Count; i++)
+                items[i] = NewFlatListItem(composites[i], rootComposite);
+            listView1.Items.AddRange(items);
+            _flatItems = new List<ListViewItem>(items);
+        }
+
+        /* The flat list's items in the order the ListView holds them, while it is the flat list: matched against the level
+           without asking the ListView for each item (it is asked one message per item). Null whenever the list is anything
+           else. */
+        private List<ListViewItem> _flatItems = null;
+
+        /* The flat list brought into line with the level in place (see UpdateBrowserInPlace): an item whose composite went
+           is taken out, a new one goes in where the sort puts it, and one the sort now puts elsewhere (a rename) is moved;
+           everything else stays where it is with its preview. Which items stay is the longest run of them still in order,
+           so a change moves as few as it can. False when this list isn't the flat list, or so much changed that making it
+           again in one go is quicker. */
+        private bool UpdateFlatListInPlace()
+        {
+            if (_flatItems == null || _flatItems.Count != listView1.Items.Count)
+                return false;
+
+            Composite rootComposite = Content.Level.Commands.EntryPoints[0];
+            List<KeyValuePair<string, Composite>> wanted = FlatListEntries();
+            List<ListViewItem> old = _flatItems;
+
+            Dictionary<Composite, int> oldIndex = new Dictionary<Composite, int>(old.Count);
+            for (int i = 0; i < old.Count; i++)
+            {
+                Composite composite = (old[i].Tag as ListViewItemContent)?.Composite;
+                if (composite != null && !oldIndex.ContainsKey(composite))
+                    oldIndex.Add(composite, i);
+            }
+            int[] from = new int[wanted.Count];
+            for (int i = 0; i < wanted.Count; i++)
+                from[i] = oldIndex.TryGetValue(wanted[i].Value, out int index) ? index : -1;
+
+            //The longest run of wanted items whose old places are in order (patience sort): those stay put
+            int[] tails = new int[wanted.Count];
+            int[] previous = new int[wanted.Count];
+            int run = 0;
+            for (int i = 0; i < wanted.Count; i++)
+            {
+                if (from[i] < 0)
+                    continue;
+                int low = 0, high = run;
+                while (low < high)
+                {
+                    int mid = (low + high) / 2;
+                    if (from[tails[mid]] < from[i]) low = mid + 1;
+                    else high = mid;
+                }
+                previous[i] = low > 0 ? tails[low - 1] : -1;
+                tails[low] = i;
+                if (low == run)
+                    run++;
+            }
+            bool[] stays = new bool[old.Count];
+            for (int i = run > 0 ? tails[run - 1] : -1; i >= 0; i = previous[i])
+                stays[from[i]] = true;
+
+            int changes = (old.Count - run) + (wanted.Count - run);
+            if (changes > 64)
+                return false;
+
+            /* Item by item with the list drawing as it goes: held (BeginUpdate), letting it draw again lays out and draws
+               the whole list afresh */
+            _flatItems = null;
+            bool suppressed = _suppressSelectionRestore;
+            _suppressSelectionRestore = true;
+            try
+            {
+                for (int i = old.Count - 1; i >= 0; i--)
+                {
+                    if (!stays[i])
+                        listView1.Items.RemoveAt(i);
+                }
+                List<ListViewItem> now = new List<ListViewItem>(wanted.Count);
+                for (int i = 0; i < wanted.Count; i++)
+                {
+                    if (from[i] >= 0 && stays[from[i]])
+                    {
+                        LabelFlatListItem(old[from[i]], wanted[i], rootComposite);
+                        now.Add(old[from[i]]);
+                        continue;
+                    }
+                    //A moved item goes back in as it was, preview and all
+                    ListViewItem item = from[i] >= 0 ? old[from[i]] : NewFlatListItem(wanted[i], rootComposite);
+                    LabelFlatListItem(item, wanted[i], rootComposite);
+                    listView1.Items.Insert(i, item);
+                    now.Add(item);
+                }
+                _flatItems = now;
+            }
+            finally
+            {
+                _suppressSelectionRestore = suppressed;
+            }
+            if (changes != 0)
+                _previewFillPending = true;
+            return true;
+        }
+
+        /* The flat list's composites with the names they show, in its order */
+        private List<KeyValuePair<string, Composite>> FlatListEntries()
+        {
+            Composite rootComposite = Content.Level.Commands.EntryPoints[0];
             bool namesOnly = SettingsManager.GetBool(Settings.CompNameOnlyOpt);
 
             List<KeyValuePair<string, Composite>> composites = new List<KeyValuePair<string, Composite>>(Content.Level.Commands.Entries.Count);
@@ -747,26 +938,43 @@ namespace OpenCAGE.DockPanels
                 int byLeaf = string.Compare(a.Key, b.Key, StringComparison.OrdinalIgnoreCase);
                 return byLeaf != 0 ? byLeaf : string.Compare(a.Value.name, b.Value.name, StringComparison.OrdinalIgnoreCase);
             });
+            return composites;
+        }
 
-            ListViewItem[] items = new ListViewItem[composites.Count];
-            for (int i = 0; i < composites.Count; i++)
+        private ListViewItem NewFlatListItem(KeyValuePair<string, Composite> entry, Composite rootComposite)
+        {
+            Composite composite = entry.Value;
+            ListViewItemContent content = new ListViewItemContent()
             {
-                Composite composite = composites[i].Value;
-                ListViewItemContent content = new ListViewItemContent()
-                {
-                    Composite = composite,
-                    StockImageIndex = StockImageIndexFor(composite),
-                };
-                items[i] = new ListViewItem()
-                {
-                    Text = composites[i].Key,
-                    ImageIndex = content.StockImageIndex,
-                    //The name under the preview is the leaf; the whole path is a hover away
-                    ToolTipText = IsUnnamedRoot(composite, rootComposite) ? "(Root)" : composite.name.Replace('\\', '/'),
-                    Tag = content,
-                };
-            }
-            listView1.Items.AddRange(items);
+                Composite = composite,
+                StockImageIndex = StockImageIndexFor(composite),
+            };
+            return new ListViewItem()
+            {
+                Text = entry.Key,
+                ImageIndex = content.StockImageIndex,
+                //The name under the preview is the leaf; the whole path is a hover away
+                ToolTipText = IsUnnamedRoot(composite, rootComposite) ? "(Root)" : composite.name.Replace('\\', '/'),
+                Tag = content,
+            };
+        }
+
+        /* An item kept in the flat list shows its composite's name, path and icon as they are now */
+        private void LabelFlatListItem(ListViewItem item, KeyValuePair<string, Composite> entry, Composite rootComposite)
+        {
+            Composite composite = entry.Value;
+            if (item.Text != entry.Key)
+                item.Text = entry.Key;
+            string path = IsUnnamedRoot(composite, rootComposite) ? "(Root)" : composite.name.Replace('\\', '/');
+            if (item.ToolTipText != path)
+                item.ToolTipText = path;
+            ListViewItemContent content = (ListViewItemContent)item.Tag;
+            int stock = StockImageIndexFor(composite);
+            if (content.StockImageIndex == stock)
+                return;
+            content.StockImageIndex = stock;
+            if (content.Preview != PreviewState.Shown)
+                item.ImageIndex = stock;
         }
 
         private static bool IsUnnamedRoot(Composite composite, Composite rootComposite)
@@ -1143,7 +1351,9 @@ namespace OpenCAGE.DockPanels
             //Scrolling the selection into view is a move the preview fill should follow at once
             _previewFillPending = true;
             string compositeFileName = EditorUtils.GetCompositeName(composite);
-            foreach (ListViewItem item in listView1.Items)
+            //The flat list is looked through as kept here: walking the ListView asks it for every item in turn
+            IEnumerable<ListViewItem> items = _flatItems ?? listView1.Items.Cast<ListViewItem>();
+            foreach (ListViewItem item in items)
             {
                 if (item.Tag is ListViewItemContent content
                     && !content.IsFolder
@@ -1272,7 +1482,7 @@ namespace OpenCAGE.DockPanels
                 MessageBox.Show("Cannot delete a composite which is the root, global, or pause menu!", "Cannot delete.", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
-            if (prompt && MessageBox.Show("Are you sure you want to remove " + Path.GetFileName(composite.name) + "?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+            if (prompt && MessageBox.Show("Are you sure you want to remove " + EditorUtils.GetCompositeName(composite) + "?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
 
             DeleteCompositesInternal(new List<Composite>() { composite });
         }
@@ -1602,7 +1812,7 @@ namespace OpenCAGE.DockPanels
             DeleteComposite(content.Composite);
 
             CompositeDisplay?.Reload();
-            ReloadList();
+            UpdateBrowserInPlace();
         }
         private void deleteViaTreeView_Click(object sender, EventArgs e)
         {
@@ -1876,7 +2086,7 @@ namespace OpenCAGE.DockPanels
             if (openComposite != null)
                 Singleton.OnCompositeRenamed?.Invoke(openComposite, NormalisePath(openComposite.name));
 
-            ReloadList();
+            UpdateBrowserInPlace();
             return true;
         }
 
@@ -1900,6 +2110,7 @@ namespace OpenCAGE.DockPanels
                 Description = "Folder name:",
                 ButtonText = "Rename"
             });
+            _renameFolder.Validate = name => EditorUtils.UnstorableTextProblem(name, "This folder name");
             _renameFolder.OnRenamed += newName =>
             {
                 string sanitised = NormalisePath(newName);
@@ -1955,7 +2166,7 @@ namespace OpenCAGE.DockPanels
             OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.CompositeRenameEdit(
                 new List<OpenCAGE.Undo.CompositeRenameEdit.Rename>() { new OpenCAGE.Undo.CompositeRenameEdit.Rename() { Composite = composite.shortGUID, Before = previousName, After = composite.name } },
                 "Move " + leafName));
-            ReloadList();
+            UpdateBrowserInPlace();
             return true;
         }
 
@@ -2323,10 +2534,27 @@ namespace OpenCAGE.DockPanels
             _previewImageList = null;
             CompositePreviewImages.EnsurePreviewList(FileBrowserImageListLarge, CompositePreviewImages.BrowserSize, ref _previewImageList);
             listView1.LargeImageList = _previewImageList;
+            StopImageListChangeNotices(_previewImageList);
             if (old == null)
                 return;
             CompositePreviewImages.Release(old);
             old.Dispose();
+        }
+
+        /* A ListView answers every change to its large image list's contents by setting every item's image again, one
+           message per item - for each batch of previews the fill adds to the derived list. Nothing it shows moves when one
+           goes in (previews go on the end, or replace one where it is, and the fill points the item at it again), so the
+           derived list does not tell it. Told, a ListView whose handle was going (a level reloading) went through items
+           it no longer held, and threw from the fill's timer. The handler is private to ListView, so it is found by name,
+           as EditorIcons does for the shared lists. */
+        private static readonly System.Reflection.MethodInfo _largeImageListChanged = typeof(ListView).GetMethod("LargeImageListChangedHandle", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic, null, new Type[] { typeof(object), typeof(EventArgs) }, null);
+        private static readonly System.Reflection.MethodInfo _removeImageListChangeHandle = typeof(ImageList).GetEvent("ChangeHandle", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.GetRemoveMethod(true);
+
+        private void StopImageListChangeNotices(ImageList list)
+        {
+            if (list == null || _largeImageListChanged == null || _removeImageListChangeHandle == null)
+                return;
+            _removeImageListChangeHandle.Invoke(list, new object[] { Delegate.CreateDelegate(typeof(EventHandler), listView1, _largeImageListChanged) });
         }
 
         /// <summary>The tree preview option changed (menu, another instance, the settings file): the tree follows.</summary>
@@ -2348,11 +2576,12 @@ namespace OpenCAGE.DockPanels
                 return;
             }
 
-            //The tree shows every composite, so with previews on there it always has something to redraw
+            //The tree shows every composite, so with previews on there it always has something to redraw: a composite that
+            //has a preview now takes it, and one whose preview was replaced under the same key is drawn again
             if (CompositePreviewImages.TreesEnabled)
             {
-                ReloadList();
-                return;
+                UpdateBrowserInPlace();
+                treeView1.Invalidate();
             }
             if (!UsingPreviews)
                 return;
@@ -2390,7 +2619,10 @@ namespace OpenCAGE.DockPanels
 
         private void PreviewFillTimer_Tick(object sender, EventArgs e)
         {
-            if (IsDisposed || !UsingPreviews || _previewImageList == null || listView1.Items.Count == 0 || !listView1.IsHandleCreated || !listView1.Visible)
+            //Nothing while the browser or its list is going, or the list is having its handle made again
+            if (IsDisposed || Disposing || listView1.IsDisposed || listView1.Disposing || listView1.RecreatingHandle)
+                return;
+            if (!UsingPreviews || _previewImageList == null || listView1.LargeImageList != _previewImageList || listView1.Items.Count == 0 || !listView1.IsHandleCreated || !listView1.Visible)
                 return;
 
             Point scroll = new Point(GetScrollPos(listView1.Handle, SB_HORZ), GetScrollPos(listView1.Handle, SB_VERT));

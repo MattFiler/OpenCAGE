@@ -46,7 +46,7 @@
 	game had it set already. Otherwise (or as well) the model's box is drawn.
 
 	PickResult (DEBUG_MENU::Pick) is filled from the latest answer for other views, and inspect.pick reports it to
-	OpenCAGE (whose "Select from game" uses it).
+	OpenCAGE (whose "Select Entity Under Game Crosshair" uses it).
 */
 namespace
 {
@@ -1327,7 +1327,17 @@ namespace
 				text = "[frozen] " + text;
 			const float size = 15.0f * scale;
 			const ImVec2 extent = ImGui::GetFont()->CalcTextSizeA(size, display.x * 0.6f, display.x * 0.6f, text.c_str());
-			const ImVec2 corner(centre.x - extent.x * 0.5f, centre.y + gap + arm + 8.0f * scale);
+			ImVec2 corner(centre.x - extent.x * 0.5f, centre.y + gap + arm + 8.0f * scale);
+			// The Debug Menu's window is drawn over the overlays: a label that would go under it moves out to its side
+			ImVec2 windowMin, windowMax;
+			if (DEBUG_MENU::WindowRect(windowMin, windowMax) && corner.x - 5.0f < windowMax.x && corner.x + extent.x + 5.0f > windowMin.x &&
+				corner.y - 3.0f < windowMax.y && corner.y + extent.y + 3.0f > windowMin.y)
+			{
+				if (windowMax.x + 10.0f + extent.x <= display.x)
+					corner.x = windowMax.x + 10.0f;
+				else if (windowMin.x - 10.0f - extent.x >= 0.0f)
+					corner.x = windowMin.x - 10.0f - extent.x;
+			}
 			drawList->AddRectFilled(ImVec2(corner.x - 5.0f, corner.y - 3.0f), ImVec2(corner.x + extent.x + 5.0f, corner.y + extent.y + 3.0f), IM_COL32(0, 0, 0, 160), 3.0f);
 			drawList->AddText(ImGui::GetFont(), size, corner, hit ? IM_COL32(200, 255, 200, 255) : IM_COL32(230, 230, 230, 255), text.c_str(), nullptr, display.x * 0.6f);
 		}
@@ -1450,7 +1460,7 @@ namespace
 					ImGui::SetClipboardText(text.c_str());
 				}
 				ImGui::SameLine();
-				ImGui::TextDisabled("(OpenCAGE's \"Select from game\" reads this through inspect.pick)");
+				ImGui::TextDisabled("(OpenCAGE's \"Select Entity Under Game Crosshair\" reads this through inspect.pick)");
 				DrawDetailsLines(g_pick.details.lines);
 			}
 		}

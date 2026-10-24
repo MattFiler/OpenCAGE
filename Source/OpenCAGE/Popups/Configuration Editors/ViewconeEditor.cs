@@ -72,7 +72,15 @@ namespace OpenCAGE.ConfigEditors
 
             _activeSet = new BML(Singleton.PathToAI + "\\DATA\\VIEW_CONE_SETS\\" + viewconeSets.Text + ".BML");
             var viewcones = _activeSet.Content["ViewconeSet"]["ViewconeSettings"];
+
+            //Pages taken off the tab control keep their window handles (a page with its viewcone controls is ~70 windows)
+            //until they are disposed: dispose what is replaced - the designer's placeholder pages on open, the previous set's on a switch.
+            //Their autosave handlers came off with the Unsubscribe above.
+            List<TabPage> replaced = tabControl1.TabPages.Cast<TabPage>().ToList();
             tabControl1.TabPages.Clear();
+            foreach (TabPage old in replaced)
+                old.Dispose();
+
             foreach (XmlElement viewcone in viewcones)
             {
                 TabPage page = new TabPage();

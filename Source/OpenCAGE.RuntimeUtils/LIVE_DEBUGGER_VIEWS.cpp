@@ -124,7 +124,7 @@ namespace
 
 		if (hit.sequence == 0)
 		{
-			ImGui::TextDisabled("No breakpoint has been hit yet.");
+			ImGui::TextDisabled("No breakpoint has been hit since the level was loaded.");
 			return;
 		}
 		ImGui::SeparatorText(hit.atBreakpoint ? "The held call" : "The last breakpoint hit");

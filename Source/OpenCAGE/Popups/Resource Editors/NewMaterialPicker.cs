@@ -29,13 +29,19 @@ namespace OpenCAGE
         private readonly ComboBox _family = new ComboBox();
         private readonly TextBox _name = new TextBox();
         private readonly Label _detail = new Label();
+        private readonly Label _note = new Label();
         private readonly Button _ok = new Button();
 
-        private readonly List<ShaderPermutationService.Creatable> _options;
+        private const string NoteText = "The material starts with no textures. Pick its features and samplers once it opens.";
 
-        public NewMaterialPicker(List<ShaderPermutationService.Creatable> options)
+        private readonly List<ShaderPermutationService.Creatable> _options;
+        private readonly Func<string, string> _takenBy;
+
+        /// <param name="takenBy">The name of the material already called this, or null when the name is free.</param>
+        public NewMaterialPicker(List<ShaderPermutationService.Creatable> options, Func<string, string> takenBy = null)
         {
             _options = options ?? new List<ShaderPermutationService.Creatable>();
+            _takenBy = takenBy;
 
             Text = "New material";
             Icon = SharedFormIcon.Icon;
@@ -64,13 +70,10 @@ namespace OpenCAGE
             _name.Size = new Size(436, 20);
             _name.TextChanged += (s, e) => Revalidate();
 
-            Label note = new Label
-            {
-                Text = "The material starts with no textures. Pick its features and samplers once it opens.",
-                Location = new Point(12, 158),
-                Size = new Size(436, 18),
-                ForeColor = SystemColors.GrayText
-            };
+            _note.Text = NoteText;
+            _note.Location = new Point(12, 158);
+            _note.Size = new Size(436, 18);
+            _note.ForeColor = SystemColors.GrayText;
 
             _ok.Text = "Create";
             _ok.DialogResult = DialogResult.OK;
@@ -90,7 +93,7 @@ namespace OpenCAGE
             Controls.Add(_detail);
             Controls.Add(nameLabel);
             Controls.Add(_name);
-            Controls.Add(note);
+            Controls.Add(_note);
             Controls.Add(_ok);
             Controls.Add(cancel);
             AcceptButton = _ok;
@@ -141,7 +144,13 @@ namespace OpenCAGE
             {
                 _detail.Text = "";
             }
-            _ok.Enabled = index >= 0 && MaterialName.Length != 0;
+            /* Two materials of one name can't be told apart by what finds a material by name (a material mapping's
+             * target, an entity's material parameter), so a name already taken is refused here, as the asset name
+             * boxes do */
+            string takenBy = MaterialName.Length == 0 ? null : _takenBy?.Invoke(MaterialName);
+            _note.Text = takenBy == null ? NoteText : "The level already has a material called '" + takenBy + "'. Pick another name.";
+            _note.ForeColor = takenBy == null ? SystemColors.GrayText : Color.FromArgb(210, 90, 80);
+            _ok.Enabled = index >= 0 && MaterialName.Length != 0 && takenBy == null;
         }
     }
 }

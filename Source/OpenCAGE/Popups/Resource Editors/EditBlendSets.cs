@@ -33,6 +33,15 @@ namespace OpenCAGE
         private int _filling;
         private bool _dirty;
 
+        /* Edits go straight into the animations everything shares, where the next write of ANIMATION.PAK from anywhere
+         * would take them out. So what each blend set, and each character's list of the blend sets it reaches, held before
+         * its first change not yet written is kept here - shared by every open blend set window, as they edit the same
+         * sets - and a window letting its changes go (No to saving them as it closes) puts back what it changed. */
+        private static readonly Dictionary<GlobalAnimClipDB.BlendSet, BlendSetBefore> _setsBefore = new Dictionary<GlobalAnimClipDB.BlendSet, BlendSetBefore>();
+        private static readonly Dictionary<List<AnimClipDB.BlendSet>, List<AnimClipDB.BlendSet>> _usersBefore = new Dictionary<List<AnimClipDB.BlendSet>, List<AnimClipDB.BlendSet>>();
+        //What this window changed of those (blend sets, and lists of their users) since they were last written
+        private readonly HashSet<object> _changed = new HashSet<object>();
+
         /// <summary>Raised when the user picks a blend set, with the name that references it.</summary>
         public Action<string> OnPicked;
 
@@ -104,7 +113,13 @@ namespace OpenCAGE
 
             saveBtn.Click += SaveBtn_Click;
             FormClosing += EditBlendSets_FormClosing;
-            FormClosed += (s, e) => { if (_clipPicker != null && !_clipPicker.IsDisposed) _clipPicker.Close(); };
+            FormClosed += (s, e) =>
+            {
+                if (_clipPicker != null && !_clipPicker.IsDisposed) _clipPicker.Close();
+                //Closed without saving (No, or closed some other way): what it changed goes back as it was. Not when the
+                //application is going - nothing in memory outlives it
+                if (!CloseReasons.IsApplicationShutdown(e.CloseReason)) LetGo();
+            };
 
             //parsing the PAK takes a couple of seconds, so let the window appear before it happens
             Load += EditBlendSets_Load;
@@ -426,6 +441,7 @@ namespace OpenCAGE
             int clip = SelectedClip;
             if (clip < 0) return;
 
+            BlendSetBefore before = BlendSetBefore.Of(_set);
             bool changed = false;
             string name = clipNameBox.Text.Trim();
             if (name.Length != 0 && name != _set.Clips[clip].Name)
@@ -445,6 +461,7 @@ namespace OpenCAGE
             { _set.Mirrored[clip] = clipMirroredCheck.Checked; changed = true; }
 
             if (!changed) return;
+            Remember(_set, before);
             MarkDirty();
             RefreshAfterEdit();
         }
@@ -455,6 +472,7 @@ namespace OpenCAGE
             int instance = SelectedInstance;
             if (instance < 0) return;
 
+            BlendSetBefore before = BlendSetBefore.Of(_set);
             bool changed = false;
             if (instanceClipBox.SelectedIndex >= 0 && instanceClipBox.SelectedIndex < _set.Clips.Count
                 && _set.InstanceToClip[instance] != (byte)instanceClipBox.SelectedIndex)
@@ -465,6 +483,7 @@ namespace OpenCAGE
             { _set.PlaySpeeds[instance] = speed; changed = true; }
 
             if (!changed) return;
+            Remember(_set, before);
             MarkDirty();
             RefreshAfterEdit();
         }
@@ -558,6 +577,7 @@ namespace OpenCAGE
                  * they come back as numbers. */
                 _animations.AddName(_set.Name, true);
                 _animations.AddName(key, true);
+                Remember(into, into.ToList());
                 into.Add(new AnimClipDB.BlendSet { Name = _set.Name, Filename = key });
 
                 MarkDirty();
@@ -572,8 +592,10 @@ namespace OpenCAGE
             if (reference == null) return;
 
             List<AnimClipDB.BlendSet> from = reference.Context == null ? reference.Database.BlendSets : reference.Context.BlendSets;
+            List<AnimClipDB.BlendSet> before = from.ToList();
             if (!from.Remove(reference.Entry)) return;
 
+            Remember(from, before);
             MarkDirty();
             FillUsers();
         }
@@ -624,6 +646,10 @@ namespace OpenCAGE
         public void MarkSaved()
         {
             _dirty = false;
+            //Written: what ANIMATION.PAK holds now is what there is to go back to
+            _changed.Clear();
+            _setsBefore.Clear();
+            _usersBefore.Clear();
             if (!IsDisposed && _animations != null)
                 statusLabel.Text = _animations.ClipIndex.BlendSets.Count + " blend set(s)";
         }
@@ -632,7 +658,100 @@ namespace OpenCAGE
         public void CloseDiscarding()
         {
             _dirty = false;
+            //The animations they're in are being replaced by those loaded again, so there's nothing to put back
+            _changed.Clear();
+            _setsBefore.Clear();
+            _usersBefore.Clear();
             Close();
+        }
+
+        /* A change is being made to a blend set, or to a list of a character's blend sets: what it held before goes on
+         * record, unless an earlier change not yet written put it there already */
+        private void Remember(GlobalAnimClipDB.BlendSet set, BlendSetBefore before)
+        {
+            if (!_setsBefore.ContainsKey(set)) _setsBefore[set] = before;
+            _changed.Add(set);
+        }
+
+        private void Remember(List<AnimClipDB.BlendSet> users, List<AnimClipDB.BlendSet> before)
+        {
+            if (!_usersBefore.ContainsKey(users)) _usersBefore[users] = before;
+            _changed.Add(users);
+        }
+
+        /* What this window changed goes back as it was before it was changed (it was not saved). Another open blend set
+         * window that changed the same things has those changes put back too, and shows them as they are now. */
+        private void LetGo()
+        {
+            List<object> putBack = _changed.ToList();
+            _changed.Clear();
+            _dirty = false;
+            foreach (object changed in putBack)
+            {
+                if (changed is GlobalAnimClipDB.BlendSet set && _setsBefore.TryGetValue(set, out BlendSetBefore before))
+                {
+                    before.PutBack(set);
+                    _setsBefore.Remove(set);
+                }
+                else if (changed is List<AnimClipDB.BlendSet> users && _usersBefore.TryGetValue(users, out List<AnimClipDB.BlendSet> held))
+                {
+                    users.Clear();
+                    users.AddRange(held);
+                    _usersBefore.Remove(users);
+                }
+            }
+            if (putBack.Count == 0) return;
+            foreach (EditBlendSets other in Application.OpenForms.OfType<EditBlendSets>().ToList())
+                if (other != this && !other.IsDisposed) other.PutBackElsewhere(putBack);
+        }
+
+        /* Another window put these back as they were: whatever of them this one changed is no longer changed */
+        private void PutBackElsewhere(List<object> putBack)
+        {
+            bool mine = false;
+            foreach (object changed in putBack) mine |= _changed.Remove(changed);
+            if (mine && _changed.Count == 0)
+            {
+                _dirty = false;
+                saveBtn.Enabled = false;
+            }
+            if (_animations?.ClipIndex == null) return;
+            ShowSelected();
+            statusLabel.Text = _animations.ClipIndex.BlendSets.Count + " blend set(s)" + (_dirty ? "   —   unsaved changes" : "");
+        }
+
+        /* The authored half of a blend set as it was: everything this window can change in it */
+        private sealed class BlendSetBefore
+        {
+            private List<GlobalAnimClipDB.BlendClip> _clips;
+            private string[] _clipNames;
+            private float[] _durations, _playSpeeds;
+            private bool[] _mirrored;
+            private byte[] _instanceToClip;
+
+            public static BlendSetBefore Of(GlobalAnimClipDB.BlendSet set)
+            {
+                return new BlendSetBefore
+                {
+                    _clips = set.Clips.ToList(),
+                    _clipNames = set.Clips.Select(o => o.Name).ToArray(),
+                    _durations = (float[])set.Durations?.Clone(),
+                    _playSpeeds = (float[])set.PlaySpeeds?.Clone(),
+                    _mirrored = (bool[])set.Mirrored?.Clone(),
+                    _instanceToClip = (byte[])set.InstanceToClip?.Clone(),
+                };
+            }
+
+            public void PutBack(GlobalAnimClipDB.BlendSet set)
+            {
+                set.Clips.Clear();
+                set.Clips.AddRange(_clips);
+                for (int i = 0; i < _clips.Count; i++) _clips[i].Name = _clipNames[i];
+                set.Durations = _durations;
+                set.PlaySpeeds = _playSpeeds;
+                set.Mirrored = _mirrored;
+                set.InstanceToClip = _instanceToClip;
+            }
         }
 
         private void EditBlendSets_FormClosing(object sender, FormClosingEventArgs e)

@@ -156,7 +156,8 @@ namespace OpenCAGE
 
         /// <summary>
         /// The node a reference names, as it is on this page now: the same object while it is here,
-        /// otherwise the entity's node at the expected position, otherwise its most recent node.
+        /// otherwise the entity's node at the expected position, then the one where the old object was
+        /// when it left the page (a rebuild puts its replacement there), otherwise its most recent node.
         /// </summary>
         internal STNode ResolveNode(NodeRef reference, Point? expectedLocation = null)
         {
@@ -166,6 +167,8 @@ namespace OpenCAGE
                 return reference.Node;
 
             Point? wanted = expectedLocation ?? reference.Location;
+            Point? lastSeen = reference.Node?.Location;
+            STNode seen = null;
             STNode last = null;
             foreach (STNode node in stNodeEditor1.Nodes)
             {
@@ -173,9 +176,81 @@ namespace OpenCAGE
                     continue;
                 if (wanted.HasValue && node.Location == wanted.Value)
                     return node;
+                if (seen == null && lastSeen.HasValue && node.Location == lastSeen.Value)
+                    seen = node;
                 last = node;
             }
-            return last;
+            return seen ?? last;
+        }
+
+        /// <summary>
+        /// The node an undo or redo should take off the page for this snapshot: its own node while that is
+        /// here; after a rebuild, the entity's node where the snapshot says it sits (or where the old node
+        /// was when it left the page); failing those, the one node of the entity whose connections are
+        /// exactly the snapshot's. Never a node carrying a connection the snapshot doesn't list - that
+        /// belongs to another node of the same entity, and would leave the script with it. Null when no
+        /// node can be told apart for certain; <paramref name="unsure"/> says the entity does have nodes here.
+        /// </summary>
+        internal STNode ResolveNodeToRemove(NodeSnapshot snapshot, out bool unsure)
+        {
+            unsure = false;
+            NodeRef self = snapshot?.Self;
+            if (self == null)
+                return null;
+            if (self.Node != null && stNodeEditor1.Nodes.IndexOf(self.Node) >= 0)
+                return self.Node;
+
+            List<STNode> candidates = new List<STNode>();
+            foreach (STNode node in stNodeEditor1.Nodes)
+            {
+                if (node?.Entity != null && node.ShortGUID == self.Entity)
+                    candidates.Add(node);
+            }
+            if (candidates.Count == 0)
+                return null;
+
+            HashSet<(uint, uint, uint)> listed = new HashSet<(uint, uint, uint)>(snapshot.Connections.Select(o => ConnectionKey(o.ThisPin, o.Peer.Entity, o.PeerPin)));
+            foreach (Point? at in new Point?[] { snapshot.Location, self.Location, self.Node?.Location })
+            {
+                if (!at.HasValue)
+                    continue;
+                List<STNode> here = candidates.Where(o => o.Location == at.Value && listed.IsSupersetOf(ConnectionKeys(o))).ToList();
+                if (here.Count != 0)
+                    return here.FirstOrDefault(o => listed.SetEquals(ConnectionKeys(o))) ?? here[0];
+            }
+
+            List<STNode> alike = candidates.Where(o => listed.SetEquals(ConnectionKeys(o))).ToList();
+            if (alike.Count == 1)
+                return alike[0];
+
+            unsure = true;
+            Debug.Log("Undo", "WARNING: Left the " + candidates.Count + " node(s) of " + candidates[0].Title + " on '" + _flowgraphName + "' as they are: none is certainly the node this step adds or removes");
+            return null;
+        }
+
+        //A node's connections by what they join - its pin, the other end's entity and pin - which a page rebuild keeps, unlike the node objects
+        private static HashSet<(uint, uint, uint)> ConnectionKeys(STNode node)
+        {
+            HashSet<(uint, uint, uint)> keys = new HashSet<(uint, uint, uint)>();
+            foreach (STNodeOption option in node.GetAllOptions())
+            {
+                if (option == null || option == STNodeOption.Empty)
+                    continue;
+                List<STNodeOption> connected = option.GetConnectedOption();
+                if (connected == null)
+                    continue;
+                foreach (STNodeOption peer in connected)
+                {
+                    if (peer?.Owner != null)
+                        keys.Add(ConnectionKey(option.ShortGUID, peer.Owner.ShortGUID, peer.ShortGUID));
+                }
+            }
+            return keys;
+        }
+
+        private static (uint, uint, uint) ConnectionKey(ShortGuid pin, ShortGuid peerEntity, ShortGuid peerPin)
+        {
+            return (pin.AsUInt32, peerEntity.AsUInt32, peerPin.AsUInt32);
         }
 
         internal NodeSnapshot SnapshotNode(STNode node)

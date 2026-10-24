@@ -57,6 +57,7 @@
             // levelList
             //
             this.levelList.FormattingEnabled = true;
+            this.levelList.HorizontalScrollbar = true;
             this.levelList.IntegralHeight = false;
             this.levelList.Location = new System.Drawing.Point(15, 28);
             this.levelList.Name = "levelList";

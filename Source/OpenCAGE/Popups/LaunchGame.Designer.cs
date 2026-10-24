@@ -69,7 +69,10 @@ namespace OpenCAGE
             this.OpenGame.TabIndex = 5;
             this.OpenGame.Text = "Start Alien: Isolation";
             this.toolTip1.SetToolTip(this.OpenGame, "Start the game with the options above. It loads levels as they are saved on disk: unsaved changes are offere" +
-        "d a save first.");
+        "d a save first. The Debug Menu, Possess characters, Debug entities, Hot reload, Live Link, Cap FPS and Unlock mo" +
+        "use need an ASI loader in the game folder as d3d11.dll: another mod\'s d3d11.dll there (ReShade, Special K...) i" +
+        "s moved to d3d11.dll.opencage_backup while any of them is on, and put back when the game is next started from he" +
+        "re with them all off.");
             this.OpenGame.UseVisualStyleBackColor = true;
             this.OpenGame.Click += new System.EventHandler(this.LaunchGame_Click);
             //

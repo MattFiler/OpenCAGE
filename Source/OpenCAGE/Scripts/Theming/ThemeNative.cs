@@ -301,6 +301,25 @@ namespace OpenCAGE.Theming
         [DllImport("user32.dll")]
         private static extern bool RedrawWindow(IntPtr hWnd, IntPtr update, IntPtr region, uint flags);
 
+        [DllImport("user32.dll")]
+        private static extern int GetWindowLong(IntPtr hWnd, int index);
+
+        private const int GWL_STYLE = -16;
+        private const int WS_VSCROLL = 0x00200000;
+        private const int WS_HSCROLL = 0x00100000;
+
+        /// <summary>
+        /// Whether the window is showing a scrollbar of its own right now - the kind drawn from its theme,
+        /// as opposed to a separate scroll bar control.
+        /// </summary>
+        public static bool HasScrollBarStyle(Control control)
+        {
+            if (control == null || !control.IsHandleCreated)
+                return false;
+
+            return (GetWindowLong(control.Handle, GWL_STYLE) & (WS_VSCROLL | WS_HSCROLL)) != 0;
+        }
+
         public enum ThemeClass
         {
             /// <summary>Lists, trees, scrollbars - the shell's own explorer look.</summary>

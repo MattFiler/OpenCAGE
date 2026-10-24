@@ -620,7 +620,13 @@ namespace OpenCAGE.MCP
             string tool = args.Tool?.Name;
             if (tool == "create_composite")
             {
-                if (args.Has("place_in")) Add(args.Str("place_in"));
+                if (args.Has("place_in"))
+                {
+                    //Given but blank names no composite: refused here, as the step would be left with none to be about
+                    if (strict && string.IsNullOrWhiteSpace(args.Str("place_in")))
+                        throw McpError.Invalid(EmptyPlaceIn);
+                    Add(args.Str("place_in"));
+                }
                 else
                 {
                     Composite shown = Singleton.Editor?.CompositeDisplay?.Composite;
@@ -868,11 +874,15 @@ namespace OpenCAGE.MCP
             return result;
         }
 
+        private const string EmptyPlaceIn = "'place_in' is empty: give the composite to place an instance of the new one in (e.g. 'root'), or leave it out to place none.";
+
         private static JObject StepCreateComposite(McpScriptEdit edit, McpCall args, Scope scope)
         {
             Commands commands = edit.Commands;
             string path = args.Str("path", required: true);
             string placeIn = args.Str("place_in");
+            if (placeIn != null && placeIn.Trim().Length == 0)
+                throw McpError.Invalid(EmptyPlaceIn);
             if (placeIn == null && (args.Has("position") || args.Has("rotation") || args.Has("instance_name") || args.Has("space") || args.Has("placement")))
                 throw McpError.Invalid("'position', 'rotation', 'space', 'placement' and 'instance_name' are for placing an instance of the new composite: give 'place_in' too (e.g. 'root').");
             bool allowCustom = args.Bool("allow_custom");

@@ -61,17 +61,26 @@ namespace OpenCAGE
             _fileTree = null;
         }
 
-        /* Update the file tree GUI. With expandAll every folder comes in open, as a search's results do. */
-        public void UpdateFileTree(List<string> FilesToList, ContextMenuStrip contextMenu = null, List<string> tags = null, List<Models.CS2.Component.LOD> models = null, bool expandAll = false)
+        /* Update the file tree GUI. With expandAll every folder comes in open, as a search's results do.
+           With inPlace the tree that is there is brought into line with the list instead of made again (see MergeNodes):
+           the nodes that stay keep their folders open or closed and the selection stays where it is, and only what changed
+           goes in or out. Made again, every node of a big level's tree left the view and went back in one at a time, which
+           took seconds for a single composite added or removed. An empty tree is made as usual. */
+        public void UpdateFileTree(List<string> FilesToList, ContextMenuStrip contextMenu = null, List<string> tags = null, List<Models.CS2.Component.LOD> models = null, bool expandAll = false, bool inPlace = false)
         {
             if (_fileTree == null || _fileTree.IsDisposed)
                 return;
 
+            inPlace = inPlace && _fileTree.Nodes.Count != 0;
+
             //A big level's composites take a moment to go in
             Cursor cursor = Cursor.Current;
-            Cursor.Current = Cursors.WaitCursor;
-            _fileTree.SuspendLayout();
-            _fileTree.BeginUpdate();
+            if (!inPlace)
+            {
+                Cursor.Current = Cursors.WaitCursor;
+                _fileTree.SuspendLayout();
+                _fileTree.BeginUpdate();
+            }
 
             /* Composite trees swap to a taller preview list while previews are on, and back when they
                are not. The composites are looked up once here rather than by name per node. */
@@ -102,7 +111,8 @@ namespace OpenCAGE
                 }
             }
 
-            _fileTree.Nodes.Clear();
+            if (!inPlace)
+                _fileTree.Nodes.Clear();
 
             /* Made off the view, sorted, and handed to it in one go. Built inside it, each node went into the
                view as it was found (its folder found by walking its siblings), Sort then took the whole tree
@@ -129,6 +139,22 @@ namespace OpenCAGE
             if (expandAll)
                 ExpandFolders(top.Nodes);
 
+            if (inPlace)
+            {
+                _merged = 0;
+                try
+                {
+                    MergeNodes(_fileTree.Nodes, top.Nodes);
+                }
+                finally
+                {
+                    if (_merged >= HoldDrawingAfter)
+                        _fileTree.EndUpdate();
+                    _merged = 0;
+                }
+                return;
+            }
+
             TreeNode[] roots = new TreeNode[top.Nodes.Count];
             top.Nodes.CopyTo(roots, 0);
             top.Nodes.Clear();
@@ -150,6 +176,140 @@ namespace OpenCAGE
             }
             foreach (TreeNode node in nodes)
                 SortNodes(node.Nodes, comparer);
+        }
+
+        /* How many changes a merge has made to the view. Past a few dozen the view stops drawing until the merge is done;
+           below that it isn't held at all, as letting it draw again (EndUpdate) has it measure every node in it once more,
+           each through a custom draw notice the TreeView answers in managed code - the bulk of a small change's cost. */
+        private int _merged = 0;
+        private const int HoldDrawingAfter = 64;
+
+        /* One level of the tree in the view brought into line with the same level of a tree made off it. A node is
+           matched by its text, which no two siblings share (AddFileToTree finds a node's children by it): a match stays,
+           with what is under it brought into line in turn, a node with no match goes, and a new one goes in where the
+           sort puts it. A node that stays is never taken out of the view, so its folder stays open or closed. */
+        private void MergeNodes(TreeNodeCollection have, TreeNodeCollection want)
+        {
+            TreeNode[] wanted = new TreeNode[want.Count];
+            want.CopyTo(wanted, 0);
+            HashSet<string> wantedText = new HashSet<string>(StringComparer.Ordinal);
+            foreach (TreeNode node in wanted)
+                wantedText.Add(node.Text);
+
+            Dictionary<string, TreeNode> kept = new Dictionary<string, TreeNode>(have.Count, StringComparer.Ordinal);
+            for (int i = have.Count - 1; i >= 0; i--)
+            {
+                TreeNode node = have[i];
+                if (wantedText.Contains(node.Text) && !kept.ContainsKey(node.Text))
+                    kept.Add(node.Text, node);
+                else
+                    RemoveNode(node);
+            }
+
+            for (int i = 0; i < wanted.Length; i++)
+            {
+                TreeNode target = wanted[i];
+                if (kept.TryGetValue(target.Text, out TreeNode node))
+                {
+                    //Out of place only when the sort found it equal to a neighbour and they came in another order this time
+                    if (i >= have.Count || have[i] != node)
+                    {
+                        RemoveNode(node);
+                        have.Insert(i, node);
+                    }
+                    MatchNode(node, target);
+                    MergeNodes(node.Nodes, target.Nodes);
+                }
+                else
+                {
+                    NoteChange();
+                    target.Remove();
+                    have.Insert(i, target);
+                }
+            }
+            while (have.Count > wanted.Length)
+                RemoveNode(have[have.Count - 1]);
+        }
+
+        private void NoteChange()
+        {
+            if (++_merged == HoldDrawingAfter)
+                _fileTree.BeginUpdate();
+        }
+
+        /* A node out of the view. One holding the selection clears it first: the view would pick a neighbour to select,
+           and raise AfterSelect for a node nobody chose (the composite browser opens whatever is selected). */
+        private void RemoveNode(TreeNode node)
+        {
+            NoteChange();
+            for (TreeNode selected = _fileTree.SelectedNode; selected != null; selected = selected.Parent)
+            {
+                if (selected != node)
+                    continue;
+                _fileTree.SelectedNode = null;
+                break;
+            }
+            node.Remove();
+        }
+
+        /* A node that stays takes what the rebuilt one has: its tag, menu and icon. A folder's icon follows whether it is
+           open (FileTree_AfterExpand), so one that was a folder already keeps its own. */
+        private void MatchNode(TreeNode node, TreeNode target)
+        {
+            TreeItem have = node.Tag is TreeItem item ? item : default(TreeItem);
+            TreeItem want = (TreeItem)target.Tag;
+            bool retyped = have.Item_Type != want.Item_Type;
+            if (retyped || have.String_Value != want.String_Value || have.Model_Value != want.Model_Value)
+                node.Tag = want;
+            if (node.ContextMenuStrip != target.ContextMenuStrip)
+                node.ContextMenuStrip = target.ContextMenuStrip;
+
+            if (FollowsOpenState(target))
+            {
+                if (retyped || !FollowsOpenState(node))
+                {
+                    NoteChange();
+                    SetFolderIcon(node, node.IsExpanded);
+                }
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(target.ImageKey))
+            {
+                if (node.ImageKey != target.ImageKey)
+                {
+                    NoteChange();
+                    node.ImageKey = target.ImageKey;
+                }
+            }
+            else if (node.ImageIndex != target.ImageIndex || !string.IsNullOrEmpty(node.ImageKey))
+            {
+                NoteChange();
+                node.ImageIndex = target.ImageIndex;
+            }
+
+            if (!string.IsNullOrEmpty(target.SelectedImageKey))
+            {
+                if (node.SelectedImageKey != target.SelectedImageKey)
+                {
+                    NoteChange();
+                    node.SelectedImageKey = target.SelectedImageKey;
+                }
+            }
+            else if (node.SelectedImageIndex != target.SelectedImageIndex || !string.IsNullOrEmpty(node.SelectedImageKey))
+            {
+                NoteChange();
+                node.SelectedImageIndex = target.SelectedImageIndex;
+            }
+        }
+
+        /* A folder showing the closed or open folder icon, which it swaps as it opens and closes */
+        private static bool FollowsOpenState(TreeNode node)
+        {
+            if (!(node.Tag is TreeItem item) || item.Item_Type != TreeItemType.DIRECTORY || !string.IsNullOrEmpty(node.ImageKey))
+                return false;
+            int index = node.ImageIndex;
+            return (index == (int)TreeItemIcon.FOLDER || index == (int)TreeItemIcon.FOLDER_OPEN) && node.SelectedImageIndex == index;
         }
 
         private void ExpandFolders(TreeNodeCollection nodes)

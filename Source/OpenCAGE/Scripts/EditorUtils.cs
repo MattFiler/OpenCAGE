@@ -272,19 +272,22 @@ namespace OpenCAGE
             if (Content.Level.Commands == null)
                 return entity.shortGUID.ToByteString();
 
-            if (hasFinishedCachingEntityNames && regenCache)
+            //The cache is built on a worker while a level loads (GenerateEntityNameCache): it is only used once complete, and
+            //always under its lock - until then names are worked out as they are asked for
+            lock (_entityNameLock)
             {
-                if (!cachedEntityName.ContainsKey(composite.shortGUID)) cachedEntityName.Add(composite.shortGUID, new Dictionary<ShortGuid, string>());
+                if (hasFinishedCachingEntityNames)
+                {
+                    if (!cachedEntityName.TryGetValue(composite.shortGUID, out Dictionary<ShortGuid, string> names))
+                        cachedEntityName.Add(composite.shortGUID, names = new Dictionary<ShortGuid, string>());
 
-                if (cachedEntityName[composite.shortGUID].ContainsKey(entity.shortGUID)) cachedEntityName[composite.shortGUID].Remove(entity.shortGUID);
-                cachedEntityName[composite.shortGUID].Add(entity.shortGUID, GenerateEntityNameInternal(entity, composite));
+                    if (regenCache)
+                        names[entity.shortGUID] = GenerateEntityNameInternal(entity, composite);
+
+                    if (names.TryGetValue(entity.shortGUID, out string name))
+                        return name;
+                }
             }
-
-            if (!cachedEntityName.ContainsKey(composite.shortGUID))
-                cachedEntityName.Add(composite.shortGUID, new Dictionary<ShortGuid, string>());
-
-            if (hasFinishedCachingEntityNames && cachedEntityName[composite.shortGUID].TryGetValue(entity.shortGUID, out string name))
-                return name;
 
             return GenerateEntityNameInternal(entity, composite);
         }
@@ -338,38 +341,64 @@ namespace OpenCAGE
             {
                 Composite composite = commands.GetComposite(proxy.function);
                 if (composite != null)
-                    target = Path.GetFileName(composite.name);
+                    target = GetCompositeName(composite);
             }
             return "UNRESOLVABLE" + (target == null ? "" : " - was " + target);
         }
 
         /* Generate a cache of entity names */
+        private readonly object _entityNameLock = new object();
         private bool hasFinishedCachingEntityNames = false;
         private Dictionary<ShortGuid, Dictionary<ShortGuid, string>> cachedEntityName = new Dictionary<ShortGuid, Dictionary<ShortGuid, string>>();
         public void GenerateEntityNameCache(CommandsEditor mainInst)
         {
-            if (Content.Level.Commands == null) return;
-            hasFinishedCachingEntityNames = false;
-            mainInst?.EnableButtons(false, "Generating caches...");
-            cachedEntityName.Clear();
-            for (int i = 0; i < Content.Level.Commands.Entries.Count; i++)
+            Commands commands = Content?.Level?.Commands;
+            if (commands == null) return;
+            lock (_entityNameLock)
             {
-                Composite comp = Content.Level.Commands.Entries[i];
-                if (!cachedEntityName.ContainsKey(comp.shortGUID))
-                    cachedEntityName.Add(comp.shortGUID, new Dictionary<ShortGuid, string>());
-                List<Entity> ents = comp.GetEntities();
-                for (int x = 0; x < ents.Count; x++)
-                    if (!cachedEntityName[comp.shortGUID].ContainsKey(ents[x].shortGUID))
-                        cachedEntityName[comp.shortGUID].Add(ents[x].shortGUID, GenerateEntityNameInternal(ents[x], comp));
+                hasFinishedCachingEntityNames = false;
+                cachedEntityName = new Dictionary<ShortGuid, Dictionary<ShortGuid, string>>();
+            }
+            mainInst?.EnableButtons(false, "Generating caches...");
+
+            //Built aside and swapped in whole, as the UI thread asks for names meanwhile. Given up if the level is closed part
+            //way through (another level loaded quickly): its names are of no use then, and the new level builds its own
+            Dictionary<ShortGuid, Dictionary<ShortGuid, string>> built = new Dictionary<ShortGuid, Dictionary<ShortGuid, string>>();
+            try
+            {
+                for (int i = 0; i < commands.Entries.Count; i++)
+                {
+                    if (!ReferenceEquals(Content?.Level?.Commands, commands))
+                        return;
+                    Composite comp = commands.Entries[i];
+                    if (!built.TryGetValue(comp.shortGUID, out Dictionary<ShortGuid, string> names))
+                        built.Add(comp.shortGUID, names = new Dictionary<ShortGuid, string>());
+                    List<Entity> ents = comp.GetEntities();
+                    for (int x = 0; x < ents.Count; x++)
+                        if (!names.ContainsKey(ents[x].shortGUID))
+                            names.Add(ents[x].shortGUID, GenerateEntityNameInternal(ents[x], comp));
+                }
+            }
+            catch (NullReferenceException) when (!ReferenceEquals(Content?.Level?.Commands, commands))
+            {
+                return;
+            }
+
+            lock (_entityNameLock)
+            {
+                cachedEntityName = built;
+                hasFinishedCachingEntityNames = true;
             }
             mainInst?.EnableButtons(true, "");
-            hasFinishedCachingEntityNames = true;
         }
 
         public void ClearEntityNameCache()
         {
-            cachedEntityName.Clear();
-            hasFinishedCachingEntityNames = false;
+            lock (_entityNameLock)
+            {
+                cachedEntityName = new Dictionary<ShortGuid, Dictionary<ShortGuid, string>>();
+                hasFinishedCachingEntityNames = false;
+            }
         }
 
         /* Utility: generate a list of suggested parameters for an entity */
@@ -445,6 +474,33 @@ namespace OpenCAGE
         }
 
         /// <summary>
+        /// Why text can't be saved into a level as it is, or null if it can. A level stores its script text (entity
+        /// names, string values, composite paths) as Windows-1252: accented letters, curly quotes, dashes and the pound
+        /// and euro signs fit, but any other character (emoji, CJK, arrows and most symbols) would be saved as '?', and a
+        /// NUL would end the text there. The message lists each such character; <paramref name="what"/> starts it, e.g.
+        /// "This name". The naming dialogs, the inspector and the AI assistant tools all refuse text by this one rule.
+        /// </summary>
+        public static string UnstorableTextProblem(string text, string what)
+        {
+            if (string.IsNullOrEmpty(text))
+                return null;
+            if (text.IndexOf('\0') != -1)
+                return what + " contains a NUL character, which the game can't store: it would cut the text short when the level is saved.";
+            List<string> unstorable = CathodeLib.Utilities.GetNonWindows1252Characters(text);
+            if (unstorable.Count == 0)
+                return null;
+            //Each as the character and its code point; half of a surrogate pair on its own only by its code point
+            string list = string.Join(", ", unstorable.Take(8).Select(o => o.Length == 1 && char.IsSurrogate(o[0])
+                ? "U+" + ((int)o[0]).ToString("X4")
+                : "'" + o + "' (U+" + (o.Length == 2 ? char.ConvertToUtf32(o[0], o[1]) : o[0]).ToString("X4") + ")"));
+            if (unstorable.Count > 8)
+                list += " and " + (unstorable.Count - 8) + " more";
+            return unstorable.Count == 1
+                ? what + " has a character the game can't store: " + list + ". It would be saved as '?'. Use letters (accented ones are fine), numbers and common punctuation instead."
+                : what + " has characters the game can't store: " + list + ". They would be saved as '?'. Use letters (accented ones are fine), numbers and common punctuation instead.";
+        }
+
+        /// <summary>
         /// The menu level. The game boots into it, and every new level is built from the shared data it
         /// carries, but it is not something to edit: it is kept out of every level picker except the
         /// launcher's, which offers it as "do not load straight into a level".
@@ -505,7 +561,8 @@ namespace OpenCAGE
         }
 
         /* Utility: close the game down. thisInstallOnly leaves alone an AI.exe that another install (or anything else
-           called AI) runs; additional processes are closed by name. Returns what was closed ("AI.exe (path)", or the name). */
+           called AI) runs, and the additional processes too unless they run from this install's game folder or from beside
+           this OpenCAGE (where it keeps the tools it starts). Returns what was closed ("AI.exe (path)", or the name). */
         public static List<string> CloseAI(List<string> additionalProcesses = null, bool thisInstallOnly = false)
         {
             List<string> closed = new List<string>();
@@ -525,7 +582,14 @@ namespace OpenCAGE
                 foreach (string additionalProcess in additionalProcesses)
                 {
                     foreach (Process process in Process.GetProcessesByName(additionalProcess))
+                    {
+                        if (thisInstallOnly && !OwnProcess(ProcessImagePath(process)))
+                        {
+                            process.Dispose();
+                            continue;
+                        }
                         allProcesses.Add(new KeyValuePair<Process, string>(process, additionalProcess));
+                    }
                 }
             }
             for (int x = 0; x < allProcesses.Count; x++)
@@ -541,6 +605,28 @@ namespace OpenCAGE
                 allProcesses[x].Key?.Dispose();
             }
             return closed;
+
+            //Whether a process's file is under this install's game folder or this OpenCAGE's own (a path that can't be read is
+            //neither). The path has junctions, symlinks and subst drives resolved, which the configured folders need not: each
+            //folder above the file is compared by name, then as the same folder under another name.
+            bool OwnProcess(string image)
+            {
+                if (string.IsNullOrEmpty(image)) return false;
+                try
+                {
+                    List<string> roots = new List<string>();
+                    foreach (string own in new string[] { Singleton.PathToAI, AppDomain.CurrentDomain.BaseDirectory })
+                        if (!string.IsNullOrEmpty(own)) roots.Add(Path.GetFullPath(own).TrimEnd('\\', '/'));
+                    for (string folder = Path.GetDirectoryName(Path.GetFullPath(image)); !string.IsNullOrEmpty(folder); folder = Path.GetDirectoryName(folder))
+                    {
+                        foreach (string root in roots)
+                            if (string.Equals(folder.TrimEnd('\\', '/'), root, StringComparison.OrdinalIgnoreCase) || SameFile(folder, root))
+                                return true;
+                    }
+                }
+                catch { }
+                return false;
+            }
         }
 
         /* Utility: the paths of the running AI.exe processes - this install's game (thisInstall), or those of any other
@@ -1088,6 +1174,19 @@ namespace OpenCAGE
                 case CompositePinType.CompositeInputStringVariablePin:
                 case CompositePinType.CompositeOutputStringVariablePin:
                     return DataType.STRING;
+                //Pins that only take links, typed as the game's own levels type them (a FLOAT here gave them a FLOAT value)
+                case CompositePinType.CompositeInputObjectVariablePin:
+                case CompositePinType.CompositeOutputObjectVariablePin:
+                    return DataType.OBJECT;
+                case CompositePinType.CompositeInputZonePtrVariablePin:
+                case CompositePinType.CompositeOutputZonePtrVariablePin:
+                    return DataType.ZONE;
+                case CompositePinType.CompositeInputZoneLinkPtrVariablePin:
+                case CompositePinType.CompositeOutputZoneLinkPtrVariablePin:
+                    return DataType.ZONE_LINK;
+                case CompositePinType.CompositeInputAnimationInfoVariablePin:
+                case CompositePinType.CompositeOutputAnimationInfoVariablePin:
+                    return DataType.ANIMATION_INFO;
                 default:
                     return DataType.FLOAT;
             }

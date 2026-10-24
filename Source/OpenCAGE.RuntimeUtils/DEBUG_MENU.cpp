@@ -1,4 +1,5 @@
 #include "DEBUG_MENU.h"
+#include "CINEMATIC_CAPTURE.h"
 #include "DEBUG_MARKER.h"
 #include "LIVE_LINK.h"
 #include "MOUSE_UNLOCK.h"
@@ -121,27 +122,39 @@ namespace
 	bool g_windowShown = false;
 	ImVec2 g_windowMin, g_windowMax;
 	ImVec2 g_display;
-	// Where the next note along the top of the screen goes this frame (render thread)
+	// Where the next note along the top of the screen goes this frame, and whether any note is there yet (render thread)
 	float g_bannerTop = 12.0f;
+	bool g_bannerShown = false;
 	std::vector<DEBUG_MENU::Character> g_characters;
 	uint32_t g_selected = 0;
 
-	// Work queued for the game's threads
+	// Work queued for the game's threads, and when each thread last came round to its queue (0: never)
 	struct Queue
 	{
 		std::mutex mutex;
 		std::vector<DEBUG_MENU::Work> work;
 		std::atomic<bool> any = false;
+		std::atomic<ULONGLONG> cameRound = 0;
 	};
 	Queue g_entityWork;
 	Queue g_aiWork;
 	Queue g_renderWork;
+
+	// A thread that hasn't come round for this long isn't running (a level loading, the game paused): a command waits for
+	// it this long at most. Commands wait on Live Link's threads, holding up the requests behind them, so full waits for a
+	// thread that isn't running add up while OpenCAGE's polls keep coming.
+	constexpr ULONGLONG kNotRunningMs = 1500;
+	constexpr int kNotRunningWaitMs = 250;
 
 	void Enqueue(Queue& queue, DEBUG_MENU::Work work);
 
 	// Work queued for a thread whose answer a command waits for
 	DEBUG_MENU::CommandResult WaitForAnswer(Queue& queue, DEBUG_MENU::Answer work, int timeoutMs)
 	{
+		const ULONGLONG asked = GetTickCount64();
+		const ULONGLONG cameRound = queue.cameRound;
+		if (!cameRound || asked - cameRound > kNotRunningMs)
+			timeoutMs = (std::min)(timeoutMs, kNotRunningWaitMs);
 		struct Waiting
 		{
 			std::mutex mutex;
@@ -160,7 +173,15 @@ namespace
 		});
 		std::unique_lock<std::mutex> lock(waiting->mutex);
 		if (!waiting->done.wait_for(lock, std::chrono::milliseconds(timeoutMs), [&]() { return waiting->finished; }))
+		{
+			// Logged with how long the wait really took and when the thread last came round, so a slow answer can be told
+			// apart from one that reached the game late
+			lock.unlock();
+			const char* thread = &queue == &g_entityWork ? "entity" : &queue == &g_aiWork ? "AI" : "render";
+			DevTools::Log("Debug menu: timed out waiting %u ms for the %s thread (asked for %d ms; it last came round %s)", static_cast<unsigned>(GetTickCount64() - asked), thread,
+				timeoutMs, cameRound ? (std::to_string(asked - cameRound) + " ms before").c_str() : "never");
 			return { false, "Timed out waiting for the game (no level running, or paused?): it will still be done when the game comes round to it" };
+		}
 		return waiting->result;
 	}
 
@@ -168,7 +189,8 @@ namespace
 	// by name), and what the window shows, for Describe
 	std::mutex g_outsideMutex;
 	// (made on first use: a view may name its switches from a static initializer)
-	std::vector<std::pair<std::string, std::atomic<bool>*>>& Switches() { static std::vector<std::pair<std::string, std::atomic<bool>*>> switches; return switches; }
+	struct NamedSwitch { std::string name; std::atomic<bool>* value; DEBUG_MENU::SwitchSetter beforeSet; };
+	std::vector<NamedSwitch>& Switches() { static std::vector<NamedSwitch> switches; return switches; }
 	std::string g_wantedTab;
 	std::string g_wantedCharacter;
 	bool g_characterWanted = false;
@@ -206,6 +228,7 @@ namespace
 
 	void RunQueued(Queue& queue)
 	{
+		queue.cameRound = GetTickCount64();
 		if (!queue.any)
 			return;
 		std::vector<DEBUG_MENU::Work> work;
@@ -408,7 +431,8 @@ bool DEBUG_MENU::AddOverlay(int order, DrawOverlay draw)
 bool DEBUG_MENU::OnWindowMessage(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
 {
 	g_window = window;
-	if (message == WM_KEYUP && wParam == static_cast<WPARAM>(Config::Get().debugMenuKey))
+	// The key stops an image sequence the game is recording (nothing is drawn meanwhile), else opens or closes the window
+	if (message == WM_KEYUP && wParam == static_cast<WPARAM>(Config::Get().debugMenuKey) && !CINEMATIC_CAPTURE::OnMenuKey())
 		Open(!g_open);
 
 	// The cursor held free while the window is open, and let go once it closes
@@ -642,13 +666,20 @@ float DEBUG_MENU::Scale()
 void DEBUG_MENU::ResetBanners(float top)
 {
 	g_bannerTop = top;
+	g_bannerShown = false;
 }
 
 float DEBUG_MENU::BannerTop(float height)
 {
 	const float top = g_bannerTop;
 	g_bannerTop += height + 6.0f;
+	g_bannerShown = true;
 	return top;
+}
+
+float DEBUG_MENU::BannersBottom()
+{
+	return g_bannerShown ? g_bannerTop : 0.0f;
 }
 
 bool DEBUG_MENU::Project(const float world[3], ImVec2& screen)
@@ -964,25 +995,28 @@ void DEBUG_MENU::RunAiThreadWork()
 	RunQueued(g_aiWork);
 }
 
-void DEBUG_MENU::AddSwitch(const std::string& name, std::atomic<bool>* value)
+void DEBUG_MENU::AddSwitch(const std::string& name, std::atomic<bool>* value, SwitchSetter beforeSet)
 {
 	std::lock_guard<std::mutex> lock(g_outsideMutex);
-	for (auto& existing : Switches())
-		if (existing.first == name)
+	for (NamedSwitch& existing : Switches())
+		if (existing.name == name)
 		{
-			existing.second = value;
+			existing.value = value;
+			existing.beforeSet = beforeSet;
 			return;
 		}
-	Switches().emplace_back(name, value);
+	Switches().push_back({ name, value, beforeSet });
 }
 
 bool DEBUG_MENU::SetSwitch(const std::string& name, bool value)
 {
 	std::lock_guard<std::mutex> lock(g_outsideMutex);
-	for (auto& existing : Switches())
-		if (existing.first == name)
+	for (NamedSwitch& existing : Switches())
+		if (existing.name == name)
 		{
-			*existing.second = value;
+			if (existing.beforeSet)
+				existing.beforeSet(value);
+			*existing.value = value;
 			return true;
 		}
 	return false;
@@ -991,10 +1025,10 @@ bool DEBUG_MENU::SetSwitch(const std::string& name, bool value)
 bool DEBUG_MENU::GetSwitch(const std::string& name, bool& value)
 {
 	std::lock_guard<std::mutex> lock(g_outsideMutex);
-	for (const auto& existing : Switches())
-		if (existing.first == name)
+	for (const NamedSwitch& existing : Switches())
+		if (existing.name == name)
 		{
-			value = existing.second->load();
+			value = existing.value->load();
 			return true;
 		}
 	return false;
@@ -1166,7 +1200,7 @@ std::string DEBUG_MENU::Describe()
 		values += (values.empty() ? "" : ",") + value.name + ":" + number;
 	}
 	text += "\ntabs=" + tabs + "\ngroups=" + groups + "\ncommands=" + commands + "\nvalues=" + values;
-	for (const auto& entry : Switches())
-		text += "\n" + entry.first + "=" + (entry.second->load() ? "1" : "0");
+	for (const NamedSwitch& entry : Switches())
+		text += "\n" + entry.name + "=" + (entry.value->load() ? "1" : "0");
 	return text;
 }

@@ -96,7 +96,50 @@ namespace OpenCAGE.Modding
                 throw new Exception("The mod package's manifest is invalid.");
             if (info.Format < 1 || info.Format > ModPackageInfo.CurrentFormat)
                 throw new Exception("The mod package uses format " + info.Format + ", which this version of OpenCAGE doesn't know. Update OpenCAGE.");
+            //The id names the package's file in the library: it can't be a path
+            if (!IsSafeName(info.Id))
+                throw new Exception("The mod package's manifest is invalid.");
+            //A mod changes the game's data and nothing else: a package naming any other file is damaged or unsafe, and isn't used at all
+            foreach (ModPackageEntry entry in info.Entries)
+            {
+                if (entry == null)
+                    throw new Exception("The mod package's manifest is invalid.");
+                if (!IsSafeTarget(entry.Target) || (entry.SourceAlsoTarget != null && !IsSafeTarget(entry.SourceAlsoTarget)))
+                    throw new Exception("The mod package names a file outside the game's DATA folder (" + (entry.Target ?? "nothing") + "), which no mod can change. It may be damaged or unsafe, so it can't be used.");
+            }
             return new ModPackage() { Info = info, FilePath = filePath };
+        }
+
+        /// <summary>
+        /// Whether a package's target is a file inside the game's DATA folder: relative, starting DATA/, with no empty, "." or
+        /// ".." part (nor one Windows would read as one), no drive or stream colon, and no part Windows reads as a device.
+        /// </summary>
+        public static bool IsSafeTarget(string target)
+        {
+            if (string.IsNullOrEmpty(target))
+                return false;
+            string normalised = ModToolkit.Normalise(target);
+            if (!normalised.StartsWith("DATA/", StringComparison.Ordinal) || normalised.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
+                return false;
+            foreach (string part in normalised.Split('/'))
+                if (!IsSafeName(part))
+                    return false;
+            return true;
+        }
+
+        /* One name in a path: something other than dots and spaces, none of the characters a file name can't have (slashes, a
+           colon), and not a device ("CON", "NUL.BML", "COM1") */
+        private static bool IsSafeName(string name)
+        {
+            if (string.IsNullOrEmpty(name) || name.Trim(' ', '.').Length == 0 || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+                return false;
+            string stem = name.Split('.')[0].Trim(' ').ToUpperInvariant();
+            if (stem == "CON" || stem == "PRN" || stem == "AUX" || stem == "NUL" || stem == "CLOCK$" || stem == "CONIN$" || stem == "CONOUT$")
+                return false;
+            //COM1-9 and LPT1-9, and the superscript 1, 2 and 3 Windows also takes for them
+            if (stem.Length == 4 && (stem.StartsWith("COM") || stem.StartsWith("LPT")) && (char.IsDigit(stem[3]) || stem[3] == (char)0xB9 || stem[3] == (char)0xB2 || stem[3] == (char)0xB3))
+                return false;
+            return true;
         }
 
         /// <summary>The preview picture's bytes, or null when the package has none.</summary>
@@ -225,11 +268,33 @@ namespace OpenCAGE.Modding
                 });
             }
 
-            if (File.Exists(filePath))
-                File.Delete(filePath);
-            if (!pak.Save(filePath))
-                throw new Exception("Could not write the package to " + filePath + ".");
+            //A package is read back whole, and a PAK2's offsets are 32-bit: one that couldn't be read is never written (nor is
+            //the old file deleted for it)
+            long size = 16 + 3;
+            foreach (CATHODE.PAK2.File entry in pak.Entries)
+                size += entry.Filename.Length + 1 + 4 + entry.Content.Length + 3;
+            if (size > MaxPackageSize)
+                throw new Exception("This mod would be " + (size / (1024.0 * 1024 * 1024)).ToString("0.00") + " GB, and a mod file can be 2 GB at most. "
+                    + "Leave some of it out (each new level goes in whole) and make it as two or more mods.");
+
+            //Written beside the old file and swapped in once it's whole: a failed write leaves what was there
+            string temp = filePath + "." + Guid.NewGuid().ToString("N").Substring(0, 8) + ".tmp";
+            try
+            {
+                if (!pak.Save(temp) || !File.Exists(temp) || new FileInfo(temp).Length > MaxPackageSize)
+                    throw new Exception("Could not write the package to " + filePath + ".");
+                if (File.Exists(filePath))
+                    File.Delete(filePath);
+                File.Move(temp, filePath);
+            }
+            finally
+            {
+                try { if (File.Exists(temp)) File.Delete(temp); } catch { }
+            }
         }
+
+        /* The biggest file reading a package can take whole (a byte array's limit) */
+        private const long MaxPackageSize = 0x7FFFFFC7;
     }
 }
 #endif

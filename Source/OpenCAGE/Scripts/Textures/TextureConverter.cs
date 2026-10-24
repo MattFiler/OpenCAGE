@@ -150,7 +150,7 @@ namespace OpenCAGE.TextureTools
             try
             {
                 if (IsAstc(target)) return ToAstc(path, source, target, mipLevels, out problem);
-                return RunTexconv(path, target, mipLevels, out problem);
+                return RunTexconv(path, source, target, mipLevels, out problem);
             }
             catch (Exception e)
             {
@@ -160,7 +160,7 @@ namespace OpenCAGE.TextureTools
         }
 
         /* texconv reads everything and writes a DDS beside itself in a folder of our choosing. */
-        private static byte[] RunTexconv(string path, TextureFormat target, int mipLevels, out string problem)
+        private static byte[] RunTexconv(string path, byte[] source, TextureFormat target, int mipLevels, out string problem)
         {
             problem = null;
 
@@ -173,7 +173,13 @@ namespace OpenCAGE.TextureTools
 
             using (Scratch scratch = new Scratch())
             {
-                string arguments = "-nologo -y -dx10"
+                //--ignore-srgb: a PNG's sRGB/gamma tag (which most image editors write) would otherwise make texconv convert its
+                //colours to linear for the game's non-sRGB formats, and the texture would come out much darker
+                //-srgb: the same happens to a DDS stored in an _SRGB format (many exporters write BC7 that way), so for those both
+                //sides are marked sRGB and the colour bytes carry straight over. Other inputs keep their colours without it.
+                bool srgbDds = DdsFile.Describe(source, out DXGI_FORMAT stored, out int _, out int _, out int _, out bool _)
+                    && stored.ToString().EndsWith("_SRGB");
+                string arguments = "-nologo -y -dx10 --ignore-srgb" + (srgbDds ? " -srgb" : "")
                     + " -f " + TexconvName(dxgi.Value)
                     + " -m " + (mipLevels <= 0 ? 0 : mipLevels)
                     + " -o \"" + scratch.Directory + "\""
@@ -317,7 +323,7 @@ namespace OpenCAGE.TextureTools
             if (IsAstcFile(source))
                 return FromAstcFile(source, target, out problem);
 
-            byte[] uncompressed = RunTexconv(path, TextureFormat.A8R8G8B8, mipLevels, out problem);
+            byte[] uncompressed = RunTexconv(path, source, TextureFormat.A8R8G8B8, mipLevels, out problem);
             if (uncompressed == null) return null;
 
             TEX4.Texture levels = DdsFile.Read(uncompressed, out TextureFormat _, out TextureStateFlag state, out TextureUsageFlag _);

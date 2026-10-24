@@ -250,6 +250,49 @@ namespace OpenCAGE.Audio
             return _copies.TryGetValue(sourceId, out copies) ? copies : new List<WwiseMediaLocation>();
         }
 
+        /// <summary>
+        /// The copy of a piece of audio the game would load, as the index has it now. Null when the game
+        /// doesn't carry it at all.
+        /// </summary>
+        public WwiseMediaLocation MediaFor(uint sourceId)
+        {
+            WwiseMediaLocation media;
+            return _media.TryGetValue(sourceId, out media) ? media : null;
+        }
+
+        /// <summary>
+        /// Read back where a soundbank's audio sits after the bank has been written to, and point every
+        /// copy the index holds in that bank there.
+        ///
+        /// Replacing one sound in a bank lays all of the bank's audio out again, so everything after it
+        /// moves. The locations are corrected in place rather than swapped for new ones because callers
+        /// hold on to them - variations resolved before the write have to read the right bytes after it.
+        /// Only a soundbank needs this: writing to a file package or a loose stream changes nothing but
+        /// the one entry written, and the writer updates that entry itself.
+        /// </summary>
+        public void Refresh(string file)
+        {
+            if (string.IsNullOrEmpty(file) || !string.Equals(Path.GetExtension(file), ".bnk", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            string bank = Path.GetFullPath(file);
+            foreach (KeyValuePair<uint, WwiseMediaLocation> media in WwiseSoundBank.Load(file).EmbeddedMedia)
+            {
+                List<WwiseMediaLocation> copies;
+                if (!_copies.TryGetValue(media.Key, out copies))
+                    continue;
+
+                foreach (WwiseMediaLocation copy in copies)
+                {
+                    if (!string.Equals(Path.GetFullPath(copy.File), bank, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    copy.Offset = media.Value.Offset;
+                    copy.Length = media.Value.Length;
+                }
+            }
+        }
+
         private IEnumerable<string> PackagesFor(string soundDirectory, string language)
         {
             foreach (string file in Directory.GetFiles(soundDirectory, "*.pck", SearchOption.AllDirectories))

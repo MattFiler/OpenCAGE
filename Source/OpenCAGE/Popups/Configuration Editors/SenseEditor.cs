@@ -65,10 +65,14 @@ namespace OpenCAGE.ConfigEditors
                 _selectedCharacter.Add(new BML(Singleton.PathToAI + "\\DATA\\CHR_INFO\\ATTRIBUTES\\" + template + ".BML"));
             }
 
-            set1Normal.Populate(_selectedCharacter, "set_1_normal", "Attribute", "Senses", "Sensing_Set_1_Normal");
-            set1Heightened.Populate(_selectedCharacter, "set_1_heightened", "Attribute", "Senses", "Sensing_Set_1_Heightened");
-            set2.Populate(_selectedCharacter, "set_2", "Attribute", "Senses", "Sensing_Set_2");
-            set3.Populate(_selectedCharacter, "set_3", "Attribute", "Senses", "Sensing_Set_3");
+            //Each file in the template chain is read once for all the fields, not once per field
+            using (ConfigEditorUtils.ReadOnce())
+            {
+                set1Normal.Populate(_selectedCharacter, "set_1_normal", "Attribute", "Senses", "Sensing_Set_1_Normal");
+                set1Heightened.Populate(_selectedCharacter, "set_1_heightened", "Attribute", "Senses", "Sensing_Set_1_Heightened");
+                set2.Populate(_selectedCharacter, "set_2", "Attribute", "Senses", "Sensing_Set_2");
+                set3.Populate(_selectedCharacter, "set_3", "Attribute", "Senses", "Sensing_Set_3");
+            }
 
             ConfigEditorUtils.Subscribe(this.Controls, Save);
         }

@@ -1,3 +1,4 @@
+#include "CINEMATIC_CAPTURE.h"
 #include "CINEMATIC_VISUALS.h"
 #include "DEBUG_MENU.h"
 #include "LIVE_LINK.h"
@@ -34,13 +35,14 @@
 	- a still: standard (.tga), HDR (Radiance .hdr) or both, at Low, Medium, High or Ultra;
 	- an environment map: standard, HDR or both, at Low only;
 	- an image sequence: standard at Low only.
-	Only those are offered.
+	Only those are offered, and only standard: HDR comes out black on PC (below).
 
-	Low saves one frame. Medium, High and Ultra save 2x2, 4x4 or 8x8 frames, named "_tile_x_y": the game works out a
-	sub-pixel offset for each (meant for a supersampled picture put together from them afterwards), but nothing in this
-	release reads the offset, so the frames come out alike. For them the game also turns off the film grain, motion blur,
-	bloom, depth of field, its anti-aliasing and the ambient occlusion's blur, and draws the ambient occlusion at full
-	resolution: a clean picture. For every capture it turns off its exposure scaling (the frame is drawn at a fixed scale
+	Low saves one frame. Medium, High and Ultra save 2x2, 4x4 or 8x8 frames, named "_tile_x_y": each is the whole view
+	again at the screen's size, not a part of a bigger picture. The game works out a sub-pixel offset for each (meant for a
+	supersampled picture put together from them afterwards, which nothing here does); in game they differ only slightly,
+	mostly along edges. For them the game also turns off the film grain, motion blur, bloom, depth of field, its
+	anti-aliasing and the ambient occlusion's blur, and draws the ambient occlusion at full resolution: a clean picture, so
+	any one of Medium's frames is that. For every capture it turns off its exposure scaling (the frame is drawn at a fixed scale
 	instead of the one the eye's adaptation sets), its frame-rate text and its profilers; while a still or an environment
 	map is saved it holds the AI, the characters and the physics (a sequence lets them run). Finishing, it puts the
 	frame-rate text and the profilers back as they were, but turns the rest back on to fixed values (on, anti-aliasing mode
@@ -48,9 +50,10 @@
 	the entity thread just before asking, and put back once the game has finished, where its finish changed them.
 
 	HDR: the game copies the presented picture (8 or 10 bits a channel) into a half-float image; Direct3D 11 doesn't copy
-	between those formats, so on PC the .hdr is expected to come out black (to be checked in game). "Both" is asked for
-	here as an HDR capture then a standard one, as the game does it itself - but the game's own second request drops the
-	file name, so it is made here, with the name kept.
+	between those formats, so on PC the .hdr comes out black (seen in game: every tile the same black file). So HDR and
+	"both" are not offered, though what follows can still ask for them: "both" is asked for as an HDR capture then a
+	standard one, as the game does it itself - but the game's own second request drops the file name, so it is made here,
+	with the name kept.
 
 	Environment map: this release has nothing that turns the camera to a cube's faces for it, so it saves the view as it
 	is, like a Low still, numbered by a count of its own (Live Link's cube map capture takes the six faces).
@@ -73,7 +76,7 @@
 	the request until the capture is finished (for a sequence, the whole recording).
 
 	Names: switch "cinematic.game_sequence_lock_step"; values "cinematic.game_capture_quality" (0 Low, 1 Medium, 2 High,
-	3 Ultra), "cinematic.game_capture_type" (0 standard, 1 HDR, 2 both), "cinematic.game_sequence_fps"; commands
+	3 Ultra), "cinematic.game_sequence_fps"; commands
 	"cinematic.game_capture", "cinematic.game_sequence_start", "cinematic.game_sequence_stop",
 	"cinematic.game_capture_status".
 */
@@ -109,11 +112,10 @@ namespace
 	const int kQualities[] = { 1, 2, 4, 8 };
 	constexpr int kQualityCount = 4;
 	const char* const kQualityNames[] = { "low", "medium", "high", "ultra" };
-	const char* const kQualityLabels[] = { "Low: one frame", "Medium: 4 frames, clean", "High: 16 frames, clean", "Ultra: 64 frames, clean" };
+	const char* const kQualityLabels[] = { "Low: 1 frame", "Medium: 4 frames", "High: 16 frames", "Ultra: 64 frames" };
 	constexpr int kTypeStandard = 0, kTypeHdr = 1, kTypeBoth = 2;
 	constexpr int kTypeCount = 3;
 	const char* const kTypeNames[] = { "standard", "hdr", "both" };
-	const char* const kTypeLabels[] = { "Standard (.tga)", "HDR (.hdr)", "Both" };
 
 	// The game's flow states a capture is started in (gameplay) and stopped at (unloading)
 	constexpr int kGameplay = 4;
@@ -149,7 +151,6 @@ namespace
 	typedef void(__thiscall* t_stop)(void* capture);
 
 	std::atomic<float> g_quality = 0.0f;     // cinematic.game_capture_quality: 0 Low .. 3 Ultra
-	std::atomic<float> g_type = 0.0f;        // cinematic.game_capture_type: 0 standard, 1 HDR, 2 both
 	std::atomic<bool> g_lockStep = true;     // cinematic.game_sequence_lock_step
 	std::atomic<float> g_fps = 30.0f;        // cinematic.game_sequence_fps
 
@@ -854,11 +855,6 @@ namespace
 		return (std::max)(0, (std::min)(kQualityCount - 1, static_cast<int>(std::lround(static_cast<float>(g_quality)))));
 	}
 
-	int CurrentType()
-	{
-		return (std::max)(0, (std::min)(kTypeCount - 1, static_cast<int>(std::lround(static_cast<float>(g_type)))));
-	}
-
 	std::vector<std::string> Words(const std::string& text)
 	{
 		std::vector<std::string> words;
@@ -951,12 +947,11 @@ namespace
 	{
 		DEBUG_MENU::AddSwitch("cinematic.game_sequence_lock_step", &g_lockStep);
 		DEBUG_MENU::AddValue("cinematic.game_capture_quality", &g_quality, 0.0f, 3.0f);
-		DEBUG_MENU::AddValue("cinematic.game_capture_type", &g_type, 0.0f, 2.0f);
 		DEBUG_MENU::AddValue("cinematic.game_sequence_fps", &g_fps, 1.0f, 240.0f);
-		DEBUG_MENU::AddCommand("cinematic.game_capture", "<still|envmap> [low|medium|high|ultra] [standard|hdr|both] (the tab's choices when left out; an environment map is always low): the game's own capture into the Screenshots folder; waits for it (up to 30 s) and names the files", [](const std::string& argument)
+		DEBUG_MENU::AddCommand("cinematic.game_capture", "<still|envmap> [low|medium|high|ultra] (the tab's choice when left out; an environment map is always low): the game's own capture as .tga files into the Screenshots folder - low one frame, medium, high and ultra 4, 16 or 64 frames of the whole view (not one bigger picture); waits for it (up to 30 s) and names the files", [](const std::string& argument)
 		{
 			Kind kind = Kind::Still;
-			int quality = CurrentQuality(), type = CurrentType();
+			int quality = CurrentQuality();
 			for (const std::string& word : Words(argument))
 			{
 				bool known = false;
@@ -971,16 +966,14 @@ namespace
 						quality = i;
 						known = true;
 					}
-				for (int i = 0; i < kTypeCount; i++)
-					if (word == kTypeNames[i])
-					{
-						type = i;
-						known = true;
-					}
+				if (word == kTypeNames[kTypeStandard])
+					known = true;
+				if (word == kTypeNames[kTypeHdr] || word == kTypeNames[kTypeBoth])
+					return DEBUG_MENU::CommandResult{ false, "HDR isn't offered: on PC the game saves the .hdr black" };
 				if (!known)
-					return DEBUG_MENU::CommandResult{ false, "unknown word \"" + word + "\": give still or envmap, low, medium, high or ultra, standard, hdr or both" };
+					return DEBUG_MENU::CommandResult{ false, "unknown word \"" + word + "\": give still or envmap, and low, medium, high or ultra" };
 			}
-			const DEBUG_MENU::CommandResult started = StartFromCommand(kind, quality, type, 0.0f);
+			const DEBUG_MENU::CommandResult started = StartFromCommand(kind, quality, kTypeStandard, 0.0f);
 			if (!started.ok)
 				return started;
 			return WaitFor(static_cast<uint32_t>(strtoul(started.message.c_str(), nullptr, 10)), 30000, "still under way after 30 s: see cinematic.game_capture_status");
@@ -1054,7 +1047,7 @@ namespace
 	void StartFromTab(Kind kind)
 	{
 		std::string error;
-		if (!Start(kind, CurrentQuality(), CurrentType(), kind == Kind::Sequence && g_lockStep ? static_cast<float>(g_fps) : 0.0f, error))
+		if (!Start(kind, CurrentQuality(), kTypeStandard, kind == Kind::Sequence && g_lockStep ? static_cast<float>(g_fps) : 0.0f, error))
 		{
 			std::lock_guard<std::mutex> lock(g_mutex);
 			g_last = std::string(KindName(kind)) + ": " + error;
@@ -1069,7 +1062,7 @@ namespace
 			RENDER_COMMON::Note("Not available on this game release.");
 			return;
 		}
-		RENDER_COMMON::Note("The game saves the next frame it draws itself, with its HUD unless hidden (never this window or anything else drawn over the game), as a .tga, a Radiance .hdr or both, in the Screenshots folder. Medium and above are a clean picture: no film grain, motion blur, bloom, depth of field or anti-aliasing.");
+		RENDER_COMMON::Note("The game saves the next frame it draws itself as a .tga in the Screenshots folder, with its HUD unless hidden (never this window or anything else drawn over the game). Medium, High and Ultra save 4, 16 or 64 frames of the whole view at the screen's size (not one bigger picture), each a clean picture: no film grain, motion blur, bloom, depth of field or anti-aliasing.");
 
 		uint64_t accepted = 0;
 		const bool haveTable = ReadAccepted(accepted);
@@ -1094,24 +1087,9 @@ namespace
 		const char* why = !haveTable || !readGame ? "The game's capture can't be read yet." : !playing ? "Needs a level being played." :
 			!busy && game.state != kStateReady ? "The game is capturing already (a level's video capture entity?)." : nullptr;
 
-		// Only what the game takes: a kind with some quality for a still, the qualities for the kind chosen
-		int type = CurrentType();
+		// Only what the game takes: the qualities it takes a standard still at (HDR is not offered: black on PC)
+		const int type = kTypeStandard;
 		int quality = CurrentQuality();
-		auto typeTaken = [&](int t)
-		{
-			for (int q = 0; q < kQualityCount; q++)
-				if (Accepted(accepted, t, q, kModeStill))
-					return true;
-			return false;
-		};
-		if (haveTable && !typeTaken(type))
-			for (int t = 0; t < kTypeCount; t++)
-				if (typeTaken(t))
-				{
-					type = t;
-					g_type = static_cast<float>(t);
-					break;
-				}
 		if (haveTable && !Accepted(accepted, type, quality, kModeStill))
 			for (int q = 0; q < kQualityCount; q++)
 				if (Accepted(accepted, type, q, kModeStill))
@@ -1131,25 +1109,14 @@ namespace
 						g_quality = static_cast<float>(q);
 			ImGui::EndCombo();
 		}
-		Tooltip("Low saves one frame, as drawn. Medium, High and Ultra save 4, 16 or 64 frames (\"_tile_x_y\") with the film grain, motion blur, bloom, depth of field, anti-aliasing and the ambient occlusion's blur off and the ambient occlusion at full resolution, the world held still meanwhile. The game works out a sub-pixel offset for each of those frames, meant for a supersampled picture put together from them, but this release never applies it, so they come out alike: Medium gives the clean picture, High and Ultra only take longer. Afterwards the graphics settings these turn off are put back as they were.");
-		ImGui::SameLine();
-		ImGui::SetNextItemWidth(width * 0.8f);
-		if (ImGui::BeginCombo("Kind", kTypeLabels[type]))
-		{
-			for (int t = 0; t < kTypeCount; t++)
-				if (!haveTable || typeTaken(t))
-					if (ImGui::Selectable(kTypeLabels[t], t == type))
-						g_type = static_cast<float>(t);
-			ImGui::EndCombo();
-		}
-		Tooltip("Standard: a 32-bit .tga of the picture. HDR: a Radiance .hdr (the game turns its exposure scaling off for it). Both: the HDR one, then a standard one the frame after (numbered one on).");
+		Tooltip("Low saves one frame, as drawn. Medium, High and Ultra save 4, 16 or 64 frames (\"_tile_x_y\"), each the whole view again at the screen's size - not parts of one bigger picture - with the film grain, motion blur, bloom, depth of field, anti-aliasing and the ambient occlusion's blur off and the ambient occlusion at full resolution, the world held still meanwhile. The game works out a sub-pixel offset for each of those frames, meant for one supersampled picture put together from them afterwards (nothing here does that); they differ only slightly, mostly along edges: one of Medium's frames is the clean picture, High and Ultra give more of the same. Afterwards the graphics settings these turn off are put back as they were.");
 
 		const bool stillTaken = haveTable && Accepted(accepted, type, quality, kModeStill);
 		ImGui::BeginDisabled(busy || why || !stillTaken);
 		if (ImGui::Button("Capture still"))
 			StartFromTab(Kind::Still);
 		ImGui::EndDisabled();
-		Tooltip("The game's capture of the next frame it draws, into the Screenshots folder as <level>_<time>_<n>.tga (or .hdr), n the game's own count. While it is taken the game holds the AI, the characters and the physics.");
+		Tooltip("The game's capture of the next frame it draws, into the Screenshots folder as <level>_<time>_<n>.tga, n the game's own count (\"_tile_x_y\" added at Medium and above). While it is taken the game holds the AI, the characters and the physics.");
 		ImGui::SameLine();
 		const bool envTaken = haveTable && Accepted(accepted, type, 0, kModeEnvMap);
 		ImGui::BeginDisabled(busy || why || !envTaken);
@@ -1157,8 +1124,6 @@ namespace
 			StartFromTab(Kind::EnvMap);
 		ImGui::EndDisabled();
 		Tooltip("The game's environment map capture, always at Low: this release has nothing that turns the camera to a cube's faces for it, so it saves the view as it is, numbered by its own count (<level>_<time>_envmap_<n>). For the six faces of a cube map, use Live Link's cube map capture in OpenCAGE.");
-		if (type != kTypeStandard)
-			RENDER_COMMON::ColouredNote(ImVec4(1.0f, 0.75f, 0.3f, 1.0f), "HDR is expected to come out black on PC: the game copies the finished 8- or 10-bit picture into its half-float image, a copy Direct3D 11 doesn't make. Look at the .hdr before relying on it.");
 		bool hide = false;
 		if (DEBUG_MENU::GetSwitch(kHideHudSwitch, hide))
 			ImGui::TextDisabled("Hide the HUD for the shot (above) is %s for these too.", hide ? "on" : "off");
@@ -1209,7 +1174,7 @@ namespace
 				StartFromTab(Kind::Sequence);
 			ImGui::EndDisabled();
 		}
-		Tooltip("A standard .tga for every frame drawn, into a folder of its own in the Screenshots folder (<level>_<time>_sequence\\frame_0.tga on), until stopped here or the level changes. Each file is written as its frame is drawn, so the game runs slowly meanwhile; at 1920x1080 each frame is about 8 MB.");
+		Tooltip("A standard .tga for every frame drawn, into a folder of its own in the Screenshots folder (<level>_<time>_sequence\\frame_0.tga on), until stopped or the level changes. Nothing of the Debug Menu or Live Link is drawn while it records (it would be in every frame): press the Debug Menu's key to stop it, or run cinematic.game_sequence_stop. Each file is written as its frame is drawn, so the game runs slowly meanwhile; at 1920x1080 each frame is about 8 MB.");
 
 		if (why)
 			RENDER_COMMON::Note("%s", why);
@@ -1221,4 +1186,22 @@ namespace
 
 	const bool g_sectionAdded = DEBUG_MENU::AddTab("Screenshots", 96, DrawSection, "Cinematic");
 	const bool g_overlayAdded = DEBUG_MENU::AddOverlay(96, Tick);
+}
+
+bool CINEMATIC_CAPTURE::HideDrawing()
+{
+	std::lock_guard<std::mutex> lock(g_mutex);
+	return Active(g_job.phase);
+}
+
+bool CINEMATIC_CAPTURE::OnMenuKey()
+{
+	{
+		std::lock_guard<std::mutex> lock(g_mutex);
+		if (g_job.kind != Kind::Sequence || !Active(g_job.phase))
+			return false;
+	}
+	std::string error;
+	AskStop(error);
+	return true;
 }

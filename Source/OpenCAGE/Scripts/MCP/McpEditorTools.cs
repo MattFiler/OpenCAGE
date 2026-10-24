@@ -295,11 +295,11 @@ namespace OpenCAGE.MCP
             {
                 Name = "restore_backup",
                 Title = "Restore a level backup",
-                Description = "Put a level's files back as a backup holds them, replacing what is on disk at once (closes this install's game; not undoable). By default the level's current files are backed up first (backup_current_first), so a wrong pick can be restored back; 'files' restores only some (e.g. ['WORLD/COMMANDS.PAK'] for just the script, or 'WORLD/*'); dry_run lists the files that would change, appear and disappear. If the level is open it is reopened: refused while it has unsaved changes unless discard_unsaved. A restore that fails part way puts the files back as they were when it can, and says so.",
+                Description = "Put a level's files back as a backup holds them, replacing what is on disk at once (closes this install's game; not undoable). By default the level's current files are backed up first (backup_current_first), so a wrong pick can be restored back; 'files' restores only some (e.g. ['WORLD/COMMANDS.PAK'] for just the script, or 'WORLD/*'; a Nostromo level's WORLD lives in its _PATCH folder, so there it is ['_PATCH/WORLD/COMMANDS.PAK']); dry_run lists the files that would change, appear and disappear. If the level is open it is reopened: refused while it has unsaved changes unless discard_unsaved. A restore that fails part way puts the files back as they were when it can, and says so.",
                 InputSchema = McpSchema.Object(
                     McpSchema.Integer("id", "The backup's id, from list_backups.", required: true),
                     McpSchema.String("level", "The level (defaults to the open one)."),
-                    McpSchema.Strings("files", "Only these level-relative files (either slash; '*' matches within a folder name, '**' across folders): each is written as the backup holds it, or deleted if the backup has no such file. Default: the whole level folder."),
+                    McpSchema.Strings("files", "Only these level-relative files (either slash; '*' matches within a folder name, '**' across folders; a Nostromo level's _PATCH folder's as '_PATCH/...'): each is written as the backup holds it, or deleted if the backup has no such file. Default: the whole level folder."),
                     McpSchema.Boolean("backup_current_first", "Back up the level as it is now before restoring (default true); the result gives its id."),
                     McpSchema.Boolean("discard_unsaved", "The level is open with unsaved changes: restore anyway, losing them."),
                     McpSchema.Boolean("dry_run", "Report which files would change, appear and disappear (hashes the level folder), writing nothing.")),
@@ -313,7 +313,13 @@ namespace OpenCAGE.MCP
                         throw McpError.NotFound("backup of " + level + " with id", id.ToString(), backups.Backups.Select(o => o.ID.ToString()), "list_backups shows them, newest first.");
                     AlienLevel.AlienBackup chosen = backups.Backups.First(o => o.ID == id);
                     Dictionary<string, string> stored = backups.PathsOf(chosen, out List<string> ambiguous);
-                    List<string> only = call.Has("files") ? MatchFiles(call.StrList("files"), stored.Keys.Concat(CurrentFiles(level)), "files") : null;
+                    //A Nostromo level's backup taken before backups held its _PATCH folder: the restore leaves that folder as it is
+                    bool patchLeft = IsNostromo(level) && !stored.Keys.Any(IsPatchFile);
+                    if (patchLeft && call.StrList("files").Any(o => IsPatchFile((o ?? "").Trim().TrimStart('/', '\\'))))
+                        throw new McpError(McpErrorCodes.NotFound, "Backup " + id + " was taken before backups held " + level + "_PATCH (where a Nostromo level's WORLD and script live), so it has no _PATCH files to restore. Nothing was restored.");
+                    List<string> only = call.Has("files") ? MatchFiles(call.StrList("files"), stored.Keys.Concat(CurrentFiles(level, withPatch: !patchLeft)), "files") : null;
+                    string patchNote = patchLeft && only == null
+                        ? "This backup was taken before backups held " + level + "_PATCH (where a Nostromo level's WORLD and script live), so that folder is left as it is." : null;
                     bool isOpen = McpEditor.UI(() => string.Equals(Singleton.Editor.CompositeBrowser?.Content?.Level?.Name, level, StringComparison.OrdinalIgnoreCase));
                     bool openDirty = isOpen && McpEditor.UI(() => DirtyTracker.IsDirty);
 
@@ -326,6 +332,11 @@ namespace OpenCAGE.MCP
                             try { now = backups.CurrentPaths(); }
                             catch (DirectoryNotFoundException) { now = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); }
                         }
+                        //As the restore itself: a _PATCH folder the backup knows nothing of is neither cleared nor written
+                        if (patchLeft)
+                            now = now.Where(o => !IsPatchFile(o.Key)).ToDictionary(o => o.Key, o => o.Value, StringComparer.OrdinalIgnoreCase);
+                        if (patchNote != null)
+                            call.Note(patchNote);
                         Func<string, bool> inScope = name => only == null || only.Contains(name, StringComparer.OrdinalIgnoreCase);
                         List<string> changes = stored.Where(o => inScope(o.Key) && now.TryGetValue(o.Key, out string hash) && hash != o.Value).Select(o => Slashes(o.Key)).OrderBy(o => o).ToList();
                         List<string> appear = stored.Where(o => inScope(o.Key) && !now.ContainsKey(o.Key)).Select(o => Slashes(o.Key)).OrderBy(o => o).ToList();
@@ -382,8 +393,20 @@ namespace OpenCAGE.MCP
                             Directory.CreateDirectory(folder);
                             recreated = true;
                         }
-                        using (Heartbeat(call, "Restoring " + level))
-                            restored = backups.RestoreBackup(id, only);
+                        try
+                        {
+                            using (Heartbeat(call, "Restoring " + level))
+                                restored = backups.RestoreBackup(id, only);
+                        }
+                        catch (AlienLevel.DamagedBackupException e)
+                        {
+                            //Found before anything was changed: a folder made for the restore goes again
+                            if (recreated)
+                                try { Directory.Delete(folder); } catch { }
+                            throw new McpError(McpErrorCodes.Failed, "Backup damaged: " + e.Message +
+                                (e.DamagedFiles.Count > 5 ? " The damaged files: " + string.Join(", ", e.DamagedFiles.Take(40).Select(Slashes)) + (e.DamagedFiles.Count > 40 ? " and " + (e.DamagedFiles.Count - 40) + " more" : "") + "." : "") +
+                                " Pick another backup (list_backups)" + (before != null ? "; the level as it was is also backup " + (long)before["id"] : "") + ".");
+                        }
                     }
                     finally
                     {
@@ -430,6 +453,8 @@ namespace OpenCAGE.MCP
                         result["backup_of_previous_state"] = before;
                         call.Note("The level as it was before is backup " + (long)before["id"] + ": restore_backup with that id puts it back.");
                     }
+                    if (patchNote != null)
+                        call.Note(patchNote);
                     if (ambiguous.Count != 0 && (only == null || only.Any(o => ambiguous.Contains(o, StringComparer.OrdinalIgnoreCase))))
                         call.Note("This backup predates per-file records, and " + ambiguous.Count + " file(s) matched more than one stored revision; the newest match was used: " + string.Join(", ", ambiguous.Take(8).Select(Slashes)) + ".");
                     if (closedGame.Count != 0)
@@ -745,6 +770,9 @@ namespace OpenCAGE.MCP
                 call.Progress("Loading PRODUCTION/FRONTEND, the base for new levels");
                 Level baseLevel = new Level(Singleton.PathToAI + "/DATA/ENV/" + EditorUtils.FrontendLevel, Singleton.Global, false);
                 baseLevel.Load();
+                //Level.Load carries on past a script it can't read: a level made from that base would have none
+                try { CompositeArchive.RequireLoadedScript(baseLevel, EditorUtils.FrontendLevel); }
+                catch (CompositeArchive.ScriptNotLoadedException) { throw new McpError(McpErrorCodes.Failed, EditorUtils.FrontendLevel + "'s script could not be read, so no level was made (nothing was written). Verify the game files."); }
                 call.ThrowIfCancelled();
 
                 //From here the folder is being written (MakeNewLevelFrom saves the base level into it): a cancellation is
@@ -893,7 +921,7 @@ namespace OpenCAGE.MCP
             string name = call.Str(argument, required: true).Trim();
             int maxLength = Math.Min(32, PatchManager.MaxLaunchMapNameLength);
             if (!Regex.IsMatch(name, "^[A-Za-z0-9_]+$"))
-                throw McpError.Invalid("Level names can only contain letters, digits and underscores ('" + name + "').");
+                throw McpError.Invalid("Level names can only contain letters, digits and underscores ('" + McpError.Shown(name) + "').");
             if (name.Length > maxLength)
                 throw McpError.Invalid("Level names can be at most " + maxLength + " characters.");
             string levelId = name.ToUpperInvariant();
@@ -1165,12 +1193,26 @@ namespace OpenCAGE.MCP
                     AlienLevel.AlienBackup backup = archive.Backups.FirstOrDefault(o => o.ID == id)
                         ?? throw McpError.NotFound("backup of " + levelName + " with id", id.ToString(), archive.Backups.Select(o => o.ID.ToString()), "list_backups shows them.");
                     Dictionary<string, string> paths = archive.PathsOf(backup, out _);
-                    string relative = scriptPath.StartsWith(levelFolder + "\\", StringComparison.OrdinalIgnoreCase) ? scriptPath.Substring(levelFolder.Length + 1) : null;
+                    //A Nostromo level's script is in its _PATCH folder, which its backups hold as "_PATCH\..." files
+                    string relative = scriptPath.StartsWith(levelFolder + "\\", StringComparison.OrdinalIgnoreCase) ? scriptPath.Substring(levelFolder.Length + 1)
+                        : IsNostromo(levelName) && scriptPath.StartsWith(levelFolder + "_PATCH\\", StringComparison.OrdinalIgnoreCase) ? "_PATCH\\" + scriptPath.Substring(levelFolder.Length + "_PATCH\\".Length) : null;
                     string hash = relative == null ? null : paths.FirstOrDefault(o => string.Equals(o.Key.Replace('/', '\\'), relative, StringComparison.OrdinalIgnoreCase)).Value;
                     if (hash == null)
-                        throw new McpError(McpErrorCodes.NotFound, "Backup " + id + " holds no " + (relative ?? Path.GetFileName(scriptPath)) + " (" + (relative == null ? "this level's script lives outside its folder - a _PATCH companion - which backups do not hold" : "it was taken before the level had one") + ").");
+                        throw new McpError(McpErrorCodes.NotFound, "Backup " + id + " holds no " + Slashes(relative ?? Path.GetFileName(scriptPath)) + " (" +
+                            (relative == null ? "this level's script lives outside its folder, which backups do not hold"
+                            : IsPatchFile(relative) && !paths.Keys.Any(IsPatchFile) ? "it was taken before backups held " + levelName + "_PATCH, where a Nostromo level's script lives, so its script can't be compared"
+                            : "it was taken before the level had one") + ").");
                     temp = Path.Combine(Path.GetTempPath(), "OpenCAGE_diff_" + Guid.NewGuid().ToString("N") + Path.GetExtension(scriptPath));
-                    File.WriteAllBytes(temp, archive.ReadRevision(hash));
+                    try { File.WriteAllBytes(temp, archive.ReadRevision(hash)); }
+                    catch (InvalidDataException e)
+                    {
+                        try { File.Delete(temp); } catch { }
+                        throw new McpError(McpErrorCodes.Failed, "Backup damaged: " + e.Message + " Compare against another backup (list_backups).");
+                    }
+                    catch (IOException e) when (e is FileNotFoundException || e is DirectoryNotFoundException)
+                    {
+                        throw new McpError(McpErrorCodes.Failed, "Backup damaged: backup " + id + "'s copy of " + Slashes(relative) + " is missing from its folder. Compare against another backup (list_backups).");
+                    }
                     otherPath = temp;
                     label = "backup " + id + " ('" + backup.Name + "', " + AlienLevel.DateUtc(backup).ToString("yyyy-MM-ddTHH:mm:ssZ") + ")";
                     break;
@@ -1595,9 +1637,12 @@ namespace OpenCAGE.MCP
             List<string> patchFailures = McpLevelTools.ApplyPatchSettings(platform, skipFrontend);
             //The Debug tools, Cap FPS, Unlock mouse and Possess characters (runtime utils ASI) go in or come out as launch_options
             //ask, as the Launch Game window does
-            string runtimeUtilsProblem = global::OpenCAGE.LaunchGame.ApplyRuntimeUtils();
+            string runtimeUtilsProblem = global::OpenCAGE.LaunchGame.ApplyRuntimeUtils(out string keptAside);
             if (runtimeUtilsProblem != null)
                 call.Note(runtimeUtilsProblem + " The Debug Menu, debug entities, hot reload, Live Link and the other runtime utils options will not work this run.");
+            //Another mod's d3d11.dll was just moved aside for the loader: that mod won't run in this game, so the user should hear it
+            else if (keptAside != null)
+                call.Note(keptAside.Replace("\n\n", " "));
             //The UI mods as launch_options say, as the Launch Game window does: also takes out the movies of the ones it no longer has
             string uiModProblem = UiMovieOverrides.Sync(Singleton.PathToAI);
             if (uiModProblem != null)
@@ -1740,6 +1785,9 @@ namespace OpenCAGE.MCP
             McpError unknown;
             try { return McpLevels.Resolve(level, call: call); }
             catch (McpError e) when (e.Code == McpErrorCodes.NotFound) { unknown = e; }
+            //A name no folder could have (characters a path can't hold, a drive, '..', or far too long) has no backups either
+            if (!McpLevels.CouldBeFolder(level))
+                throw unknown;
 
             //A level a failed restore left without its files is no longer listed, but its backups are still there.
             //Backups live under the full name; the old external tool kept campaign levels' under the short name alone.
@@ -1906,14 +1954,33 @@ namespace OpenCAGE.MCP
             return chosen;
         }
 
-        /// <summary>A level's files on disk, level-relative ('\' separated).</summary>
-        private static IEnumerable<string> CurrentFiles(string level)
+        /// <summary>
+        /// A level's files on disk, level-relative ('\' separated); <paramref name="withPatch"/>: a Nostromo level's _PATCH folder's
+        /// too, as "_PATCH\..." (how its backups hold them).
+        /// </summary>
+        private static IEnumerable<string> CurrentFiles(string level, bool withPatch = false)
         {
             string folder = Path.Combine(Singleton.PathToAI, "DATA", "ENV", level.Replace('/', '\\'));
-            if (!Directory.Exists(folder)) return Enumerable.Empty<string>();
-            string root = Path.GetFullPath(folder).TrimEnd('\\') + "\\";
-            return Directory.GetFiles(folder, "*.*", SearchOption.AllDirectories).Select(o => Path.GetFullPath(o).Substring(root.Length));
+            IEnumerable<string> files = Enumerable.Empty<string>();
+            if (Directory.Exists(folder))
+            {
+                string root = Path.GetFullPath(folder).TrimEnd('\\') + "\\";
+                files = Directory.GetFiles(folder, "*.*", SearchOption.AllDirectories).Select(o => Path.GetFullPath(o).Substring(root.Length));
+            }
+            string patch = folder.TrimEnd('\\') + "_PATCH";
+            if (withPatch && IsNostromo(level) && Directory.Exists(patch))
+            {
+                string root = Path.GetFullPath(patch).TrimEnd('\\') + "\\";
+                files = files.Concat(Directory.GetFiles(patch, "*.*", SearchOption.AllDirectories).Select(o => "_PATCH\\" + Path.GetFullPath(o).Substring(root.Length)));
+            }
+            return files;
         }
+
+        /// <summary>A Nostromo level: its WORLD (script included) is read and written in the "_PATCH" folder beside it, which its backups hold as "_PATCH\..." files (AlienLevel's rule).</summary>
+        private static bool IsNostromo(string level) => (level ?? "").Replace('\\', '/').StartsWith("PRODUCTION/DLC/BSPNOSTROMO", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>Whether a backup's level-relative path is in a Nostromo level's _PATCH folder.</summary>
+        private static bool IsPatchFile(string name) => (name ?? "").Replace('/', '\\').StartsWith("_PATCH\\", StringComparison.OrdinalIgnoreCase);
 
         private static string Slashes(string path) => (path ?? "").Replace('\\', '/');
 
@@ -2354,9 +2421,23 @@ namespace OpenCAGE.MCP
             //A part of a name: say which levels it could be
             List<string> containing = levels.Where(o => o.Contains(wanted)).ToList();
             if (containing.Count != 0 && containing.Count <= 12)
-                throw new McpError(McpErrorCodes.NotFound, "There is no level '" + given + "'. Levels whose name contains it: " + McpNames.Quote(containing) + ".") { Candidates = new JArray(containing) };
+                throw new McpError(McpErrorCodes.NotFound, "There is no level '" + McpError.Shown(given) + "'. Levels whose name contains it: " + McpNames.Quote(containing) + ".") { Candidates = new JArray(containing) };
             List<string> near = Near(levels, wanted);
-            throw new McpError(McpErrorCodes.NotFound, "There is no level '" + given + "'." + (near.Count != 0 ? " Did you mean " + McpNames.Quote(near) + "?" : "") + " list_levels shows them.") { Candidates = near.Count != 0 ? new JArray(near) : null };
+            throw new McpError(McpErrorCodes.NotFound, "There is no level '" + McpError.Shown(given) + "'." + (near.Count != 0 ? " Did you mean " + McpNames.Quote(near) + "?" : "") + " list_levels shows them.") { Candidates = near.Count != 0 ? new JArray(near) : null };
+        }
+
+        /// <summary>
+        /// Whether a level name could be a folder under DATA/ENV: none of the characters a path can't hold (nor a drive's ':',
+        /// or '*' and '?'), no '..' step out of it, and not far too long for a path.
+        /// </summary>
+        public static bool CouldBeFolder(string level)
+        {
+            string tidy = Tidy(level);
+            if (tidy.Length == 0 || tidy.Length > 200)
+                return false;
+            if (tidy.IndexOfAny(Path.GetInvalidPathChars()) >= 0 || tidy.IndexOfAny(new[] { ':', '*', '?' }) >= 0)
+                return false;
+            return !tidy.Split('/').Any(o => o.Trim() == "..");
         }
 
         /// <summary>

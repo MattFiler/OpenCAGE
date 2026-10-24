@@ -3,6 +3,7 @@
 #include "CINEMATIC_VISUALS.h"
 #include "Config.h"
 #include "DEBUG_MENU.h"
+#include "GAME_TIME_STEP.h"
 #include "LIVE_LINK.h"
 #include "POSSESS.h"
 #include "ZONE_LOADER.h"
@@ -1004,7 +1005,11 @@ bool CINEMATIC_CAMERA::CameraPose(Pose& out, bool mayApply)
 			}
 			const float scrub = (std::max)(-1.0f, (std::min)(1.0f, g_axes[MoveY]));
 			Pose played = pose;
-			if (mayApply && CINEMATIC_TRACKS::Advance(dt, scrub, played))
+			// With the fixed time step on (Game > Tools), a track keeps to the game's time - one step a frame - so an image
+			// sequence captured at it plays the track at its own pace; otherwise real time
+			float trackDt = dt;
+			GAME_TIME_STEP::FrameStep(trackDt);
+			if (mayApply && CINEMATIC_TRACKS::Advance(trackDt, scrub, played))
 			{
 				// The camera stays where the track takes it (unlocked while it plays): its turning is only replaced when
 				// the track's rotation is locked
@@ -1634,7 +1639,7 @@ namespace
 		ImGui::SameLine();
 		if (ImGui::Button("1x"))
 			DEBUG_MENU::SetValue("game.speed", 1.0f);
-		Tooltip("The game clock's own time scale (game.speed), as Cinematic Tools' timescale: slow motion and fast forward. Camera tracks play in real time whatever it is.");
+		Tooltip("The game clock's own time scale (game.speed), as Cinematic Tools' timescale: slow motion and fast forward. Camera tracks play in real time whatever it is, unless the Game group's fixed time step is on: then a track moves one game step a frame, this scale included.");
 		ImGui::EndDisabled();
 	}
 
@@ -1700,6 +1705,7 @@ namespace
 			DEBUG_MENU::CommandResult result;
 			DEBUG_MENU::RunCommand("cinematic.reset", "", result);
 		}
+		Tooltip("Moves the free camera to where the game's own camera is now, and unlocks it from a character (cinematic.reset). The free camera stays on: untick Cinematic camera above to see through the game's camera again.");
 		ImGui::SameLine();
 		if (ImGui::Button("Move the player here"))
 		{

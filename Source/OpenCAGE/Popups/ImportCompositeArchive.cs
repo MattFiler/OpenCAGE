@@ -489,7 +489,7 @@ namespace OpenCAGE
             {
                 string written = done.Count == 0 ? "No level was written." : "Written and saved: " + string.Join(", ", done.Select(o => o.Level)) + ".";
                 MessageBox.Show("The import failed on " + failed.Level + ":\n\n" + failed.Error + "\n\n" + written
-                    + "\n\n" + failed.Level + " may be part-written on disk - restore it from Manage Backups, or verify the game files.",
+                    + (failed.Untouched ? "" : "\n\n" + failed.Level + " may be part-written on disk - restore it from Manage Backups, or verify the game files."),
                     "Import failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Enabled = true;
                 return;

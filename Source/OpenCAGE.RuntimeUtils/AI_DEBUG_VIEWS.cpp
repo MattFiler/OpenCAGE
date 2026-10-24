@@ -223,7 +223,8 @@ namespace
 
 	// ---- Overlays ----
 
-	void DrawLabel(ImDrawList* drawList, const AI_DEBUG::Snapshot& snapshot, const AI_DEBUG::Character& character)
+	// placed: the boxes of the labels already drawn this frame (left, top, right, bottom), which this one keeps clear of
+	void DrawLabel(ImDrawList* drawList, const AI_DEBUG::Snapshot& snapshot, const AI_DEBUG::Character& character, std::vector<ImVec4>& placed)
 	{
 		float at[3];
 		LabelPoint(character, at);
@@ -267,7 +268,29 @@ namespace
 		const float lineHeight = size + 1.0f;
 		const float barHeight = bar ? 7.0f * scale + 4.0f : 0.0f;
 		const float height = lineHeight * count + barHeight;
-		const ImVec2 corner(anchor.x - width * 0.5f, anchor.y - height);
+		// Two characters close together on screen would print over each other: a label that would cover one already drawn
+		// goes up above it, with a line back down to its character
+		ImVec2 corner(anchor.x - width * 0.5f, anchor.y - height);
+		bool moved = false;
+		for (int tries = 0; tries < 8; tries++)
+		{
+			bool clear = true;
+			for (const ImVec4& box : placed)
+			{
+				if (corner.x - 5.0f < box.z && corner.x + width + 5.0f > box.x && corner.y - 3.0f < box.w && corner.y + height + 3.0f > box.y)
+				{
+					corner.y = box.y - height - 8.0f;
+					moved = true;
+					clear = false;
+					break;
+				}
+			}
+			if (clear)
+				break;
+		}
+		placed.push_back(ImVec4(corner.x - 5.0f, corner.y - 3.0f, corner.x + width + 5.0f, corner.y + height + 3.0f));
+		if (moved)
+			drawList->AddLine(anchor, ImVec2(anchor.x, corner.y + height + 3.0f), IM_COL32(0, 0, 0, 200), 1.5f);
 		drawList->AddRectFilled(ImVec2(corner.x - 5.0f, corner.y - 3.0f), ImVec2(corner.x + width + 5.0f, corner.y + height + 3.0f), IM_COL32(0, 0, 0, 160), 3.0f);
 		if (character.selected)
 			drawList->AddRect(ImVec2(corner.x - 5.0f, corner.y - 3.0f), ImVec2(corner.x + width + 5.0f, corner.y + height + 3.0f), IM_COL32(255, 255, 255, 160), 3.0f);
@@ -524,9 +547,10 @@ namespace
 			DrawLightSamples(drawList, snapshot.player);
 		// Labels last, over everything else; with many characters, only those near enough to read in detail. The player's
 		// only when selected, as its label would sit just over the camera.
+		std::vector<ImVec4> placed;
 		for (const AI_DEBUG::Character& character : snapshot.characters)
 			if (Shown(character, g_labels, g_labelsAll) && (character.detailed || character.selected) && (!character.player || character.selected))
-				DrawLabel(drawList, snapshot, character);
+				DrawLabel(drawList, snapshot, character, placed);
 	}
 
 	// ---- The Characters tab ----

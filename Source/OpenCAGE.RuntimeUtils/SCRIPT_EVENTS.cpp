@@ -245,11 +245,9 @@ namespace
 		{
 			const uint32_t id = *out;
 			const char* name = NameGuarded(table, offset, g_stringFromOffset);
+			// Kept as UTF-8, for drawing (the game's text is Windows-1252)
 			char copy[128];
-			size_t i = 0;
-			for (; name && i + 1 < sizeof(copy) && name[i]; i++)
-				copy[i] = name[i];
-			copy[i] = '\0';
+			DevTools::GameTextToUtf8(name, copy, sizeof(copy));
 			if (id && copy[0])
 			{
 				AcquireSRWLockExclusive(&g_nameLock);

@@ -237,7 +237,10 @@ namespace OpenCAGE.UserControls
                 DecodedAudio audio = null;
                 try
                 {
-                    byte[] wem = WwiseSoundLibrary.ReadMedia(variation.Media);
+                    //Read through the index as it is now: a Replace (here, through the MCP, or by a mod) can
+                    //rewrite a whole soundbank and move the rest of its audio after this list was resolved
+                    WwiseMediaLocation media = SoundPreviewLibrary.Get().MediaFor(variation.SourceId) ?? variation.Media;
+                    byte[] wem = WwiseSoundLibrary.ReadMedia(media);
                     audio = WwiseAudioDecoder.Decode(wem);
 
                     DecodedAudio decoded = audio;
@@ -550,13 +553,17 @@ namespace OpenCAGE.UserControls
                     return;
 
                 SoundImport.Reading reading;
+                WwiseMediaLocation target;
                 Cursor.Current = Cursors.WaitCursor;
                 try
                 {
-                    //The same audio is often shipped in several banks at once, and all of them have to
-                    //change or the old sound comes back in whichever level carries a different copy
-                    IList<WwiseMediaLocation> copies = SoundPreviewLibrary.Get().AllCopies(variation.SourceId);
-                    reading = SoundImport.Read(dialog.FileName, variation.Media, copies, null);
+                    //Where the audio is by the index as it is now, since the list may predate a write that
+                    //moved it. The same audio is often shipped in several banks at once, and all of them have
+                    //to change or the old sound comes back in whichever level carries a different copy
+                    WwiseSoundLibrary library = SoundPreviewLibrary.Get();
+                    target = library.MediaFor(variation.SourceId) ?? variation.Media;
+                    IList<WwiseMediaLocation> copies = library.AllCopies(variation.SourceId);
+                    reading = SoundImport.Read(dialog.FileName, target, copies, null);
                 }
                 finally { Cursor.Current = Cursors.Default; }
 
@@ -575,25 +582,33 @@ namespace OpenCAGE.UserControls
                 ReleasePlayer();
 
                 //Pristine copies of every container this write touches, while they're still pristine
-                Modding.ModServices.CaptureBeforeWrite(variation.Media.File);
+                Modding.ModServices.CaptureBeforeWrite(target.File);
                 foreach (WwiseMediaLocation copy in SoundPreviewLibrary.Get().AllCopies(variation.SourceId))
                     Modding.ModServices.CaptureBeforeWrite(copy.File);
 
                 string problem;
+                bool replaced;
                 Cursor.Current = Cursors.WaitCursor;
                 try
                 {
-                    if (!SoundImport.Apply(reading, variation.Media, out problem))
-                    {
-                        MessageBox.Show("The sound could not be replaced:\n\n" + problem, "Replace",
-                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
+                    replaced = SoundImport.Apply(reading, target, out problem);
                 }
-                finally { Cursor.Current = Cursors.Default; }
+                finally
+                {
+                    //Writing into a soundbank lays all of its audio out again, so the other sounds in it move
+                    //too. The index is pointed at where they are now - even after a write that failed part
+                    //way - or they read the wrong bytes, and a second Replace can't find them
+                    SoundPreviewLibrary.Refresh(reading.Copies.Select(c => c.File).Concat(new[] { target.File }));
+                    Cursor.Current = Cursors.Default;
+                }
+
+                if (!replaced)
+                    MessageBox.Show("The sound could not be replaced:\n\n" + problem, "Replace",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
 
-            //Play the new audio straight back, which is the only way to see that it worked
+            //Play the new audio straight back, which is the only way to see that it worked (or, after a
+            //failure, what the file holds now)
             LoadVariation(index);
         }
 

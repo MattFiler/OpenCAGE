@@ -423,11 +423,8 @@ namespace
 			if (composite)
 			{
 				place.composite = *reinterpret_cast<const uint32_t*>(composite + kTemplateGuid);
-				const char* name = *reinterpret_cast<const char* const*>(composite + kTemplateName);
-				size_t i = 0;
-				for (; name && i + 1 < sizeof(place.compositeName) && name[i]; i++)
-					place.compositeName[i] = name[i];
-				place.compositeName[i] = '\0';
+				// As UTF-8, for the banner and the replies (the game's text is Windows-1252)
+				DevTools::GameTextToUtf8(*reinterpret_cast<const char* const*>(composite + kTemplateName), place.compositeName, sizeof(place.compositeName));
 			}
 		}
 		// The path: the owner's id, its owner's, ... up to (not with) the root, read the other way round
@@ -545,11 +542,8 @@ namespace
 			if (!LevelRunning(manager))
 				return;
 			const uint8_t* found = FindTemplate(manager, composite);
-			const char* name = found ? *reinterpret_cast<const char* const*>(found + kTemplateName) : nullptr;
-			size_t i = 0;
-			for (; name && i + 1 < size && name[i]; i++)
-				out[i] = name[i];
-			out[i] = '\0';
+			// As UTF-8 (the game's text is Windows-1252)
+			DevTools::GameTextToUtf8(found ? *reinterpret_cast<const char* const*>(found + kTemplateName) : nullptr, out, size);
 		}
 		__except (EXCEPTION_EXECUTE_HANDLER)
 		{
@@ -1040,12 +1034,24 @@ namespace
 				}
 	}
 
-	// The level's breakpoint list has gone (no level, another level, or the level made again): nothing is in it
+	// The level's breakpoint list has gone (no level, another level, or the level made again): nothing is in it. The last
+	// hit was in the load that has gone, so it is forgotten too (the count of hits OpenCAGE watches goes on).
 	void Forget()
 	{
-		std::lock_guard<std::mutex> lock(g_mutex);
-		g_written.clear();
-		g_recordsInGame = 0;
+		bool hadHit = false;
+		{
+			std::lock_guard<std::mutex> lock(g_mutex);
+			g_written.clear();
+			g_recordsInGame = 0;
+			hadHit = g_hit.sequence != 0;
+			if (hadHit)
+				g_hit = LIVE_DEBUGGER::HitView();
+		}
+		if (hadHit)
+		{
+			g_version++;
+			Publish();
+		}
 	}
 
 	void Release(const char* why)
@@ -1508,11 +1514,11 @@ namespace
 					void* table = Address(kStringTable) ? *reinterpret_cast<void**>(Address(kStringTable)) : nullptr;
 					if (iface && read && lookup && read(iface, &entity, &parameter, &offset))
 					{
-						const char* value = offset != 0xFFFFFFFF && table ? lookup(table, offset) : "";
-						size_t i = 0;
-						for (; value && i + 1 < size && value[i]; i++)
-							out[i] = (value[i] == '\n' || value[i] == '\r') ? ' ' : value[i];
-						out[i] = '\0';
+						// As UTF-8, which OpenCAGE reads replies as (the game's text is Windows-1252), on one line
+						DevTools::GameTextToUtf8(offset != 0xFFFFFFFF && table ? lookup(table, offset) : "", out, size);
+						for (char* c = out; *c; c++)
+							if (*c == '\n' || *c == '\r')
+								*c = ' ';
 						ok = true;
 					}
 					break;

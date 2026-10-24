@@ -462,9 +462,30 @@ namespace OpenCAGE
             cString data = (cString)Parameter.content;
             string newValue = (string)value ?? "";
             if (data.value == newValue) return;
+            //Text the level can't store is refused before anything changes: the grid shows the reason (under its
+            //"Details") and keeps the old value, and a multi-selection stops at the first entity, so none of them change
+            string problem = EditorUtils.UnstorableTextProblem(newValue, WhatTheValueIs);
+            if (problem != null)
+                throw new ArgumentException(problem);
             CaptureBefore();
             data.value = newValue;
             NotifyEdited();
+        }
+
+        /* How the refusal starts, e.g. "This value has a character the game can't store" */
+        protected virtual string WhatTheValueIs => "This value";
+
+        /// <summary>
+        /// For a value picked in a popup rather than typed into the grid: false, with the reason shown, when the level
+        /// can't store the text, since nothing would catch the refusal <see cref="SetValue"/> throws from there.
+        /// </summary>
+        public static bool CheckPickedValue(string value)
+        {
+            string problem = EditorUtils.UnstorableTextProblem(value, "This value");
+            if (problem == null)
+                return true;
+            MessageBox.Show(problem, "Can't use this value", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return false;
         }
     }
     #endregion
@@ -646,6 +667,7 @@ namespace OpenCAGE
     public class NameParameterDescriptor : StringParameterDescriptor
     {
         public NameParameterDescriptor(EntityParameterProxy proxy, Parameter parameter, string name, Attribute[] attributes) : base(proxy, parameter, name, attributes) { }
+        protected override string WhatTheValueIs => "This name";
 
         public override object GetValue(object component)
         {
@@ -931,6 +953,7 @@ namespace OpenCAGE
             string picked = wholeSet ? set : animation;
             string other = wholeSet ? animation : set;
             if (string.IsNullOrEmpty(picked)) return;
+            if (!StringParameterDescriptor.CheckPickedValue(picked) || !StringParameterDescriptor.CheckPickedValue(other)) return;
 
             //unnamed when only the one was set, so the step keeps the usual label for a single parameter
             using (OpenCAGE.Undo.UndoStack.Current.BeginGroup(string.IsNullOrEmpty(other) ? null : "Set " + AnimationParameter + " and " + AnimationSetParameter))
@@ -951,6 +974,7 @@ namespace OpenCAGE
 
         private static void ApplyToTargets(List<EnumStringParameterDescriptor> targets, string value)
         {
+            if (!StringParameterDescriptor.CheckPickedValue(value)) return;
             foreach (EnumStringParameterDescriptor target in targets)
                 target.SetValue(target.Proxy, value);
             ParameterGridPanel.Current?.RefreshValues();
@@ -986,6 +1010,7 @@ namespace OpenCAGE
             {
                 if (texture == null) return;
                 string newPath = "n:\\content\\build\\textures\\" + texture.Name;
+                if (!StringParameterDescriptor.CheckPickedValue(newPath)) return;
                 foreach (TexturePathParameterDescriptor target in targets)
                     target.SetValue(target.Proxy, newPath);
                 ParameterGridPanel.Current?.RefreshValues();

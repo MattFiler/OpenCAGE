@@ -458,6 +458,9 @@
     <ClInclude Include="TABLE_ORDER.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CINEMATIC_CAPTURE.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="BT_DEBUG.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -44,6 +44,19 @@ namespace OpenCAGE.Popups
         private bool _pending;
         private List<string> _stale = new List<string>();
 
+        /* What the selected mod clashes with among the ticked ones is worked out on a thread of its own - it can mean combining
+           big files (ModInstaller.Analyze) - and so is reading its file. Every change of the ticks, the order or the selection
+           asks again: the newest ask replaces any waiting, and stops the one being worked on. */
+        private readonly object _checkLock = new object();
+        private DetailsCheck _checkWanted;
+        private DetailsCheck _checkRunning;
+        private Thread _checkThread;
+        private bool _checksPaused;
+        private bool _checkMissed;
+        private int _detailsAsked;
+        private readonly Dictionary<string, ModFacts> _facts = new Dictionary<string, ModFacts>();
+        private byte[] _previewShown;
+
         public ModManagerForm()
         {
             Text = "Mod Manager";
@@ -60,6 +73,8 @@ namespace OpenCAGE.Popups
             DragEnter += OnDragEnter;
             DragDrop += OnDragDrop;
             Shown += OnFirstShown;
+            //A check still running when the window closes stops at its next step, and its answer goes nowhere
+            FormClosed += (s, e) => PauseChecks();
         }
 
         private void BuildLayout()
@@ -76,7 +91,11 @@ namespace OpenCAGE.Popups
             FlowLayoutPanel stateRow = new FlowLayoutPanel() { Dock = DockStyle.Top, Height = 24, FlowDirection = FlowDirection.LeftToRight, WrapContents = false };
             _installState = new Label() { AutoSize = true, Text = "Checking your game files...", Margin = new Padding(0, 4, 6, 0) };
             _installAction = new LinkLabel() { AutoSize = true, Visible = false, Margin = new Padding(0, 4, 0, 0) };
-            _installAction.LinkClicked += (s, e) => RunPristineWizard();
+            _installAction.LinkClicked += (s, e) =>
+            {
+                if (ModServices.State?.Unreadable != null) StartAfresh();
+                else RunPristineWizard();
+            };
             stateRow.Controls.Add(_installState);
             stateRow.Controls.Add(_installAction);
             header.Controls.Add(stateRow);
@@ -98,8 +117,9 @@ namespace OpenCAGE.Popups
             _modList.Columns.Add("Author", 110);
             _modList.Columns.Add("Type", 90);
             _modList.Columns.Add("Status", 140);
-            _modList.SelectedIndexChanged += (s, e) => ShowDetails();
-            _modList.ItemChecked += (s, e) => { if (!_refreshingList) { UpdatePending(); ShowDetails(); } };
+            //Once for a run of changes: moving the selection deselects the old row first, and one action can tick many rows
+            _modList.SelectedIndexChanged += (s, e) => ShowListChanges(false);
+            _modList.ItemChecked += (s, e) => { if (!_refreshingList) ShowListChanges(true); };
             _modList.ItemDrag += (s, e) => _modList.DoDragDrop(e.Item, DragDropEffects.Move);
             _modList.DragEnter += OnListDragEnter;
             _modList.DragOver += OnListDragOver;
@@ -179,7 +199,7 @@ namespace OpenCAGE.Popups
             ModInstaller installer = ModServices.Installer;
             if (installer == null)
             {
-                _installState.Text = "Set your game folder first (File > Game Directory) - the Mod Manager works on that copy of the game.";
+                _installState.Text = "Set your game folder first (Options > Manage Game Directories) - the Mod Manager works on that copy of the game.";
                 foreach (Control control in new Control[] { _addButton, _applyButton, _repairButton, _createButton })
                     control.Enabled = false;
                 return;
@@ -228,6 +248,53 @@ namespace OpenCAGE.Popups
                 return;
             }
 
+            //Its record of what's installed can't be read: nothing is changed until the user chooses to start afresh
+            if (ModServices.State.Unreadable != null)
+            {
+                _headline.Text = "OpenCAGE can't read its record of the mods installed in this game.";
+                _installState.Text = "Nothing will be changed until you choose what to do.";
+                _installAction.Text = "Start afresh...";
+                _installAction.Visible = true;
+                _detailTitle.Text = "";
+                _detailByline.Text = "";
+                _details.Text = ModServices.State.Unreadable;
+                foreach (Control control in new Control[] { _modList, _addButton, _removeButton, _upButton, _downButton, _applyButton, _repairButton, _createButton })
+                    control.Enabled = false;
+                return;
+            }
+
+            RefreshModList();
+            StartScan();
+        }
+
+        /* A new record in place of one that can't be read, once the user knows what that means: the mods in the library are
+           listed again, unticked */
+        private void StartAfresh()
+        {
+            if (MessageBox.Show("Start the Mod Manager afresh?\n\nIt forgets which mods were installed and what they changed. Game files your mods changed stay as they are now - "
+                + "verify the game files in Steam (or your store) to put them back as they shipped.\n\nThe mods in your library are listed again, unticked. A copy of the record that "
+                + "can't be read is kept beside it.", "Start afresh", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+                return;
+            try
+            {
+                ModServices.State.StartAfresh();
+                string library = ModToolkit.LibraryDir(ModServices.GameRoot);
+                if (Directory.Exists(library))
+                    foreach (string package in Directory.GetFiles(library, "*" + ModToolkit.PackageExtension))
+                    {
+                        try { ModServices.Installer.ImportPackage(package); }
+                        catch { }
+                    }
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show(e.Message, "Start afresh", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            _headline.Text = "Tick the mods you want to play with, put them in order, then click Apply.";
+            _installAction.Visible = false;
+            foreach (Control control in new Control[] { _modList, _addButton, _removeButton, _upButton, _downButton, _applyButton, _repairButton, _createButton })
+                control.Enabled = true;
             RefreshModList();
             StartScan();
         }
@@ -427,14 +494,36 @@ namespace OpenCAGE.Popups
                 : (_stale.Count != 0 ? "Some mod files need repairing - click Repair." : "");
         }
 
+        /* A tick or a selection: shown once the list's events for it are through (posted, so a run of them is shown once) */
+        private bool _listChangesQueued;
+        private bool _ticksChanged;
+        private void ShowListChanges(bool ticks)
+        {
+            _ticksChanged |= ticks;
+            if (_listChangesQueued || IsDisposed || !IsHandleCreated)
+                return;
+            _listChangesQueued = true;
+            BeginInvoke((Action)(() =>
+            {
+                _listChangesQueued = false;
+                if (IsDisposed)
+                    return;
+                if (_ticksChanged)
+                    UpdatePending();
+                _ticksChanged = false;
+                ShowDetails();
+            }));
+        }
+
+        /* The selected mod: what's known at once now, the rest (what its file says, what it clashes with) as it's worked out */
         private void ShowDetails()
         {
             ModState.InstalledMod mod = SelectedMod;
-            _preview.Image?.Dispose();
-            _preview.Image = null;
-            _preview.Visible = false;
+            int asked = ++_detailsAsked;
             if (mod == null)
             {
+                CancelCheck();
+                ShowPreview(null);
                 _detailTitle.Text = _modList.Items.Count == 0 ? "No mods yet" : "";
                 _detailByline.Text = "";
                 _details.Text = _modList.Items.Count == 0
@@ -446,70 +535,111 @@ namespace OpenCAGE.Popups
 
             _detailTitle.Text = mod.Name ?? mod.Id;
             _detailByline.Text = (string.IsNullOrEmpty(mod.Author) ? "" : "by " + mod.Author) + (string.IsNullOrEmpty(mod.Version) ? "" : (string.IsNullOrEmpty(mod.Author) ? "" : "  ·  ") + "version " + mod.Version);
+
+            //What it clashes with among the ticked mods (and itself, if it isn't ticked)
+            List<string> ids = DesiredEnabledIds();
+            if (!ids.Contains(mod.Id)) ids.Add(mod.Id);
+            ModInstaller installer = ModServices.Installer;
+            ModFacts facts = KnownFacts(installer, mod, out string packagePath);
+            bool clashes = ids.Count > 1 && (facts == null || facts.Error == null);
+            ShowDetailText(mod, facts, clashes ? CheckingLines() : null);
+            if (facts != null && !clashes)
+            {
+                CancelCheck();
+                return;
+            }
+            StartCheck(new DetailsCheck() { Asked = asked, Installer = installer, Mod = mod, Name = mod.Name, PackagePath = packagePath, NeedFacts = facts == null, Ids = ids.Count > 1 ? ids : null });
+        }
+
+        private static List<string> CheckingLines()
+        {
+            return new List<string>() { "", "Checking what it clashes with among the ticked mods..." };
+        }
+
+        /* The details text: what the mod's file says once it's read, then what it clashes with (the lines given, or none) */
+        private void ShowDetailText(ModState.InstalledMod mod, ModFacts facts, List<string> clashLines)
+        {
             List<string> lines = new List<string>();
+            if (facts != null && facts.Error != null)
+                lines.Add("This mod's file can't be read: " + facts.Error);
+            else
+            {
+                if (!string.IsNullOrWhiteSpace(mod.Description)) { lines.Add(mod.Description.Trim()); lines.Add(""); }
+                if (facts == null)
+                    lines.Add("Reading the mod's file...");
+                else
+                {
+                    lines.Add("What it changes:");
+                    lines.Add("  " + facts.Summary);
+                    lines.Add("");
+                    lines.Add(facts.Replaces
+                        ? "A replacement mod: it installs exactly as it was made, with nothing rebuilt, and no other mod can change the same levels or files while it's on."
+                        : "A combinable mod: it's combined with any other mods (and your own changes) that change the same levels and files.");
+                    if (clashLines != null)
+                        lines.AddRange(clashLines);
+                }
+            }
+            ShowPreview(facts != null && facts.Error == null ? facts.Preview : null);
+            _details.Text = string.Join("\r\n", lines);
+        }
+
+        /* What the selected mod clashes with, from the check of the ticked mods */
+        private List<string> ClashLines(ModState.InstalledMod mod, ModFacts facts, ModAnalysis analysis)
+        {
+            List<string> lines = new List<string>();
+            List<ReplacementClash> clashes = analysis.Clashes.Where(o => o.Replacing == mod.Name || o.Others.Contains(mod.Name)).ToList();
+            if (clashes.Count != 0)
+            {
+                lines.Add("");
+                lines.Add("Can't be on at the same time as other ticked mods - untick one of each:");
+                foreach (ReplacementClash clash in clashes.Take(12))
+                    lines.Add("  • " + clash.Describe());
+                if (clashes.Count > 12)
+                    lines.Add("  ...and " + (clashes.Count - 12) + " more");
+            }
+            List<MergeConflict> conflicts = analysis.Conflicts.Where(o => o.Kept == mod.Name || o.Lost == mod.Name).ToList();
+            List<string> shared = analysis.CombinedLevels.Where(facts.Levels.Contains).ToList();
+            if (shared.Count != 0)
+            {
+                lines.Add("");
+                lines.Add("Shares " + string.Join(", ", shared.Select(ModToolkit.LevelName)) + " with other ticked mods (or your own changes) - they're combined into one level when you apply.");
+            }
+            if (analysis.CombinedFiles.Count != 0)
+            {
+                lines.Add("");
+                lines.Add("Shares " + string.Join(", ", analysis.CombinedFiles.Select(MergeConflict.Place)) + " with other ticked mods (or your own changes) - they're combined into one when you apply, and anything they both change is listed then.");
+            }
+            if (conflicts.Count != 0)
+            {
+                lines.Add("");
+                //The list as it stands: with changes not applied yet, what's installed may still have another mod's version
+                lines.Add(_pending ? "Changes the same things as other ticked mods (once you click Apply, the one lower in the list wins):"
+                    : "Changes the same things as other ticked mods (the one lower in the list wins):");
+                foreach (MergeConflict conflict in conflicts.Take(12))
+                    lines.Add("  • " + conflict.Describe());
+                if (conflicts.Count > 12)
+                    lines.Add("  ...and " + (conflicts.Count - 12) + " more");
+            }
+            return lines;
+        }
+
+        private void ShowPreview(byte[] png)
+        {
+            if (png == _previewShown)
+                return;
+            _previewShown = png;
+            _preview.Image?.Dispose();
+            _preview.Image = null;
+            _preview.Visible = false;
+            if (png == null)
+                return;
             try
             {
-                ModPackage package = ModServices.Installer.OpenPackage(mod);
-                byte[] png = package.ReadPreview();
-                if (png != null)
-                {
-                    try
-                    {
-                        using (MemoryStream stream = new MemoryStream(png))
-                            _preview.Image = new Bitmap(Image.FromStream(stream));
-                        _preview.Visible = true;
-                    }
-                    catch { }
-                }
-                if (!string.IsNullOrWhiteSpace(mod.Description)) { lines.Add(mod.Description.Trim()); lines.Add(""); }
-                lines.Add("What it changes:");
-                lines.Add("  " + (string.IsNullOrWhiteSpace(package.Info.Summary) ? DescribeEntries(package) : package.Info.Summary));
-                lines.Add("");
-                lines.Add(package.Info.Replaces
-                    ? "A replacement mod: it installs exactly as it was made, with nothing rebuilt, and no other mod can change the same levels or files while it's on."
-                    : "A combinable mod: it's combined with any other mods (and your own changes) that change the same levels and files.");
-
-                //What it clashes with among the ticked mods (and itself, if it isn't ticked)
-                List<string> ids = DesiredEnabledIds();
-                if (!ids.Contains(mod.Id)) ids.Add(mod.Id);
-                if (ids.Count > 1)
-                {
-                    ModAnalysis analysis = ModServices.Installer.Analyze(ids);
-                    List<ReplacementClash> clashes = analysis.Clashes.Where(o => o.Replacing == mod.Name || o.Others.Contains(mod.Name)).ToList();
-                    if (clashes.Count != 0)
-                    {
-                        lines.Add("");
-                        lines.Add("Can't be on at the same time as other ticked mods - untick one of each:");
-                        foreach (ReplacementClash clash in clashes.Take(12))
-                            lines.Add("  • " + clash.Describe());
-                        if (clashes.Count > 12)
-                            lines.Add("  ...and " + (clashes.Count - 12) + " more");
-                    }
-                    List<MergeConflict> conflicts = analysis.Conflicts.Where(o => o.Kept == mod.Name || o.Lost == mod.Name).ToList();
-                    List<string> shared = analysis.CombinedLevels.Where(level => SharesLevel(level, mod, ids)).ToList();
-                    if (shared.Count != 0)
-                    {
-                        lines.Add("");
-                        lines.Add("Shares " + string.Join(", ", shared) + " with other ticked mods (or your own changes) - they're combined into one level when you apply.");
-                    }
-                    if (conflicts.Count != 0)
-                    {
-                        lines.Add("");
-                        //The list as it stands: with changes not applied yet, what's installed may still have another mod's version
-                        lines.Add(_pending ? "Changes the same things as other ticked mods (once you click Apply, the one lower in the list wins):"
-                            : "Changes the same things as other ticked mods (the one lower in the list wins):");
-                        foreach (MergeConflict conflict in conflicts.Take(12))
-                            lines.Add("  • " + conflict.Describe());
-                        if (conflicts.Count > 12)
-                            lines.Add("  ...and " + (conflicts.Count - 12) + " more");
-                    }
-                }
+                using (MemoryStream stream = new MemoryStream(png))
+                    _preview.Image = new Bitmap(Image.FromStream(stream));
+                _preview.Visible = true;
             }
-            catch (Exception e)
-            {
-                lines.Add("This mod's file can't be read: " + e.Message);
-            }
-            _details.Text = string.Join("\r\n", lines);
+            catch { }
         }
 
         private static string DescribeEntries(ModPackage package)
@@ -521,10 +651,198 @@ namespace OpenCAGE.Popups
                 + (other != 0 ? other + " other game file" + (other == 1 ? "" : "s") : "") + ".";
         }
 
-        private bool SharesLevel(string level, ModState.InstalledMod mod, List<string> ids)
+        /* What the details show of a mod's file: read on the check's thread (a mod's file is read whole, and can be big), kept
+           while the file stays as it was */
+        private class ModFacts
         {
-            try { return ModServices.Installer.OpenPackage(mod).Info.Entries.Any(o => ModInstaller.LevelUnitOf(ModToolkit.Normalise(o.Target)) == level); }
-            catch { return false; }
+            public long Length;
+            public DateTime Written;
+            public string Error;
+            public string Summary;
+            public bool Replaces;
+            public byte[] Preview;
+            /* The levels its files are in, as levels are combined (ModInstaller.LevelUnitOf) */
+            public HashSet<string> Levels = new HashSet<string>();
+        }
+
+        /* One ask for the selected mod's details: its file read (if it isn't yet), then what it clashes with among Ids (none: no
+           other mod is ticked) */
+        private class DetailsCheck
+        {
+            public int Asked;
+            public ModInstaller Installer;
+            public ModState.InstalledMod Mod;
+            public string Name;
+            public string PackagePath;
+            public bool NeedFacts;
+            public List<string> Ids;
+            public CancellationTokenSource Cancel = new CancellationTokenSource();
+        }
+
+        /* The mod's file as it is now (size and time): -1 when it isn't there */
+        private static (long Length, DateTime Written) Stamp(string path)
+        {
+            try
+            {
+                FileInfo info = new FileInfo(path);
+                if (info.Exists)
+                    return (info.Length, info.LastWriteTimeUtc);
+            }
+            catch { }
+            return (-1, DateTime.MinValue);
+        }
+
+        /* What was read of a mod's file before, if the file is still as it was then */
+        private ModFacts KnownFacts(ModInstaller installer, ModState.InstalledMod mod, out string path)
+        {
+            path = null;
+            try { path = Path.Combine(ModToolkit.LibraryDir(installer.GameRoot), mod.PackageFileName); }
+            catch { }
+            if (path == null || !_facts.TryGetValue(mod.Id, out ModFacts facts))
+                return null;
+            (long length, DateTime written) = Stamp(path);
+            return facts.Length == length && facts.Written == written ? facts : null;
+        }
+
+        private static ModFacts ReadFacts(DetailsCheck check)
+        {
+            ModFacts facts = new ModFacts();
+            if (check.PackagePath != null)
+                (facts.Length, facts.Written) = Stamp(check.PackagePath);
+            try
+            {
+                ModPackage package = check.Installer.OpenPackage(check.Mod);
+                facts.Summary = string.IsNullOrWhiteSpace(package.Info.Summary) ? DescribeEntries(package) : package.Info.Summary;
+                facts.Replaces = package.Info.Replaces;
+                facts.Preview = package.ReadPreview();
+                facts.Levels = new HashSet<string>(package.Info.Entries.Select(o => ModInstaller.LevelUnitOf(ModToolkit.Normalise(o.Target))).Where(o => o != null));
+            }
+            catch (Exception e)
+            {
+                facts.Error = e.Message;
+            }
+            return facts;
+        }
+
+        /* Ask for the details on the check's thread, in place of whatever was asked before */
+        private void StartCheck(DetailsCheck check)
+        {
+            lock (_checkLock)
+            {
+                _checkRunning?.Cancel.Cancel();
+                if (_checksPaused)
+                {
+                    //Asked again once applying's done (ResumeChecks)
+                    _checkWanted = null;
+                    _checkMissed = true;
+                    return;
+                }
+                _checkWanted = check;
+                if (_checkThread == null)
+                {
+                    _checkThread = new Thread(CheckLoop) { IsBackground = true, Name = "Mod Manager details", Priority = ThreadPriority.BelowNormal };
+                    _checkThread.Start();
+                }
+            }
+        }
+
+        private void CancelCheck()
+        {
+            lock (_checkLock)
+            {
+                _checkRunning?.Cancel.Cancel();
+                _checkWanted = null;
+            }
+        }
+
+        /* Applying writes what a check reads: the check stops, and no other starts until ResumeChecks. Its thread is handed back
+           to wait for - not on the UI thread, as it can be part-way through combining a big file. */
+        private Thread PauseChecks()
+        {
+            lock (_checkLock)
+            {
+                _checksPaused = true;
+                if (_checkWanted != null || _checkRunning != null)
+                    _checkMissed = true;
+                _checkWanted = null;
+                _checkRunning?.Cancel.Cancel();
+                return _checkThread;
+            }
+        }
+
+        private void ResumeChecks()
+        {
+            bool missed;
+            lock (_checkLock)
+            {
+                _checksPaused = false;
+                missed = _checkMissed;
+                _checkMissed = false;
+            }
+            //What was stopped, or asked for meanwhile, is asked for again
+            if (missed && !IsDisposed)
+                ShowDetails();
+        }
+
+        /* The check's thread: works on the newest ask until there's none */
+        private void CheckLoop()
+        {
+            while (true)
+            {
+                DetailsCheck check;
+                lock (_checkLock)
+                {
+                    check = _checkWanted;
+                    _checkWanted = null;
+                    _checkRunning = check;
+                    if (check == null)
+                    {
+                        _checkThread = null;
+                        return;
+                    }
+                }
+                try { RunCheck(check); }
+                catch { }
+                lock (_checkLock)
+                    _checkRunning = null;
+            }
+        }
+
+        private void RunCheck(DetailsCheck check)
+        {
+            CancellationToken cancel = check.Cancel.Token;
+            if (check.NeedFacts)
+            {
+                ModFacts facts = ReadFacts(check);
+                SafeInvoke(() => OnFactsRead(check, facts));
+                if (facts.Error != null)
+                    return;
+            }
+            if (check.Ids == null || cancel.IsCancellationRequested)
+                return;
+            ModAnalysis analysis = null;
+            string error = null;
+            try { analysis = check.Installer.Analyze(check.Ids, check.Name, cancel); }
+            catch (OperationCanceledException) { return; }
+            catch (Exception e) { error = e.Message; }
+            SafeInvoke(() => OnChecked(check, analysis, error));
+        }
+
+        private void OnFactsRead(DetailsCheck check, ModFacts facts)
+        {
+            if (IsDisposed)
+                return;
+            _facts[check.Mod.Id] = facts;
+            if (check.Asked == _detailsAsked)
+                ShowDetailText(check.Mod, facts, check.Ids != null && facts.Error == null ? CheckingLines() : null);
+        }
+
+        private void OnChecked(DetailsCheck check, ModAnalysis analysis, string error)
+        {
+            //An answer to an older ask (the ticks or the selection changed since) isn't shown
+            if (IsDisposed || check.Asked != _detailsAsked || !_facts.TryGetValue(check.Mod.Id, out ModFacts facts) || facts.Error != null)
+                return;
+            ShowDetailText(check.Mod, facts, error != null ? new List<string>() { "", "What it clashes with couldn't be worked out: " + error } : ClashLines(check.Mod, facts, analysis));
         }
 
         private void MoveSelected(int direction)
@@ -656,7 +974,8 @@ namespace OpenCAGE.Popups
             List<string> desired = DesiredEnabledIds();
             HashSet<string> installedBefore = new HashSet<string>(ModServices.State.Mods.Where(o => o.Enabled).Select(o => o.Id));
 
-            if (System.Diagnostics.Process.GetProcessesByName("AI").Length != 0)
+            //This install's game only: another install's (or another game called AI) doesn't hold these files
+            if (EditorUtils.ThisInstallsGameRunning())
             {
                 MessageBox.Show("Close Alien: Isolation before changing mods - its files are in use while it runs.", "Game is running", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
@@ -667,12 +986,18 @@ namespace OpenCAGE.Popups
             LoadedGameFiles.Change change = LoadedGameFiles.BeforeChange(this, ModServices.Installer.MayChange(desired), out _);
             if (change == null)
                 return;
+            //The check of the selected mod stops: this works out all of it, then writes what it reads
+            Thread check = PauseChecks();
             TransactionResult result = null;
             bool declined = false;
             try
             {
-                //Say what will happen before anything does
-                ModAnalysis analysis = ModServices.Installer.Analyze(desired);
+                //Say what will happen before anything does (worked out off the UI thread: it can mean combining big files)
+                ModAnalysis analysis = Busy("Working out what applying changes...", () =>
+                {
+                    check?.Join();
+                    return ModServices.Installer.Analyze(desired);
+                });
                 if (analysis.Problems.Count != 0)
                 {
                     MessageBox.Show("Some mods can't be used:\n\n" + string.Join("\n\n", analysis.Problems.Take(8)), "Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -743,6 +1068,7 @@ namespace OpenCAGE.Popups
             finally
             {
                 LoadedGameFiles.AfterChange(change, FilesChanged(result));
+                ResumeChecks();
             }
             if (result == null)
                 return;
@@ -811,14 +1137,22 @@ namespace OpenCAGE.Popups
             ModReportDialog.Show(this, "Mods applied", string.Join("\r\n", lines), "OK", null);
         }
 
+        /* Callers pause the check of the selected mod first (PauseChecks), and resume it after */
         private TransactionResult RunTransaction(List<string> desired, bool adopt, EditedFilesChoice edited)
         {
             TransactionResult result = null;
             Exception error = null;
+            Thread check = PauseChecks();
             using (BusyDialog busy = new BusyDialog("Applying your mods..."))
             {
                 busy.Work = report =>
                 {
+                    //Nothing reads what applying writes: a check part-way through combining a file finishes that first
+                    if (check != null && check.IsAlive)
+                    {
+                        report("Waiting for the check of the ticked mods to stop...");
+                        check.Join();
+                    }
                     try { result = ModServices.Installer.ApplyConfiguration(desired, adopt, report, edited); }
                     catch (Exception e) { error = e; }
                 };
@@ -829,6 +1163,32 @@ namespace OpenCAGE.Popups
                 MessageBox.Show(error.Message, "Couldn't apply", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return null;
             }
+            return result;
+        }
+
+        /* Work that can take a while, off the UI thread so the window keeps drawing - with a "working..." window once it's taken
+           long enough to notice. What it throws is thrown here. */
+        private T Busy<T>(string message, Func<T> work)
+        {
+            T result = default(T);
+            Exception error = null;
+            Thread thread = new Thread(() =>
+            {
+                try { result = work(); }
+                catch (Exception e) { error = e; }
+            });
+            thread.IsBackground = true;
+            thread.Start();
+            if (!thread.Join(300))
+            {
+                using (BusyDialog busy = new BusyDialog(message))
+                {
+                    busy.Work = report => thread.Join();
+                    busy.ShowDialog(this);
+                }
+            }
+            if (error != null)
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw();
             return result;
         }
 
@@ -847,12 +1207,19 @@ namespace OpenCAGE.Popups
 
         private void Repair()
         {
+            //As for applying changes: the files are in use while this install's game runs
+            if (EditorUtils.ThisInstallsGameRunning())
+            {
+                MessageBox.Show("Close Alien: Isolation before repairing mods - its files are in use while it runs.", "Game is running", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
             //The same mods again: everything rebuilt from the original files and the mods
             List<string> enabled = ModServices.State.ModsInPriorityOrder().Where(o => o.Enabled).Select(o => o.Id).ToList();
             //What OpenCAGE has open of the files: saved (or let go) before the edited ones are worked out, as saving changes them
             LoadedGameFiles.Change change = LoadedGameFiles.BeforeChange(this, ModServices.Installer.MayChange(enabled), out _);
             if (change == null)
                 return;
+            PauseChecks();
             TransactionResult result = null;
             try
             {
@@ -870,6 +1237,7 @@ namespace OpenCAGE.Popups
             finally
             {
                 LoadedGameFiles.AfterChange(change, FilesChanged(result));
+                ResumeChecks();
             }
             if (result != null && result.Success)
                 _stale = new List<string>();

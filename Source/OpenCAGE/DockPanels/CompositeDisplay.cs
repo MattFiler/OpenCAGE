@@ -358,12 +358,36 @@ namespace OpenCAGE.DockPanels
                 SaveInnerDockLayout();
             else if (_levelViewerPanel.DockPanel != dockPanel || _levelViewerPanel.DockState == DockState.Hidden)
             {
-                _levelViewerPanel.Show(dockPanel, DockState.DockTop);
+                ShowLevelViewerDockedTop();
                 SaveInnerDockLayout();
             }
 
             if (_levelViewerPanel.IsRunning)
                 _levelViewerPanel.RefreshEmbeddedBounds();
+        }
+
+        /* Docking the panel while it holds the focus (left in the viewer) made the docking library put the focus back into
+           the pane it was still building, which threw "ActiveContent must be one of the visible contents" - out through the
+           level load that docked it. The library no longer does that; should it throw anyway, it is tried once more, and a
+           second failure is logged rather than ending the load. */
+        private void ShowLevelViewerDockedTop()
+        {
+            try
+            {
+                _levelViewerPanel.Show(dockPanel, DockState.DockTop);
+            }
+            catch (InvalidOperationException ex)
+            {
+                Debug.Log("Composite Display", "Docking the level viewer panel failed, trying again: " + ex.Message);
+                try
+                {
+                    _levelViewerPanel.Show(dockPanel, DockState.DockTop);
+                }
+                catch (InvalidOperationException again)
+                {
+                    Debug.Log("Composite Display", "Docking the level viewer panel failed again: " + again);
+                }
+            }
         }
 
         /* Show ends by activating the panel, which gives the focus back to the window it last had focused - the viewer's -
@@ -845,7 +869,7 @@ namespace OpenCAGE.DockPanels
                         newCount += _flowgraphs[i].SaveAndCompile();
                     }
                 }
-                Debug.Log("Composite Display", System.IO.Path.GetFileName(Composite.name) + " -> Created " + newCount + " links from flowgraph pages!");
+                Debug.Log("Composite Display", EditorUtils.GetCompositeName(Composite) + " -> Created " + newCount + " links from flowgraph pages!");
 #if DEBUG
                 if (ogCount != newCount)
                 {
@@ -3046,7 +3070,7 @@ namespace OpenCAGE.DockPanels
         public Entity CreateCompositeInstanceEntity(Composite instanceComposite, PointF? flowgraphPosition = null, cTransform position = null)
         {
             //The entity and the node placed for it undo as one step
-            using (UndoStack.Current.BeginGroup("Add " + System.IO.Path.GetFileName((instanceComposite?.name ?? "").Replace('\\', '/'))))
+            using (UndoStack.Current.BeginGroup("Add " + EditorUtils.GetCompositeName(instanceComposite)))
                 return CreateCompositeInstanceEntityCore(instanceComposite, flowgraphPosition, position);
         }
         private Entity CreateCompositeInstanceEntityCore(Composite instanceComposite, PointF? flowgraphPosition, cTransform position)

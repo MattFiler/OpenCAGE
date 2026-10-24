@@ -69,6 +69,9 @@ namespace DEBUG_MENU
 	// an overlay's note asks BannerTop where its top goes, giving its height in pixels, and the next note goes under it.
 	void ResetBanners(float top);
 	float BannerTop(float height);
+	// Where the stack of notes ends this frame (where the next would go), 0 while none shows: for text kept clear of them
+	// (read after the overlays have drawn).
+	float BannersBottom();
 
 	// This frame's camera: game world space (Y up) to overlay pixels, false when behind the camera; where it is, and the
 	// way it looks (a unit vector).
@@ -129,8 +132,11 @@ namespace DEBUG_MENU
 	// outside the window - OpenCAGE over the live link, for its own tools and for testing. A tab names each of its
 	// switches once (any thread), e.g. "characters.view_cones", and keeps reading and writing the flag itself. Switches,
 	// values and commands may be named from a static initializer too (their lists are made on first use, and the lock that
-	// guards them needs no construction), so they exist before the first frame is drawn.
-	void AddSwitch(const std::string& name, std::atomic<bool>* value);
+	// guards them needs no construction), so they exist before the first frame is drawn. A switch can name a function told
+	// of each SetSwitch on it just before the flag takes the value (any thread, under the menu's lock: it must be quick and
+	// call nothing here), for switches that need to know which of them was set last.
+	using SwitchSetter = void (*)(bool value);
+	void AddSwitch(const std::string& name, std::atomic<bool>* value, SwitchSetter beforeSet = nullptr);
 	bool SetSwitch(const std::string& name, bool value);
 	// What a switch holds (false when there is none of that name), for a view that drives another's switch.
 	bool GetSwitch(const std::string& name, bool& value);
@@ -156,7 +162,9 @@ namespace DEBUG_MENU
 
 	// For a command that needs a game thread (or this frame's characters and camera, on the render thread): runs the work
 	// there and waits for its answer, up to timeoutMs - no level may be running, or the game paused, and the work then still
-	// runs when that thread next comes round; the answer says it timed out. So work may run after the level has restarted
+	// runs when that thread next comes round; the answer says it timed out. A thread that hasn't come round for a while (a
+	// level loading, the game paused) is waited for a moment only: a wait holds up the Live Link requests behind it, so full
+	// waits for a thread that isn't running would add up while polls keep coming. So work may run after the level has restarted
 	// or changed: work that names a character by its unique id then finds nothing, as the game never gives an id out twice,
 	// and does no harm. Work that acts on the player should carry the player's id for the same reason, rather than look the
 	// player up when it runs (which would find the new level's player).

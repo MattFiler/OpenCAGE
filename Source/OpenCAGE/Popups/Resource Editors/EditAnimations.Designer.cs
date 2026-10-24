@@ -32,10 +32,14 @@ namespace OpenCAGE
             this.clipSearchBox = new System.Windows.Forms.TextBox();
             this.buttonPanel = new System.Windows.Forms.Panel();
             this.summaryLabel = new System.Windows.Forms.Label();
+            this.actionsPanel = new System.Windows.Forms.FlowLayoutPanel();
             this.pickBtn = new System.Windows.Forms.Button();
             this.previewBtn = new System.Windows.Forms.Button();
             this.exportBtn = new System.Windows.Forms.Button();
             this.importBtn = new System.Windows.Forms.Button();
+            this.replaceBtn = new System.Windows.Forms.Button();
+            this.eventsBtn = new System.Windows.Forms.Button();
+            this.deleteBtn = new System.Windows.Forms.Button();
             this.statusStrip = new System.Windows.Forms.StatusStrip();
             this.statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this.tabKinds.SuspendLayout();
@@ -47,6 +51,7 @@ namespace OpenCAGE
             this.setSearchPanel.SuspendLayout();
             this.contextPanel.SuspendLayout();
             this.buttonPanel.SuspendLayout();
+            this.actionsPanel.SuspendLayout();
             this.statusStrip.SuspendLayout();
             this.SuspendLayout();
             //
@@ -104,7 +109,7 @@ namespace OpenCAGE
             this.splitLists.Panel2.Controls.Add(this.clipList);
             this.splitLists.Panel2.Controls.Add(this.contextPanel);
             this.splitLists.Panel2MinSize = 120;
-            this.splitLists.Size = new System.Drawing.Size(986, 540);
+            this.splitLists.Size = new System.Drawing.Size(986, 508);
             this.splitLists.SplitterDistance = 210;
             this.splitLists.TabIndex = 0;
             //
@@ -214,15 +219,12 @@ namespace OpenCAGE
             // buttonPanel
             //
             this.buttonPanel.Controls.Add(this.summaryLabel);
-            this.buttonPanel.Controls.Add(this.pickBtn);
-            this.buttonPanel.Controls.Add(this.previewBtn);
-            this.buttonPanel.Controls.Add(this.exportBtn);
-            this.buttonPanel.Controls.Add(this.importBtn);
+            this.buttonPanel.Controls.Add(this.actionsPanel);
             this.buttonPanel.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.buttonPanel.Location = new System.Drawing.Point(0, 540);
+            this.buttonPanel.Location = new System.Drawing.Point(0, 508);
             this.buttonPanel.Name = "buttonPanel";
-            this.buttonPanel.Padding = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.buttonPanel.Size = new System.Drawing.Size(986, 44);
+            this.buttonPanel.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.buttonPanel.Size = new System.Drawing.Size(986, 76);
             this.buttonPanel.TabIndex = 1;
             //
             // summaryLabel
@@ -230,28 +232,68 @@ namespace OpenCAGE
             this.summaryLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right))));
             this.summaryLabel.AutoEllipsis = true;
-            this.summaryLabel.Location = new System.Drawing.Point(6, 13);
+            this.summaryLabel.Location = new System.Drawing.Point(6, 9);
             this.summaryLabel.Name = "summaryLabel";
-            this.summaryLabel.Size = new System.Drawing.Size(430, 18);
+            this.summaryLabel.Size = new System.Drawing.Size(974, 18);
             this.summaryLabel.TabIndex = 0;
             this.summaryLabel.Text = "Choose a skeleton above.";
             //
+            // actionsPanel
+            //
+            this.actionsPanel.Controls.Add(this.exportBtn);
+            this.actionsPanel.Controls.Add(this.previewBtn);
+            this.actionsPanel.Controls.Add(this.pickBtn);
+            this.actionsPanel.Controls.Add(this.deleteBtn);
+            this.actionsPanel.Controls.Add(this.eventsBtn);
+            this.actionsPanel.Controls.Add(this.replaceBtn);
+            this.actionsPanel.Controls.Add(this.importBtn);
+            this.actionsPanel.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.actionsPanel.FlowDirection = System.Windows.Forms.FlowDirection.RightToLeft;
+            this.actionsPanel.Location = new System.Drawing.Point(4, 36);
+            this.actionsPanel.Name = "actionsPanel";
+            this.actionsPanel.Size = new System.Drawing.Size(978, 36);
+            this.actionsPanel.TabIndex = 1;
+            this.actionsPanel.WrapContents = false;
+            //
             // importBtn
             //
-            this.importBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.importBtn.Enabled = false;
-            this.importBtn.Location = new System.Drawing.Point(444, 8);
             this.importBtn.Name = "importBtn";
             this.importBtn.Size = new System.Drawing.Size(128, 26);
             this.importBtn.TabIndex = 4;
             this.importBtn.Text = "Import...";
             this.importBtn.UseVisualStyleBackColor = true;
             //
+            // replaceBtn
+            //
+            this.replaceBtn.Enabled = false;
+            this.replaceBtn.Name = "replaceBtn";
+            this.replaceBtn.Size = new System.Drawing.Size(110, 26);
+            this.replaceBtn.TabIndex = 5;
+            this.replaceBtn.Text = "Replace...";
+            this.replaceBtn.UseVisualStyleBackColor = true;
+            //
+            // eventsBtn
+            //
+            this.eventsBtn.Enabled = false;
+            this.eventsBtn.Name = "eventsBtn";
+            this.eventsBtn.Size = new System.Drawing.Size(110, 26);
+            this.eventsBtn.TabIndex = 6;
+            this.eventsBtn.Text = "Events...";
+            this.eventsBtn.UseVisualStyleBackColor = true;
+            //
+            // deleteBtn
+            //
+            this.deleteBtn.Enabled = false;
+            this.deleteBtn.Name = "deleteBtn";
+            this.deleteBtn.Size = new System.Drawing.Size(90, 26);
+            this.deleteBtn.TabIndex = 7;
+            this.deleteBtn.Text = "Delete";
+            this.deleteBtn.UseVisualStyleBackColor = true;
+            //
             // pickBtn
             //
-            this.pickBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.pickBtn.Enabled = false;
-            this.pickBtn.Location = new System.Drawing.Point(578, 8);
             this.pickBtn.Name = "pickBtn";
             this.pickBtn.Size = new System.Drawing.Size(150, 26);
             this.pickBtn.TabIndex = 1;
@@ -261,9 +303,7 @@ namespace OpenCAGE
             //
             // previewBtn
             //
-            this.previewBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.previewBtn.Enabled = false;
-            this.previewBtn.Location = new System.Drawing.Point(734, 8);
             this.previewBtn.Name = "previewBtn";
             this.previewBtn.Size = new System.Drawing.Size(110, 26);
             this.previewBtn.TabIndex = 2;
@@ -272,9 +312,7 @@ namespace OpenCAGE
             //
             // exportBtn
             //
-            this.exportBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.exportBtn.Enabled = false;
-            this.exportBtn.Location = new System.Drawing.Point(850, 8);
             this.exportBtn.Name = "exportBtn";
             this.exportBtn.Size = new System.Drawing.Size(130, 26);
             this.exportBtn.TabIndex = 3;
@@ -316,6 +354,7 @@ namespace OpenCAGE
             this.contextPanel.ResumeLayout(false);
             this.contextPanel.PerformLayout();
             this.buttonPanel.ResumeLayout(false);
+            this.actionsPanel.ResumeLayout(false);
             this.statusStrip.ResumeLayout(false);
             this.statusStrip.PerformLayout();
             this.ResumeLayout(false);
@@ -345,6 +384,10 @@ namespace OpenCAGE
         private System.Windows.Forms.Button previewBtn;
         private System.Windows.Forms.Button exportBtn;
         private System.Windows.Forms.Button importBtn;
+        private System.Windows.Forms.FlowLayoutPanel actionsPanel;
+        private System.Windows.Forms.Button replaceBtn;
+        private System.Windows.Forms.Button eventsBtn;
+        private System.Windows.Forms.Button deleteBtn;
         private System.Windows.Forms.StatusStrip statusStrip;
         private System.Windows.Forms.ToolStripStatusLabel statusLabel;
     }
