@@ -806,7 +806,7 @@ namespace
 		}
 		if (!character.player && ImGui::CollapsingHeader("Senses", ImGuiTreeNodeFlags_DefaultOpen))
 			DrawSenses(snapshot, character);
-		if (!character.player && ImGui::CollapsingHeader("Last known positions"))
+		if (!character.player && ImGui::CollapsingHeader("Last known positions##details"))
 			DrawLastKnownTable(snapshot, character);
 		if (!character.player && ImGui::CollapsingHeader("View cones and hearing"))
 			DrawConesAndHearing(character);
