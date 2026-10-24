@@ -1243,7 +1243,7 @@ namespace OpenCAGE.MCP
 
         public static JArray Describe() => new JArray(All.Select(o => o.Describe()));
 
-        /* Corrections to tools defined elsewhere, kept here so the whole list follows one rule (see McpTool's remarks).
+        /* Corrections to tools defined elsewhere, kept here so the whole list follows one rule.
            Once a tool's own definition is fixed, its entry here can go. */
 
         //Destructive: deletes, or writes over something one undo step cannot bring back
