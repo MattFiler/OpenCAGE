@@ -103,8 +103,8 @@ namespace OpenCAGE.Popups
 
         private void RefreshLists()
         {
-            Fill(_gridList, SnapIncrementSettings.GridValues, "0.###");
-            Fill(_rotationList, SnapIncrementSettings.RotationValues, "0.##");
+            Fill(_gridList, SnapIncrementSettings.GridValues, "0.#######");
+            Fill(_rotationList, SnapIncrementSettings.RotationValues, "0.#######");
         }
 
         //The stored list is what the menu shows minus Off; Off is never edited here

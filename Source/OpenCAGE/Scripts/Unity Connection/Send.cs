@@ -213,8 +213,8 @@ namespace OpenCAGE.UnityConnection
             packet.hide_nested_script_entities = SettingsManager.GetBool(Settings.HideNestedScriptEntities);
             packet.highlight_aliases = SettingsManager.GetBool(Settings.HighlightAliases);
             packet.highlight_proxies = SettingsManager.GetBool(Settings.HighlightProxies);
-            packet.transform_grid_snap = TransformSnapDefinitions.NormalizeGridSnap(SettingsManager.GetFloat(Settings.TransformGridSnap));
-            packet.rotation_snap_degrees = TransformSnapDefinitions.NormalizeRotationSnap(SettingsManager.GetFloat(Settings.RotationSnapDegrees));
+            packet.transform_grid_snap = SnapIncrementSettings.NormalizeGrid(SettingsManager.GetFloat(Settings.TransformGridSnap));
+            packet.rotation_snap_degrees = SnapIncrementSettings.NormalizeRotation(SettingsManager.GetFloat(Settings.RotationSnapDegrees));
             packet.transform_vertex_snap = SettingsManager.GetBool(Settings.TransformVertexSnap);
             packet.deep_select_mode = (int)LevelViewerViewportDefinitions.NormalizeDeepSelectMode(
                 SettingsManager.GetInteger(Settings.LevelViewerDeepSelectMode));
@@ -1115,8 +1115,8 @@ namespace OpenCAGE.UnityConnection
             p.hide_nested_script_entities = SettingsManager.GetBool(Settings.HideNestedScriptEntities);
             p.highlight_aliases = SettingsManager.GetBool(Settings.HighlightAliases);
             p.highlight_proxies = SettingsManager.GetBool(Settings.HighlightProxies);
-            p.transform_grid_snap = TransformSnapDefinitions.NormalizeGridSnap(SettingsManager.GetFloat(Settings.TransformGridSnap));
-            p.rotation_snap_degrees = TransformSnapDefinitions.NormalizeRotationSnap(SettingsManager.GetFloat(Settings.RotationSnapDegrees));
+            p.transform_grid_snap = SnapIncrementSettings.NormalizeGrid(SettingsManager.GetFloat(Settings.TransformGridSnap));
+            p.rotation_snap_degrees = SnapIncrementSettings.NormalizeRotation(SettingsManager.GetFloat(Settings.RotationSnapDegrees));
             p.transform_vertex_snap = SettingsManager.GetBool(Settings.TransformVertexSnap);
             p.deep_select_mode = (int)LevelViewerViewportDefinitions.NormalizeDeepSelectMode(
                 SettingsManager.GetInteger(Settings.LevelViewerDeepSelectMode));
