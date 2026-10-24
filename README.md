@@ -147,7 +147,7 @@
 <hr />
 
 <div>
-  <img align="right" width="55%" src="https://github.com/user-attachments/assets/5458068f-ef47-4709-8897-1cd276607fd1" alt="The Mod Manager with the Sponza mod installed">
+  <img align="left" width="55%" src="https://github.com/user-attachments/assets/5458068f-ef47-4709-8897-1cd276607fd1" alt="The Mod Manager with the Sponza mod installed">
   <br>
   <h3>Package or Install Mods via the Mod Manager</h3>
   <p>Create a Mod lists everything you&rsquo;ve changed, so you choose exactly what goes in. Players install it with the Mod Manager, which also combines, updates and removes mods for them.</p>
@@ -157,7 +157,7 @@
 <hr />
 
 <div>
-  <img align="left" width="55%" src="https://github.com/user-attachments/assets/4ae9cd24-727c-4b32-a199-8fe1c6e8e258" alt="The Alien Configuration editor">
+  <img align="right" width="55%" src="https://github.com/user-attachments/assets/4ae9cd24-727c-4b32-a199-8fe1c6e8e258" alt="The Alien Configuration editor">
   <br>
   <h3>Configure Characters, Items, Weapons, and More</h3>
   <p>Dedicated editors for the game&rsquo;s configuration: the alien&rsquo;s behaviour settings, character asset sets, inventory items, crafting recipes and every line of localised text.</p>
@@ -167,7 +167,7 @@
 <hr />
 
 <div>
-  <img align="right" width="55%" src="https://github.com/user-attachments/assets/a74c9c2c-c551-4b90-bc0d-ed868096d8a3" alt="Zooming into and panning round the alien's behaviour tree in the Behaviour Tree Editor">
+  <img align="left" width="55%" src="https://github.com/user-attachments/assets/a74c9c2c-c551-4b90-bc0d-ed868096d8a3" alt="Zooming into and panning round the alien's behaviour tree in the Behaviour Tree Editor">
   <br>
   <h3>Edit and Create Behaviour Trees</h3>
   <p>Open the behaviour trees that drive the alien, androids and humans, and edit them node by node.</p>
