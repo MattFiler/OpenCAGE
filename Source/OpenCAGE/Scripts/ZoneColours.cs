@@ -13,16 +13,6 @@ namespace OpenCAGE
     /// Which zone each entity in the open composite goes with, in the colour the viewport draws that
     /// zone in - so a flowgraph node or the inspector can be matched against the level at a glance.
     /// </summary>
-    /// <remarks>
-    /// Read off the table the viewport was sent (<see cref="ViewerZoneSync.Current"/>) rather than worked
-    /// out again, so the two cannot disagree - and there is only anything to show while the viewport is
-    /// highlighting zones.
-    ///
-    /// That table is written from the level root, and a zone is per placement: an entity in a composite
-    /// placed twice can be in a different zone in each. So the answer is for the drill path the user took
-    /// to get here, and there is one only when that path starts at the level root. A composite opened on
-    /// its own is what the viewport shows on its own too, and it draws no zones there either.
-    /// </remarks>
     public sealed class ZoneColours
     {
         /// <summary>How an entity goes with the zone it is shown in.</summary>

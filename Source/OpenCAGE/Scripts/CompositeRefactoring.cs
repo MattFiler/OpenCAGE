@@ -314,7 +314,6 @@ namespace OpenCAGE
     /// placed before such an edit, <see cref="Follow"/> how the edit rewrote the path once it is made, then <see cref="Set"/>
     /// after every apply (false) and undo (true), so the sets move with the edit inside its undo step.
     /// </summary>
-    /// <remarks>A copy (new ids) or a port to another level makes a new placement rather than moving one, so it has no set to follow.</remarks>
     internal sealed class AccessorySetRemap
     {
         private sealed class Placed

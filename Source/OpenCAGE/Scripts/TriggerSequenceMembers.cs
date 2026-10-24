@@ -15,16 +15,6 @@ namespace OpenCAGE
     /// Putting entities into a TriggerSequence and taking them out again without opening its editor: the
     /// right-click actions on a sequence, and adding whatever is placed while a sequence is set to take it.
     /// </summary>
-    /// <remarks>
-    /// Every change is a <see cref="TriggerSequenceEdit"/>, the step the editor records for a session, so
-    /// it undoes and redoes the same way and the viewport's zones follow it.
-    ///
-    /// An entry is a path from the sequence's own composite to the entity, and the sequence need not be in
-    /// the composite the entity is in: a level's zone sequences sit in its ENVIRONMENT composite while the
-    /// geometry they name is in the composites placed inside it. So the path is the steps the display took
-    /// down from the sequence's composite to the one on screen, then the entity - there is one whenever the
-    /// display stands in the sequence's composite, or anywhere it has stepped down to through it.
-    /// </remarks>
     public static class TriggerSequenceMembers
     {
         /// <summary>A sequence, and the composite it is in.</summary>
@@ -86,11 +76,6 @@ namespace OpenCAGE
         /// The steps the display took down from the target's composite to the composite it has open, or
         /// null when its path does not pass through there.
         /// </summary>
-        /// <remarks>
-        /// Any way down through the sequence's composite will do, not only the one it was found by: the
-        /// entry is written from that composite, so how the display got there - from the level root, or
-        /// by opening it on its own - makes no difference to it.
-        /// </remarks>
         private static List<Entity> StepsBelow(Target target, CompositeDisplay display)
         {
             Composite open = display?.Composite;
@@ -319,11 +304,6 @@ namespace OpenCAGE
         /// viewport can place (models, lights, fog spheres...) - whether it is placed in the sequence's
         /// composite or in one stepped down to from there. Null stops it.
         /// </summary>
-        /// <remarks>
-        /// Placed further down, it goes in with the steps from the sequence's composite to it, which is
-        /// how a level's zone sequences name their geometry. Placed anywhere the display did not reach
-        /// through the sequence's composite there is no such path, and it is left out.
-        /// </remarks>
         public static void SetAutoAdd(Target target)
         {
             if (AutoAddTarget == null && target != null)

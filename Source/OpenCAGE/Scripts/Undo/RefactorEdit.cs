@@ -16,16 +16,6 @@ namespace OpenCAGE.Undo
     /// <summary>
     /// A De-instance Composite Instance, Create Composite From Selected, Create Composite Variant or Duplicate: one step that can change many composites at once.
     /// </summary>
-    /// <remarks>
-    /// The script changes are CathodeLib's <see cref="ScriptTransaction"/>: the before and after state of
-    /// everything the refactor touched, written back onto the same objects. What the transaction does not
-    /// hold is editor state, which this keeps alongside it: the script pages of each composite whose pages
-    /// the refactor rewrote (with its flowgraph verdict), and a new composite's place in the browser.
-    ///
-    /// <para>The composite the refactor was made in is <see cref="CompositeId"/>, so undo and redo open it
-    /// first; its pages are then rebuilt from the page table, and the viewer is told exactly what came and
-    /// went in each composite.</para>
-    /// </remarks>
     public sealed class RefactorEdit : IEdit, IChangesComposites
     {
         private readonly Composite _parent;

@@ -12,11 +12,6 @@ namespace OpenCAGE.UnityConnection
     /// Keeps the Level Viewer's copy of the zone table up to date. What a zone covers is worked out by
     /// <see cref="ZoneMembership"/>; this decides when that is worth doing and sends the answer.
     /// </summary>
-    /// <remarks>
-    /// It runs here rather than in the viewer because zone membership is made entirely of links, and
-    /// links are not part of the entity sync: the viewer's copy of the level would be right at load and
-    /// wrong from the first rewiring onwards.
-    /// </remarks>
     public static class ViewerZoneSync
     {
         //Edits arrive in bursts (a paste, an undo of a group), so a recalculation waits for the burst to end
@@ -89,11 +84,6 @@ namespace OpenCAGE.UnityConnection
         /// <summary>
         /// The zone table has (or may have) changed - recalculate and send it once things settle.
         /// </summary>
-        /// <remarks>
-        /// Nothing is calculated while the overlay is off: a level's worth of link chasing is not free,
-        /// and every edit would pay for it to produce something nobody is looking at. Turning the
-        /// overlay on sends the table itself, so switching it on is never stale.
-        /// </remarks>
         public static void MarkDirty()
         {
             //A selected Zone's contents are worked out whether or not the overlay is on
@@ -140,11 +130,6 @@ namespace OpenCAGE.UnityConnection
         }
 
         /// <summary>Recalculate and send the zone table straight away.</summary>
-        /// <remarks>
-        /// Also what the editor's own zone colours are refreshed by, so the table is worked out whenever
-        /// zones are <see cref="Showing"/> - including while the viewer is still starting and has not
-        /// connected - and dropped the moment they are not.
-        /// </remarks>
         public static void SendNow() => SendNow(skipIfUnchanged: false);
 
         /* MarkDirty stands in for link edits with every entity reload, and an entity reload is every selection: with
@@ -268,12 +253,6 @@ namespace OpenCAGE.UnityConnection
         /// paths returned are written from there.
         /// </param>
         /// <param name="drillPath">The entity ids stepped through from <paramref name="from"/> to the zone's composite.</param>
-        /// <remarks>
-        /// A zone is per placement, so the one wanted is the entry for this entity reached down this drill
-        /// path, not any entry for it. The table is kept until the next edit that could have changed it:
-        /// every packet carries the selection, and working out a level's zones costs around 200 ms on the
-        /// larger levels - once per packet would be felt on every click.
-        /// </remarks>
         internal static List<List<uint>> ResolveZoneMembers(
             Level level,
             Composite from,

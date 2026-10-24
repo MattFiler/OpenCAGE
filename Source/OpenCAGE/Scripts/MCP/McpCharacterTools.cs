@@ -14,26 +14,6 @@ using Anim = CathodeLib.Animation;
 namespace OpenCAGE.MCP
 {
     /// <summary>NPCs: spawning characters, patrols and their effective settings.</summary>
-    /// <remarks>
-    /// <para>
-    /// Retail places an NPC as an instance of an archetype (Archetypes\NPCs\Android\Android_NPC, ...\Human\Civilian\Worker_NPC_Pistol,
-    /// ...\Alien\Xenomorph_NPC), mostly in mission composites. The archetype wraps Archetypes\Misc_Subarchetypes\NPC_Logic, whose
-    /// Character holds what the NPC is (character_class, alliance_group, attribute_set, display_model, anim_set). The archetype
-    /// exposes some of those as pins and fixes others inside itself: an Android_NPC's class and alliance come from VariableEnums
-    /// its NPC_Logic reads. Every archetype has spawn_on_reset, the spawn_npc / despawn_npc methods, the finished_spawning relay
-    /// and an npc_reference pin standing for its Character.
-    /// </para>
-    /// <para>
-    /// Commands (CMD_GoTo, CMD_Idle, CMD_PlayAnimation) have no character pin: they act on the character of the trigger that
-    /// starts them. Retail binds one with a TriggerBindCharacter (characters -> the NPC's npc_reference, bound_trigger -> the
-    /// command's apply_start), and chains commands on their own events, which carry the character on (CMD_GoTo.succeeded ->
-    /// CMD_Idle.apply_start, CMD_Idle.finished -> the next CMD_GoTo.apply_start). A CMD_GoTo's Waypoint and a CMD_PlayAnimation's
-    /// Marker point at PositionMarkers. Counted on vanilla SCI_AndroidLab: 130 TriggerBindCharacter links into NPCs' npc_reference,
-    /// 93 bound_trigger -> CMD_PlayAnimation.apply_start, 48 -> CMD_GoTo.apply_start, 79 Waypoint and 189 Marker links to
-    /// PositionMarkers, 53 CMD_GoTo.succeeded -> CMD_Idle.apply_start and 18 CMD_Idle.finished -> CMD_GoTo.apply_start. Friendly
-    /// NPCs are on alliance_group PLAYER_ALLY (Samuels; CHR_SetAlliance on a friendly android).
-    /// </para>
-    /// </remarks>
     internal static class McpCharacterTools
     {
         #region Archetypes

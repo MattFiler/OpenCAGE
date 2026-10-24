@@ -21,12 +21,6 @@ namespace OpenCAGE
     /// unpacked until the user imports. A package is imported as it is - the tree shows its contents,
     /// there is nothing to pick.
     /// </summary>
-    /// <remarks>
-    /// Two ways in, decided when the window opens. With a level open in the editor the import goes into
-    /// it in memory, like a port from another level, and nothing touches disk until the user saves.
-    /// With no level open - a package double-clicked before anything was loaded, say - the window asks
-    /// which levels on disk to import into, and each is loaded, written and saved in turn.
-    /// </remarks>
     public partial class ImportCompositeArchive : BaseWindow
     {
         private readonly string _archivePath;

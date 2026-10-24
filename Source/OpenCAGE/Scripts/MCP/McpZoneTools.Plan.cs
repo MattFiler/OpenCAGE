@@ -15,14 +15,6 @@ namespace OpenCAGE.MCP
     /// Zoning a level wholesale: seeing how a composite's content, zones, doors and links fit together, linking every
     /// door and neighbouring pair of zones, and splitting unzoned content into new zones.
     /// </summary>
-    /// <remarks>
-    /// Zones and the links between them live in one composite - the one holding the level's geometry (a vanilla level's
-    /// ENVIRONMENT composite, or the root of a level made from scratch) - since a link only reaches zones in its own
-    /// composite. These tools read that composite's placed content through <see cref="McpPlacements"/> and hand it to
-    /// <see cref="McpZonePlanner.Geometry"/>, which decides from positions alone; what they write goes through the same
-    /// <see cref="JoinZones"/> and <see cref="ChangeContents"/> the single-link tools use, as one undo step. The edits plan
-    /// inside the step, on the script as the step sees it.
-    /// </remarks>
     internal static partial class McpZoneTools
     {
         private static readonly string[] OpenPairOptions = { "exclusion", "open_link", "none" };

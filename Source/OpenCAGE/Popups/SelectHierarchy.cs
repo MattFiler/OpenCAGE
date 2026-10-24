@@ -126,11 +126,6 @@ namespace OpenCAGE
         /// Ctrl + middle click on a composite instance, which here means what the Follow Entity Through
         /// button means: walk this window's own path into it.
         /// </summary>
-        /// <remarks>
-        /// It used to send the editor behind the picker into the composite instead, which closed the
-        /// picker out from under the click and left whatever opened it pointing at a composite the user
-        /// was no longer in.
-        /// </remarks>
         private void StepIntoCompositeInstance(Entity entity)
         {
             if (!_allowFollowThrough || entity == null || entity.variant != EntityVariant.FUNCTION) return;
@@ -186,10 +181,6 @@ namespace OpenCAGE
         /// <summary>
         /// Jump back up to a composite on the path - a click on the breadcrumb, or Back for the one above.
         /// </summary>
-        /// <remarks>
-        /// The same breadcrumb as the editor's own, and it lands the same way: the instance that was
-        /// followed out of that composite is selected again, so it's clear which way the path went.
-        /// </remarks>
         private void LoadPathSegment(int segmentIndex)
         {
             if (!_path.TryNavigateToCompositeIndex(selectedComposite, segmentIndex, out Composite composite, out Entity entity))
@@ -211,12 +202,6 @@ namespace OpenCAGE
         /// Offer "browse from level root", which lets the user build a path to an entity in another
         /// branch of the tree rather than only below the composite they started in.
         /// </summary>
-        /// <remarks>
-        /// Only valid where the stored path may be root-relative. A CAGEAnimation binding or a
-        /// TriggerSequence entry may be - that is how Tech_Hub's blackbox scene reaches a prop three
-        /// composites away - but an alias must stay local and a proxy path leads with a composite id,
-        /// so those pickers must not offer it.
-        /// </remarks>
         public bool AllowRootBrowsing
         {
             get { return browseFromRoot.Visible; }

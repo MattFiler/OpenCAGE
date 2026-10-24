@@ -11,17 +11,6 @@ namespace OpenCAGE
     /// Which parameters, on which entity instances, a CAGEAnimation drives. This is what paints the
     /// purple highlight in the inspector.
     /// </summary>
-    /// <remarks>
-    /// Built the same way <see cref="ZoneMembership"/> is: a CAGEAnimation's connections name their
-    /// targets by paths written relative to the composite it lives in, so a target is only pinned down
-    /// once you know which PLACEMENT of that composite you are standing in. So the walk descends the
-    /// instance tree from the composite the active hierarchy starts at, carrying the path that got
-    /// there, and every answer is an instance path from that root - the same address the inspector
-    /// builds for the entity it is showing, and the same one the Level Viewer addresses nodes by.
-    ///
-    /// A level has a few dozen CAGEAnimations and tens of thousands of composite instances, so the
-    /// walk is first cut down to the composites that can reach one at all.
-    /// </remarks>
     public sealed class CageAnimationDrivers
     {
         private readonly Dictionary<string, HashSet<uint>> _driven = new Dictionary<string, HashSet<uint>>();

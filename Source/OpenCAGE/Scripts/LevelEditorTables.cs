@@ -15,12 +15,6 @@ namespace OpenCAGE
     /// after the loaded level's copies; a level being written on disk (a port into it, or an import from
     /// a package) has to carry its own across a save.
     /// </summary>
-    /// <remarks>
-    /// Commands.Save truncates the file and writes the script alone; CathodeLib's own tables come back
-    /// through its OnSaveSuccess handlers, but these six do not - so read them before the save and
-    /// write them back after it. Writing any one table through CustomTable keeps the others present in
-    /// the file, so the order below does not matter beyond happening after the save.
-    /// </remarks>
     public class LevelEditorTables
     {
         public CompositeFlowgraphTable Layouts;

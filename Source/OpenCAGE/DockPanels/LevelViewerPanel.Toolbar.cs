@@ -530,12 +530,6 @@ namespace OpenCAGE.DockPanels
         /// A drop-down that can be drawn on, as a pressed toggle button is: for a menu holding a mode that is either on or off,
         /// so that being on reads at a glance from the toolbar rather than only from the tick inside.
         /// </summary>
-        /// <remarks>
-        /// The background is painted here, in the colours the strip's renderer gives a checked button - the light theme's
-        /// and the dark one's are different renderers - and then the renderer draws the rest as it always does: the text,
-        /// the arrow, and the hover and open looks, which take over from this while the pointer is on it or the menu is open.
-        /// Neither renderer paints anything behind an idle drop-down to cover it.
-        /// </remarks>
         private sealed class ActiveDropDownButton : ToolStripDropDownButton
         {
             public ActiveDropDownButton(string text) : base(text) { }

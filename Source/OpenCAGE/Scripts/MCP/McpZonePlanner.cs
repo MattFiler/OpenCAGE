@@ -9,18 +9,6 @@ namespace OpenCAGE.MCP
     /// The geometry behind zoning a level: splitting a composite's placed content into zones, finding which zones
     /// neighbour each other, and which two zones each door joins.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// It works on plain data - entity paths and world positions - and nothing of the editor, so the same code is run
-    /// over real levels outside OpenCAGE to measure it against hand-made zones (ChallengeMap4's 26). Positions and the kit
-    /// names of what is placed (walls, windows, vent ducts) are all it uses: Y is up, X and Z the floor plane, metres. The
-    /// work is done by <see cref="Geometry"/>.
-    /// </para>
-    /// <para>
-    /// A path is the ids of the entities stepped through from the composite being zoned, joined by '/'; a leaf (a model,
-    /// light, piece of collision...) belongs to a zone when one of the zone's entries is a prefix of its path.
-    /// </para>
-    /// </remarks>
     internal static partial class McpZonePlanner
     {
         #region Input

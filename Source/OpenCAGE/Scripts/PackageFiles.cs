@@ -13,14 +13,6 @@ namespace OpenCAGE
     /// (which reaches a running OpenCAGE through <see cref="PackageHandover"/>, or a fresh one
     /// through the -openfile= argument).
     /// </summary>
-    /// <remarks>
-    /// Files are queued rather than opened on the spot, because the moment they arrive is rarely a
-    /// good one: the process may still be starting, a level may be loading (a package double-clicked
-    /// with -level in the launch options meets exactly that), or a modal dialog may be up - and a
-    /// Control.BeginInvoke callback runs happily during a modal loop, which would put an import window
-    /// on top of a "save before closing?" prompt. A short timer drains the queue once the editor is
-    /// idle: window enabled, no level mid-load.
-    /// </remarks>
     public static class PackageFiles
     {
         /// <summary>OpenCAGE Composite Package: composites with everything they use.</summary>

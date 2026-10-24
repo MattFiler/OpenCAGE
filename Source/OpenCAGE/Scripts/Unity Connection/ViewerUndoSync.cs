@@ -6,12 +6,6 @@ namespace OpenCAGE.UnityConnection
     /// <summary>
     /// Applies UNDO_REQUEST / REDO_REQUEST (and GESTURE_CANCEL_REQUEST) from the Level Viewer.
     /// </summary>
-    /// <remarks>
-    /// The undo stack lives here, but the viewport is a separate process with its own window. While it
-    /// has focus, nothing it is sent reaches the editor's WinForms chords - which is why Ctrl+Z in the
-    /// viewport used to fly the camera at the selection and Ctrl+Y did nothing at all (issue 667). The
-    /// viewer recognises the chords and asks; this is where the asking lands.
-    /// </remarks>
     public static class ViewerUndoSync
     {
         public static bool TryApply(Packet packet)

@@ -18,10 +18,6 @@ namespace OpenCAGE.AnimTrees
     /// Tree Editor draws on its own canvas with it; the AI assistant tools draw on an off-screen one, so both size and
     /// place nodes the same way.
     /// </summary>
-    /// <remarks>
-    /// Ghosts exist on the canvas only - the tree holds each node once. Which copy draws a link is the layout's business:
-    /// drawing a link the tree already has onto another copy just moves it there.
-    /// </remarks>
     public sealed class AnimTreeCanvas
     {
         public STNodeEditor Editor { get; }

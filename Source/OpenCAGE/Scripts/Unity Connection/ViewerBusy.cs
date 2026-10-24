@@ -5,14 +5,6 @@ namespace OpenCAGE.UnityConnection
     /// <summary>
     /// Whether the viewer's main thread is probably tied up (a load or populate is running, or has just been asked for).
     /// </summary>
-    /// <remarks>
-    /// The viewer's window is another process's, parented into ours, so moving keyboard focus into or out of it waits
-    /// for the viewer's thread to take the focus messages. While it populates that thread does nothing else for seconds
-    /// at a time (a minute on the big levels), and a focus change made then froze OpenCAGE for as long: the stress run
-    /// caught the inspector doing it on every selection that opened another composite. Focus moves that can wait are
-    /// held back while this says so - checking the window answers is not enough on its own, since the populate the
-    /// selection just asked for has usually not started yet.
-    /// </remarks>
     public static class ViewerBusy
     {
         //How long after asking for a populate the viewer can still be about to start it
@@ -63,11 +55,6 @@ namespace OpenCAGE.UnityConnection
         /// <summary>
         /// Activating a panel now could wait on the viewer's thread, and that thread is not free: busy, or not answering.
         /// </summary>
-        /// <remarks>
-        /// Not only when focus is in the viewer: DockPanelSuite gives an activated panel's focus back to the window it last
-        /// had focused, and for the composite display that is the viewer's own window. A level load reached that with the
-        /// viewer still working through a big undo, and OpenCAGE was frozen for as long as the viewer took.
-        /// </remarks>
         public static bool FocusMoveWouldWait =>
             Send.Connected && (Likely || !(Singleton.Editor?.LevelViewerPanel?.IsViewerResponding(50) ?? true));
     }

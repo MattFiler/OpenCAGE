@@ -625,14 +625,6 @@ namespace OpenCAGE
         /// <summary>
         /// The level the bundled pages know a script as, if they know it at all.
         /// </summary>
-        /// <remarks>
-        /// The bundled pages were checked against each retail level by its root composite's name, and
-        /// CathodeLib applies its own bundled tables by the same name - so that name is what says which
-        /// level a script is. The folder it sits in does not: a copy of a level under a new folder name
-        /// (BSP_TORRENS_ORIGINAL, say) is still BSP_Torrens, and named by its folder it was handed every
-        /// level's version of a page, or none. A DLC level's root is its bare name ("ChallengeMap16"), as
-        /// the flags are. The folder name is the fallback, for a script with no root to go by.
-        /// </remarks>
         public static bool TryGetBundledLevel(Commands commands, string levelName, out FlowgraphMeta.SupportedLevel level)
         {
             Composite root = commands?.EntryPoints != null && commands.EntryPoints.Length != 0 ? commands.EntryPoints[0] : null;
@@ -661,13 +653,6 @@ namespace OpenCAGE
         /// The predefined pages to hand a composite being ported out of a level that has none saved of
         /// its own.
         /// </summary>
-        /// <remarks>
-        /// Predefined pages are authored per level, and a composite that several levels share can carry
-        /// a page of the same name laid out differently in each - so which of them apply is a question
-        /// about the level the composite is leaving, never the one it is arriving in. Answering it with
-        /// the level's own flags hands the destination what that level would itself have shown. For a
-        /// level the flags do not name, every version comes back, and <see cref="OneLevelsPages"/> picks.
-        /// </remarks>
         private static List<FlowgraphMeta> PredefinedLayoutsFor(Composite composite, string sourceLevelName)
         {
             List<FlowgraphMeta> layouts = _preDefinedLayouts.flowgraphs.FindAll(o => o.CompositeGUID == composite.shortGUID);
@@ -688,17 +673,6 @@ namespace OpenCAGE
         /// <summary>
         /// A composite's pages as one level has them.
         /// </summary>
-        /// <remarks>
-        /// The bundled set carries a page once per level whose layout of it differs, and only one level's
-        /// set can be the composite's: two levels' together repeat its links, the check its first open
-        /// makes fails, and it shows no pages for good - which is how small_floor_light came out of a
-        /// package exported from a copied level, before the level was known by its root. Packages written
-        /// then still carry every version. Pages that all share a level are one level's set, as they come.
-        /// Otherwise the level the pages are coming from takes its own; failing that, each level's set is
-        /// tried against the composite's links, judged as its first open will judge them, and the first
-        /// that matches is kept. When none does, the bundled pages are dropped (the editor's own stay),
-        /// and the first open decides on what is left.
-        /// </remarks>
         private static List<FlowgraphMeta> OneLevelsPages(List<FlowgraphMeta> pages, Composite composite, string levelName, Commands commands)
         {
             List<FlowgraphMeta> bundled = pages.FindAll(IsLevelSpecific);
@@ -773,13 +747,6 @@ namespace OpenCAGE
         /// <summary>
         /// Give every one of a composite's pages a name of its own.
         /// </summary>
-        /// <remarks>
-        /// A page's name is how it is addressed everywhere else: creating one refuses a name already in
-        /// use, saving replaces the first page of that name, and deleting removes every page of that name
-        /// at once. 13 composites in the bundled layouts hold two pages that share a name - and checked
-        /// against the levels that use them, the two are complementary halves of one layout whose links
-        /// only add up together. Both are wanted, so it is the name that has to give.
-        /// </remarks>
         private static void EnsureUniquePageNames(List<FlowgraphMeta> pages)
         {
             HashSet<string> taken = new HashSet<string>();

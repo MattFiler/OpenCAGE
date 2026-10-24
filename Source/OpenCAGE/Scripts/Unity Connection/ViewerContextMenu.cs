@@ -18,14 +18,6 @@ namespace OpenCAGE.UnityConnection
     /// paste from the menu is placed exactly as one from the key. The rest are the viewer's, asked for with
     /// VIEWPORT_ACTION and run there through the same methods their shortcuts run.
     /// </summary>
-    /// <remarks>
-    /// The viewer's window belongs to another process, so a click or a key that lands in it while the menu
-    /// is up never reaches this side's message loop, and the menu would stay. The viewer is told when the
-    /// menu opens and closes (ContextMenuOpened / ContextMenuClosed), swallows its next click or key while
-    /// it is up, and sends VIEWPORT_CONTEXT_MENU_DISMISS instead - which closes the menu here, and is also
-    /// how Escape in the viewport closes it. A click anywhere else in the editor closes it as any menu
-    /// closes. It also goes when the viewer disconnects or exits, and when a level loads.
-    /// </remarks>
     public static class ViewerContextMenu
     {
         private static ContextMenuStrip _menu;

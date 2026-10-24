@@ -260,11 +260,6 @@ namespace OpenCAGE.UserControls
         /// <summary>
         /// Whether a point on screen is on this breadcrumb, and not on something in front of it.
         /// </summary>
-        /// <remarks>
-        /// The wheel filter sees every wheel message in the app, so being inside the rectangle is not
-        /// enough. A picker opened over the top bar - which is where one centred on the screen lands -
-        /// had its wheel turns taken by the breadcrumb hidden behind it.
-        /// </remarks>
         private bool IsOverBreadcrumb(Point screenPoint)
         {
             if (!IsHandleCreated || !Visible)

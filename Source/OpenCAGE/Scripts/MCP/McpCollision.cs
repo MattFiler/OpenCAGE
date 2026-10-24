@@ -23,18 +23,6 @@ namespace OpenCAGE.MCP
     /// transform, and CollisionBarrier / NavMeshBarrier / SoundBarrier boxes as they stand in game (a CollisionBarrier
     /// counts whether the save pass prebuilds it, static_collision on, or the entity makes it at run time).
     /// </summary>
-    /// <remarks>
-    /// <para>The saved COLLISION.HKX world hosts are rebuilt only at save, so they miss unsaved moves; this does not. It
-    /// follows the save pass where it can: deleted subtrees and repeat placements of is_shared composites are left out,
-    /// is_template content and collision with enable_on_reset off is ghosted, delete_standard_collision drops the world
-    /// collider and both delete flags drop the lot; a proxy's storage class (world / ballistic) comes from its template
-    /// row as Instancing.ProcessEntity reads it. Measured against retail's built hosts on SCI_ANDROIDLAB it agreed on 98%
-    /// of down and horizontal rays to 5 cm.</para>
-    /// <para>Per-proxy local meshes are cached per level (dropped when the level closes, on a save and on collision
-    /// imports). Soups are cached by (level, script version, region, filter): <see cref="Version"/> moves on every script
-    /// edit, undo or resource change.</para>
-    /// <para>Walks run on the UI thread; transforming and the BVH build run on the calling thread.</para>
-    /// </remarks>
     internal static class McpCollision
     {
         #region Versions and caches

@@ -21,11 +21,6 @@ namespace OpenCAGE
     /// vanilla composite. Composites edited since their preview was taken are captured again by the
     /// viewer when the level is saved, and the results go into the user table.
     /// </summary>
-    /// <remarks>
-    /// A user entry with no PNG in it means "this composite draws nothing any more" (the viewer reported
-    /// it empty) and hides the baked preview rather than falling through to it. The baked table is read
-    /// lazily and may not exist at all: everything here works without it.
-    /// </remarks>
     public static class CompositePreviewManager
     {
         private const string LogSystem = "Composite Previews";

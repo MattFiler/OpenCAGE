@@ -15,26 +15,6 @@ namespace OpenCAGE
     /// Hands a package file (a double-clicked .ocp or .omp) to the OpenCAGE that is already running,
     /// so a second copy never starts just to open it.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// The primary instance (the one holding <see cref="PrimaryInstanceLock"/>) serves a named pipe for
-    /// the life of the process; a process launched with -openfile= writes the path down it and exits.
-    /// The pipe answers with the server's process id first, so the sender - which was launched by the
-    /// user's click and so holds the right to set the foreground window - can pass that right on
-    /// (AllowSetForegroundWindow) before the primary brings itself forward. Without it the primary's
-    /// Activate would only flash the taskbar and the import window would open behind Explorer.
-    /// </para>
-    /// <para>
-    /// A primary that holds the mutex but is not serving yet (still starting up, or between a level
-    /// load and its window) must never be worked around by starting a second instance: on Steam that
-    /// ends in "app already running". So when the pipe cannot be reached the file is written to a
-    /// stash file beside the executable and the sender exits regardless; the primary watches that
-    /// file and opens whatever lands in it. The stash is also how a file survives Steam relaunching
-    /// the process (see Program.Main), which drops the arguments. A primary that goes away while the
-    /// sender is waiting is a different matter: then nobody is left to read a stash, so the sender
-    /// starts up and opens the file itself.
-    /// </para>
-    /// </remarks>
     public static class PackageHandover
     {
         //Per logon session, to match the primary mutex's scope

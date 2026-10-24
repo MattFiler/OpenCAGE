@@ -18,27 +18,6 @@ namespace OpenCAGE.MCP
     /// <summary>
     /// Lets AI assistants drive this editor: the Model Context Protocol, served over a local named pipe.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// An MCP client (Claude Desktop, Claude Code, ...) starts OpenCAGE.MCP.exe, which speaks the protocol
-    /// over its stdin/stdout and relays every message here, starting OpenCAGE first if it is not running.
-    /// The tools (<see cref="McpTools"/>) run against the level open in this window, through the same
-    /// code paths the UI uses, so everything they do shows up in the editor, goes onto its undo history,
-    /// and reaches the viewport.
-    /// </para>
-    /// <para>
-    /// The pipe is per logon session and only the user running OpenCAGE may open it (never from another
-    /// machine). One tool runs at a time; pings, cancellations and the few tools marked Concurrent (status
-    /// reads such as get_activity) are answered while one runs, and a call waiting its turn reports so as
-    /// progress. Only the first OpenCAGE to start serves: a second one keeps trying until the first goes
-    /// away, so a client never talks to two editors at once.
-    /// </para>
-    /// <para>
-    /// Every tools/call result carries _meta "opencage/session" (this editor's process id and start, the open
-    /// level, unsaved changes): the bridge compares it across reconnects to tell the assistant when OpenCAGE was
-    /// restarted and what was lost.
-    /// </para>
-    /// </remarks>
     public static class McpServer
     {
         /// <summary>The pipe the bridge connects to. Must match OpenCAGE.MCP's Program.PipeName.</summary>

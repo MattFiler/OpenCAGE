@@ -23,13 +23,6 @@ namespace OpenCAGE.MCP
     /// Entity resources - what an entity draws, its collision, its physics system, its animated model - and the
     /// level's collision proxies and physics systems they point at, and a Character's appearance.
     /// </summary>
-    /// <remarks>
-    /// Resource changes go through the editor's own undo record for the inspector's Resources dialog
-    /// (<see cref="ResourceSessionEdit"/>), so each call is one step exactly as a dialog session is. A changed
-    /// collision mapping is written as a new row rather than into the shared one, so the step undoes cleanly and
-    /// other entities sharing the old row keep it. New collision proxies and physics systems go into the level's
-    /// Havok files in memory; like the editor's own import, that part cannot be undone.
-    /// </remarks>
     internal static class McpResourceTools
     {
         public static IEnumerable<McpTool> Tools()

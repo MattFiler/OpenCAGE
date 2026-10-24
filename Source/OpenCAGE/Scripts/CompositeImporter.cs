@@ -266,15 +266,6 @@ namespace OpenCAGE
         /// left showing nothing - and opening the composite it had on its own lost the hierarchy the
         /// user had stepped down through, in the editor and in the viewer.
         /// </summary>
-        /// <remarks>
-        /// The place is walked back down by id (<see cref="CompositePath.Resolve"/>): a composite the
-        /// import replaced, on the path or at the end of it, comes back as its replacement, and a step
-        /// the import took away ends the walk at the deepest composite still there. The selection comes
-        /// back when the walk got all the way. It goes to the viewer as an imported composite does: kept
-        /// from it until the resource sync carrying the import's contents, then one rebuild of the
-        /// composite the path starts from - the scene - with the place to land in the same packet.
-        /// Call it inside the import's scene batch, so that rebuild is the batch's only one.
-        /// </remarks>
         public static void ReopenClosedPlace(CompositePath.Place place)
         {
             DockPanels.CompositeBrowser browser = Singleton.Editor?.CompositeBrowser;

@@ -9,29 +9,6 @@ namespace OpenCAGE
     /// <summary>
     /// Composing entity transforms down a chain of composite instances.
     /// </summary>
-    /// <remarks>
-    /// An entity's <c>position</c> is relative to the composite that owns it, so an entity several
-    /// instances down needs every instance on the way applied to it to say where it actually is. The
-    /// viewer does this by parenting nodes; this is the same thing done by hand, for the times the
-    /// answer is needed on this side (lifting a deep-selected entity out into the composite on screen).
-    ///
-    /// <para><see cref="CommandsUtils.CalculateInstancedPosition"/> answers a similar question by adding
-    /// the transforms up, which loses the parent's rotation of the child's offset - a child one metre
-    /// out from a parent turned 90 degrees belongs a metre round, not a metre along. That matters here,
-    /// where the result has to land on top of what the user is looking at, so this composes properly.</para>
-    ///
-    /// <para>The euler convention is the one the rest of the codebase states: Y is yaw, X pitch, Z roll,
-    /// read through <see cref="Quaternion.CreateFromYawPitchRoll"/> (as CalculateInstancedPosition does
-    /// when it hands a rotation back). <see cref="ToEulerDegrees"/> is the exact inverse of
-    /// <see cref="ToQuaternion"/> - which is what makes a composed rotation survive being stored as
-    /// euler angles and read back.</para>
-    ///
-    /// <para>The maths is done in double precision, following System.Numerics' own formulas exactly (as
-    /// CathodeLib's RefactorCommon.Compose does). A rotation pitched straight up or down leaves yaw and
-    /// roll to be recovered from matrix entries that are all but zero; in single precision sin(pitch)
-    /// rounds to a hair under one there, the degenerate case goes unnoticed, and yaw and roll come back
-    /// as rounding noise - a sign flip on the composed rotation, not a small error.</para>
-    /// </remarks>
     internal static class InstanceTransform
     {
         private const float Deg2Rad = (float)(Math.PI / 180.0);

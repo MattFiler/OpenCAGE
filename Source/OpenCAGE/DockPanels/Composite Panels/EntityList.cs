@@ -265,12 +265,6 @@ namespace OpenCAGE.DockPanels
         /// <summary>
         /// Delete everything selected, as one step.
         /// </summary>
-        /// <remarks>
-        /// Right clicking already settles what the target is: the list selects the row under the cursor
-        /// unless it is part of a multi-selection, in which case the selection is left alone. So the
-        /// selection is the answer either way, and there is no separate "the row I right-clicked"
-        /// to reconcile as there is on the flowgraph's nodes.
-        /// </remarks>
         private void DeleteSelectedEntities()
         {
             List<Entity> entities = List.SelectedEntities;

@@ -43,27 +43,6 @@ namespace OpenCAGE
     /// Animation Mode: the CAGEAnimation editor driving the Level Viewer from its playhead, and taking
     /// edits made out in the world back as keyframes.
     /// </summary>
-    /// <remarks>
-    /// Two directions, and the important thing about both is that the level's own data is never
-    /// touched:
-    ///
-    /// - Outwards, the animation is evaluated at the playhead and the answers are sent as a transient
-    ///   override the viewer paints on top of its scene (<see cref="PacketEvent.ANIMATION_PREVIEW"/>).
-    ///   Leaving the mode clears it and everything goes back where it was.
-    /// - Inwards, moving something in the viewport (or editing a parameter in the inspector) while the
-    ///   mode is on is how keyframes are made. The edit does not become the entity's value - it becomes
-    ///   a keyframe at the playhead, and the entity keeps the value it rests at when nothing is
-    ///   playing.
-    ///
-    /// Targets are addressed by instance path from the composite the viewer populated, because a
-    /// connection path is written relative to the composite the animation lives in and only names a
-    /// particular thing once you know which placement of that composite you are standing in.
-    ///
-    /// The running game can follow the playhead too ("In game", over the live link): the session owns
-    /// that drive, so every way out of the mode goes through <see cref="End"/>, which gives the game its
-    /// animation back. The game evaluates the animation itself, so it shows every track, not only
-    /// transforms - and that touches no level data either.
-    /// </remarks>
     public sealed class AnimationModeSession
     {
         /// <summary>The transform sub-properties a position parameter is animated through.</summary>

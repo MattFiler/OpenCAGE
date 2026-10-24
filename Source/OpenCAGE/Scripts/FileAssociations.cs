@@ -12,11 +12,6 @@ namespace OpenCAGE
     /// instance so they follow the install wherever Steam puts it. Program.cs routes the argument
     /// into <see cref="PackageFiles"/>.
     /// </summary>
-    /// <remarks>
-    /// Steam cannot register file types for a tool, so the tool does it for itself, the way portable
-    /// apps do: everything lives under HKEY_CURRENT_USER\Software\Classes, which needs no elevation
-    /// and never touches another user's settings.
-    /// </remarks>
     public static class FileAssociations
     {
         private const string CompositeProgId = "OpenCAGE.CompositePackage";

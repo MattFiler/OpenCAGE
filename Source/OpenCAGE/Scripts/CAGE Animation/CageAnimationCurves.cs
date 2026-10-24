@@ -8,27 +8,6 @@ namespace OpenCAGE
     /// Reads and writes the float tracks of a CAGEAnimation: what a track holds at a given time, and
     /// how a keyframe is put there.
     /// </summary>
-    /// <remarks>
-    /// The evaluation here is the same one the curve editor draws with (<see cref="CurveEditor"/>
-    /// delegates to it), so what Animation Mode shows in the viewport is what the graph shows on
-    /// screen. Interpolation is a property of the whole animation rather than of a keyframe: the
-    /// keyframes carry a mode each, but the editor sets them all together and draws with one, so this
-    /// takes it as an argument rather than reading it off a key.
-    ///
-    /// <para><b>What a keyframe's fields mean</b>, read off the retail data (8 Sep 2026):</para>
-    /// <list type="bullet">
-    /// <item><c>value</c> is the point (time, value) - its X is the key's time on every retail key, so
-    /// it is written alongside <c>time</c> here rather than left at the struct's default of 1.</item>
-    /// <item><c>tan_in</c>/<c>tan_out</c> are weighted tangents in (seconds, value) units, and the cubic
-    /// Bezier control points sit at <c>key + tan_out / 3</c> and <c>key - tan_in / 3</c> - the same
-    /// Hermite-to-Bezier identity Maya uses. Exported keys carry <c>tan.X</c> equal to the segment
-    /// length exactly (a tangent weight of one), and the tiny <c>(0.01, 0.01)</c> pairs the level
-    /// animators use are how "linear" is spelt in this representation. Reading them as whole
-    /// control-point offsets, as the editor did before, put control points past the neighbouring key
-    /// on a fair share of retail segments - the curve's time ran backwards, which is not something
-    /// the game can be playing.</item>
-    /// </list>
-    /// </remarks>
     public static class CageAnimationCurves
     {
         /// <summary>Two keyframe times closer than this are the same keyframe.</summary>

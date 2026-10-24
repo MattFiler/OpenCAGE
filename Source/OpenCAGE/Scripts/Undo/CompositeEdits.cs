@@ -76,13 +76,6 @@ namespace OpenCAGE.Undo
     /// links into them), and the TriggerSequence entries and CAGEAnimation connections that reached into
     /// them. The objects are kept, so undo puts back exactly what went.
     /// </summary>
-    /// <remarks>
-    /// Whatever the edit left pointing at what went, the purge would take the next time its composite was
-    /// opened, and a save of a composite's pages writes only what they draw - either way beyond the reach of
-    /// undo. The pages of every composite it reached are kept too (one opened while the composites are gone
-    /// has its pages saved without them), and the composite on screen is shown again after each step, as a
-    /// refactor does: pages drawn from before the step would be compiled back over the links at the next save.
-    /// </remarks>
     public sealed class CompositeDeleteEdit : IEdit, IChangesComposites
     {
         private struct EntryRecord

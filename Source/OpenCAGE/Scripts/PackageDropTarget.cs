@@ -8,26 +8,6 @@ namespace OpenCAGE
     /// <summary>
     /// Lets a package file (.ocp / .omp) be dropped anywhere on the editor window to open it.
     /// </summary>
-    /// <remarks>
-    /// OLE delivers a drop to the window under the cursor if it registered as a drop target, else to
-    /// the nearest ancestor that did. So this attaches to the containers - the form, the dock panel and
-    /// its panes, panels, tool strips - and to any control that already accepts drags of its own
-    /// (the composite browser's lists, the flowgraph's dock content), and leaves plain leaf controls
-    /// alone: a drop on a text box or a property grid rises to the container behind it. Setting
-    /// AllowDrop on a leaf would instead make it the nearest target for every other kind of drag the
-    /// editor uses, and swallow them.
-    ///
-    /// On controls that already accept drags the handlers here run alongside theirs and only speak up
-    /// for package files; those handlers step aside for a package drag (see Flowgraph and
-    /// CompositeBrowser), so entity, composite and palette drags are exactly as they were. Containers
-    /// added later are picked up through ControlAdded, which is subscribed on every container reached -
-    /// including empty ones, since a dock window is empty until its first pane arrives. Panels with
-    /// drag handling of their own also attach themselves at the end of their constructors, so they
-    /// never depend on the walk reaching them.
-    ///
-    /// Nothing is opened from inside the drop: the OLE callback is Explorer's, and a dialog or a message
-    /// box inside it would hold Explorer until dismissed.
-    /// </remarks>
     public static class PackageDropTarget
     {
         private static readonly HashSet<Control> _attached = new HashSet<Control>();

@@ -17,23 +17,6 @@ namespace OpenCAGE.MCP
     /// Zones and the ZoneLinks between them: reading back how they are wired, making them, and finding out why
     /// part of a level pops in.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// A Zone claims part of the level through its 'composites' pin: Zone.composites -> TriggerSequence.reference,
-    /// the sequence's entries naming instances and functions, each with everything inside it. Save &amp; Build
-    /// writes each claimed model's zone onto its mover, and each piece of collision's onto COLLISION.MAP, which is
-    /// how the game tells which zone the player is standing in; whatever no zone claims goes in the global zone.
-    /// </para>
-    /// <para>
-    /// A ZoneLink is a gate (GateInterface: open, close, lock, unlock, open_on_reset) between two zones, named by
-    /// its ZoneA and ZoneB pointer pins, each linked to a Zone's reference pin (ZoneLink.ZoneA -> Zone.reference).
-    /// While it is open the game draws and streams each zone from the other. A Door drives one through its own
-    /// zone_link pin (Door.zone_link -> ZoneLink.reference; a door composite hands it in through an
-    /// input_zone_link pin), opening it with the door. Links only join entities of one composite, so a ZoneLink
-    /// only reaches zones in its own composite. A door deeper down is reached through an alias: links from an
-    /// alias are added to the entity it points at when the level is instanced.
-    /// </para>
-    /// </remarks>
     internal static partial class McpZoneTools
     {
         private static readonly JObject PathSchema = new JObject()

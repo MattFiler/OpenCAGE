@@ -15,12 +15,6 @@ namespace OpenCAGE.Undo
     /// pointed at it, its nodes on saved and open flowgraph pages - recorded so that undo puts each
     /// piece back where it was. The Entity object itself is kept rather than copied.
     /// </summary>
-    /// <remarks>
-    /// What elsewhere in the level reaches through the entity goes in the same step: aliases (in any composite) whose path
-    /// passes through it, and trigger sequence entries and animation bindings whose path does. Left behind, they would be
-    /// dropped the next time their composite opens (CommandsUtils.PurgeDeadLinks), outside any undo step, so undoing the
-    /// delete afterwards could not bring them back. Proxies stay, as dead proxies always have.
-    /// </remarks>
     public sealed class EntityDeleteEdit : IEdit, IChangesComposites
     {
         private struct LinkRecord

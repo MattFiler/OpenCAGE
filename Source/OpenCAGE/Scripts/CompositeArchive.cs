@@ -20,32 +20,6 @@ namespace OpenCAGE
     /// Composites, with everything they use, as one file on disk: an OpenCAGE Composite Package
     /// (<c>.ocp</c>) that can be imported into a level on another install, or another machine.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// The porting itself is <see cref="CompositePorter"/>'s, unchanged. What this adds is a middle man:
-    /// the composites are ported into a blank scratch level in a temp folder, that level is saved, and
-    /// its files are packed into the package behind a manifest. Importing unpacks the level and ports
-    /// out of it into the destination - exactly the path a level-to-level port takes, so every rule that
-    /// port has (resource dedupe, Havok proxies, pin info, layouts) applies here too. The destination is
-    /// the level open in the editor (in memory, kept by saving), or any number of levels on disk when
-    /// nothing is open (each loaded, written and saved in turn).
-    /// </para>
-    /// <para>
-    /// The scratch level is scaffolded from FRONTEND (the smallest Havok files the game ships) with
-    /// <see cref="Level.AbsorbGlobalTextures"/> off: a level normally copies every global texture into
-    /// its own pak on load and save, which is what keeps it self-contained but would put ~80MB nothing
-    /// in the package references into every export. The source level was loaded normally, so its
-    /// materials already point at level copies and the porter carries exactly the textures they use.
-    /// </para>
-    /// <para>
-    /// Format: one gzip stream. First the 8-byte magic, then the manifest (int32 length + UTF-8 JSON),
-    /// then each file as {int16 path length, path, int64 length, bytes}, then an int16 0 terminator.
-    /// The manifest comes first so the header can be read without inflating the payload, and it lists
-    /// every file with its length so a truncated package is refused rather than imported with holes.
-    /// <see cref="FormatVersion"/> in the manifest is the container's version, bumped when a reader
-    /// would need to change.
-    /// </para>
-    /// </remarks>
     public static class CompositeArchive
     {
         public const string Extension = PackageFiles.CompositeExtension;

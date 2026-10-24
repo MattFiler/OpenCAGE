@@ -12,10 +12,6 @@ using System.Runtime.CompilerServices;
 namespace OpenCAGE.MCP
 {
     /// <summary>Navigation mesh queries.</summary>
-    /// <remarks>
-    /// Over the navmesh the last Save &amp; Build wrote (a STATE's NAV_MESH, loaded with the level), read back into Detour
-    /// (CathodeLib's NavigationMeshQuery). It does not follow unsaved edits: every result says how it may be out of date.
-    /// </remarks>
     internal static class McpNavTools
     {
         private static readonly string[] Actions = { "info", "nearest", "path", "reachable", "sample" };

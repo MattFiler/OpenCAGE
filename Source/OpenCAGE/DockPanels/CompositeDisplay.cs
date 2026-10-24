@@ -2068,12 +2068,6 @@ namespace OpenCAGE.DockPanels
         /// <paramref name="pointerTargets"/> from <see cref="CollectPointerTargets"/> when checking
         /// several entities at once.
         /// </summary>
-        /// <remarks>
-        /// Links between entities deliberately don't count. They are the flowgraph's own wiring - all
-        /// but the loneliest entity has some - and deleting the entity takes them with it (and undo
-        /// puts them back). What counts is a use the flowgraph can't see: an animation or trigger
-        /// sequence driving it, or a pointer to it from another composite.
-        /// </remarks>
         public bool IsEntityStillReferenced(Entity entity, HashSet<ShortGuid> pointerTargets = null)
         {
             if (entity == null || Composite == null)

@@ -17,11 +17,6 @@ namespace OpenCAGE
     /// materials, its galaxy...) in the level's own tables, saved with it - and the game's shared files (animations, UI,
     /// text, settings) in the install's mod tools folder. Create a Mod lists the user's changes by it, newest first.
     /// </summary>
-    /// <remarks>
-    /// Only the user's own work is recorded: what OpenCAGE changes by itself (dead links removed when a composite is
-    /// first shown, defaults filled in when an entity is first inspected, links recompiled from the pages) never is,
-    /// and neither is where nodes sit on a page. Recording never gets in the way of the edit it records.
-    /// </remarks>
     public static class EditHistory
     {
         /// <summary>This build, as the history notes which build made a change: 0.18.0.41 is 0x00120029.</summary>

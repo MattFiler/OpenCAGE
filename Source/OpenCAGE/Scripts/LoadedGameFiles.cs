@@ -23,7 +23,6 @@ namespace OpenCAGE
     /// files are closed. After: whatever changed is loaded again - the open level, the animations, the global textures and
     /// text - so nothing shows what was there before, or saves it back over what the mods put there.
     /// </summary>
-    /// <remarks>UI thread.</remarks>
     public static class LoadedGameFiles
     {
         /// <summary>A change to the game's files under way (<see cref="BeforeChange"/> to <see cref="AfterChange"/>).</summary>

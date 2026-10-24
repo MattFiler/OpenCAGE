@@ -13,12 +13,6 @@ namespace OpenCAGE.Modding.Merging
     /// order, so changes to different values, different list entries or different behaviour trees all survive,
     /// and where two mods change the same thing the later one wins and the clash is reported.
     /// </summary>
-    /// <remarks>
-    /// Elements are paired with their vanilla originals by a key attribute (a <c>name</c> unique among their
-    /// siblings, and the like), or - where a list has no keys, as behaviour tree nodes don't - by lining the
-    /// children up: identical subtrees first, then what's left in order. A mod's additions go in after the
-    /// sibling they followed in that mod's own version, which keeps behaviour tree priority order intact.
-    /// </remarks>
     public class XmlMerge
     {
         private readonly string _target;

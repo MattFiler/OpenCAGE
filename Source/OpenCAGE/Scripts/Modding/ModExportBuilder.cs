@@ -64,13 +64,6 @@ namespace OpenCAGE.Modding
         /// Include a file, together with its sidecar: its .META if it has one (an animation PAK carries its tree layouts
         /// inside it). Vanilla files are skipped silently - they carry nothing.
         /// </summary>
-        /// <remarks>
-        /// The sidecar is the other half of the file it sits beside, not an optional extra, so it
-        /// is not something a caller can forget or a user can untick: a package carrying
-        /// COMMANDS.BIN without its tables, or a regenerated level without the marker saying the
-        /// lighting is ours, installs something subtly wrong rather than something obviously
-        /// missing. Enforced here rather than in the exporter UI so every caller gets it.
-        /// </remarks>
         public void AddFile(string normalisedPath)
         {
             Include(normalisedPath);

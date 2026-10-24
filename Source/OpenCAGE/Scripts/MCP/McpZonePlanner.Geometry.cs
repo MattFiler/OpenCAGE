@@ -12,16 +12,6 @@ namespace OpenCAGE.MCP
         /// or see-through), the wall-like kit pieces, and the placement units and points the partition works on. Built once
         /// from the scene; partition, neighbours and bridge all read it.
         /// </summary>
-        /// <remarks>
-        /// A line-by-line port of the measured research algorithm (algo_gen.py): constrained agglomerative clustering of
-        /// placement units on a point graph, with doorway, corridor bulkhead and one-sided wall barriers, cannot-link door
-        /// tokens, a cluster width cap, tiny-cluster grouping and attachment, and a door guarantee. Kit (walls, windows, vent
-        /// ducts, bulkheads) is typed at every depth when the nested instances are given, so a level that keeps its geometry
-        /// inside a few big level composites is read as well as one that places it at the top. Everything is computed in
-        /// double from the float inputs, string orders are ordinal, and every order that can change a result follows the
-        /// reference exactly (sorted keys, heap order on full tuples, Python's pow for squares), so the output is identical to
-        /// the reference given the same inputs.
-        /// </remarks>
         public sealed class Geometry
         {
             #region Constants

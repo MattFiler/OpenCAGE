@@ -9,13 +9,6 @@ using System.Threading;
 namespace OpenCAGE.MCP
 {
     /// <summary>One tool an MCP client can call: its name, what it does, the arguments it takes, and the code that runs it.</summary>
-    /// <remarks>
-    /// The annotations follow one rule, so a client can decide what to ask the user about. ReadOnly: changes no level,
-    /// file or game state (moving the editor's view or selection does not count). Destructive: may delete things, or
-    /// overwrite work that one undo step cannot bring back (files written straight away, a save, a cleared history).
-    /// A script edit the undo history takes back counts only when it deletes. Idempotent: calling it twice with the
-    /// same arguments leaves things as calling it once does.
-    /// </remarks>
     internal sealed class McpTool
     {
         public string Name;
@@ -421,11 +414,6 @@ namespace OpenCAGE.MCP
     }
 
     /// <summary>Small builders for tools' JSON input schemas.</summary>
-    /// <remarks>
-    /// Every object schema that lists 'properties' is closed: a call with a key it does not list is refused, at any
-    /// depth (<see cref="McpValidation"/>), so list every key a handler reads. A free-form object (parameter names to
-    /// values, say) is a <see cref="Map"/>, or sets additionalProperties to true.
-    /// </remarks>
     internal static class McpSchema
     {
         public sealed class Prop

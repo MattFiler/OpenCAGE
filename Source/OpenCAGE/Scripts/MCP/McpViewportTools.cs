@@ -28,15 +28,6 @@ namespace OpenCAGE.MCP
     /// what it is set to show, placing and snapping entities with its raycasts, turning it on and off, and the
     /// composite previews it takes.
     /// </summary>
-    /// <remarks>
-    /// The viewport is a separate process (the Godot level viewer) spoken to by packets. Everything here goes
-    /// through the packets and settings the editor's own toolbar, Options menu and context menu use, so the
-    /// editor's controls stay in step with what a tool changed. Its view settings are editor settings,
-    /// remembered across sessions; the only level data changed here is by place_in_viewport and snap_to_floor,
-    /// which the editor records on its undo history exactly as a drop or Shift+End would (labelled 'AI: ...',
-    /// as these tools' steps are). Camera placements the tools make (a field of view, an entity followed) last
-    /// until the user moves the camera.
-    /// </remarks>
     internal static class McpViewportTools
     {
         [DllImport("user32.dll")] private static extern bool PrintWindow(IntPtr hwnd, IntPtr hdc, uint flags);

@@ -22,20 +22,6 @@ namespace OpenCAGE.MCP
     /// <summary>
     /// A composite's script pages and the nodes on them, changed the way the flowgraph editor changes them.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Every edit works on the composite on screen (it is opened first), with its live pages compiled into
-    /// the page table beforehand - the pages are the truth about their nodes while they are open. Where the
-    /// editor has an undo record for the change it is used as the editor uses it (a page added, renamed or
-    /// deleted; nodes added, moved or removed; a node's pins changed), so the tool's change is one undo step
-    /// that behaves exactly like the user's. Changes with no editor equivalent (reordering pages, merging one
-    /// into another, redrawing connections elsewhere) replace the composite's pages whole, as one step.
-    /// </para>
-    /// <para>
-    /// A node's id is its place on its page, as the editor numbers nodes when it saves a page: get_flowgraph
-    /// reports the same numbers. A composite shown as a plain list of links has no pages to edit.
-    /// </para>
-    /// </remarks>
     internal static class McpPageTools
     {
         private static readonly string[] _pageActions = { "create", "rename", "delete", "duplicate", "reorder", "show", "arrange" };

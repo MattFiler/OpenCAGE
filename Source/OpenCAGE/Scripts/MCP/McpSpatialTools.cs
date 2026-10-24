@@ -14,11 +14,6 @@ using System.Text;
 namespace OpenCAGE.MCP
 {
     /// <summary>World-space questions about the level as it stands in the editor (unsaved edits included): collision raycasts, bounds, room sampling, world/local transforms, finding places by name.</summary>
-    /// <remarks>
-    /// Conventions every tool here states: positions [x,y,z] in metres, Y up; rotations [x,y,z] in degrees, x pitch, y yaw,
-    /// z roll, applied yaw then pitch then roll; an entity faces its local +Z and a positive pitch looks down, so facing a
-    /// direction d is [-asin(d.y/|d|), atan2(d.x, d.z), 0] (<see cref="InstanceTransform.LookRotation"/>).
-    /// </remarks>
     internal static class McpSpatialTools
     {
         private const string Source = "the script as it is in the editor (unsaved changes included)";

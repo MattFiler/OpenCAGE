@@ -12,22 +12,6 @@ using System.Numerics;
 namespace OpenCAGE.MCP
 {
     /// <summary>Scripted cameras: camera rigs and camera tracks for CAGEAnimations.</summary>
-    /// <remarks>
-    /// <para>The retail pattern for a free camera move (TECH_RND_HZDLAB's benchmark flythrough 'float_cam'): a CameraResource
-    /// whose position a CAGEAnimation keys (all six component tracks, Bezier), switched to by a link into its activate_camera
-    /// from the same trigger that starts the animation (Checkpoint.finished_loading there), and handed back to the player by
-    /// deactivate_camera. The camera binding of an event track is something else: it is for CameraPlayAnimation events
-    /// playing baked cutscene clips. Retail starts things when a zone has streamed in with ZoneLoaded.on_loaded (six in
-    /// BSP_TORRENS), which is what a rig started at 'level_start' uses.</para>
-    /// <para>Conventions, as every spatial tool states them: positions [x,y,z] metres, Y up; rotations [pitch, yaw, roll]
-    /// degrees applied yaw then pitch then roll; a camera looks along its local +Z and a positive pitch looks down, so facing
-    /// d is [-asin(d.y/|d|), atan2(d.x, d.z), 0] (<see cref="InstanceTransform.LookRotation"/>).</para>
-    /// <para>A track is built in world space - a centripetal Catmull-Rom spline through the points (wrapped round for a
-    /// loop), keys placed along it by arc length so the camera moves at a steady speed (or eases in and out), each key's
-    /// rotation looking where it is told to - then each key is taken into the space the camera's position is written in,
-    /// rotations unwrapped there, and given Hermite tangents (weight one: tan.X is the neighbouring segment's seconds, as
-    /// exported retail keys carry), seamless across the join of a loop.</para>
-    /// </remarks>
     internal static class McpCameraTools
     {
         private const string Conventions = "Positions [x, y, z] metres, Y up; rotations [pitch, yaw, roll] degrees (a camera looks along its +Z; positive pitch looks down).";

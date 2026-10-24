@@ -16,11 +16,6 @@ namespace OpenCAGE
     /// back takes their layouts with them, and a mod's animation PAK brings its own. The game never asks for it. A tree
     /// with no entry is laid out automatically.
     /// </summary>
-    /// <remarks>
-    /// Nothing in a tree set has a stable id, so everything is keyed by hashes that survive a save and reload: a tree by
-    /// its set's hash and its own name's, a node by its name's hash, its kind, and which of the tree's same-named nodes of
-    /// that kind it is (the game's own trees list some parameters and callbacks more than once).
-    /// </remarks>
     public class AnimTreeLayouts : CathodeFile
     {
         /// <summary>

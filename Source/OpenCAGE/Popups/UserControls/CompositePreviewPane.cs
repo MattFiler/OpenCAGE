@@ -15,11 +15,6 @@ namespace OpenCAGE.Popups.UserControls
     /// It is never stretched: in a pane smaller than that it is shrunk to fit, keeping its shape. A composite without
     /// a preview, a folder, or nothing selected gets a line saying so.
     /// </summary>
-    /// <remarks>
-    /// The stored preview rather than the composite's models in 3D: a composite can hold thousands of models (a level
-    /// section, a mission), and building those as the selection moves would stall the window, while a preview is one
-    /// small PNG, decoded once and kept by the manager.
-    /// </remarks>
     public class CompositePreviewPane : UserControl
     {
         //Around the edge, and between the name, the preview and the note

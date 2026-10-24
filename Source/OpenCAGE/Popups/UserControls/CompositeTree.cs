@@ -14,11 +14,6 @@ namespace OpenCAGE.Popups.UserControls
     /// counts it. Ticking a folder ticks what is in it. With <see cref="ReadOnly"/> set there are no
     /// checkboxes and the tree just shows what is there. Icons are the composite browser's.
     /// </summary>
-    /// <remarks>
-    /// The selection is two sets: <see cref="Ticked"/>, what the user chose, and <see cref="Implied"/>,
-    /// what those instance (transitively) and that is not itself ticked. Callers port <b>Ticked</b> with
-    /// recursion on - the porter finds the rest for itself - and show both in their summaries.
-    /// </remarks>
     public class CompositeTree
     {
         public enum ItemKind

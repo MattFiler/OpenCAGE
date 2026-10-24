@@ -17,23 +17,6 @@ namespace OpenCAGE.MCP
     /// A change to the script made by a tool: any number of entities, parameters and links in any number of
     /// composites, made as one step on the editor's undo history.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// It rides on the machinery De-instance Composite Instance and Create Composite From Selected use (<see cref="RefactorEdit"/>): what is
-    /// about to change is snapshotted first (<see cref="ScriptTransaction"/>), so undo and redo put back
-    /// exactly that; the viewer is told what came, went and changed in each composite; and the composite
-    /// on screen is rebuilt.
-    /// </para>
-    /// <para>
-    /// A composite shown as script pages takes its links from its pages whenever they are compiled (on
-    /// save, or on leaving it), so a link that is not drawn would be lost. Each composite touched is
-    /// therefore sorted once, before it changes: pages that already draw its links are kept in step (new
-    /// links drawn beside what they join, gone ones taken off); a composite whose pages do not match its
-    /// links is left to its links (the editor shows it without pages); and one with no pages at all is
-    /// given pages drawing everything, when everything can be drawn. A link the pages could never draw is
-    /// refused where pages must carry it, rather than written and silently dropped at the next compile.
-    /// </para>
-    /// </remarks>
     internal sealed class McpScriptEdit
     {
         private enum PageMode { Carry, DataOnly, Generate }
@@ -715,10 +698,6 @@ namespace OpenCAGE.MCP
         /// A TriggerSequence's entries (entity paths from its composite, each with its delay) and methods,
         /// replacing or adding to what it has. Works on a proxy of one too (it keeps its own copy).
         /// </summary>
-        /// <remarks>
-        /// Replacing the methods takes away the pins of those left out (M, M_relay, M_finished): links in the composite on
-        /// them are refused, listed, unless <paramref name="dropLinks"/>, which removes them (and the pins' delays) too.
-        /// </remarks>
         public void SetTriggerSequence(Composite composite, Entity entity, List<(ShortGuid[] path, float delay)> entries, List<string> methods, bool append, bool dropLinks = false)
         {
             if (methods != null && !append)

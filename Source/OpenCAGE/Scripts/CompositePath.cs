@@ -116,12 +116,6 @@ namespace OpenCAGE
         /// <summary>
         /// Put a captured path back.
         /// </summary>
-        /// <remarks>
-        /// A rebuild hands the level across rather than reloading it, so these are still the same
-        /// composites and entities the user walked through and can go back verbatim. If any of it does
-        /// not line up the whole thing is refused rather than half restored - a breadcrumb missing a
-        /// step in the middle would take you somewhere you never were.
-        /// </remarks>
         public bool Restore(Snapshot snapshot)
         {
             if (snapshot?.Composites == null || snapshot.Entities == null)
@@ -143,11 +137,6 @@ namespace OpenCAGE
         /// A place in the hierarchy by id rather than by object: the composite the user was in, the composites and
         /// instances they stepped down through to reach it, and what they had selected there.
         /// </summary>
-        /// <remarks>
-        /// For a caller that closes the display while it swaps composites out (an import or port that overwrites).
-        /// By the time the user is put back, a composite it replaced is the level's new copy, and only the id still
-        /// finds it - a <see cref="Snapshot"/> would hand back the old objects.
-        /// </remarks>
         public class Place
         {
             internal List<ShortGuid> Composites = new List<ShortGuid>();
@@ -188,12 +177,6 @@ namespace OpenCAGE
         /// <summary>
         /// Walk a place back down through the composites the level holds now, as far as it still leads.
         /// </summary>
-        /// <remarks>
-        /// Every step has to find the instance it followed, still placing the composite it did then: one that has
-        /// gone, or now places something else, ends the walk in the composite it was in, rather than going on
-        /// somewhere the user never was. If the composite the walk starts from has gone, the one the user was in is
-        /// all that can be put back, on its own.
-        /// </remarks>
         /// <param name="landed">The composite the walk ended in; null when nothing of the place is left.</param>
         /// <returns>The path down to <paramref name="landed"/>, empty when it stands on its own.</returns>
         public static Snapshot Resolve(CATHODE.Commands commands, Place place, out Composite landed)

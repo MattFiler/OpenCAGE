@@ -13,14 +13,6 @@ using System.Numerics;
 namespace OpenCAGE.MCP
 {
     /// <summary>Lights: finding the lights in a place and changing their real controls.</summary>
-    /// <remarks>
-    /// A retail light is a LightReference inside a fixture composite (AYZ\Lights\Small_Strip and the like), and its colour,
-    /// strength and range are usually fed by links from the fixture's pins (lgt_col, lgt_spot_IntMult...), set per placement
-    /// on the instance or by aliases. Writing the LightReference's own parameter then does nothing: instancing reads the link
-    /// first. These tools follow each parameter to what really sets it (<see cref="McpValueSource"/>) and write there, for one
-    /// placement through an alias in the root composite, as retail does. Flicker is the fixture's LightBehaviour archetype
-    /// (its LightConstantBehaviour, a LIGHT_ANIM), reached the same way.
-    /// </remarks>
     internal static class McpLightTools
     {
         private const string ColourHelp = "[r, g, b] 0-255 per channel, or '#RRGGBB'";
@@ -1035,17 +1027,6 @@ namespace OpenCAGE.MCP
     /// <summary>
     /// The value a parameter of one placed entity really has, as instancing resolves it, and what to write to change it.
     /// </summary>
-    /// <remarks>
-    /// <para>A placement is a chain of entities from a start composite (usually the level's root): each an instance but the
-    /// last. For a parameter: links into it win over values, the last link winning; links on the entity come first, then
-    /// links that aliases add, innermost first (so the outermost alias's link wins). A link to a composite variable is followed
-    /// to the value the placing instance passes in (its own links, then values), else the variable's default. With no link, an
-    /// alias's value wins (the outermost one), then the entity's own value, then the type's default. A link from anything else
-    /// is set at run time (a behaviour's output, a TriggerSelect...).</para>
-    /// <para>To change it for one placement, write the <see cref="Source.Target"/>'s parameter through an alias in the start
-    /// composite with the path down to it (or straight on it when it is in the start composite); to change it everywhere,
-    /// write the <see cref="Source.Holder"/>.</para>
-    /// </remarks>
     internal sealed class McpValueSource
     {
         public readonly Commands Commands;

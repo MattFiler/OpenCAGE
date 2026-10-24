@@ -17,7 +17,6 @@ namespace OpenCAGE
     /// (by the Mod Manager, say) is never written over from memory (<see cref="AnimationPakWrite"/>), so the layouts and
     /// trees there stay as they were put together.
     /// </summary>
-    /// <remarks>UI thread only.</remarks>
     public static class AnimTreeLayoutManager
     {
         private const string LogSystem = "Anim Tree Layouts";

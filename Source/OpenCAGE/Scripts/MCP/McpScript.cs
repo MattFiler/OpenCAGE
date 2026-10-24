@@ -15,11 +15,6 @@ namespace OpenCAGE.MCP
     /// <summary>
     /// Finding composites and entities from what a client names them, and describing them back.
     /// </summary>
-    /// <remarks>
-    /// Ids are ShortGuids written as their byte string ("AA-BB-CC-DD"), as OpenCAGE shows them. Entity
-    /// ids are only unique within their composite, so an entity is always named together with its
-    /// composite. Names are accepted wherever an id is, as long as they pick out one thing.
-    /// </remarks>
     internal static class McpScript
     {
         private static readonly Regex _byteString = new Regex("^[0-9A-Fa-f]{2}(-[0-9A-Fa-f]{2}){3}$", RegexOptions.Compiled);
@@ -653,11 +648,6 @@ namespace OpenCAGE.MCP
     /// (its own, then its aliases', the last one winning) ahead of any value; the outermost alias's value ahead of the entity's
     /// own; a composite pin followed up into the instance that places the composite; then the type's default.
     /// </summary>
-    /// <remarks>
-    /// A placement is a chain of entities with the composites holding them: comps[i] holds chain[i], comps[0] is where the chain
-    /// starts (the root, for a placement in the level), and chain[i] instances comps[i + 1]. Aliases are applied innermost first
-    /// and outer ones overwrite, as Instancing.GenerateInstances applies them.
-    /// </remarks>
     internal static class McpEffective
     {
         public sealed class Resolved

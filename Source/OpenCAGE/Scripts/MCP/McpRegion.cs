@@ -16,12 +16,6 @@ namespace OpenCAGE.MCP
     /// A part of the level a spatial tool works on - a zone, the placements of a composite or entity, one placement by its
     /// path from the root, a place found by name, a world box or a sphere - resolved from the shared 'region' argument.
     /// </summary>
-    /// <remarks>
-    /// <para>A region is the subtrees under some placements (<see cref="Roots"/>, entity chains from the level root), a world
-    /// clip box (<see cref="ClipMin"/>/<see cref="ClipMax"/>), or both. A box or sphere has no roots: it is everything of the
-    /// level inside it. Every position is in world space (metres, Y up) unless a field says otherwise.</para>
-    /// <para>Resolve on the UI thread: it reads the live script.</para>
-    /// </remarks>
     internal sealed class McpRegion
     {
         /// <summary>zone, placement (one placement of a composite or entity), placements (several), box, sphere or level.</summary>

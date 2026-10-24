@@ -9,11 +9,6 @@ namespace OpenCAGE
     /// shipped lists in <see cref="TransformSnapDefinitions"/> are the defaults; anything the user
     /// edits in Options > Viewport > Snap Increments lives in settings and takes their place.
     /// </summary>
-    /// <remarks>
-    /// "Off" (zero) is not stored and cannot be removed: it is always the first entry of both lists,
-    /// because a menu with no way to switch snapping off is a trap. Everything else is kept positive,
-    /// distinct and sorted, so the menus read in order whatever was typed.
-    /// </remarks>
     public static class SnapIncrementSettings
     {
         /// <summary>Raised after either list is changed, so the menus can rebuild.</summary>

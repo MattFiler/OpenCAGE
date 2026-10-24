@@ -610,11 +610,6 @@ namespace OpenCAGE
         /// <summary>
         /// Write the working copy back to the CAGEAnimation in the level, as one undo step.
         /// </summary>
-        /// <remarks>
-        /// The window edits a deep copy and this installs a fresh deep copy of it each time, so the
-        /// lists the level is holding are never the ones still being edited here - which is what lets
-        /// the undo step keep the previous ones as its "before" and have them stay that way.
-        /// </remarks>
         private void CommitLive(string label, bool mergeable = false)
         {
             if (!_liveCommits || _committing)
@@ -779,10 +774,6 @@ namespace OpenCAGE
         /// The T_STRING pins these keyframes carry are about to go. Ask first if anything is still
         /// linked to one, because the link goes with it.
         /// </summary>
-        /// <remarks>
-        /// Asked here, at the removal, rather than at save: with edits written back as they are made
-        /// there is no later moment at which the warning would still be something the user can act on.
-        /// </remarks>
         private bool ConfirmRemovingStringEvents(List<CAGEAnimation.EventTrack.Keyframe> removing)
         {
             if (removing == null || removing.Count == 0)

@@ -17,7 +17,6 @@ namespace OpenCAGE
     /// A write of every tree as it is in memory also needs each name in them in the debug string table, and each tree set
     /// to load again as it would be written - one that doesn't is gone, every tree in it, the next time the PAK loads.
     /// </summary>
-    /// <remarks>UI thread, apart from <see cref="ChangedOnDisk"/>, which only looks at the file and can be asked from any.</remarks>
     public static class AnimationPakWrite
     {
         //ANIMATION.PAK as it was on disk when OpenCAGE loaded it, or last wrote it: its size and time, and its contents' hash

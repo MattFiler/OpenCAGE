@@ -933,17 +933,6 @@ namespace OpenCAGE
         /// The entity ids stepped through from <paramref name="startComposite"/>, ending with the entity
         /// itself.
         /// </param>
-        /// <remarks>
-        /// A zone claims an entity and everything inside it, so an entity is in a zone when one of that
-        /// zone's roots is this path or a prefix of it. Both halves have to be per INSTANCE, not per
-        /// entity: a composite instanced five times has one set of entities but five places they sit,
-        /// and each one can be in a different zone. Answering with the path is what tells them apart -
-        /// comparing the entity alone said "the same zone" wherever you stepped in from.
-        ///
-        /// The zone table is <see cref="ZoneMembership"/>, the same walk the viewport overlay and the
-        /// instancer do, taken from <paramref name="startComposite"/> rather than the level root so a
-        /// user who opened a composite directly is told what is resolvable from there.
-        /// </remarks>
         public List<ZoneReference> FindZonesForEntity(Composite startComposite, List<uint> instancePath, CancellationToken ct)
         {
             List<ZoneReference> found = new List<ZoneReference>();

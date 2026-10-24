@@ -18,31 +18,6 @@ namespace OpenCAGE.MCP
     /// The OpenCAGE MCP server, as an AI client (Claude Desktop, Claude Code, ...) starts it: a console
     /// program speaking the Model Context Protocol over stdin/stdout.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// The tools themselves run inside the OpenCAGE editor, against the level it has open, so every change
-    /// shows up in the editor as it is made, goes through its undo history, and reaches its viewport. This
-    /// program is the bridge between the two: it relays each message to the editor over a local named pipe
-    /// (<see cref="PipeName"/>, served by OpenCAGE's McpServer), starting OpenCAGE.exe (from beside this
-    /// program) the first time a tool is called when no OpenCAGE is running, and relays the editor's answers back.
-    /// </para>
-    /// <para>
-    /// It answers the protocol's handshake itself, and the tool list and prompts from the copy the editor last
-    /// left (McpServer.WriteToolCache, which also holds the editor's instructions), so a client starting up
-    /// neither waits for nor starts the editor. The instructions have one source, OpenCAGE's McpTools.Instructions:
-    /// from that copy when this very OpenCAGE.exe wrote it, else read out of the exe itself; the bridge keeps no
-    /// text of its own beyond a two-line fallback for when OpenCAGE.exe cannot be read at all. Messages for the editor queue on a sender
-    /// thread; pings are answered at once whatever it is doing. When the editor answering is not the one that
-    /// answered before (it was restarted, or crashed), the next tool result says so and what was lost.
-    /// </para>
-    /// <para>
-    /// Arguments: <c>--editor &lt;path&gt;</c> to use an OpenCAGE.exe somewhere else (or set OPENCAGE_EXE);
-    /// <c>--no-launch</c> to only ever attach to an OpenCAGE that is already open; <c>--launch-at-start</c> to
-    /// start OpenCAGE at the handshake rather than on the first tool call; <c>--toolsets core,script,...</c> to
-    /// offer only those toolsets at first (a load_toolsets tool offers the rest; every tool stays callable);
-    /// anything after <c>--</c> is passed to OpenCAGE when this starts it (e.g. <c>-- -disable_viewport</c>).
-    /// </para>
-    /// </remarks>
     internal static class Program
     {
         /// <summary>Per logon session, like OpenCAGE's other pipes. Must match McpServer.PipeName.</summary>

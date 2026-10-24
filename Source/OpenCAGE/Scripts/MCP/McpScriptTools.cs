@@ -16,11 +16,6 @@ using System.Windows.Forms;
 namespace OpenCAGE.MCP
 {
     /// <summary>Changing the open level's script: composites, entities, parameters, links, pins, and the refactors.</summary>
-    /// <remarks>
-    /// Each script tool is a step (<c>Step...</c>) that works on an <see cref="McpScriptEdit"/>: a call runs one step as one
-    /// undo step, and script_batch runs several as one, sharing their refs. World-space arguments go through one placement
-    /// of the composite (<see cref="FrameFor"/>), and nested entities are reached through an alias found or made on the path.
-    /// </remarks>
     internal static class McpScriptTools
     {
         #region Schemas
