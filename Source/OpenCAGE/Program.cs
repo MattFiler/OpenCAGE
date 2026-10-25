@@ -599,7 +599,7 @@ namespace OpenCAGE
                 content.Add(new StringContent(ram), "ram_total");
                 error += "\n RAM: " + ram;
 
-                var response = await client.PostAsync("http://opencage.mattfiler.co.uk/crashes/crash_handler.php", content);
+                var response = await client.PostAsync("https://opencage.mattfiler.co.uk/crashes/crash_handler.php", content);
                 if (!response.IsSuccessStatusCode)
                 {
                     Console.WriteLine("Failed to upload crash log [" + response.StatusCode + "]: " + response.RequestMessage);

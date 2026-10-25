@@ -14,7 +14,7 @@ header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: *"); // For development; restrict in production
 
 // --- Database Configuration ---
-define('DB_HOST', 'localhost');
+define('DB_HOST', '127.0.0.1');
 define('DB_NAME', 'OpenCAGE'); 
 
 define('DB_USER', isset($username) ? $username : 'default_user_fallback');
