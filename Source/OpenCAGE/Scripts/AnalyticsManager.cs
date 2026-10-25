@@ -30,7 +30,7 @@ namespace OpenCAGE
         {
             try
             {
-                Stream webStream = new WebClient().OpenRead("http://opencage.mattfiler.co.uk/analytics.php?uid=" + SettingsManager.GetString(Settings.UniqueId) + "&version=" + Singleton.Version + "&staging=" + Singleton.BetaName + "&r=" + new Random().Next(5000).ToString());
+                Stream webStream = new WebClient().OpenRead("https://opencage.mattfiler.co.uk/analytics.php?uid=" + SettingsManager.GetString(Settings.UniqueId) + "&version=" + Singleton.Version + "&staging=" + Singleton.BetaName + "&r=" + new Random().Next(5000).ToString());
                 string result = new StreamReader(webStream).ReadToEnd();
                 switch (result)
                 {
