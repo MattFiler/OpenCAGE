@@ -1,6 +1,10 @@
 <p align="center">
   <a href="https://opencage.co.uk/">
-    <img src="https://opencage.co.uk/logo_trim_smaller.png" alt="OpenCAGE" width="460" />
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/61761112-2c4c-4bb1-bd60-cf4df9594326">
+      <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/b58c7897-5997-4a6a-9bc4-063fc8a76652">
+      <img alt="OpenCAGE" src="https://github.com/user-attachments/assets/b58c7897-5997-4a6a-9bc4-063fc8a76652" width="460">
+    </picture>
   </a>
 </p>
 
