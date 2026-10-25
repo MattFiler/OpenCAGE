@@ -70,9 +70,15 @@ namespace
 		settings.debugTextStacking = flag("DebugTextStacking", settings.debugTextStacking);
 		settings.debugEnvironmentMarker = flag("DebugEnvironmentMarker", settings.debugEnvironmentMarker);
 		settings.debugPositionMarker = flag("DebugPositionMarker", settings.debugPositionMarker);
+		settings.debugGraph = flag("DebugGraph", settings.debugGraph);
+		settings.debugMenuToggle = flag("DebugMenuToggle", settings.debugMenuToggle);
+		settings.debugObjectMarker = flag("DebugObjectMarker", settings.debugObjectMarker);
+		settings.debugCaptureScreenShot = flag("DebugCaptureScreenShot", settings.debugCaptureScreenShot);
+		settings.scriptErrors = flag("ScriptErrors", settings.scriptErrors);
 		settings.loadAllZones = flag("LoadAllZones", settings.loadAllZones);
 		settings.liveLink = flag("LiveLink", settings.liveLink);
 		settings.liveLinkCamera = flag("LiveLinkCamera", settings.liveLinkCamera);
+		settings.liveLinkLabel = flag("LiveLinkLabel", settings.liveLinkLabel);
 		settings.possess = flag("Possess", settings.possess);
 		settings.debugMenu = flag("DebugMenu", settings.debugMenu);
 		const int port = GetPrivateProfileIntA(section, "LiveLinkPort", settings.liveLinkPort, ini.c_str());
@@ -123,6 +129,12 @@ bool Config::AnyDebug()
 {
 	const Settings& settings = Get();
 	return settings.debugText || settings.debugTextStacking || settings.debugEnvironmentMarker || settings.debugPositionMarker;
+}
+
+bool Config::AnyScriptEntity()
+{
+	const Settings& settings = Get();
+	return settings.debugGraph || settings.debugMenuToggle || settings.debugObjectMarker || settings.debugCaptureScreenShot;
 }
 
 const char* Config::KeyName(int virtualKey)

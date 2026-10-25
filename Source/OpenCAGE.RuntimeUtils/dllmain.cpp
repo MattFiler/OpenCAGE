@@ -23,6 +23,7 @@
 #include "RENDER_SWITCHES.h"
 #include "DEBUG_ACTIONS.h"
 #include "DEBUG_MENU.h"
+#include "SCRIPT_DEBUG.h"
 #include "GAME_SAVES.h"
 
 // External includes.
@@ -198,7 +199,7 @@ static void AttachHooks(bool attach)
     };
 
     // Rendering hooks: needed for the hot reload, unlock mouse and possess keys (window procedure) and the overlay.
-    if ((config.hotReload || config.unlockMouse || Config::AnyDebug() || config.liveLink || config.possess || config.debugMenu) && d3d11CreateDeviceAndSwapChain)
+    if ((config.hotReload || config.unlockMouse || Config::AnyDebug() || Config::AnyScriptEntity() || config.liveLink || config.possess || config.debugMenu) && d3d11CreateDeviceAndSwapChain)
     {
         hook(d3d11CreateDeviceAndSwapChain, hD3D11CreateDeviceAndSwapChain);
         if (!attach && d3d11Present)
@@ -217,8 +218,8 @@ static void AttachHooks(bool attach)
     }
 
     // Live link: requests on entities are carried out once a frame, on the entity thread. The debug menu's work for that
-    // thread is run there too.
-    if (config.liveLink || config.debugMenu)
+    // thread is run there too, and the debug script entities' (debug menu or not).
+    if (config.liveLink || config.debugMenu || Config::AnyScriptEntity())
         hook(LIVE_LINK::process, LIVE_LINK::h_process);
 
     // Live link camera sync: renders the game from OpenCAGE's viewport camera while OpenCAGE asks. Attached for the whole
@@ -255,6 +256,14 @@ static void AttachHooks(bool attach)
     // Debug menu views' own hooks, each added from its view's file (see DEBUG_MENU::AddHooks).
     if (config.debugMenu)
         DEBUG_MENU::AttachHooks(attach);
+
+    // The debug script entities made to work again (DebugGraph, DebugObjectMarker...): whenever one is on, debug menu or not
+    // (Launch Game's Debug entities). And the game's script errors: with the debug menu (its Scripts > Errors), or on their own
+    // for OpenCAGE's Error Log (ScriptErrors=1, Launch Game's Error log).
+    if (Config::AnyScriptEntity())
+        SCRIPT_ENTITIES::AttachHooks(attach);
+    if (config.debugMenu || config.scriptErrors)
+        SCRIPT_ERRORS::AttachHooks(attach);
 
     // Don't write saves (DontWriteSaves=1) without the debug menu: its hooks on their own. With the debug menu they come
     // with the views' hooks above.
@@ -371,7 +380,7 @@ BOOL APIENTRY DllMain( HMODULE /*hModule*/,
         DetourUpdateThread(GetCurrentThread());
 
     	// Overlay hooks / initialisation code, adapted from Alias Isolation.
-        if (config.hotReload || config.unlockMouse || Config::AnyDebug() || config.liveLink || config.possess || config.debugMenu)
+        if (config.hotReload || config.unlockMouse || Config::AnyDebug() || Config::AnyScriptEntity() || config.liveLink || config.possess || config.debugMenu)
         {
             const HMODULE hModule = GetModuleHandle(L"d3d11");
 

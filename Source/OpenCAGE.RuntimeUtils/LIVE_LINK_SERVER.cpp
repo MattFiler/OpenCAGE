@@ -12,6 +12,7 @@
 #include "GAME_DEBUG.h"
 #include "SCREENSHOT.h"
 #include "DevTools.h"
+#include "SCRIPT_DEBUG.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <WinSock2.h>
@@ -63,6 +64,8 @@ namespace
 	std::atomic<bool> g_running = false;
 	std::atomic<bool> g_connected = false;
 	std::thread g_thread;
+	// The overlay's "OpenCAGE Live Link" label as OVERLAY last set it (-1: not yet, so as LiveLinkLabel= in the ini says)
+	std::atomic<int> g_label{ -1 };
 
 	std::mutex g_activityMutex;
 	std::string g_activity;
@@ -769,6 +772,34 @@ namespace
 		Reply(request, result.ok, result.message);
 	}
 
+	void HandleErrorsGet(const Request& request)
+	{
+		Reader reader(request.payload);
+		const uint32_t after = reader.U32();
+		if (reader.failed)
+		{
+			Reply(request, false, "Malformed request");
+			return;
+		}
+		std::string message;
+		std::vector<uint8_t> payload;
+		const bool ok = SCRIPT_ERRORS::TakeSince(after, message, payload);
+		Reply(request, ok, message, payload);
+	}
+
+	void HandleOverlay(const Request& request)
+	{
+		Reader reader(request.payload);
+		const uint8_t label = reader.U8();
+		if (reader.failed)
+		{
+			Reply(request, false, "Malformed request");
+			return;
+		}
+		g_label = label != 0 ? 1 : 0;
+		Reply(request, true, std::string("label=") + (label != 0 ? "1" : "0"));
+	}
+
 	void HandlePossessGet(const Request& request)
 	{
 		Reader reader(request.payload);
@@ -859,6 +890,16 @@ namespace
 		if (request.command == LIVE_LINK_SERVER::DEBUG_MENU_CONTROL)
 		{
 			HandleDebugMenu(request);
+			return;
+		}
+		if (request.command == LIVE_LINK_SERVER::ERRORS_GET)
+		{
+			HandleErrorsGet(request);
+			return;
+		}
+		if (request.command == LIVE_LINK_SERVER::OVERLAY)
+		{
+			HandleOverlay(request);
 			return;
 		}
 
@@ -1016,6 +1057,12 @@ std::string LIVE_LINK_SERVER::LastActivity(unsigned int withinMs)
 {
 	std::lock_guard<std::mutex> lock(g_activityMutex);
 	return GetTickCount64() - g_activityAt <= withinMs ? g_activity : std::string();
+}
+
+bool LIVE_LINK_SERVER::ShowLabel()
+{
+	const int label = g_label;
+	return label < 0 ? Config::Get().liveLinkLabel : label != 0;
 }
 
 uint32_t LIVE_LINK_SERVER::CurrentConnection()

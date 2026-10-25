@@ -169,6 +169,11 @@ namespace OpenCAGE
         JumpToBreakpointHit,
         ContinueScripts,
         StepScripts,
+
+        //The Runtime Error Log's toolbar
+        ClearLog,
+        ClearOnPlay,
+        GroupByEntity,
     }
 
     /// <summary>

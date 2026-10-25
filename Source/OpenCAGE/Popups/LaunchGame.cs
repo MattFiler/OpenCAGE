@@ -93,6 +93,12 @@ namespace OpenCAGE
             return SettingsManager.GetBool(Settings.DebugMenu) && SettingsManager.GetBool(Settings.DontWriteSaves);
         }
 
+        /* The Error Log as a launch applies it: the game relays its script errors over Live Link, so only with Live Link on */
+        internal static bool ErrorLogOn()
+        {
+            return SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink) && SettingsManager.GetBool(Settings.ErrorLog);
+        }
+
         public LaunchGame()
         {
             InitializeComponent();
@@ -117,6 +123,7 @@ namespace OpenCAGE
             enableCapFps.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersCapFps);
             enableDebugEntities.Checked = SettingsManager.GetBool(Settings.DebugEntities);
             enableLiveLink.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink);
+            enableErrorLog.Checked = SettingsManager.GetBool(Settings.ErrorLog);
             hotReloadKey.Items.AddRange(HelperKeys);
             hotReloadKey.SelectedIndex = Array.IndexOf(HelperKeys, HotReloadKey());
             unlockMouseKey.Items.AddRange(HelperKeys);
@@ -133,6 +140,8 @@ namespace OpenCAGE
             disableUI.Checked = SettingsManager.GetBool(Settings.HudDisabled);
             patchCurrentGen.Checked = SettingsManager.GetBool(Settings.PatchCurrentGen, true);
             renderConstantAmbient.Checked = SettingsManager.GetBool(Settings.RenderConstantAmbient);
+            debugCheckpoints.Checked = SettingsManager.GetBool(Settings.UiModPauseMenu);
+            levelSelect.Checked = SettingsManager.GetBool(Settings.UiModNewFrontendMenu);
             debugLoadingScreen.Checked = SettingsManager.GetBool(Settings.UiModLoadingScreen);
             quitToMenuOnDeath.Checked = SettingsManager.GetBool(Settings.UiModGameOverMenu);
             _applyingExternalSettings = false;
@@ -148,6 +157,7 @@ namespace OpenCAGE
             possessKey.Enabled = _scriptingHelpersAvailable && enablePossess.Checked;
             enableDebugMenu.Enabled = _scriptingHelpersAvailable;
             UpdateDebugMenuOptionsEnabled();
+            UpdateErrorLogEnabled();
 
             //The picker never offers FRONTEND: leaving this unchecked is how the game starts at its menu (and ticked, it skips the
             //title screen: the old Skip Frontend option is what this means now). With a level open in the editor it's ticked, with
@@ -176,6 +186,13 @@ namespace OpenCAGE
             bool debugMenu = _scriptingHelpersAvailable && enableDebugMenu.Checked;
             debugMenuKey.Enabled = debugMenu;
             dontWriteSaves.Enabled = debugMenu;
+        }
+
+        /* The Error Log only while Live Link is ticked (the game relays its errors over it): unticked, it is greyed out, its
+           choice kept */
+        private void UpdateErrorLogEnabled()
+        {
+            enableErrorLog.Enabled = _scriptingHelpersAvailable && enableLiveLink.Checked;
         }
 
         private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
@@ -225,6 +242,9 @@ namespace OpenCAGE
                         case Settings.ScriptingHelpersLiveLink:
                             enableLiveLink.Checked = SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink);
                             break;
+                        case Settings.ErrorLog:
+                            enableErrorLog.Checked = SettingsManager.GetBool(Settings.ErrorLog);
+                            break;
                         case Settings.PossessCharacters:
                             enablePossess.Checked = SettingsManager.GetBool(Settings.PossessCharacters);
                             break;
@@ -252,6 +272,12 @@ namespace OpenCAGE
                             break;
                         case Settings.RenderConstantAmbient:
                             renderConstantAmbient.Checked = SettingsManager.GetBool(Settings.RenderConstantAmbient);
+                            break;
+                        case Settings.UiModPauseMenu:
+                            debugCheckpoints.Checked = SettingsManager.GetBool(Settings.UiModPauseMenu);
+                            break;
+                        case Settings.UiModNewFrontendMenu:
+                            levelSelect.Checked = SettingsManager.GetBool(Settings.UiModNewFrontendMenu);
                             break;
                         case Settings.UiModLoadingScreen:
                             debugLoadingScreen.Checked = SettingsManager.GetBool(Settings.UiModLoadingScreen);
@@ -287,8 +313,7 @@ namespace OpenCAGE
                 MessageBox.Show("Failed to set level loading values in AI.exe!\nIs the game already open?", "Failed to patch binary.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
             PatchManager.UpdateLevelListInPackages(Singleton.Platform, Singleton.PathToAI);
-            //The UI options as their settings say: checking the game's files puts the binary and UI.PAK back as shipped. The
-            //menus of the two this window no longer has (debug checkpoints, level selection) are taken out.
+            //The UI options as their settings say: checking the game's files puts the binary and UI.PAK back as shipped
             UiMovieOverrides.Sync(Singleton.PathToAI);
 
             //Start game process
@@ -688,8 +713,8 @@ namespace OpenCAGE
             SettingsManager.SetString(Settings.ScriptingHelpersCapFpsRate, CapFpsRates[capFpsRate.SelectedIndex]);
         }
 
-        /* Enable/disable Debug entities: DebugText, DebugTextStacking, DebugEnvironmentMarker and DebugPositionMarker script
-           entities draw in game (the four runtime utils switches, together) */
+        /* Enable/disable Debug entities: the debug script entities work in game - DebugText, DebugTextStacking, the two markers,
+           DebugGraph, DebugMenuToggle, DebugObjectMarker and DebugCaptureScreenShot (the eight runtime utils switches, together) */
         private void enableDebugEntities_CheckedChanged(object sender, EventArgs e)
         {
             if (_applyingExternalSettings) return;
@@ -699,8 +724,16 @@ namespace OpenCAGE
         /* Enable/disable the live link the game serves (OpenCAGE connects to it by itself once the game is up) */
         private void enableLiveLink_CheckedChanged(object sender, EventArgs e)
         {
+            UpdateErrorLogEnabled();
             if (_applyingExternalSettings) return;
             SettingsManager.SetBool(Settings.ScriptingHelpersLiveLink, enableLiveLink.Checked);
+        }
+
+        /* Enable/disable the Error Log: the game notes its script errors, and the Error Log window opens as it starts */
+        private void enableErrorLog_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_applyingExternalSettings) return;
+            SettingsManager.SetBool(Settings.ErrorLog, enableErrorLog.Checked);
         }
 
         /* Enable/disable Possess Characters: its key opens an in-game menu to take control of a character */
@@ -871,13 +904,21 @@ namespace OpenCAGE
                 "UnlockMouseKey=" + UnlockMouseKey(),
                 //The most frames a second the game runs at (0 = no cap)
                 "CapFps=" + (SettingsManager.GetBool(Settings.ScriptingHelpersCapFps) ? CapFpsRate() : "0"),
-                //Debug entities: the four kinds of debug script entity draw in game, all together
+                //Debug entities: every kind of debug script entity works in game, all together (with or without the Debug Menu)
                 "DebugText=" + debugEntities,
                 "DebugTextStacking=" + debugEntities,
                 "DebugEnvironmentMarker=" + debugEntities,
                 "DebugPositionMarker=" + debugEntities,
+                "DebugGraph=" + debugEntities,
+                "DebugMenuToggle=" + debugEntities,
+                "DebugObjectMarker=" + debugEntities,
+                "DebugCaptureScreenShot=" + debugEntities,
                 //The live link server (127.0.0.1 only) runs only when Live Link is ticked
                 "LiveLink=" + (SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink) ? "1" : "0"),
+                //"OpenCAGE Live Link" in the game's top-right corner while connected (Options > Misc > Hide Live Link Label In-Game)
+                "LiveLinkLabel=" + (SettingsManager.GetBool(Settings.HideLiveLinkLabel) ? "0" : "1"),
+                //The Error Log: the game notes its script errors for OpenCAGE to read over Live Link (the Debug Menu does anyway)
+                "ScriptErrors=" + (ErrorLogOn() ? "1" : "0"),
                 //Possess Characters (a launch option, not a scripting helper): its key opens the in-game menu of characters
                 "Possess=" + (SettingsManager.GetBool(Settings.PossessCharacters) ? "1" : "0"),
                 "PossessKey=" + PossessKey(),
@@ -937,7 +978,18 @@ namespace OpenCAGE
                 MessageBox.Show("Failed to set constant ambient patch option.\nIs Alien: Isolation open?", "Couldn't write!", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
-        /* UI tweaks: OpenCAGE's own loading screen and game-over menu beside the game's in UI.PAK (UiMovieOverrides) */
+        /* UI tweaks: OpenCAGE's own pause menu (debug checkpoints), main menu (level selection), loading screen and game-over
+           menu beside the game's in UI.PAK (UiMovieOverrides) */
+        private void debugCheckpoints_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_applyingExternalSettings) return;
+            UpdateUI(Settings.UiModPauseMenu, debugCheckpoints.Checked);
+        }
+        private void levelSelect_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_applyingExternalSettings) return;
+            UpdateUI(Settings.UiModNewFrontendMenu, levelSelect.Checked);
+        }
         private void debugLoadingScreen_CheckedChanged(object sender, EventArgs e)
         {
             if (_applyingExternalSettings) return;

@@ -52,6 +52,11 @@ namespace DEBUG_MENU
 	// Render thread, as the overlay draws: reads this frame's characters and camera, draws the overlays, then the window.
 	void Draw();
 
+	// Render thread, as the overlay draws, in place of Draw while the debug menu is off (DebugMenu=0) but something outside
+	// it still uses its world drawing (Project, WorldText...) or its render-thread work - the debug script entities: reads
+	// this frame's camera and runs the queued render-thread work. No characters, overlays or window.
+	void KeepUpWithoutWindow();
+
 	bool IsOpen();
 	// While it is open (any thread; as of the last frame drawn): a text box in it has the keyboard, and the mouse is over it
 	// (or dragging something in it). For views that read the keyboard or mouse themselves while the window is open.

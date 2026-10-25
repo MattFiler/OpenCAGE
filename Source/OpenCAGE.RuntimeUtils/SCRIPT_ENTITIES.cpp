@@ -24,9 +24,12 @@
 
 /*
 	Debug script entities (debug menu: Scripts > Entities): the debugging entities that the shipped game still
-	creates but whose methods do nothing - made to work again, the way DebugText is, each behind its own switch
-	(scripts.entity.*, off unless its key in OpenCAGE.RuntimeUtils.ini says 1: DebugGraph, DebugMenuToggle,
-	DebugObjectMarker, DebugCaptureScreenShot - so a level that still holds one of them plays as the shipped game does).
+	creates but whose methods do nothing - made to work again, the way DebugText is, each behind its own key in
+	OpenCAGE.RuntimeUtils.ini (DebugGraph, DebugMenuToggle, DebugObjectMarker, DebugCaptureScreenShot: off unless it says 1,
+	so a level that still holds one of them plays as the shipped game does; Launch Game's Debug entities writes all four).
+	They run with or without the debug menu: the DLL attaches their hooks whenever one is on, and with the debug menu off
+	draws their overlay itself (DEBUG_MENU::KeepUpWithoutWindow keeps the camera and the render thread's work going for it).
+	The tab only shows what they are doing.
 
 	- DebugGraph: plots the numbers linked to its Inputs over time while it is started (start / stop), in a panel over
 	  the game - its duration (seconds kept), samples_per_second, scale (the top of the range; the bottom is 0, or minus it
@@ -566,11 +569,13 @@ namespace
 				SCRIPT_DEBUG::RestoreSlot(slot);
 			return;
 		}
-		// Off unless the ini says otherwise
-		g_graphOn = Config::IniInt("DebugGraph", 0) != 0;
-		g_toggleOn = Config::IniInt("DebugMenuToggle", 0) != 0;
-		g_markerOn = Config::IniInt("DebugObjectMarker", 0) != 0;
-		g_screenshotOn = Config::IniInt("DebugCaptureScreenShot", 0) != 0;
+		// As the ini says (Launch Game's Debug entities writes all four). A DebugMenuToggle sets the debug menu's switches, so
+		// it only does anything with the debug menu on.
+		const Config::Settings& config = Config::Get();
+		g_graphOn = config.debugGraph;
+		g_toggleOn = config.debugMenuToggle && config.debugMenu;
+		g_markerOn = config.debugObjectMarker;
+		g_screenshotOn = config.debugCaptureScreenShot;
 		struct Entry { uintptr_t table; uint32_t offset; uintptr_t was; const void* replacement; t_method* original; const char* what; };
 		const Entry entries[] = {
 			{ kGraphMethods, kOnStart, kAnswerNo, reinterpret_cast<const void*>(&OnGraphStart), &g_graphStartWas, "DebugGraph start" },
@@ -601,14 +606,10 @@ namespace
 	bool ToggleAvailable() { return g_slots[3].at != nullptr; }
 	bool ScreenshotAvailable() { return g_slots[4].at != nullptr; }
 
-	const bool g_hooks = DEBUG_MENU::AddHooks(Attach);
-
+	// The hooks are attached by the DLL itself (SCRIPT_ENTITIES::AttachHooks), debug menu or not; the four are switched by
+	// Launch Game's Debug entities, not from the menu
 	bool Register()
 	{
-		DEBUG_MENU::AddSwitch("scripts.entity.debug_graph", &g_graphOn);
-		DEBUG_MENU::AddSwitch("scripts.entity.debug_menu_toggle", &g_toggleOn);
-		DEBUG_MENU::AddSwitch("scripts.entity.debug_object_marker", &g_markerOn);
-		DEBUG_MENU::AddSwitch("scripts.entity.debug_capture_screenshot", &g_screenshotOn);
 		DEBUG_MENU::AddCommand("scripts.list_debug_entities", "the debug script entities: which are followed in this build, the graphs being drawn, the object markers, the screenshots saved",
 			[](const std::string&) -> DEBUG_MENU::CommandResult
 			{
@@ -761,7 +762,7 @@ namespace
 		}
 	}
 
-	void DrawOverlay(ImDrawList* drawList)
+	void DrawEntityOverlay(ImDrawList* drawList)
 	{
 		if (g_graphOn)
 			DrawGraphs(drawList);
@@ -769,15 +770,16 @@ namespace
 	}
 
 	// ---- The tab ----
-	void Switch(const char* label, std::atomic<bool>& value, bool available, const char* help)
+	void Status(const char* label, bool on, bool available, const char* help)
 	{
-		bool ticked = value;
-		ImGui::BeginDisabled(!available);
-		if (ImGui::Checkbox(label, &ticked))
-			value = ticked;
-		ImGui::EndDisabled();
+		if (!available)
+			ImGui::TextDisabled("%s: not available on this game release", label);
+		else if (on)
+			ImGui::TextColored(ImVec4(0.55f, 0.9f, 0.6f, 1.0f), "%s: on", label);
+		else
+			ImGui::TextDisabled("%s: off", label);
 		ImGui::SameLine();
-		ImGui::TextDisabled(available ? "(?)" : "(not available on this game release)");
+		ImGui::TextDisabled("(?)");
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip))
 		{
 			ImGui::BeginTooltip();
@@ -790,11 +792,11 @@ namespace
 
 	void DrawTab()
 	{
-		ImGui::TextWrapped("The debugging script entities, which the game creates but leaves doing nothing - working again, each behind its switch (off unless OpenCAGE.RuntimeUtils.ini says otherwise, so levels play as shipped).");
-		Switch("DebugGraph", g_graphOn, GraphAvailable(), "Plots the numbers linked to its Inputs while it is started, in a panel at the right of the screen: duration, samples_per_second, scale and auto_scale are followed. Key DebugGraph=1 in the ini turns it on from the start.");
-		Switch("DebugMenuToggle", g_toggleOn, ToggleAvailable(), "When triggered, sets the debug menu switch its debug_variable names (one of this menu's switch names, e.g. characters.view_cones) to its value, or flips it when it has none. Key DebugMenuToggle=1.");
-		Switch("DebugObjectMarker", g_markerOn, true, "Shows its marked_name over its marked_object. Key DebugObjectMarker=1.");
-		Switch("DebugCaptureScreenShot", g_screenshotOn, ScreenshotAvailable(), "When triggered, saves the next frame as a .bmp named after its capture_filename, in a DebugCaptureScreenShot folder next to AI.exe (its field of view, clip planes and streaming wait are not followed). Key DebugCaptureScreenShot=1.");
+		ImGui::TextWrapped("The debugging script entities, which the game creates but leaves doing nothing - working again while OpenCAGE's Launch Game has Debug entities ticked (with or without this menu), so levels otherwise play as shipped.");
+		Status("DebugGraph", g_graphOn, !g_attached || GraphAvailable(), "Plots the numbers linked to its Inputs while it is started, in a panel at the right of the screen: duration, samples_per_second, scale and auto_scale are followed.");
+		Status("DebugMenuToggle", g_toggleOn, !g_attached || ToggleAvailable(), "When triggered, sets the debug menu switch its debug_variable names (one of this menu's switch names, e.g. characters.view_cones) to its value, or flips it when it has none. Only with this menu on.");
+		Status("DebugObjectMarker", g_markerOn, true, "Shows its marked_name over its marked_object.");
+		Status("DebugCaptureScreenShot", g_screenshotOn, !g_attached || ScreenshotAvailable(), "When triggered, saves the next frame as a .bmp named after its capture_filename, in a DebugCaptureScreenShot folder next to AI.exe (its field of view, clip planes and streaming wait are not followed).");
 
 		{
 			std::lock_guard<std::mutex> lock(g_graphMutex);
@@ -831,5 +833,15 @@ namespace
 		ImGui::TextWrapped("%d saved%s%s", g_screenshots.load(), g_lastScreenshot.empty() ? "" : ", the last: ", g_lastScreenshot.c_str());
 	}
 
-	const bool g_added = DEBUG_MENU::AddTab("Entities", 150, DrawTab, "Scripts") && DEBUG_MENU::AddOverlay(97, DrawOverlay);
+	const bool g_added = DEBUG_MENU::AddTab("Entities", 150, DrawTab, "Scripts") && DEBUG_MENU::AddOverlay(97, DrawEntityOverlay);
+}
+
+void SCRIPT_ENTITIES::AttachHooks(bool attach)
+{
+	Attach(attach);
+}
+
+void SCRIPT_ENTITIES::DrawOverlay()
+{
+	DrawEntityOverlay(ImGui::GetBackgroundDrawList());
 }

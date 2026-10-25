@@ -24,6 +24,7 @@ namespace OpenCAGE.DockPanels
         private ToolStripMenuItem _debuggerSelectFromGame;
         private ToolStripMenuItem _debuggerPause;
         private ToolStripMenuItem _debuggerFollowHits;
+        private ToolStripMenuItem _debuggerErrorLog;
         private ToolStripButton _debuggerContinue;
         private ToolStripButton _debuggerStep;
         private ToolStripLabel _debuggerStatus;
@@ -80,8 +81,13 @@ namespace OpenCAGE.DockPanels
             };
             EditorIcons.Bind(_debuggerFollowHits, EditorIcon.JumpToBreakpointHit);
             _debuggerFollowHits.CheckedChanged += (s, e) => DebuggerFollowsHits = _debuggerFollowHits.Checked;
+            _debuggerErrorLog = new ToolStripMenuItem("Runtime Error Log", ScriptErrorLog.SignImage(false, 16))
+            {
+                ToolTipText = "The level's script errors as the running game finds them: double-click one to go to its entity (Launch Game's Error log opens it as the game starts).",
+            };
+            _debuggerErrorLog.Click += (s, e) => ErrorLog.Open();
             _debuggerMenu.DropDownItems.AddRange(new ToolStripItem[] { _debuggerBreakpoints, _debuggerRemoveAll, new ToolStripSeparator(), _debuggerShowStates,
-                _debuggerSelectFromGame, _debuggerPause, new ToolStripSeparator(), _debuggerFollowHits });
+                _debuggerSelectFromGame, _debuggerPause, new ToolStripSeparator(), _debuggerFollowHits, new ToolStripSeparator(), _debuggerErrorLog });
             _debuggerMenu.DropDownOpening += (s, e) =>
             {
                 LiveLinkDebugger.PanelOpen = true;

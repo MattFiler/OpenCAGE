@@ -477,6 +477,13 @@ bool DEBUG_MENU::OnWindowMessage(HWND window, UINT message, WPARAM wParam, LPARA
 	return false;
 }
 
+void DEBUG_MENU::KeepUpWithoutWindow()
+{
+	g_display = ImGui::GetIO().DisplaySize;
+	g_haveCamera = ReadCamera(g_viewProjection, g_cameraPosition, g_cameraForward);
+	RunQueued(g_renderWork);
+}
+
 void DEBUG_MENU::Draw()
 {
 	// The notes along the top of the screen start under the Unlock Mouse note while it shows

@@ -9,9 +9,10 @@ using System.Reflection;
 namespace OpenCAGE
 {
     /// <summary>
-    /// The Launch Game UI options - the level's name on the loading screen, quit to menu on the game-over screen (and, until
-    /// 22 Oct 2026, debug checkpoints in the pause menu and level selection in the main menu: <see cref="Movie.Removed"/>) -
-    /// as OpenCAGE's own movies in UI.PAK, BESIDE the game's rather than over them.
+    /// The Launch Game UI options - debug checkpoints in the pause menu, level selection in the main menu, the quicker loading
+    /// screen with the level's name, and quit to menu on the game-over screen - as OpenCAGE's own movies in UI.PAK, BESIDE the
+    /// game's rather than over them. (An option Launch Game drops is flagged <see cref="Movie.Removed"/>; none is now - the
+    /// first two were dropped on 22 Oct 2026 and brought back on 25 Oct.)
     ///
     /// The game opens each of these movies by a path held in its binary ("DATA/UI/PAUSEMENU.GFX"). OpenCAGE used to write
     /// its version over that entry, which made UI.PAK read as the user's own change everywhere the Mod Manager looks, and
@@ -48,11 +49,11 @@ namespace OpenCAGE
             //LaunchGame tool before it). The other three have only ever had one version (OpenCAGE, LaunchGame and
             //CommandsEditor histories, 17 Oct 2026)
             //The pause menu's debug checkpoints and the main menu's level selection were dropped from Launch Game on 22 Oct 2026
-            //(the Debug Menu's Game > Tools and Game > Game flow): Removed, so launches take them out
-            new Movie() { Key = Settings.RemovedUiModPauseMenu, Resource = "PAUSEMENU", GamePath = "DATA/UI/PAUSEMENU.GFX", OwnPath = "DATA/UI/PAUSEM_OC.GFX",
-                          OlderVersions = new[] { "b7403a238e91de6274de9aee86288b001e188a2cb358f3690c68b591b97cfbff" }, Removed = true },
+            //(for the Debug Menu's Game > Tools and Game > Game flow) and brought back on 25 Oct, beside them
+            new Movie() { Key = Settings.UiModPauseMenu, Resource = "PAUSEMENU", GamePath = "DATA/UI/PAUSEMENU.GFX", OwnPath = "DATA/UI/PAUSEM_OC.GFX",
+                          OlderVersions = new[] { "b7403a238e91de6274de9aee86288b001e188a2cb358f3690c68b591b97cfbff" } },
             new Movie() { Key = Settings.UiModLoadingScreen, Resource = "LOADINGSCREEN", GamePath = "data/UI/loadingscreen.gfx", OwnPath = "data/UI/loadingscr_oc.gfx" },
-            new Movie() { Key = Settings.RemovedUiModNewFrontendMenu, Resource = "NEWFRONTENDMENU", GamePath = "DATA/UI/NEWFRONTENDMENU.GFX", OwnPath = "DATA/UI/NEWFRONTENDM_OC.GFX", Removed = true },
+            new Movie() { Key = Settings.UiModNewFrontendMenu, Resource = "NEWFRONTENDMENU", GamePath = "DATA/UI/NEWFRONTENDMENU.GFX", OwnPath = "DATA/UI/NEWFRONTENDM_OC.GFX" },
             new Movie() { Key = Settings.UiModGameOverMenu, Resource = "GAMEOVERMENU", GamePath = "DATA/UI/GAMEOVERMENU.GFX", OwnPath = "DATA/UI/GAMEOVERM_OC.GFX" },
         };
 

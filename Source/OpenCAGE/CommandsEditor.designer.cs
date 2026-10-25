@@ -163,6 +163,7 @@ namespace OpenCAGE
             this.resetRenderFiltersOnLoadToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.alwaysFullyRebuildRadiosityToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.cubemapCaptureSizeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.hideLiveLinkLabelToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.cubemapCaptureSizeReplacedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.cubemapCaptureSizeToolStripSeparator = new System.Windows.Forms.ToolStripSeparator();
             this.cubemapCaptureSize64ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -1237,6 +1238,7 @@ namespace OpenCAGE
             this.resetRenderFiltersOnLoadToolStripMenuItem,
             this.alwaysFullyRebuildRadiosityToolStripMenuItem,
             this.cubemapCaptureSizeToolStripMenuItem,
+            this.hideLiveLinkLabelToolStripMenuItem,
             this.allowAiAssistantsToolStripMenuItem});
             this.miscToolStripMenuItem.Name = "miscToolStripMenuItem";
             this.miscToolStripMenuItem.Size = new System.Drawing.Size(210, 22);
@@ -1346,6 +1348,15 @@ namespace OpenCAGE
             this.cubemapCaptureSizeToolStripMenuItem.Text = "Cubemap Capture Size";
             this.cubemapCaptureSizeToolStripMenuItem.ToolTipText = "The size of each face of the cubemaps captured in the game over Live Link (Capture on an EnvironmentMap, File > Re" +
     "capture All Cubemaps). Bigger is sharper on mirror-like surfaces; it needs the game\'s window at least as tall.";
+            //
+            // hideLiveLinkLabelToolStripMenuItem
+            //
+            this.hideLiveLinkLabelToolStripMenuItem.Name = "hideLiveLinkLabelToolStripMenuItem";
+            this.hideLiveLinkLabelToolStripMenuItem.Size = new System.Drawing.Size(254, 22);
+            this.hideLiveLinkLabelToolStripMenuItem.Text = "Hide Live Link Label In-Game";
+            this.hideLiveLinkLabelToolStripMenuItem.ToolTipText = "If enabled, the game doesn\'t show \"OpenCAGE Live Link\" in its top-right corner while connected (notes such as the " +
+    "last edit sent still show for a few seconds).";
+            this.hideLiveLinkLabelToolStripMenuItem.Click += new System.EventHandler(this.hideLiveLinkLabelToolStripMenuItem_Click);
             //
             // cubemapCaptureSizeReplacedToolStripMenuItem
             //
@@ -1738,6 +1749,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem resetRenderFiltersOnLoadToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem alwaysFullyRebuildRadiosityToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem cubemapCaptureSizeToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem hideLiveLinkLabelToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem cubemapCaptureSizeReplacedToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator cubemapCaptureSizeToolStripSeparator;
         private System.Windows.Forms.ToolStripMenuItem cubemapCaptureSize64ToolStripMenuItem;

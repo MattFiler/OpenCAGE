@@ -28,14 +28,17 @@ namespace OpenCAGE
         public bool Held;
         /// <summary>Lines drawn in a strip above the node: its live state, then values (null or empty: none).</summary>
         public string[] States;
+        /// <summary>How many lines of the Error Log are about this node's entity: a warning sign on its top-right corner (0: none).</summary>
+        public int Errors;
 
-        public bool IsEmpty => Breakpoint == BreakpointMark.None && !Held && (States == null || States.Length == 0);
+        public bool IsEmpty => Breakpoint == BreakpointMark.None && !Held && (States == null || States.Length == 0) && Errors == 0;
     }
 
     /// <summary>
     /// The flowgraph's node editor, with the script debugger's marks drawn over the nodes once the editor has drawn them: a
     /// red dot on the top-left corner of a node with a breakpoint, an outline and arrow on the node the scripts are held
-    /// at, and a strip of the node's live state above it. The page says what each node shows (DebugMarkProvider); with no
+    /// at, a strip of the node's live state above it, and the Error Log's warning sign on the top-right corner of a node
+    /// whose entity the game reported errors on. The page says what each node shows (DebugMarkProvider); with no
     /// provider, or none to show, it draws as the plain editor.
     /// </summary>
     public class DebuggerNodeEditor : STNodeEditor
@@ -87,6 +90,8 @@ namespace OpenCAGE
                         DrawStates(g, area, scale, mark.States);
                     if (mark.Breakpoint != BreakpointMark.None)
                         DrawBreakpoint(g, area, scale, mark.Breakpoint);
+                    if (mark.Errors != 0)
+                        DrawErrors(g, area, scale);
                 }
             }
             finally
@@ -116,6 +121,13 @@ namespace OpenCAGE
                     g.FillEllipse(fill, dot);
                 g.DrawEllipse(outline, dot);
             }
+        }
+
+        //The Error Log's sign: a warning triangle on the node's top-right corner, as the breakpoint's dot sits on its top-left
+        private static void DrawErrors(Graphics g, Rectangle area, float scale)
+        {
+            float size = Math.Max(10f, Math.Min(24f, 17f * scale));
+            RuntimeUtilsConnection.ScriptErrorLog.DrawWarning(g, new RectangleF(area.Right - size * 0.65f, area.Top - size * 0.45f, size, size * 0.9f));
         }
 
         private static void DrawHeld(Graphics g, Rectangle area, float scale)

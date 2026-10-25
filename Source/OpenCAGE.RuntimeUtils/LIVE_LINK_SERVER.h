@@ -141,6 +141,21 @@ namespace LIVE_LINK_SERVER
 		                     //    the command answers (ok as it says); otherwise "open=0|1\ngroup=..\ntab=..\nselected=..\ntabs=..
 		                     //    \ngroups=..\ncommands=a,b\nvalues=name:1.5,..", then every switch as "name=0|1" a line each.
 		                     //    Refused while DebugMenu=0 in the ini. See DEBUG_MENU.h.
+		ERRORS_GET = 19,     // u32 after (the last sequence number already taken; 0: everything still kept) -> message "errors=N\nnewest=S
+		                     //    \noldest=O\nmore=0|1" and a payload: u32 format (1), u32 oldest (the sequence number of the oldest error
+		                     //    still kept, 0: none - later than after+1 means some were lost), u32 newest, u32 root (the running level's
+		                     //    root composite, 0: none), u32 count, then per error, oldest first: u32 sequence, u8 kind (1: a check the
+		                     //    game made failed; 2: an error it reported), u8 flags (1: the entity could be read), u16 0, f32 script time
+		                     //    (s), u32 root (the level it happened in), u32 entity, u32 instance (the id of the composite instance it
+		                     //    sits in; 0: the root instance), u32 type (its entity type's id, or the composite it instances), u32
+		                     //    composite (the one it sits in), then u32 length + UTF-8: the message, the composite's name, and the
+		                     //    name of the composite it is an instance of (empty unless it is one). At most 512 an answer: more=1 when
+		                     //    there are others to ask for. The game keeps the latest 2048, across levels. Answered at once on the
+		                     //    socket thread. Refused while the errors are not noted: neither ScriptErrors=1 nor DebugMenu=1 in the ini.
+		                     //    See SCRIPT_ERRORS.cpp.
+		OVERLAY = 20,        // u8 label (1: "OpenCAGE Live Link" shows in the top right while connected; 0: it doesn't) -> message
+		                     //    "label=0|1". From the next frame, until changed again or the game closes (LiveLinkLabel= in the ini is
+		                     //    where it starts). Answered at once on the socket thread.
 	};
 
 	void Start(uint16_t port);
@@ -155,6 +170,9 @@ namespace LIVE_LINK_SERVER
 	// Whether OpenCAGE is connected, and a line about the last thing done (if it was recent), for the overlay.
 	bool Connected();
 	std::string LastActivity(unsigned int withinMs);
+
+	// Whether the overlay shows "OpenCAGE Live Link" while connected: LiveLinkLabel= in the ini, until OVERLAY changes it.
+	bool ShowLabel();
 
 	// Which connection is current: bumped when OpenCAGE connects and when it goes, so something a request left behind
 	// (the camera pose, the animation drive) can tell its connection has ended.

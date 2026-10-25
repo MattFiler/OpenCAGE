@@ -19,7 +19,8 @@ namespace OpenCAGE
        each breakpoint as a red dot on its node (a ring while the game does not stop on it), outlines the node the scripts
        are held at, and - while Show Live States Above Nodes is on - shows above each node its state in the running game (started,
        enabled...) and the values its data pins read, polled from the game twice a second while the page is on screen. F8
-       continues and F10 steps while the scripts are held. */
+       continues and F10 steps while the scripts are held. While the Error Log is open, a node whose entity the game reported
+       script errors on shows a warning sign (see ScriptErrorLog). */
     public partial class Flowgraph
     {
         private CompositeDisplay _debuggerDisplay;
@@ -74,6 +75,7 @@ namespace OpenCAGE
                 editor.DebugMarkProvider = DebugMarkOf;
             LiveLinkDebugger.Changed += OnDebuggerChanged;
             LiveLinkDebugger.HitArrived += OnDebuggerHit;
+            ScriptErrorLog.MarksChanged += OnErrorMarksChanged;
             VisibleChanged += OnDebuggerVisibleChanged;
             FormClosed += OnDebuggerClosed;
             Disposed += OnDebuggerClosed;
@@ -88,6 +90,7 @@ namespace OpenCAGE
         {
             LiveLinkDebugger.Changed -= OnDebuggerChanged;
             LiveLinkDebugger.HitArrived -= OnDebuggerHit;
+            ScriptErrorLog.MarksChanged -= OnErrorMarksChanged;
             VisibleChanged -= OnDebuggerVisibleChanged;
             FormClosed -= OnDebuggerClosed;
             Disposed -= OnDebuggerClosed;
@@ -115,6 +118,25 @@ namespace OpenCAGE
             //The states as they are where the scripts stopped
             if (Visible && LiveLinkDebugger.ShowStates)
                 BeginInvoke(new Action(async () => await PollStates()));
+        }
+
+        //The Error Log's errors came or went (any thread): the warning signs are asked for as the page paints
+        private void OnErrorMarksChanged()
+        {
+            if (IsDisposed || !IsHandleCreated)
+                return;
+            try
+            {
+                BeginInvoke(new Action(() =>
+                {
+                    if (!IsDisposed && Visible && stNodeEditor1 != null && !stNodeEditor1.IsDisposed)
+                        stNodeEditor1.Invalidate();
+                }));
+            }
+            catch (InvalidOperationException)
+            {
+                //Closing
+            }
         }
 
         private void OnDebuggerVisibleChanged(object sender, EventArgs e)
@@ -211,7 +233,8 @@ namespace OpenCAGE
                 }
             }
             uint id = node.Entity.shortGUID.AsUInt32;
-            if (_breakpointMarks.Count == 0 && !_heldHere && _stateLines.Count == 0)
+            bool errors = ScriptErrorLog.AnyMarks;
+            if (_breakpointMarks.Count == 0 && !_heldHere && _stateLines.Count == 0 && !errors)
                 return NodeDebugMark.None;
             NodeDebugMark mark = new NodeDebugMark();
             if (_breakpointMarks.TryGetValue(id, out BreakpointMark breakpoint))
@@ -219,6 +242,8 @@ namespace OpenCAGE
             mark.Held = _heldHere && _heldEntity == id;
             if (_stateLines.TryGetValue(id, out string[] lines))
                 mark.States = lines;
+            if (errors && _composite != null)
+                mark.Errors = ScriptErrorLog.CountOn(_composite.shortGUID.AsUInt32, id);
             return mark;
         }
 

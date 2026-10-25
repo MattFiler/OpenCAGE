@@ -186,6 +186,24 @@ namespace
 	// The newest error, for the overlay
 	std::atomic<ULONGLONG> g_toastTick = 0;
 
+	// What OpenCAGE's Error Log reads (Live Link's ERRORS_GET): every occurrence noted (not the repeats only counted), each
+	// numbered, the latest kRelaySize of them. Kept across levels: OpenCAGE starts its log afresh itself, when it launches the
+	// game. Under g_lock; made when the hooks attach.
+	constexpr size_t kRelaySize = 2048;
+	constexpr uint32_t kRelayBatch = 512;   // the most one answer carries
+	struct Relayed
+	{
+		uint32_t sequence = 0;
+		uint32_t root = 0;                  // the level it happened in (the id of its root composite)
+		SiteKind kind = Check;
+		float scriptTime = 0.0f;
+		SCRIPT_DEBUG::EntityId entity;
+		char message[kMessageSize] = {};
+	};
+	std::vector<Relayed> g_relay;
+	size_t g_relayNext = 0;
+	uint32_t g_relaySequence = 0;          // the last number given out
+
 	// ---- Switches ----
 	std::atomic<bool> g_record = true;
 	std::atomic<bool> g_recordDropped = true;
@@ -335,6 +353,17 @@ namespace
 		g_log[g_logNext] = occurrence;
 		g_logNext = (g_logNext + 1) % kLogSize;
 		g_logCount = (std::min)(g_logCount + 1, kLogSize);
+		if (!g_relay.empty())
+		{
+			Relayed& relayed = g_relay[g_relayNext];
+			g_relayNext = (g_relayNext + 1) % g_relay.size();
+			relayed.sequence = ++g_relaySequence;
+			relayed.root = g_root;
+			relayed.kind = kind;
+			relayed.scriptTime = static_cast<float>(occurrence.scriptTime);
+			relayed.entity = occurrence.entity;
+			strcpy_s(relayed.message, occurrence.message);
+		}
 		Entry* entry = nullptr;
 		for (Entry& existing : g_entries)
 			if (existing.latest.format == format && existing.latest.entity.entity == occurrence.entity.entity && existing.latest.entity.instance == occurrence.entity.instance)
@@ -526,6 +555,8 @@ namespace
 				AcquireSRWLockExclusive(&g_lock);
 				g_entries.reserve(kMaxEntries);
 				g_dropped.reserve(kMaxDroppedEntries);
+				if (g_relay.empty())
+					g_relay.resize(kRelaySize);
 				ReleaseSRWLockExclusive(&g_lock);
 			}
 			// Where each call returns to, sorted (so the handlers can tell which call it was), made before any call is changed
@@ -814,7 +845,7 @@ namespace
 	}
 
 	const bool g_registered = Register();
-	const bool g_hooks = DEBUG_MENU::AddHooks(Attach);
+	// The hooks are attached by the DLL itself (SCRIPT_ERRORS::AttachHooks): with the debug menu, or for the Error Log alone
 
 	// ---- The tab ----
 	Snapshot g_view;
@@ -1178,4 +1209,80 @@ void SCRIPT_DEBUG::NoteScriptError(const void* entityRef, const char* message)
 {
 	if (g_record)
 		NoteOwn(entityRef, "%s", message);
+}
+
+void SCRIPT_ERRORS::AttachHooks(bool attach)
+{
+	Attach(attach);
+}
+
+bool SCRIPT_ERRORS::Following()
+{
+	return g_attached && g_patchedChecks + g_patchedErrors > 0;
+}
+
+bool SCRIPT_ERRORS::TakeSince(uint32_t after, std::string& message, std::vector<uint8_t>& payload)
+{
+	if (!Following())
+	{
+		message = g_attached ? "None of the game's script checks could be followed on this game release"
+			: "The game's script errors are not being noted: launch it from OpenCAGE with Error log (or the Debug Menu) ticked";
+		return false;
+	}
+	auto u8 = [&payload](uint8_t value) { payload.push_back(value); };
+	auto u32 = [&payload](uint32_t value) { for (int i = 0; i < 4; i++) payload.push_back(static_cast<uint8_t>(value >> (i * 8))); };
+	auto f32 = [&u32](float value) { uint32_t bits; memcpy(&bits, &value, 4); u32(bits); };
+	auto text = [&payload, &u32](const char* value, size_t size)
+	{
+		const size_t length = strnlen(value, size);
+		u32(static_cast<uint32_t>(length));
+		payload.insert(payload.end(), value, value + length);
+	};
+
+	payload.clear();
+	AcquireSRWLockShared(&g_lock);
+	const size_t kept = (std::min)(static_cast<size_t>(g_relaySequence), g_relay.size());
+	const size_t oldestAt = (g_relayNext + g_relay.size() - kept) % (std::max)(g_relay.size(), static_cast<size_t>(1));
+	const uint32_t oldest = kept == 0 ? 0 : g_relay[oldestAt].sequence;
+	const uint32_t newest = g_relaySequence;
+	u32(1); // format
+	u32(oldest);
+	u32(newest);
+	u32(SCRIPT_DEBUG::RunningRoot());
+	const size_t countAt = payload.size();
+	u32(0);
+	uint32_t count = 0;
+	bool more = false;
+	for (size_t i = 0; i < kept; i++)
+	{
+		const Relayed& relayed = g_relay[(oldestAt + i) % g_relay.size()];
+		if (relayed.sequence <= after)
+			continue;
+		if (count == kRelayBatch)
+		{
+			more = true;
+			break;
+		}
+		count++;
+		u32(relayed.sequence);
+		u8(relayed.kind == Check ? 1 : 2);
+		u8(relayed.entity.valid ? 1 : 0);
+		u8(0);
+		u8(0);
+		f32(relayed.scriptTime);
+		u32(relayed.root);
+		u32(relayed.entity.entity);
+		u32(relayed.entity.instance);
+		u32(relayed.entity.type);
+		u32(relayed.entity.composite);
+		text(relayed.message, sizeof(relayed.message));
+		text(relayed.entity.compositeName, sizeof(relayed.entity.compositeName));
+		text(relayed.entity.instanceOf, sizeof(relayed.entity.instanceOf));
+	}
+	ReleaseSRWLockShared(&g_lock);
+	for (int i = 0; i < 4; i++)
+		payload[countAt + i] = static_cast<uint8_t>(count >> (i * 8));
+
+	message = "errors=" + std::to_string(count) + "\nnewest=" + std::to_string(newest) + "\noldest=" + std::to_string(oldest) + "\nmore=" + (more ? "1" : "0");
+	return true;
 }

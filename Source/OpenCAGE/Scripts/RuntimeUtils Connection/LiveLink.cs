@@ -44,6 +44,8 @@ namespace OpenCAGE.RuntimeUtilsConnection
             SETTINGS = 16,
             SETTINGS_GET = 17,
             DEBUG_MENU_CONTROL = 18,
+            ERRORS_GET = 19,
+            OVERLAY = 20,
         }
 
         public sealed class Reply
@@ -520,6 +522,16 @@ namespace OpenCAGE.RuntimeUtilsConnection
         public static Task<Reply> GetSettings(SettingsFile file)
         {
             return Request(Command.SETTINGS_GET, w => w.Write((byte)file));
+        }
+
+        /// <summary>
+        /// Whether the game shows "OpenCAGE Live Link" in its top-right corner while connected (Options > Misc > Hide Live Link
+        /// Label In-Game), from its next frame; the launch writes it too (LiveLinkLabel=). Runtime utils from before it answer
+        /// "Unknown request".
+        /// </summary>
+        public static Task<Reply> SetOverlay(bool showLabel)
+        {
+            return Request(Command.OVERLAY, w => w.Write((byte)(showLabel ? 1 : 0)), 5);
         }
 
         /// <summary>What to do with the game's Debug Menu (DebugMenu).</summary>

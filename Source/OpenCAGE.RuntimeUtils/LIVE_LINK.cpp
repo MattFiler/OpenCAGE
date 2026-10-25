@@ -1167,12 +1167,13 @@ namespace
 __declspec(noinline)
 void __fastcall LIVE_LINK::h_process(void* _this, void* /*_EDX*/)
 {
-	if (Config::Get().debugMenu)
-	{
+	// The debug menu's work for this thread - and, debug menu or not, the debug script entities' (the object markers' look
+	// through the level)
+	if (Config::Get().debugMenu || Config::AnyScriptEntity())
 		DEBUG_MENU::RunEntityThreadWork();
-		// Script breakpoints: the game's list kept in line with what is set
+	// Script breakpoints: the game's list kept in line with what is set
+	if (Config::Get().debugMenu)
 		LIVE_DEBUGGER::EntityFrame();
-	}
 	TrackTransport();
 	LIVE_LINK_SERVER::ProcessEntityRequests();
 	// After the requests, so an edit pushed this frame (which can rebind or restart the driven animation) is already in, and

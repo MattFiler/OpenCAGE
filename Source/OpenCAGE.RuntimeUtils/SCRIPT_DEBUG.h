@@ -148,3 +148,29 @@ namespace SCRIPT_DEBUG
 	// level's triggers. Returns at once while counting is off.
 	void CountTrigger(const void* info);
 }
+
+// The debug script entities made to work again (SCRIPT_ENTITIES.cpp). They run on their own, debug menu or not, whenever
+// one of their keys is on (Launch Game's Debug entities writes all four): their hooks are attached with the others, and with
+// the debug menu off their overlay is drawn from the overlay's own frame (with it on, the debug menu draws it).
+namespace SCRIPT_ENTITIES
+{
+	void AttachHooks(bool attach);
+
+	// Render thread, inside the ImGui frame, while the debug menu is off
+	void DrawOverlay();
+}
+
+// The game's script errors and failed checks (SCRIPT_ERRORS.cpp). Noted with the debug menu, or on their own with
+// ScriptErrors=1 (Launch Game's Error log), for OpenCAGE's Error Log to read over Live Link (ERRORS_GET).
+namespace SCRIPT_ERRORS
+{
+	void AttachHooks(bool attach);
+
+	// Whether the game's errors are being noted (the hooks are attached and they could be patched)
+	bool Following();
+
+	// Live Link's ERRORS_GET, on the socket thread: every error noted after the sequence number given (0: all still kept),
+	// oldest first, at most a batch at a time, as its payload (see LIVE_LINK_SERVER.h), with a summary for its message.
+	// False (with why) while errors are not being noted.
+	bool TakeSince(uint32_t after, std::string& message, std::vector<uint8_t>& payload);
+}

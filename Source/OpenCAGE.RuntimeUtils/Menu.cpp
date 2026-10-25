@@ -11,6 +11,7 @@
 #include "CINEMATIC_CAMERA.h"
 #include "CINEMATIC_CAPTURE.h"
 #include "DEBUG_MENU.h"
+#include "SCRIPT_DEBUG.h"
 #include "MOUSE_UNLOCK.h"
 #include "POSSESS.h"
 
@@ -285,6 +286,14 @@ void Menu::DrawMenu() {
         DEBUG_MARKER::DrawOverlay();
     }
 
+    // The debug script entities (DebugGraph, DebugObjectMarker...) with the debug menu off: the camera and the render
+    // thread's work kept going for them, and their overlay. With the debug menu on, it draws them as one of its overlays.
+    if (Config::AnyScriptEntity() && !Config::Get().debugMenu)
+    {
+        DEBUG_MENU::KeepUpWithoutWindow();
+        SCRIPT_ENTITIES::DrawOverlay();
+    }
+
     // Unlock Mouse: a note when its key is pressed.
     if (Config::Get().unlockMouse)
         MOUSE_UNLOCK::DrawOverlay();
@@ -299,17 +308,22 @@ void Menu::DrawMenu() {
 
     // Live Link: a quiet note in the top right while OpenCAGE is connected, with what it last did for a few seconds. Drawn
     // after the debug menu, so it can start under the notes along the top of the screen while any shows (a long one, such
-    // as the scripts held at a breakpoint, runs right across).
+    // as the scripts held at a breakpoint, runs right across). The "OpenCAGE Live Link" label can be hidden (OpenCAGE's
+    // Options > Misc > Hide Live Link Label In-Game): the lines under it then start where it would be.
     if (Config::Get().liveLink && LIVE_LINK_SERVER::Connected())
     {
         ImDrawList* drawList = ImGui::GetForegroundDrawList();
         const float width = ImGui::GetIO().DisplaySize.x;
         const float size = 16.0f;
         const float top = Config::Get().debugMenu ? (std::max)(10.0f, DEBUG_MENU::BannersBottom()) : 10.0f;
-        const char* label = "OpenCAGE Live Link";
-        const float labelWidth = ImGui::GetFont()->CalcTextSizeA(size, FLT_MAX, 0.0f, label).x;
-        drawList->AddText(ImGui::GetFont(), size, ImVec2(width - labelWidth - 12.0f, top), IM_COL32(120, 220, 140, 220), label);
-        float line = top + 20.0f;
+        float line = top;
+        if (LIVE_LINK_SERVER::ShowLabel())
+        {
+            const char* label = "OpenCAGE Live Link";
+            const float labelWidth = ImGui::GetFont()->CalcTextSizeA(size, FLT_MAX, 0.0f, label).x;
+            drawList->AddText(ImGui::GetFont(), size, ImVec2(width - labelWidth - 12.0f, top), IM_COL32(120, 220, 140, 220), label);
+            line += 20.0f;
+        }
         // Camera sync: for as long as the game renders from OpenCAGE's viewport camera.
         if (LIVE_CAMERA::Applying())
         {

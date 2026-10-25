@@ -127,9 +127,9 @@ namespace OpenCAGE
         {
             (string Legacy, string Key)[] keys =
             {
-                (Settings.LegacyUiModPauseMenu, Settings.RemovedUiModPauseMenu),
+                (Settings.LegacyUiModPauseMenu, Settings.UiModPauseMenu),
                 (Settings.LegacyUiModLoadingScreen, Settings.UiModLoadingScreen),
-                (Settings.LegacyUiModNewFrontendMenu, Settings.RemovedUiModNewFrontendMenu),
+                (Settings.LegacyUiModNewFrontendMenu, Settings.UiModNewFrontendMenu),
                 (Settings.LegacyUiModGameOverMenu, Settings.UiModGameOverMenu),
             };
             foreach ((string legacy, string key) in keys)
@@ -145,10 +145,10 @@ namespace OpenCAGE
         /* Launch Game was redesigned (22 Oct 2026). Its four debug entity switches (DebugText, DebugTextStacking,
            DebugEnvironmentMarker, DebugPositionMarker) are one now, Debug entities: on for whoever had any of them on. The
            options it dropped go: Skip Frontend (Load straight into a level skips the title screen, starting at the main menu
-           never does), the UI memory overlay (the Debug Menu's Performance > Memory has it), memory logging, and the debug
-           checkpoints and level selection menus (the Debug Menu's Game > Tools and Game > Game flow do those). Each old key is
+           never does), the UI memory overlay (the Debug Menu's Performance > Memory has it) and memory logging. Each old key is
            removed once it is read, so this runs once per key (an older OpenCAGE then shows them off). What the dropped options
-           left on in AI.exe and UI.PAK goes back off at the next launch (McpLevelTools.ApplyPatchSettings, UiMovieOverrides). */
+           left on in AI.exe goes back off at the next launch (McpLevelTools.ApplyPatchSettings). The debug checkpoints and level
+           selection menus were dropped too, then brought back (25 Oct 2026) under their old keys, which are no longer removed. */
         static void EnsureLaunchGameRedesign()
         {
             string[] debugEntities = { Settings.LegacyDebugText, Settings.LegacyDebugTextStacking, Settings.LegacyDebugEnvironmentMarker, Settings.LegacyDebugPositionMarker };
@@ -158,7 +158,6 @@ namespace OpenCAGE
             string[] removed = debugEntities.Concat(new[]
             {
                 Settings.LegacySkipFrontend, Settings.LegacyUiMemoryOverlay, Settings.LegacyMemoryLogging,
-                Settings.RemovedUiModPauseMenu, Settings.RemovedUiModNewFrontendMenu,
             }).ToArray();
             foreach (string key in removed)
                 if (SettingsManager.IsSet(key))

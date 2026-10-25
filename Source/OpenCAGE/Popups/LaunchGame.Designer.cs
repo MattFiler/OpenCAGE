@@ -41,6 +41,7 @@ namespace OpenCAGE
             this.enableHotReload = new System.Windows.Forms.CheckBox();
             this.hotReloadKey = new System.Windows.Forms.ComboBox();
             this.enableLiveLink = new System.Windows.Forms.CheckBox();
+            this.enableErrorLog = new System.Windows.Forms.CheckBox();
             this.renderConstantAmbient = new System.Windows.Forms.CheckBox();
             this.disableUI = new System.Windows.Forms.CheckBox();
             this.patchCurrentGen = new System.Windows.Forms.CheckBox();
@@ -50,6 +51,8 @@ namespace OpenCAGE
             this.unlockMouseKey = new System.Windows.Forms.ComboBox();
             this.enablePossess = new System.Windows.Forms.CheckBox();
             this.possessKey = new System.Windows.Forms.ComboBox();
+            this.debugCheckpoints = new System.Windows.Forms.CheckBox();
+            this.levelSelect = new System.Windows.Forms.CheckBox();
             this.quitToMenuOnDeath = new System.Windows.Forms.CheckBox();
             this.debugLoadingScreen = new System.Windows.Forms.CheckBox();
             this.debugToolsGroup = new System.Windows.Forms.GroupBox();
@@ -63,7 +66,7 @@ namespace OpenCAGE
             // OpenGame
             //
             this.OpenGame.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.OpenGame.Location = new System.Drawing.Point(12, 291);
+            this.OpenGame.Location = new System.Drawing.Point(12, 314);
             this.OpenGame.Name = "OpenGame";
             this.OpenGame.Size = new System.Drawing.Size(436, 40);
             this.OpenGame.TabIndex = 5;
@@ -113,8 +116,8 @@ namespace OpenCAGE
             this.toolTip1.SetToolTip(this.enableDebugMenu, "An in-game debug menu: press the chosen key to open it. See what each character senses, thinks and is doing (i" +
         "ts behaviour tree, view cones, path, suspicion), flip the behaviour trees\' debug switches, rendering switches and" +
         " more. Cinematic Tools are part of it now, under Cinematic (their free camera, camera tracks and visuals), and s" +
-        "o are the UI memory overlay (Performance > Memory), debug checkpoints (Game > Tools) and level selection (Game >" +
-        " Game flow).");
+        "o is the UI memory overlay (Performance > Memory). It has debug checkpoints too (Game > Tools), and loads any le" +
+        "vel (Game > Game flow).");
             this.enableDebugMenu.UseVisualStyleBackColor = true;
             this.enableDebugMenu.CheckedChanged += new System.EventHandler(this.enableDebugMenu_CheckedChanged);
             //
@@ -154,8 +157,10 @@ namespace OpenCAGE
             this.enableDebugEntities.Size = new System.Drawing.Size(96, 17);
             this.enableDebugEntities.TabIndex = 5;
             this.enableDebugEntities.Text = "Debug entities";
-            this.toolTip1.SetToolTip(this.enableDebugEntities, "Debug script entities show in-game: DebugText and DebugTextStacking draw their text on screen, DebugEnvironmen" +
-        "tMarker draws its text at a place in the world, and DebugPositionMarker draws axes there.");
+            this.toolTip1.SetToolTip(this.enableDebugEntities, "Debug script entities work in game, with or without the Debug Menu: DebugText and DebugTextStacking draw thei" +
+        "r text on screen, DebugEnvironmentMarker draws its text at a place in the world and DebugPositionMarker draws axes" +
+        " there, DebugGraph plots its inputs, DebugObjectMarker names its object, and DebugCaptureScreenShot saves a scree" +
+        "nshot. DebugMenuToggle sets Debug Menu switches (with the Debug Menu on).");
             this.enableDebugEntities.UseVisualStyleBackColor = true;
             this.enableDebugEntities.CheckedChanged += new System.EventHandler(this.enableDebugEntities_CheckedChanged);
             //
@@ -199,6 +204,20 @@ namespace OpenCAGE
         "a and the game\'s can follow each other.");
             this.enableLiveLink.UseVisualStyleBackColor = true;
             this.enableLiveLink.CheckedChanged += new System.EventHandler(this.enableLiveLink_CheckedChanged);
+            //
+            // enableErrorLog
+            //
+            this.enableErrorLog.AutoSize = true;
+            this.enableErrorLog.Enabled = false;
+            this.enableErrorLog.Location = new System.Drawing.Point(252, 65);
+            this.enableErrorLog.Name = "enableErrorLog";
+            this.enableErrorLog.Size = new System.Drawing.Size(68, 17);
+            this.enableErrorLog.TabIndex = 7;
+            this.enableErrorLog.Text = "Error log";
+            this.toolTip1.SetToolTip(this.enableErrorLog, "The Error Log opens as the game starts and lists the level\'s script errors as the game finds them (Live Link): " +
+        "double-click one to go to its entity, and flowgraph nodes with errors show a warning sign. Needs Live Link.");
+            this.enableErrorLog.UseVisualStyleBackColor = true;
+            this.enableErrorLog.CheckedChanged += new System.EventHandler(this.enableErrorLog_CheckedChanged);
             //
             // renderConstantAmbient
             //
@@ -316,29 +335,55 @@ namespace OpenCAGE
             this.toolTip1.SetToolTip(this.possessKey, "The key that opens and closes the in-game menu of characters to possess.");
             this.possessKey.SelectedIndexChanged += new System.EventHandler(this.possessKey_SelectedIndexChanged);
             //
-            // quitToMenuOnDeath
+            // debugCheckpoints
             //
-            this.quitToMenuOnDeath.AutoSize = true;
-            this.quitToMenuOnDeath.Location = new System.Drawing.Point(10, 19);
-            this.quitToMenuOnDeath.Name = "quitToMenuOnDeath";
-            this.quitToMenuOnDeath.Size = new System.Drawing.Size(135, 17);
-            this.quitToMenuOnDeath.TabIndex = 0;
-            this.quitToMenuOnDeath.Text = "Quit to menu on death";
-            this.toolTip1.SetToolTip(this.quitToMenuOnDeath, "Adds a Quit To Menu option to the game-over screen, so a death can go back to the main menu.");
-            this.quitToMenuOnDeath.UseVisualStyleBackColor = true;
-            this.quitToMenuOnDeath.CheckedChanged += new System.EventHandler(this.quitToMenuOnDeath_CheckedChanged);
+            this.debugCheckpoints.AutoSize = true;
+            this.debugCheckpoints.Location = new System.Drawing.Point(10, 19);
+            this.debugCheckpoints.Name = "debugCheckpoints";
+            this.debugCheckpoints.Size = new System.Drawing.Size(196, 17);
+            this.debugCheckpoints.TabIndex = 0;
+            this.debugCheckpoints.Text = "Debug Checkpoints (in Pause Menu)";
+            this.toolTip1.SetToolTip(this.debugCheckpoints, "Adds the level\'s debug checkpoints to the pause menu: pick one to jump to it. The Debug Menu\'s Game > Tools ta" +
+        "b has them too.");
+            this.debugCheckpoints.UseVisualStyleBackColor = true;
+            this.debugCheckpoints.CheckedChanged += new System.EventHandler(this.debugCheckpoints_CheckedChanged);
+            //
+            // levelSelect
+            //
+            this.levelSelect.AutoSize = true;
+            this.levelSelect.Location = new System.Drawing.Point(236, 19);
+            this.levelSelect.Name = "levelSelect";
+            this.levelSelect.Size = new System.Drawing.Size(158, 17);
+            this.levelSelect.TabIndex = 1;
+            this.levelSelect.Text = "Level Select (in Main Menu)";
+            this.toolTip1.SetToolTip(this.levelSelect, "Adds a level selection to the main menu: pick any level, your own included, to load it. The Debug Menu\'s Game" +
+        " > Game flow tab can load levels too.");
+            this.levelSelect.UseVisualStyleBackColor = true;
+            this.levelSelect.CheckedChanged += new System.EventHandler(this.levelSelect_CheckedChanged);
             //
             // debugLoadingScreen
             //
             this.debugLoadingScreen.AutoSize = true;
-            this.debugLoadingScreen.Location = new System.Drawing.Point(236, 19);
+            this.debugLoadingScreen.Location = new System.Drawing.Point(10, 42);
             this.debugLoadingScreen.Name = "debugLoadingScreen";
-            this.debugLoadingScreen.Size = new System.Drawing.Size(133, 17);
-            this.debugLoadingScreen.TabIndex = 1;
-            this.debugLoadingScreen.Text = "Debug loading screen";
-            this.toolTip1.SetToolTip(this.debugLoadingScreen, "The loading screen shows the name of the level being loaded.");
+            this.debugLoadingScreen.Size = new System.Drawing.Size(119, 17);
+            this.debugLoadingScreen.TabIndex = 2;
+            this.debugLoadingScreen.Text = "Quicker Loadscreen";
+            this.toolTip1.SetToolTip(this.debugLoadingScreen, "OpenCAGE\'s quicker loading screen, which shows the name of the level being loaded.");
             this.debugLoadingScreen.UseVisualStyleBackColor = true;
             this.debugLoadingScreen.CheckedChanged += new System.EventHandler(this.debugLoadingScreen_CheckedChanged);
+            //
+            // quitToMenuOnDeath
+            //
+            this.quitToMenuOnDeath.AutoSize = true;
+            this.quitToMenuOnDeath.Location = new System.Drawing.Point(236, 42);
+            this.quitToMenuOnDeath.Name = "quitToMenuOnDeath";
+            this.quitToMenuOnDeath.Size = new System.Drawing.Size(160, 17);
+            this.quitToMenuOnDeath.TabIndex = 3;
+            this.quitToMenuOnDeath.Text = "Quit Option On Deathscreen";
+            this.toolTip1.SetToolTip(this.quitToMenuOnDeath, "Adds a Quit To Menu option to the game-over screen, so a death can go back to the main menu.");
+            this.quitToMenuOnDeath.UseVisualStyleBackColor = true;
+            this.quitToMenuOnDeath.CheckedChanged += new System.EventHandler(this.quitToMenuOnDeath_CheckedChanged);
             //
             // debugToolsGroup
             //
@@ -349,6 +394,7 @@ namespace OpenCAGE
             this.debugToolsGroup.Controls.Add(this.enableHotReload);
             this.debugToolsGroup.Controls.Add(this.hotReloadKey);
             this.debugToolsGroup.Controls.Add(this.enableLiveLink);
+            this.debugToolsGroup.Controls.Add(this.enableErrorLog);
             this.debugToolsGroup.Location = new System.Drawing.Point(12, 41);
             this.debugToolsGroup.Name = "debugToolsGroup";
             this.debugToolsGroup.Size = new System.Drawing.Size(436, 92);
@@ -376,11 +422,13 @@ namespace OpenCAGE
             //
             // uiTweaksGroup
             //
-            this.uiTweaksGroup.Controls.Add(this.quitToMenuOnDeath);
+            this.uiTweaksGroup.Controls.Add(this.debugCheckpoints);
+            this.uiTweaksGroup.Controls.Add(this.levelSelect);
             this.uiTweaksGroup.Controls.Add(this.debugLoadingScreen);
+            this.uiTweaksGroup.Controls.Add(this.quitToMenuOnDeath);
             this.uiTweaksGroup.Location = new System.Drawing.Point(12, 237);
             this.uiTweaksGroup.Name = "uiTweaksGroup";
-            this.uiTweaksGroup.Size = new System.Drawing.Size(436, 46);
+            this.uiTweaksGroup.Size = new System.Drawing.Size(436, 69);
             this.uiTweaksGroup.TabIndex = 4;
             this.uiTweaksGroup.TabStop = false;
             this.uiTweaksGroup.Text = "UI tweaks";
@@ -389,7 +437,7 @@ namespace OpenCAGE
             //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(460, 343);
+            this.ClientSize = new System.Drawing.Size(460, 366);
             this.Controls.Add(this.loadToLevel);
             this.Controls.Add(this.levelList);
             this.Controls.Add(this.debugToolsGroup);
@@ -428,6 +476,7 @@ namespace OpenCAGE
         private System.Windows.Forms.CheckBox enableHotReload;
         private System.Windows.Forms.ComboBox hotReloadKey;
         private System.Windows.Forms.CheckBox enableLiveLink;
+        private System.Windows.Forms.CheckBox enableErrorLog;
         private System.Windows.Forms.GroupBox gameOptionsGroup;
         private System.Windows.Forms.CheckBox renderConstantAmbient;
         private System.Windows.Forms.CheckBox disableUI;
@@ -439,6 +488,8 @@ namespace OpenCAGE
         private System.Windows.Forms.CheckBox enablePossess;
         private System.Windows.Forms.ComboBox possessKey;
         private System.Windows.Forms.GroupBox uiTweaksGroup;
+        private System.Windows.Forms.CheckBox debugCheckpoints;
+        private System.Windows.Forms.CheckBox levelSelect;
         private System.Windows.Forms.CheckBox quitToMenuOnDeath;
         private System.Windows.Forms.CheckBox debugLoadingScreen;
     }

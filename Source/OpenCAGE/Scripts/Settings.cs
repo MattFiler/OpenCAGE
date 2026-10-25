@@ -101,6 +101,8 @@ namespace OpenCAGE
         public const string ResetRenderFilters = "ResetRenderFilters";
         public const string AlwaysFullyRebuildRadiosity = "AlwaysFullyRebuildRadiosity";
         public const string CubemapCaptureSize = "CubemapCaptureSize";
+        //Options > Misc > Hide Live Link Label In-Game: the game doesn't show "OpenCAGE Live Link" in its top-right corner
+        public const string HideLiveLinkLabel = "HideLiveLinkLabel";
         public const string LaunchChildrenWithoutViewport = "LaunchChildrenWithoutViewport";
         public const string ViewportEnabled = "ViewportEnabled";
         public const string LevelViewerHighlightMode = "LevelViewerHighlightMode";
@@ -127,10 +129,16 @@ namespace OpenCAGE
         public const string ScriptingHelpersUnlockMouseKey = "ScriptingHelpers_UnlockMouseKey";
         public const string ScriptingHelpersCapFps = "ScriptingHelpers_CapFps";
         public const string ScriptingHelpersCapFpsRate = "ScriptingHelpers_CapFpsRate";
-        //Launch Game's "Debug entities": DebugText, DebugTextStacking, DebugEnvironmentMarker and DebugPositionMarker script
-        //entities draw in game - one switch for the four the runtime utils config has
+        //Launch Game's "Debug entities": the debug script entities work in game (DebugText, DebugTextStacking, the two markers,
+        //DebugGraph, DebugMenuToggle, DebugObjectMarker, DebugCaptureScreenShot) - one switch for the eight runtime utils keys
         public const string DebugEntities = "ScriptingHelpers_DebugEntities";
         public const string ScriptingHelpersLiveLink = "ScriptingHelpers_LiveLink";
+        //Launch Game's "Error log" (under Live Link): the game notes its script errors, and the Error Log window opens as it
+        //is launched and lists them as they happen
+        public const string ErrorLog = "ErrorLog";
+        //The Error Log window's own options: start afresh at each launch (on by default), and list the errors under their entities
+        public const string ErrorLogClearOnPlay = "ErrorLogClearOnPlay";
+        public const string ErrorLogGroupByEntity = "ErrorLogGroupByEntity";
         //Possess Characters (Launch Game > Game options): its key opens an in-game menu to take a character and move it
         public const string PossessCharacters = "PossessCharacters";
         public const string PossessCharactersKey = "PossessCharactersKey";
@@ -155,13 +163,12 @@ namespace OpenCAGE
         public const string LegacyMemoryLogging = "Mem_Replay_Logs";
 
         //The Launch Game UI options: OpenCAGE's own menu movies beside the game's in UI.PAK, the game pointed at them (UiMovieOverrides)
+        //(Quicker Loadscreen, Quit Option On Deathscreen, Debug Checkpoints in the pause menu, Level Select in the main menu). The
+        //last two were dropped on 22 Oct 2026 for the Debug Menu's own and brought back on 25 Oct, under the same keys
         public const string UiModLoadingScreen = "UiOption_LoadingScreen";
         public const string UiModGameOverMenu = "UiOption_GameOverMenu";
-        //...and the two Launch Game dropped on 22 Oct 2026 (the Debug Menu's Game > Tools has the debug checkpoints, its Game >
-        //Game flow loads any level): removed once (SettingsDefaults); UiMovieOverrides keeps their movies out, so a launch
-        //takes out one an older OpenCAGE left in
-        public const string RemovedUiModPauseMenu = "UiOption_PauseMenu";
-        public const string RemovedUiModNewFrontendMenu = "UiOption_NewFrontendMenu";
+        public const string UiModPauseMenu = "UiOption_PauseMenu";
+        public const string UiModNewFrontendMenu = "UiOption_NewFrontendMenu";
         //...named until 17 Oct 2026 after the movies themselves, when ticking one wrote OpenCAGE's movie OVER the game's in UI.PAK.
         //Moved onto the keys above once (SettingsDefaults), then removed
         public const string LegacyUiModPauseMenu = "PAUSEMENU";

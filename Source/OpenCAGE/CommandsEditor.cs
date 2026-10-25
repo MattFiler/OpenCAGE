@@ -2593,6 +2593,20 @@ namespace OpenCAGE
             ToggleBoolSetting(Settings.AlwaysFullyRebuildRadiosity);
         }
 
+        private void hideLiveLinkLabelToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.HideLiveLinkLabel);
+        }
+
+        /* Options > Misc > Hide Live Link Label In-Game, told to a connected game straight away (a launch writes it into the
+           game's ini too, and each new connection is told it again). An older runtime utils doesn't know the request: it keeps
+           its label until the next launch. */
+        private static void SendLiveLinkLabelSetting()
+        {
+            if (RuntimeUtilsConnection.LiveLink.Connected)
+                RuntimeUtilsConnection.LiveLink.SetOverlay(!SettingsManager.GetBool(Settings.HideLiveLinkLabel));
+        }
+
         private bool _levelViewerToolbarConfigured;
 
         private void EnsureLevelViewerToolbarConfigured()
@@ -3033,6 +3047,11 @@ namespace OpenCAGE
                 alwaysFullyRebuildRadiosityToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.AlwaysFullyRebuildRadiosity);
             if (ShouldApplySetting(Settings.CubemapCaptureSize, changedKeys))
                 ApplyCubemapCaptureSizeSelectionFromSettings();
+            if (ShouldApplySetting(Settings.HideLiveLinkLabel, changedKeys))
+            {
+                hideLiveLinkLabelToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.HideLiveLinkLabel);
+                SendLiveLinkLabelSetting();
+            }
         }
 
         /* Render Planets and Use Planar Reflections each hang off the option above them. Planets are drawn in the galaxy's sky,
@@ -3353,6 +3372,13 @@ namespace OpenCAGE
                 ApplySettingEffects(new[] { Settings.RuntimeUtilsOpt });
                 OnLiveLinkConnectionChanged();
             }
+            //A new session: the Error Log opens with Launch Game's Error log ticked, and starts afresh (emptied too, with its Clear
+            //on Play on) - the game numbers its errors from the start again
+            bool errorLog = servesLiveLink && LaunchGame.ErrorLogOn();
+            if (errorLog || ErrorLog.IsOpen)
+                RuntimeUtilsConnection.ScriptErrorLog.NewSession(SettingsManager.GetBool(Settings.ErrorLogClearOnPlay, true));
+            if (errorLog)
+                ErrorLog.Open();
             RefreshLiveLinkMenu();
         }
 
@@ -3406,6 +3432,8 @@ namespace OpenCAGE
                 {
                     SettingsManager.SetInteger(Settings.LiveLinkCameraMode, (int)RuntimeUtilsConnection.LiveLinkCameraSync.CameraMode.Disabled);
                     _levelViewerPanel?.ApplyLiveLinkCameraMode(RuntimeUtilsConnection.LiveLinkCameraSync.CameraMode.Disabled);
+                    //The label as the option is now (it may have changed since the game was launched)
+                    SendLiveLinkLabelSetting();
                 }
                 //Live Link Camera needs a game to follow or be followed by: shown while connected, and started or stopped with it
                 _levelViewerPanel?.SetLiveLinkConnected(connected);
