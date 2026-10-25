@@ -503,6 +503,8 @@ namespace OpenCAGE.MCP
                         ConnectedEntityGUID = connection.ConnectedEntityGUID,
                         ConnectedParameterGUID = connection.ConnectedParameterGUID,
                         ConnectedNodeID = to,
+                        //the line's reroute points move down with its nodes
+                        RoutePoints = connection.RoutePoints?.Select(o => new Point(o.X + dx, o.Y + dy)).ToList(),
                     });
                     connections++;
                 }

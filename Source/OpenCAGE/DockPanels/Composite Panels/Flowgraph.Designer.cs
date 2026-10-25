@@ -61,6 +61,9 @@ namespace OpenCAGE
             this.addNodeForSelectedEntityToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.addNodeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.deleteLinkToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.addReroutePointToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.removeReroutePointToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.removeAllReroutePointsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.setDelayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.clearDelayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.triggerInGameSeparator = new System.Windows.Forms.ToolStripSeparator();
@@ -107,6 +110,9 @@ namespace OpenCAGE
             this.arrangePageToolStripMenuItem,
             this.arrangeSelectedToolStripMenuItem,
             this.deleteLinkToolStripMenuItem,
+            this.addReroutePointToolStripMenuItem,
+            this.removeReroutePointToolStripMenuItem,
+            this.removeAllReroutePointsToolStripMenuItem,
             this.setDelayToolStripMenuItem,
             this.clearDelayToolStripMenuItem,
             this.triggerInGameSeparator,
@@ -376,6 +382,31 @@ namespace OpenCAGE
             this.deleteLinkToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
             this.deleteLinkToolStripMenuItem.Text = "Delete Link";
             this.deleteLinkToolStripMenuItem.Click += new System.EventHandler(this.deleteLinkToolStripMenuItem_Click);
+            //
+            // addReroutePointToolStripMenuItem
+            //
+            this.addReroutePointToolStripMenuItem.Name = "addReroutePointToolStripMenuItem";
+            this.addReroutePointToolStripMenuItem.ShortcutKeyDisplayString = "Double-click";
+            this.addReroutePointToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.addReroutePointToolStripMenuItem.Text = "Add Reroute Point";
+            this.addReroutePointToolStripMenuItem.ToolTipText = "Put a point on the link\'s line here, to drag the line round other nodes. The link itself doesn\'t change.";
+            this.addReroutePointToolStripMenuItem.Click += new System.EventHandler(this.addReroutePointToolStripMenuItem_Click);
+            //
+            // removeReroutePointToolStripMenuItem
+            //
+            this.removeReroutePointToolStripMenuItem.Name = "removeReroutePointToolStripMenuItem";
+            this.removeReroutePointToolStripMenuItem.ShortcutKeyDisplayString = "Del";
+            this.removeReroutePointToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.removeReroutePointToolStripMenuItem.Text = "Remove Reroute Point";
+            this.removeReroutePointToolStripMenuItem.Click += new System.EventHandler(this.removeReroutePointToolStripMenuItem_Click);
+            //
+            // removeAllReroutePointsToolStripMenuItem
+            //
+            this.removeAllReroutePointsToolStripMenuItem.Name = "removeAllReroutePointsToolStripMenuItem";
+            this.removeAllReroutePointsToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.removeAllReroutePointsToolStripMenuItem.Text = "Remove All Reroute Points";
+            this.removeAllReroutePointsToolStripMenuItem.ToolTipText = "Draw the link\'s line straight from pin to pin again.";
+            this.removeAllReroutePointsToolStripMenuItem.Click += new System.EventHandler(this.removeAllReroutePointsToolStripMenuItem_Click);
             // 
             // setDelayToolStripMenuItem
             // 
@@ -531,6 +562,9 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
         private System.Windows.Forms.ToolStripMenuItem addNodeForSelectedEntityToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem deleteLinkToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem addReroutePointToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem removeReroutePointToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem removeAllReroutePointsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem goToNextNodeInFlowgraphToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showConnectedLinksToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator triggerSequenceSeparator;

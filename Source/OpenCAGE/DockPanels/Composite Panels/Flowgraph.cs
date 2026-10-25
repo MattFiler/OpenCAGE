@@ -63,6 +63,9 @@ namespace OpenCAGE
             EditorIcons.Bind(createProxyToolStripMenuItem, EditorIcon.Proxy);
             EditorIcons.Bind(createAliasToolStripMenuItem1, EditorIcon.Alias);
             EditorIcons.Bind(showConnectedLinksToolStripMenuItem, EditorIcon.ConnectedLinks);
+            EditorIcons.Bind(addReroutePointToolStripMenuItem, EditorIcon.AddReroutePoint);
+            EditorIcons.Bind(removeReroutePointToolStripMenuItem, EditorIcon.RemoveReroutePoint);
+            EditorIcons.Bind(removeAllReroutePointsToolStripMenuItem, EditorIcon.RemoveAllReroutePoints);
             this.VisibleChanged += Flowgraph_VisibleChanged;
             this.FormClosed += Flowgraph_FormClosed;
 
@@ -75,6 +78,7 @@ namespace OpenCAGE
             stNodeEditor1.PinToNodeConnected += StNodeEditor1_PinToNodeConnected;
             stNodeEditor1.NodeCtrlMiddleMouseDown += StNodeEditor1_NodeCtrlMiddleMouseDown;
             stNodeEditor1.NodesMoved += StNodeEditor1_NodesMoved;
+            stNodeEditor1.RerouteChanged += StNodeEditor1_RerouteChanged;
             // STNodeEditor rejects non-STNodeType drags in its own OnDragEnter; handle drops on this form instead.
             stNodeEditor1.AllowDrop = false;
 
@@ -153,6 +157,7 @@ namespace OpenCAGE
             stNodeEditor1.OptionDisconnected -= StNodeEditor1_OptionConnectionChanged;
             stNodeEditor1.NodeCtrlMiddleMouseDown -= StNodeEditor1_NodeCtrlMiddleMouseDown;
             stNodeEditor1.NodesMoved -= StNodeEditor1_NodesMoved;
+            stNodeEditor1.RerouteChanged -= StNodeEditor1_RerouteChanged;
             DragEnter -= Flowgraph_DragEnter;
             DragOver -= Flowgraph_DragOver;
             DragDrop -= Flowgraph_DragDrop;
@@ -487,6 +492,13 @@ namespace OpenCAGE
         {
             MarkFlowgraphEdit();
             RecordNodesMoved(e);
+        }
+
+        /* A line's reroute points are stored with its connection in the layout too */
+        private void StNodeEditor1_RerouteChanged(object sender, STNodeEditorRerouteEventArgs e)
+        {
+            MarkFlowgraphEdit();
+            RecordRerouteChanged(e);
         }
 
         /* Keep the inspector's "fed by flowgraph" parameter highlights live as connections change */
@@ -901,6 +913,11 @@ namespace OpenCAGE
                             //NOTE: We hit this for some in the base game, but it SHOULDN'T be a problem -> links that can't connect won't logically work.
                             Debug.Log("Flowgraph", "WARNING: Could not create the following connection...\n\t" + nodes[i].Title + " [" + pinOut.Text + "] " + pinOut.Location + " -> " + connectedNode.Title + " [" + pinIn.Text + "] " + pinIn.Location);
                         }
+                        else if (connectionMeta.RoutePoints != null && connectionMeta.RoutePoints.Count != 0)
+                        {
+                            //Drawn through the reroute points it was saved with
+                            stNodeEditor1.SetReroutePoints(pinOut, pinIn, connectionMeta.RoutePoints.Select(o => (PointF)o));
+                        }
                     }
                     else
                     {
@@ -961,6 +978,9 @@ namespace OpenCAGE
 
                 if (keyCode == Keys.Delete)
                 {
+                    //A link's reroute point - the one under the mouse, else the one selected - goes on its own
+                    if (stNodeEditor1.RemoveReroutePoint())
+                        return true;
                     deleteToolStripMenuItem_Click(null, null);
                     deleteLinkToolStripMenuItem_Click(null, null);
                     return true;
@@ -1161,6 +1181,17 @@ namespace OpenCAGE
             (STNodeOption linkIn, STNodeOption linkOut) = stNodeEditor1.GetHoveredLink();
             STNodeOption hoveredPin = stNodeEditor1.GetHoveredPin();
 
+            //A link's reroute point counts as its link (its dot reaches a little past the line), over a node too (it is drawn
+            //over the nodes)
+            _menuReroutePoint = stNodeEditor1.GetReroutePointUnderMouse();
+            if (_menuReroutePoint != null)
+            {
+                node = null;
+                hoveredPin = null;
+                (linkIn, linkOut) = (_menuReroutePoint.From, _menuReroutePoint.To);
+            }
+            _menuLink = (linkIn, linkOut);
+
             if (hoveredPin?.Location == PinLocation.Top || hoveredPin?.Location == PinLocation.Bottom)
                 hoveredPin = null; //Only allow right click on in/out pins
 
@@ -1230,6 +1261,9 @@ namespace OpenCAGE
             arrangeSeparator.Visible = onCanvas || arrangeSelection;
 
             deleteLinkToolStripMenuItem.Visible = linkIn != null;
+            addReroutePointToolStripMenuItem.Visible = linkIn != null && _menuReroutePoint == null;
+            removeReroutePointToolStripMenuItem.Visible = _menuReroutePoint != null;
+            removeAllReroutePointsToolStripMenuItem.Visible = linkIn != null && stNodeEditor1.HasReroutePoints(linkIn, linkOut);
 
             setDelayToolStripMenuItem.Visible = hoveredPin != null;
             clearDelayToolStripMenuItem.Visible = hoveredPin != null;
@@ -1486,7 +1520,35 @@ namespace OpenCAGE
 
         private void deleteLinkToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            //From the menu opened on a reroute point: that point's link (the mouse may have been just off its line)
+            if (sender != null && _menuReroutePoint != null && _menuLink.Item1?.GetConnectedOption()?.Contains(_menuLink.Item2) == true)
+            {
+                _menuLink.Item1.DisconnectOption(_menuLink.Item2);
+                stNodeEditor1.Invalidate();
+                return;
+            }
             stNodeEditor1.RemoveHoveredLink(); //raises OptionDisconnected, which marks the level as modified
+        }
+
+        //The link and the reroute point the menu was opened on (by the time an item is clicked the mouse is on the menu)
+        private (STNodeOption, STNodeOption) _menuLink;
+        private ReroutePoint _menuReroutePoint;
+
+        //Reroute points: dots a link's line is drawn through, to lead it round other nodes (STNodeEditor.Reroutes.cs); each
+        //change is recorded for undo by StNodeEditor1_RerouteChanged
+        private void addReroutePointToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            stNodeEditor1.AddReroutePoint(_menuLink.Item1, _menuLink.Item2, _pasteCanvasPos);
+        }
+
+        private void removeReroutePointToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            stNodeEditor1.RemoveReroutePoint(_menuReroutePoint);
+        }
+
+        private void removeAllReroutePointsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            stNodeEditor1.ClearReroutePoints(_menuLink.Item1, _menuLink.Item2);
         }
 
         //Delete the selected nodes - or the right-clicked one, when it isn't part of the selection

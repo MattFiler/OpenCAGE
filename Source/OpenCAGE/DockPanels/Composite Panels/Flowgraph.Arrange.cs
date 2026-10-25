@@ -55,6 +55,7 @@ namespace OpenCAGE
             List<NodeMoveEdit.Movement> moves = new List<NodeMoveEdit.Movement>();
             using (UndoStack.Current.BeginGroup(label))
             {
+                ClearRoutesBetween(placing);
                 Point[] positions;
                 for (int round = 0; ; round++)
                 {
@@ -107,6 +108,28 @@ namespace OpenCAGE
         private static List<STNode> OwnOrder(IEnumerable<STNode> nodes)
         {
             return nodes.OrderBy(o => o.ShortGUID.AsUInt32).ThenBy(Signature, StringComparer.Ordinal).ThenBy(o => o.Top).ThenBy(o => o.Left).ToList();
+        }
+
+        /// <summary>
+        /// Laid out afresh, the links between these nodes are drawn straight from pin to pin: their reroute points were for
+        /// where the nodes were. Each taken off as the user would (recorded, inside the caller's undo group).
+        /// </summary>
+        private void ClearRoutesBetween(List<STNode> nodes)
+        {
+            HashSet<STNode> arranging = new HashSet<STNode>(nodes);
+            foreach (STNode node in nodes)
+            {
+                foreach (STNodeOption pin in node.GetOutputOptions().Concat(node.GetTopOptions()))
+                {
+                    if (pin == null || pin == STNodeOption.Empty)
+                        continue;
+                    foreach (STNodeOption other in pin.GetConnectedOption() ?? new List<STNodeOption>())
+                    {
+                        if (other?.Owner != null && arranging.Contains(other.Owner))
+                            stNodeEditor1.ClearReroutePoints(pin, other);
+                    }
+                }
+            }
         }
 
         /// <summary>Each connection between the nodes once, with its pins' sides and where they sit on the nodes as drawn - and the pins themselves.</summary>

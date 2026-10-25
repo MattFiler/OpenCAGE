@@ -56,8 +56,34 @@ namespace OpenCAGE
                     To = movement.NewLocation,
                 });
             }
+            //The reroute points that went along with both their line's nodes
+            List<NodeMoveEdit.RouteMovement> routes = new List<NodeMoveEdit.RouteMovement>();
+            foreach (RouteMovement route in e.RouteMovements ?? new RouteMovement[0])
+            {
+                if (route.From?.Owner?.Entity == null || route.To?.Owner?.Entity == null)
+                    continue;
+                routes.Add(new NodeMoveEdit.RouteMovement() { Line = new LineRef(route.From, route.To), From = route.Before, To = route.After });
+            }
             if (moves.Count > 0)
-                UndoStack.Current.Record(new NodeMoveEdit(_composite, _flowgraphName, moves));
+                UndoStack.Current.Record(new NodeMoveEdit(_composite, _flowgraphName, moves, null, routes));
+        }
+
+        /* Reroute points the user added to a line, moved or took off it (STNodeEditor.Reroutes.cs) */
+        private void RecordRerouteChanged(STNodeEditorRerouteEventArgs e)
+        {
+            if (!CanRecord || e?.From?.Owner?.Entity == null || e.To?.Owner?.Entity == null)
+                return;
+
+            string label;
+            switch (e.Change)
+            {
+                case RerouteChange.Added: label = "Add reroute point"; break;
+                case RerouteChange.Moved: label = "Move reroute point"; break;
+                case RerouteChange.Removed: label = "Remove reroute point"; break;
+                default: label = "Remove reroute points"; break;
+            }
+            label += " on the link from " + UndoLabels.Entity(_composite, e.From.Owner.Entity) + " to " + UndoLabels.Entity(_composite, e.To.Owner.Entity);
+            UndoStack.Current.Record(new RouteEdit(_composite, _flowgraphName, e.From, e.To, e.Before, e.After, label));
         }
 
         /* Connections raise the same event from whichever end started it; the edit always names the
@@ -88,7 +114,8 @@ namespace OpenCAGE
             bool aFeeds = a.Location == PinLocation.Right || a.Location == PinLocation.Top;
             STNodeOption source = aFeeds ? a : b;
             STNodeOption target = aFeeds ? b : a;
-            UndoStack.Current.Record(new LinkEdit(_composite, _flowgraphName, source, target, connected));
+            //A line broken takes its reroute points with it: putting it back puts them back
+            UndoStack.Current.Record(new LinkEdit(_composite, _flowgraphName, source, target, connected, connected ? null : e.Route));
         }
 
         private void RecordNodeAdded(STNode node)
@@ -279,6 +306,7 @@ namespace OpenCAGE
                     {
                         if (peer?.Owner == null)
                             continue;
+                        PointF[] route = stNodeEditor1.GetReroutePoints(option, peer);
                         snapshot.Connections.Add(new ConnectionSnapshot()
                         {
                             Peer = new NodeRef(peer.Owner),
@@ -287,6 +315,7 @@ namespace OpenCAGE
                             PeerPin = peer.ShortGUID,
                             PeerSide = peer.Location,
                             Outgoing = outgoing,
+                            Route = route.Length == 0 ? null : route,
                         });
                     }
                 }
@@ -344,9 +373,9 @@ namespace OpenCAGE
                     if (peer == null)
                         continue;
                     if (connection.Outgoing)
-                        Connect(node, connection.ThisPin, connection.ThisSide, peer, connection.PeerPin, connection.PeerSide);
+                        Connect(node, connection.ThisPin, connection.ThisSide, peer, connection.PeerPin, connection.PeerSide, connection.Route);
                     else
-                        Connect(peer, connection.PeerPin, connection.PeerSide, node, connection.ThisPin, connection.ThisSide);
+                        Connect(peer, connection.PeerPin, connection.PeerSide, node, connection.ThisPin, connection.ThisSide, connection.Route);
                 }
 
                 node.EnsureProperNodeSizing();
@@ -369,14 +398,14 @@ namespace OpenCAGE
             DirtyTracker.MarkLevelDataModified();
         }
 
-        /// <summary>Make or break one connection on the live page, as an undo or redo asks.</summary>
-        internal void SetConnection(STNode source, ShortGuid sourcePin, PinLocation sourceSide, STNode target, ShortGuid targetPin, PinLocation targetSide, bool connect)
+        /// <summary>Make or break one connection on the live page, as an undo or redo asks - one made drawn through <paramref name="route"/>, if given.</summary>
+        internal void SetConnection(STNode source, ShortGuid sourcePin, PinLocation sourceSide, STNode target, ShortGuid targetPin, PinLocation targetSide, bool connect, PointF[] route = null)
         {
             using (SuppressRecording())
             {
                 if (connect)
                 {
-                    Connect(source, sourcePin, sourceSide, target, targetPin, targetSide);
+                    Connect(source, sourcePin, sourceSide, target, targetPin, targetSide, route);
                 }
                 else
                 {
@@ -413,19 +442,40 @@ namespace OpenCAGE
                 stNodeEditor1.Invalidate();
         }
 
-        private void Connect(STNode source, ShortGuid sourcePin, PinLocation sourceSide, STNode target, ShortGuid targetPin, PinLocation targetSide)
+        private void Connect(STNode source, ShortGuid sourcePin, PinLocation sourceSide, STNode target, ShortGuid targetPin, PinLocation targetSide, PointF[] route = null)
         {
             source.AddPinsForConnection(target, sourcePin, targetPin, _composite, _commands);
             STNodeOption pinOut = FindOption(source, sourcePin, sourceSide) ?? source.GetOption(sourcePin) ?? AddOption(source, sourcePin, sourceSide, PinStyle.ArrowDown);
             STNodeOption pinIn = FindOption(target, targetPin, targetSide) ?? target.GetOption(targetPin) ?? AddOption(target, targetPin, targetSide, PinStyle.ArrowDown);
 
             List<STNodeOption> connected = pinOut.GetConnectedOption();
-            if (connected != null && connected.Contains(pinIn))
-                return;
+            if (connected == null || !connected.Contains(pinIn))
+            {
+                ConnectionStatus status = pinOut.ConnectOption(pinIn);
+                if (status != ConnectionStatus.Connected)
+                    Debug.Log("Flowgraph", "WARNING: Could not restore the connection " + source.Title + " [" + pinOut.Text + "] -> " + target.Title + " [" + pinIn.Text + "]: " + status);
+            }
+            if (route != null && route.Length != 0)
+                stNodeEditor1.SetReroutePoints(pinOut, pinIn, route);
+        }
 
-            ConnectionStatus status = pinOut.ConnectOption(pinIn);
-            if (status != ConnectionStatus.Connected)
-                Debug.Log("Flowgraph", "WARNING: Could not restore the connection " + source.Title + " [" + pinOut.Text + "] -> " + target.Title + " [" + pinIn.Text + "]: " + status);
+        /// <summary>
+        /// Draw a connection's line through these reroute points (none: straight from pin to pin), as an undo or redo asks.
+        /// False when the line is not on the page.
+        /// </summary>
+        internal bool SetRoute(LineRef line, PointF[] points)
+        {
+            STNode source = ResolveNode(line?.Source);
+            STNode target = ResolveNode(line?.Target);
+            if (source == null || target == null)
+                return false;
+            STNodeOption pinOut = FindOption(source, line.SourcePin, line.SourceSide) ?? source.GetOption(line.SourcePin);
+            STNodeOption pinIn = FindOption(target, line.TargetPin, line.TargetSide) ?? target.GetOption(line.TargetPin);
+            if (pinOut == null || pinIn == null || !stNodeEditor1.SetReroutePoints(pinOut, pinIn, points))
+                return false;
+            stNodeEditor1.Invalidate();
+            DirtyTracker.MarkLevelDataModified();
+            return true;
         }
 
         /// <summary>The pins a node shows now, and where it sits.</summary>

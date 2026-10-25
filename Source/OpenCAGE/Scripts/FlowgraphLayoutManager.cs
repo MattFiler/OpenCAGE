@@ -260,6 +260,7 @@ namespace OpenCAGE
                         ConnectedEntityGUID = connection.ConnectedEntityGUID,
                         ConnectedParameterGUID = connection.ConnectedParameterGUID,
                         ConnectedNodeID = id,
+                        RoutePoints = connection.RoutePoints == null ? null : new List<Point>(connection.RoutePoints),
                     };
                 }
 
@@ -1064,12 +1065,15 @@ namespace OpenCAGE
                     for (int z = 0; z < connections.Count; z++)
                     {
                         STNode connectedNode = connections[z].Owner;
+                        //The reroute points its line is drawn through, if any (an output or top pin is the feeding end)
+                        PointF[] route = editor.GetReroutePoints(options[y], connections[z]);
                         nodeMeta.ConnectionsOut.Add(new FlowgraphMeta.NodeMeta.ConnectionMeta()
                         {
                             ParameterGUID = options[y].ShortGUID,
                             ConnectedEntityGUID = connectedNode.ShortGUID,
                             ConnectedNodeID = editor.Nodes.IndexOf(connectedNode),
                             ConnectedParameterGUID = connections[z].ShortGUID,
+                            RoutePoints = route.Length == 0 ? null : route.Select(o => Point.Round(o)).ToList(),
                         });
                     }
                     //If there were no links, remember the pin anyway

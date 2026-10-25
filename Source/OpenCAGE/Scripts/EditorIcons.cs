@@ -174,6 +174,11 @@ namespace OpenCAGE
         ClearLog,
         ClearOnPlay,
         GroupByEntity,
+
+        //A flowgraph link's reroute points (its menu)
+        AddReroutePoint,
+        RemoveReroutePoint,
+        RemoveAllReroutePoints,
     }
 
     /// <summary>

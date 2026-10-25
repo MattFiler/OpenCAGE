@@ -48,6 +48,32 @@ namespace OpenCAGE.Undo
         public ShortGuid PeerPin;
         public PinLocation PeerSide;
         public bool Outgoing;
+        /// <summary>The reroute points its line was drawn through (from its feeding end), or null.</summary>
+        public PointF[] Route;
+    }
+
+    /// <summary>
+    /// A connection's line on a page, named by its two ends - each a node (see NodeRef), its pin and the side it is on - so
+    /// it can be found again after the page is rebuilt. Source is the feeding end (a right or top pin).
+    /// </summary>
+    public sealed class LineRef
+    {
+        public NodeRef Source;
+        public ShortGuid SourcePin;
+        public PinLocation SourceSide;
+        public NodeRef Target;
+        public ShortGuid TargetPin;
+        public PinLocation TargetSide;
+
+        public LineRef(STNodeOption source, STNodeOption target)
+        {
+            Source = new NodeRef(source.Owner);
+            SourcePin = source.ShortGUID;
+            SourceSide = source.Location;
+            Target = new NodeRef(target.Owner);
+            TargetPin = target.ShortGUID;
+            TargetSide = target.Location;
+        }
     }
 
     /// <summary>Everything needed to put a node back on its page: position, pins, and both directions of connection.</summary>
@@ -82,9 +108,18 @@ namespace OpenCAGE.Undo
             public Point To;
         }
 
+        /// <summary>A line's reroute points, carried along with both its nodes.</summary>
+        public sealed class RouteMovement
+        {
+            public LineRef Line;
+            public PointF[] From;
+            public PointF[] To;
+        }
+
         private readonly ShortGuid _composite;
         private readonly string _page;
         private readonly List<Movement> _moves;
+        private readonly List<RouteMovement> _routes;
 
         public string Label { get; }
         public ShortGuid CompositeId => _composite;
@@ -92,11 +127,12 @@ namespace OpenCAGE.Undo
         public IEnumerable<ShortGuid> ChangedComposites => new ShortGuid[0];
         public ShortGuid EntityId => ShortGuid.Invalid;
 
-        public NodeMoveEdit(Composite composite, string page, List<Movement> moves, string label = null)
+        public NodeMoveEdit(Composite composite, string page, List<Movement> moves, string label = null, List<RouteMovement> routes = null)
         {
             _composite = composite.shortGUID;
             _page = page;
             _moves = moves;
+            _routes = routes ?? new List<RouteMovement>();
             Label = label ?? "Move " + UndoLabels.Count(moves.Count, "node", "nodes");
         }
 
@@ -113,6 +149,8 @@ namespace OpenCAGE.Undo
                     continue;
                 node.SetPosition(forward ? move.To : move.From);
             }
+            foreach (RouteMovement route in _routes)
+                page.SetRoute(route.Line, forward ? route.To : route.From);
             page.Nodegraph.Invalidate();
             DirtyTracker.MarkLevelDataModified();
         }
@@ -197,13 +235,16 @@ namespace OpenCAGE.Undo
         private readonly ShortGuid _targetPin;
         private readonly PinLocation _targetSide;
         private readonly bool _connectedAfter;
+        //The reroute points the line had when it was broken: it is drawn through them again whenever it is made again
+        private readonly PointF[] _route;
 
         public string Label { get; }
         public ShortGuid CompositeId => _composite;
         public ShortGuid EntityId => ShortGuid.Invalid;
 
-        public LinkEdit(Composite composite, string page, STNodeOption source, STNodeOption target, bool connectedAfter)
+        public LinkEdit(Composite composite, string page, STNodeOption source, STNodeOption target, bool connectedAfter, PointF[] route = null)
         {
+            _route = route;
             _composite = composite.shortGUID;
             _page = page;
             _source = new NodeRef(source.Owner);
@@ -229,7 +270,48 @@ namespace OpenCAGE.Undo
             STNode target = page.ResolveNode(_target);
             if (source == null || target == null)
                 throw new InvalidOperationException("The nodes this link joined are no longer on the page");
-            page.SetConnection(source, _sourcePin, _sourceSide, target, _targetPin, _targetSide, connected);
+            page.SetConnection(source, _sourcePin, _sourceSide, target, _targetPin, _targetSide, connected, connected ? _route : null);
+        }
+
+        public bool TryMerge(IEdit next) => false;
+    }
+
+    /// <summary>
+    /// Reroute points added to a connection's line, moved or taken off it. Only how the line is drawn: the link is the
+    /// same before and after.
+    /// </summary>
+    public sealed class RouteEdit : IEdit, IChangesComposites
+    {
+        private readonly ShortGuid _composite;
+        private readonly string _page;
+        private readonly LineRef _line;
+        private readonly PointF[] _before;
+        private readonly PointF[] _after;
+
+        public string Label { get; }
+        public ShortGuid CompositeId => _composite;
+        //How a line is drawn on a page, not what the scripts say
+        public IEnumerable<ShortGuid> ChangedComposites => new ShortGuid[0];
+        public ShortGuid EntityId => ShortGuid.Invalid;
+
+        public RouteEdit(Composite composite, string page, STNodeOption source, STNodeOption target, PointF[] before, PointF[] after, string label)
+        {
+            _composite = composite.shortGUID;
+            _page = page;
+            _line = new LineRef(source, target);
+            _before = before ?? new PointF[0];
+            _after = after ?? new PointF[0];
+            Label = label;
+        }
+
+        public void Apply(UndoContext context) => Set(context, _after);
+        public void Revert(UndoContext context) => Set(context, _before);
+
+        private void Set(UndoContext context, PointF[] points)
+        {
+            Flowgraph page = FlowgraphEdits.RequirePage(context, _composite, _page);
+            if (!page.SetRoute(_line, points))
+                throw new InvalidOperationException("The link these reroute points are on is no longer on the page");
         }
 
         public bool TryMerge(IEdit next) => false;
