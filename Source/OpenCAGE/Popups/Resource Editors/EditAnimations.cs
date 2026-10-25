@@ -117,14 +117,14 @@ namespace OpenCAGE
             exportBtn.Click += ExportBtn_Click;
             importBtn.Click += ImportBtn_Click;
             replaceBtn.Click += ReplaceBtn_Click;
-            eventsBtn.Click += EventsBtn_Click;
+            metadataBtn.Click += (s, e) => EditMetadata(Selected(), this);
             deleteBtn.Click += DeleteBtn_Click;
 
             //Changing animations is for the browser: a picker only chooses one
-            replaceBtn.Visible = eventsBtn.Visible = deleteBtn.Visible = _picking == PickMode.None;
+            replaceBtn.Visible = metadataBtn.Visible = deleteBtn.Visible = _picking == PickMode.None;
             _tips.SetToolTip(importBtn, "Bring an animation in from a model or animation file, as a new animation in this set.");
             _tips.SetToolTip(replaceBtn, "Rebuild the selected animation from a file. It keeps its name, so the scripts, animation trees and blend sets that play it keep working.");
-            _tips.SetToolTip(eventsBtn, "See and edit the selected animation's metadata: the tracks of moments it fires (footsteps, sounds, flags) and the settings they use.");
+            _tips.SetToolTip(metadataBtn, "See and edit the selected animation's metadata: its settings, and the tracks of moments it fires them at (footsteps, sounds, flags).");
             _tips.SetToolTip(deleteBtn, "Take the selected animation out of this set and ANIMATION.PAK. Only animations imported with OpenCAGE, and only once nothing here plays them.");
             BuildClipMenu();
             clipList.KeyDown += (s, e) =>
@@ -161,7 +161,7 @@ namespace OpenCAGE
                 items.Add(Tuple.Create(item, button));
             }
             Add("Preview...", previewBtn);
-            Add("Events...", eventsBtn);
+            Add("Metadata...", metadataBtn);
             Add("Replace...", replaceBtn);
             Add("Delete", deleteBtn);
             ToolStripSeparator separator = new ToolStripSeparator();
@@ -712,7 +712,7 @@ namespace OpenCAGE
             //One animation at a time; why one can't be replaced or deleted is said when asked, rather than left to a grey button
             bool one = clip != null && clipList.SelectedItems.Count == 1;
             replaceBtn.Enabled = deleteBtn.Enabled = one;
-            eventsBtn.Enabled = one && clip.Metadata != null;
+            metadataBtn.Enabled = one && clip.Metadata != null;
 
             //picking a set with one of its animations selected hands that animation back too
             if (_picking == PickMode.AnimationSet) pickBtn.Text = clip != null ? "Use Set + Animation" : "Use This Set";
@@ -846,6 +846,12 @@ namespace OpenCAGE
             //It closes with this window: left open, it showed animations of a window that was gone, and kept that window alive
             _preview.CloseWith(this);
             _preview.FormClosed += (s, args) => _preview = null;
+            //Its Metadata button edits through here, which writes ANIMATION.PAK; a picker changes nothing, so it has none
+            if (_picking == PickMode.None)
+            {
+                AnimationPreview preview = _preview;
+                preview.EditMetadata = shown => EditMetadata(shown, preview);
+            }
             _preview.Show();
             //Paint it before the mesh and rig load on this thread: until then the new window sat there unpainted - white,
             //in dark mode - for as long as the skinning took
@@ -967,27 +973,29 @@ namespace OpenCAGE
             return null;
         }
 
-        /* See and edit the selected animation's metadata - its tracks of timed moments and the settings they fire - in a
-         * window working on a copy. What it saves goes into the animation, and ANIMATION.PAK is written straight away. */
-        private void EventsBtn_Click(object sender, EventArgs e)
+        /* See and edit an animation's metadata - its settings, and the tracks of timed moments that fire them - in a window
+         * working on a copy, opened from here or from the preview. What it saves goes into the animation, and ANIMATION.PAK
+         * is written straight away. */
+        private void EditMetadata(CathodeLib.Animation.ClipReference clip, IWin32Window owner)
         {
-            CathodeLib.Animation.ClipReference clip = Selected();
-            if (clip == null || _set == null || _animations == null) return;
+            if (clip == null || _animations == null) return;
             if (clip.Metadata == null)
             {
-                MessageBox.Show("'" + NameOf(clip) + "' has no metadata in ANIMATION.PAK to show.", "Events", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("'" + NameOf(clip) + "' has no metadata in ANIMATION.PAK to show.", "Metadata", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
             bool changed;
-            using (EditAnimationEvents events = new EditAnimationEvents(_animations, clip))
-                changed = events.ShowDialog(this) == DialogResult.OK;
+            using (EditAnimationMetadata metadata = new EditAnimationMetadata(_animations, clip))
+                changed = metadata.ShowDialog(owner) == DialogResult.OK;
             if (!changed) return;
             Singleton.OnAnimationsModified?.Invoke();
 
             FillClips();
             SelectClip(clip.Name, clip.Context);
-            Save("The events of '" + NameOf(clip) + "' changed");
+            Save("The metadata of '" + NameOf(clip) + "' changed");
+            //The preview's timeline shows the moments the metadata tags
+            if (_preview != null && !_preview.IsDisposed) _preview.ShowMetadata(clip);
         }
 
         /* Take an animation imported with OpenCAGE back out: its line in its set's clip database, its entry in the PAK's index

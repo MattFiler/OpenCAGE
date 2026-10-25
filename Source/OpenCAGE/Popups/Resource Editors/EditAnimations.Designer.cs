@@ -32,14 +32,16 @@ namespace OpenCAGE
             this.clipSearchBox = new System.Windows.Forms.TextBox();
             this.buttonPanel = new System.Windows.Forms.Panel();
             this.summaryLabel = new System.Windows.Forms.Label();
+            this.actionsRow = new System.Windows.Forms.TableLayoutPanel();
+            this.clipActionsPanel = new System.Windows.Forms.FlowLayoutPanel();
             this.actionsPanel = new System.Windows.Forms.FlowLayoutPanel();
-            this.pickBtn = new System.Windows.Forms.Button();
             this.previewBtn = new System.Windows.Forms.Button();
-            this.exportBtn = new System.Windows.Forms.Button();
-            this.importBtn = new System.Windows.Forms.Button();
+            this.metadataBtn = new System.Windows.Forms.Button();
             this.replaceBtn = new System.Windows.Forms.Button();
-            this.eventsBtn = new System.Windows.Forms.Button();
             this.deleteBtn = new System.Windows.Forms.Button();
+            this.importBtn = new System.Windows.Forms.Button();
+            this.exportBtn = new System.Windows.Forms.Button();
+            this.pickBtn = new System.Windows.Forms.Button();
             this.statusStrip = new System.Windows.Forms.StatusStrip();
             this.statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this.tabKinds.SuspendLayout();
@@ -51,6 +53,8 @@ namespace OpenCAGE
             this.setSearchPanel.SuspendLayout();
             this.contextPanel.SuspendLayout();
             this.buttonPanel.SuspendLayout();
+            this.actionsRow.SuspendLayout();
+            this.clipActionsPanel.SuspendLayout();
             this.actionsPanel.SuspendLayout();
             this.statusStrip.SuspendLayout();
             this.SuspendLayout();
@@ -219,7 +223,7 @@ namespace OpenCAGE
             // buttonPanel
             //
             this.buttonPanel.Controls.Add(this.summaryLabel);
-            this.buttonPanel.Controls.Add(this.actionsPanel);
+            this.buttonPanel.Controls.Add(this.actionsRow);
             this.buttonPanel.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.buttonPanel.Location = new System.Drawing.Point(0, 508);
             this.buttonPanel.Name = "buttonPanel";
@@ -238,86 +242,111 @@ namespace OpenCAGE
             this.summaryLabel.TabIndex = 0;
             this.summaryLabel.Text = "Choose a skeleton above.";
             //
+            // actionsRow: what to do with the animations selected on the left, what to do with the set (and, in a picker,
+            // the choice itself, last) on the right
+            //
+            this.actionsRow.ColumnCount = 2;
+            this.actionsRow.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.actionsRow.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.AutoSize));
+            this.actionsRow.Controls.Add(this.clipActionsPanel, 0, 0);
+            this.actionsRow.Controls.Add(this.actionsPanel, 1, 0);
+            this.actionsRow.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.actionsRow.Location = new System.Drawing.Point(4, 36);
+            this.actionsRow.Name = "actionsRow";
+            this.actionsRow.RowCount = 1;
+            this.actionsRow.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.actionsRow.Size = new System.Drawing.Size(978, 36);
+            this.actionsRow.TabIndex = 1;
+            //
+            // clipActionsPanel
+            //
+            this.clipActionsPanel.Controls.Add(this.previewBtn);
+            this.clipActionsPanel.Controls.Add(this.metadataBtn);
+            this.clipActionsPanel.Controls.Add(this.replaceBtn);
+            this.clipActionsPanel.Controls.Add(this.deleteBtn);
+            this.clipActionsPanel.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.clipActionsPanel.Margin = new System.Windows.Forms.Padding(0);
+            this.clipActionsPanel.Name = "clipActionsPanel";
+            this.clipActionsPanel.TabIndex = 0;
+            this.clipActionsPanel.WrapContents = false;
+            //
             // actionsPanel
             //
-            this.actionsPanel.Controls.Add(this.exportBtn);
-            this.actionsPanel.Controls.Add(this.previewBtn);
+            this.actionsPanel.AutoSize = true;
+            this.actionsPanel.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.actionsPanel.Controls.Add(this.pickBtn);
-            this.actionsPanel.Controls.Add(this.deleteBtn);
-            this.actionsPanel.Controls.Add(this.eventsBtn);
-            this.actionsPanel.Controls.Add(this.replaceBtn);
+            this.actionsPanel.Controls.Add(this.exportBtn);
             this.actionsPanel.Controls.Add(this.importBtn);
-            this.actionsPanel.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.actionsPanel.Dock = System.Windows.Forms.DockStyle.Right;
             this.actionsPanel.FlowDirection = System.Windows.Forms.FlowDirection.RightToLeft;
-            this.actionsPanel.Location = new System.Drawing.Point(4, 36);
+            this.actionsPanel.Margin = new System.Windows.Forms.Padding(0);
             this.actionsPanel.Name = "actionsPanel";
-            this.actionsPanel.Size = new System.Drawing.Size(978, 36);
             this.actionsPanel.TabIndex = 1;
             this.actionsPanel.WrapContents = false;
-            //
-            // importBtn
-            //
-            this.importBtn.Enabled = false;
-            this.importBtn.Name = "importBtn";
-            this.importBtn.Size = new System.Drawing.Size(128, 26);
-            this.importBtn.TabIndex = 4;
-            this.importBtn.Text = "Import...";
-            this.importBtn.UseVisualStyleBackColor = true;
-            //
-            // replaceBtn
-            //
-            this.replaceBtn.Enabled = false;
-            this.replaceBtn.Name = "replaceBtn";
-            this.replaceBtn.Size = new System.Drawing.Size(110, 26);
-            this.replaceBtn.TabIndex = 5;
-            this.replaceBtn.Text = "Replace...";
-            this.replaceBtn.UseVisualStyleBackColor = true;
-            //
-            // eventsBtn
-            //
-            this.eventsBtn.Enabled = false;
-            this.eventsBtn.Name = "eventsBtn";
-            this.eventsBtn.Size = new System.Drawing.Size(110, 26);
-            this.eventsBtn.TabIndex = 6;
-            this.eventsBtn.Text = "Events...";
-            this.eventsBtn.UseVisualStyleBackColor = true;
-            //
-            // deleteBtn
-            //
-            this.deleteBtn.Enabled = false;
-            this.deleteBtn.Name = "deleteBtn";
-            this.deleteBtn.Size = new System.Drawing.Size(90, 26);
-            this.deleteBtn.TabIndex = 7;
-            this.deleteBtn.Text = "Delete";
-            this.deleteBtn.UseVisualStyleBackColor = true;
-            //
-            // pickBtn
-            //
-            this.pickBtn.Enabled = false;
-            this.pickBtn.Name = "pickBtn";
-            this.pickBtn.Size = new System.Drawing.Size(150, 26);
-            this.pickBtn.TabIndex = 1;
-            this.pickBtn.Text = "Use This Animation";
-            this.pickBtn.UseVisualStyleBackColor = true;
-            this.pickBtn.Visible = false;
             //
             // previewBtn
             //
             this.previewBtn.Enabled = false;
             this.previewBtn.Name = "previewBtn";
             this.previewBtn.Size = new System.Drawing.Size(110, 26);
-            this.previewBtn.TabIndex = 2;
+            this.previewBtn.TabIndex = 0;
             this.previewBtn.Text = "Preview...";
             this.previewBtn.UseVisualStyleBackColor = true;
+            //
+            // metadataBtn
+            //
+            this.metadataBtn.Enabled = false;
+            this.metadataBtn.Name = "metadataBtn";
+            this.metadataBtn.Size = new System.Drawing.Size(110, 26);
+            this.metadataBtn.TabIndex = 1;
+            this.metadataBtn.Text = "Metadata...";
+            this.metadataBtn.UseVisualStyleBackColor = true;
+            //
+            // replaceBtn
+            //
+            this.replaceBtn.Enabled = false;
+            this.replaceBtn.Name = "replaceBtn";
+            this.replaceBtn.Size = new System.Drawing.Size(110, 26);
+            this.replaceBtn.TabIndex = 2;
+            this.replaceBtn.Text = "Replace...";
+            this.replaceBtn.UseVisualStyleBackColor = true;
+            //
+            // deleteBtn
+            //
+            this.deleteBtn.Enabled = false;
+            this.deleteBtn.Name = "deleteBtn";
+            this.deleteBtn.Size = new System.Drawing.Size(90, 26);
+            this.deleteBtn.TabIndex = 3;
+            this.deleteBtn.Text = "Delete";
+            this.deleteBtn.UseVisualStyleBackColor = true;
+            //
+            // importBtn
+            //
+            this.importBtn.Enabled = false;
+            this.importBtn.Name = "importBtn";
+            this.importBtn.Size = new System.Drawing.Size(128, 26);
+            this.importBtn.TabIndex = 2;
+            this.importBtn.Text = "Import...";
+            this.importBtn.UseVisualStyleBackColor = true;
             //
             // exportBtn
             //
             this.exportBtn.Enabled = false;
             this.exportBtn.Name = "exportBtn";
             this.exportBtn.Size = new System.Drawing.Size(130, 26);
-            this.exportBtn.TabIndex = 3;
+            this.exportBtn.TabIndex = 1;
             this.exportBtn.Text = "Export All...";
             this.exportBtn.UseVisualStyleBackColor = true;
+            //
+            // pickBtn
+            //
+            this.pickBtn.Enabled = false;
+            this.pickBtn.Name = "pickBtn";
+            this.pickBtn.Size = new System.Drawing.Size(150, 26);
+            this.pickBtn.TabIndex = 0;
+            this.pickBtn.Text = "Use This Animation";
+            this.pickBtn.UseVisualStyleBackColor = true;
+            this.pickBtn.Visible = false;
             //
             // statusStrip
             //
@@ -354,6 +383,9 @@ namespace OpenCAGE
             this.contextPanel.ResumeLayout(false);
             this.contextPanel.PerformLayout();
             this.buttonPanel.ResumeLayout(false);
+            this.actionsRow.ResumeLayout(false);
+            this.actionsRow.PerformLayout();
+            this.clipActionsPanel.ResumeLayout(false);
             this.actionsPanel.ResumeLayout(false);
             this.statusStrip.ResumeLayout(false);
             this.statusStrip.PerformLayout();
@@ -384,9 +416,11 @@ namespace OpenCAGE
         private System.Windows.Forms.Button previewBtn;
         private System.Windows.Forms.Button exportBtn;
         private System.Windows.Forms.Button importBtn;
+        private System.Windows.Forms.TableLayoutPanel actionsRow;
+        private System.Windows.Forms.FlowLayoutPanel clipActionsPanel;
         private System.Windows.Forms.FlowLayoutPanel actionsPanel;
         private System.Windows.Forms.Button replaceBtn;
-        private System.Windows.Forms.Button eventsBtn;
+        private System.Windows.Forms.Button metadataBtn;
         private System.Windows.Forms.Button deleteBtn;
         private System.Windows.Forms.StatusStrip statusStrip;
         private System.Windows.Forms.ToolStripStatusLabel statusLabel;

@@ -61,6 +61,7 @@ namespace OpenCAGE
             modelBtn.Click += ModelBtn_Click;
             skeletonBtn.Click += SkeletonBtn_Click;
             exportBtn.Click += ExportBtn_Click;
+            metadataBtn.Click += (s, e) => { if (_clip != null) _editMetadata?.Invoke(_clip); };
 
             timeline.FrameChanged += Timeline_FrameChanged;
             timeline.MarkerSelected += Timeline_MarkerSelected;
@@ -106,6 +107,33 @@ namespace OpenCAGE
             _viewer = null;
         }
 
+        /// <summary>
+        /// What the Metadata button does with the clip shown: the Animation Editor's editing, which saves ANIMATION.PAK and
+        /// then calls <see cref="ShowMetadata"/>. Without it (a picker's preview) there is no button.
+        /// </summary>
+        public Action<CathodeLib.Animation.ClipReference> EditMetadata
+        {
+            get { return _editMetadata; }
+            set
+            {
+                _editMetadata = value;
+                metadataBtn.Visible = value != null;
+            }
+        }
+        private Action<CathodeLib.Animation.ClipReference> _editMetadata;
+
+        /// <summary>The clip's metadata changed: lay its markers out again, on the same mesh, rig and frame.</summary>
+        public void ShowMetadata(CathodeLib.Animation.ClipReference clip)
+        {
+            if (clip == null || clip != _clip) return;
+            int frame = timeline.Frame;
+            timeline.SetClip(clip);
+            timeline.Frame = frame;
+            SizeTimeline();
+            ShowMarkerCount();
+            metadataBtn.Enabled = clip.Metadata != null;
+        }
+
         /// <summary>Show a clip, restoring whatever mesh and rig this set was last previewed with.</summary>
         public void Show(CathodeLib.Animation.ClipReference clip)
         {
@@ -115,6 +143,7 @@ namespace OpenCAGE
             bool changedSet = _clip?.Context?.Set != clip.Context?.Set;
             _clip = clip;
             clipLabel.Text = clip.Name + "   —   " + clip.Path;
+            metadataBtn.Enabled = clip.Metadata != null;
 
             if (changedSet || _skeleton == null) RestoreChoices();
 

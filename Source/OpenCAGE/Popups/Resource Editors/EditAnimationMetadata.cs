@@ -19,7 +19,7 @@ namespace OpenCAGE
     /// and only Save puts them into the animation (every stored copy of it at once); the Animation Editor then writes
     /// ANIMATION.PAK. Built in code: it is three lists and the fields to change them.
     /// </summary>
-    public class EditAnimationEvents : BaseWindow
+    public class EditAnimationMetadata : BaseWindow
     {
         private readonly CathodeLib.Animation _animations;
         private readonly CathodeLib.Animation.ClipReference _clip;
@@ -77,7 +77,7 @@ namespace OpenCAGE
         private readonly Button cancelBtn = NewButton("Cancel", 100);
         private readonly ToolTip _tips = new ToolTip();
 
-        public EditAnimationEvents(CathodeLib.Animation animations, CathodeLib.Animation.ClipReference clip)
+        public EditAnimationMetadata(CathodeLib.Animation animations, CathodeLib.Animation.ClipReference clip)
             : base(WindowClosesOn.COMMANDS_RELOAD)
         {
             _animations = animations;
@@ -85,7 +85,7 @@ namespace OpenCAGE
             _working = Copy(clip.Metadata);
             _readOnly = WhyReadOnly();
 
-            Text = "Events of '" + ClipName + "' (" + (clip.Context?.Set?.Name ?? "") + ")";
+            Text = "Metadata of '" + ClipName + "' (" + (clip.Context?.Set?.Name ?? "") + ")";
             Icon = SharedFormIcon.Icon;
             ClientSize = new Size(1000, 680);
             MinimumSize = new Size(920, 580);
@@ -98,7 +98,7 @@ namespace OpenCAGE
             FillBlocks();
             UpdateButtons();
 
-            FormClosing += EditAnimationEvents_FormClosing;
+            FormClosing += EditAnimationMetadata_FormClosing;
             FormClosed += (s, e) => _tips.Dispose();
         }
 
@@ -807,10 +807,10 @@ namespace OpenCAGE
             _animations.AddName(name, true);
         }
 
-        private void EditAnimationEvents_FormClosing(object sender, FormClosingEventArgs e)
+        private void EditAnimationMetadata_FormClosing(object sender, FormClosingEventArgs e)
         {
             if (_closing || !_dirty || e.CloseReason != CloseReason.UserClosing) return;
-            DialogResult answer = MessageBox.Show("There are changes to the events of '" + ClipName + "' that haven't been saved.\n\nSave them before closing?",
+            DialogResult answer = MessageBox.Show("There are changes to the metadata of '" + ClipName + "' that haven't been saved.\n\nSave them before closing?",
                 "Unsaved changes", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
             if (answer == DialogResult.Cancel) { e.Cancel = true; return; }
             if (answer == DialogResult.Yes && !Save()) e.Cancel = true;

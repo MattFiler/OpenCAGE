@@ -348,7 +348,7 @@
     <Compile Include="Popups\Resource Editors\BlendSetUserPicker.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Popups\Resource Editors\EditAnimationEvents.cs">
+    <Compile Include="Popups\Resource Editors\EditAnimationMetadata.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Popups\Resource Editors\EditBlendSets.cs">

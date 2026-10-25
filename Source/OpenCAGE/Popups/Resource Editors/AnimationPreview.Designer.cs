@@ -16,6 +16,7 @@ namespace OpenCAGE
         private void InitializeComponent()
         {
             this.topPanel = new System.Windows.Forms.Panel();
+            this.metadataBtn = new System.Windows.Forms.Button();
             this.exportBtn = new System.Windows.Forms.Button();
             this.modelBtn = new System.Windows.Forms.Button();
             this.modelLabel = new System.Windows.Forms.Label();
@@ -62,6 +63,7 @@ namespace OpenCAGE
             this.topPanel.Controls.Add(this.modelBtn);
             this.topPanel.Controls.Add(this.skeletonLabel);
             this.topPanel.Controls.Add(this.skeletonBtn);
+            this.topPanel.Controls.Add(this.metadataBtn);
             this.topPanel.Controls.Add(this.exportBtn);
             this.topPanel.Dock = System.Windows.Forms.DockStyle.Top;
             this.topPanel.Location = new System.Drawing.Point(0, 0);
@@ -129,6 +131,18 @@ namespace OpenCAGE
             this.exportBtn.TabIndex = 5;
             this.exportBtn.Text = "Export...";
             this.exportBtn.UseVisualStyleBackColor = true;
+            //
+            // metadataBtn
+            //
+            this.metadataBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.metadataBtn.Enabled = false;
+            this.metadataBtn.Location = new System.Drawing.Point(738, 42);
+            this.metadataBtn.Name = "metadataBtn";
+            this.metadataBtn.Size = new System.Drawing.Size(112, 28);
+            this.metadataBtn.TabIndex = 6;
+            this.metadataBtn.Text = "Metadata...";
+            this.metadataBtn.UseVisualStyleBackColor = true;
+            this.metadataBtn.Visible = false;
             //
             // warningLabel
             //
@@ -393,6 +407,7 @@ namespace OpenCAGE
         private System.Windows.Forms.Button skeletonBtn;
         private System.Windows.Forms.Label skeletonLabel;
         private System.Windows.Forms.Button exportBtn;
+        private System.Windows.Forms.Button metadataBtn;
         private System.Windows.Forms.Label warningLabel;
         private System.Windows.Forms.SplitContainer splitViewer;
         private System.Windows.Forms.Integration.ElementHost viewerHost;
