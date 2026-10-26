@@ -218,7 +218,7 @@ namespace OpenCAGE.MCP
                     McpSchema.String("replace", "Put the image into this existing texture instead of making a new one."),
                     McpSchema.String("format", "BC7 (default for a new one; a replaced one keeps its own), DXN (normal maps), DXT1, DXT5, BC6H, A8R8G8B8, ..."),
                     McpSchema.Integer("mips", "Mip levels to build: 0 = full chain (default), 1 = no mips."),
-                    McpSchema.Integer("persistent_drop", "Levels down for the smaller always-resident copy (default 1; a replaced one keeps its own); 0 = streamed copy only."),
+                    McpSchema.Integer("persistent_drop", "Levels down for the smaller always-resident copy (default: down to a 128-pixel edge, as the game's own and generated materials' are; a replaced one keeps its own); 0 = streamed copy only."),
                     McpSchema.Boolean("persistent_only", "Keep only the resident copy (how volume textures are stored)."),
                     McpSchema.Boolean("srgb", "Set (true) or clear (false) ALLOW_SRGB: colour maps are sRGB, normal maps (DXN), masks and single-channel maps are not. Default: a replaced texture keeps its own; a new one is sRGB except in DXN/BC5, A8 and L8."),
                     McpSchema.Boolean("force", "replace: put a cubemap into a flat texture or the reverse (it changes the slot's kind).")),
@@ -1109,6 +1109,8 @@ namespace OpenCAGE.MCP
                 submesh.MinBounds = made.MinBounds;
                 submesh.Bones.Clear();
                 submesh.Bones.AddRange(made.Bones);
+                if (submesh.Bones.Count != 0)
+                    ModelIO.SetSkinnedBounds(model, Singleton.Animations?.RigFor(model), new[] { submesh });
                 if (material != null) submesh.Material = material;
                 result["submesh"] = Address(target.c, target.l, target.s);
                 result["vertices"] = submesh.VertexCount;
@@ -1188,6 +1190,8 @@ namespace OpenCAGE.MCP
                             break;
                         }
                 }
+                if (built.Any(o => o.Bones.Count != 0))
+                    ModelIO.SetSkinnedBounds(model, Singleton.Animations?.RigFor(model), built);
                 result["submeshes_added"] = built.Count;
                 result["material"] = McpAssets.MaterialRef(level, fallback);
             }
@@ -1487,10 +1491,14 @@ namespace OpenCAGE.MCP
             });
             if (call.Has("format"))
                 format = McpAssets.ParseTextureFormat(call.Str("format"));
+            //A new texture's resident copy is sized as the material generator sizes it, to a 128-pixel edge: one level down left a
+            //2048 import with a 1024 resident copy, where retail keeps 128 or 32 on 90% of its level textures
+            bool residentToEdge = replaceName == null && drop != 0;
             if (call.Has("persistent_drop"))
             {
                 drop = call.Int("persistent_drop");
                 if (drop < 0) throw new McpError("'persistent_drop' is 0 (no resident copy) or more.");
+                residentToEdge = false;
             }
 
             byte[] converted;
@@ -1547,6 +1555,8 @@ namespace OpenCAGE.MCP
                     if (call.Bool("srgb")) texture.StateFlags |= Textures.TextureStateFlag.ALLOW_SRGB;
                     else texture.StateFlags &= ~Textures.TextureStateFlag.ALLOW_SRGB;
                 }
+                if (residentToEdge)
+                    drop = TextureConverter.DropForEdge(part.Width, part.Height, 128, part.MipLevels);
                 OpenCAGE.EditTexture.ApplyParts(texture, part, drop, persistentOnly);
                 if (!replacing) level.Textures.Entries.Add(texture);
                 Singleton.OnResourceModified?.Invoke();

@@ -486,6 +486,7 @@ namespace OpenCAGE.MCP
                     if (model.Components.Count == 0)
                         throw new McpError("None of the meshes could be converted." + (warnings.Count != 0 ? " " + string.Join(" ", warnings.Take(10)) : ""));
                     notes.AddRange(warnings.Take(15));
+                    ModelIO.SetSkinnedBounds(model, skeleton);
 
                     model.Name = UniqueModelName(level, modelName);
                     if (model.Name != modelName) notes.Add("The level already had a model called " + modelName + ", so this one is " + model.Name + ".");

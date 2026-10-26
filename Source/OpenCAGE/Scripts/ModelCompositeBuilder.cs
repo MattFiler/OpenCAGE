@@ -19,6 +19,9 @@ namespace OpenCAGE
     {
         public const string DisplayModelPrefix = "DisplayModel:";
 
+        //The id every shipped display model gives its ANIMATED_MODEL resource
+        private static readonly ShortGuid AnimatedModelResourceId = new ShortGuid("00-E4-14-34");
+
         public class Result
         {
             public Composite Composite;
@@ -128,16 +131,19 @@ namespace OpenCAGE
 
             if (skeleton != null)
             {
-                FunctionEntity reference = composite.AddFunction(FunctionType.EnvironmentModelReference);
+                //Shaped like every shipped display model: the skeleton's entity has the composite's own id (which is the hash
+                //of the character's name, see Composite.DisplayModelId) and its ANIMATED_MODEL resource the constant id they
+                //all share. A character set up from any other shape got no animated model and crashed the game as it spawned.
+                FunctionEntity reference = composite.AddFunction(new FunctionEntity(composite.shortGUID, FunctionType.EnvironmentModelReference));
                 commands.Utils.SetEntityName(composite, reference, skeletonName);
                 reference.AddParameter("name", new cString(skeletonName));
 
                 string how;
                 EnvironmentAnimations.EnvironmentAnimation entry = level.EnvironmentAnimations.AddForSkeleton(skeletonName, skeleton, Singleton.Animations, OtherLevels(level), renderableIds, out how);
 
-                cResource resource = new cResource(reference.shortGUID);
+                cResource resource = new cResource(AnimatedModelResourceId);
                 resource.AddResource(ResourceType.ANIMATED_MODEL).AnimatedModel = entry;
-                reference.AddParameter("resource", resource);
+                reference.AddParameter(ShortGuids.resource, resource, bindResourceToEntity: false);
 
                 result.Notes.Add("Animated model " + entry.ID + " on skeleton " + skeletonName + ", " + how + ".");
             }

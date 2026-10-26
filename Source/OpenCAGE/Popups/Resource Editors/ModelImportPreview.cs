@@ -926,6 +926,7 @@ namespace AlienPAK
                 MessageBox.Show("None of the selected meshes could be converted." + (warnings.Count == 0 ? "" : "\n\n" + string.Join("\n", warnings)), "Import failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
+            ModelIO.SetSkinnedBounds(cs2, CompositeSkeleton);
 
             if (warnings.Count != 0)
             {

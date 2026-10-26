@@ -488,6 +488,80 @@ namespace AlienPAK
         }
 
         /// <summary>
+        /// Give a model skinned to a game skeleton its bounds the way the game keeps them for a skinned
+        /// submesh: MaxBounds the corner its vertices reach, and where a static one has its minimum corner,
+        /// a single distance three times over - the farthest any vertex sits from a bone with weight on it,
+        /// with the rig at rest (its bind pose for a character's rig, its model-space pose for an
+        /// environment rig, as ScoreFit tells them apart). All 763 skinned submeshes on TECH_HUB hold that
+        /// to the tenth of a millimetre. The game grows its bones by that distance to cull the mesh, so an
+        /// ordinary minimum corner - a negative distance - left an imported player model invisible.
+        /// </summary>
+        /// <summary>
+        /// Give skinned submeshes whose bounds aren't kept the game's way (see <see cref="SetSkinnedBounds"/>) -
+        /// imports from before they were - their bounds, against the rig the model was built for. Nothing
+        /// shipped is touched: every skinned submesh the game has already keeps them so. Returns how many
+        /// were set; none without the animation data (not loaded yet), which the next save puts right.
+        /// </summary>
+        public static int RepairSkinnedBounds(Level level, CathodeLib.Animation animations)
+        {
+            if (level?.Models == null || animations == null)
+                return 0;
+            int repaired = 0;
+            foreach (Models.CS2 model in level.Models.Entries)
+            {
+                List<Submesh> wrong = model.Components.SelectMany(o => o.LODs).SelectMany(o => o.Submeshes)
+                    .Where(o => o.Bones.Count != 0 && !(o.MinBounds.X >= 0 && o.MinBounds.X == o.MinBounds.Y && o.MinBounds.Y == o.MinBounds.Z)).ToList();
+                if (wrong.Count == 0)
+                    continue;
+                Skeleton rig = animations.RigFor(model);
+                if (rig == null)
+                    continue;
+                SetSkinnedBounds(model, rig, wrong);
+                repaired += wrong.Count;
+            }
+            return repaired;
+        }
+
+        public static void SetSkinnedBounds(Models.CS2 model, Skeleton skeleton, ICollection<Submesh> only = null)
+        {
+            if (model == null || skeleton == null)
+                return;
+            ScoreFit(skeleton, model, out bool environment);
+            List<Matrix4x4> rest = environment ? skeleton.GetModelSpacePose() : skeleton.GetBindPose();
+
+            foreach (Models.CS2.Component component in model.Components)
+                foreach (Models.CS2.Component.LOD lod in component.LODs)
+                    foreach (Submesh submesh in lod.Submeshes)
+                    {
+                        if (submesh.Bones.Count == 0 || (only != null && !only.Any(o => ReferenceEquals(o, submesh))))
+                            continue;
+                        cMesh mesh = submesh.ToMesh();
+                        if (mesh.Vertices.Count == 0 || mesh.BoneIndexes.Count != mesh.Vertices.Count || mesh.BoneWeights.Count != mesh.Vertices.Count)
+                            continue;
+
+                        float reach = 0;
+                        Vector3 max = new Vector3(float.MinValue);
+                        for (int v = 0; v < mesh.Vertices.Count; v++)
+                        {
+                            Vector3 position = mesh.Vertices[v];
+                            max = Vector3.Max(max, position);
+                            Vector4 indices = mesh.BoneIndexes[v], weights = mesh.BoneWeights[v];
+                            float[] index = { indices.X, indices.Y, indices.Z, indices.W }, weight = { weights.X, weights.Y, weights.Z, weights.W };
+                            for (int k = 0; k < 4; k++)
+                            {
+                                int local = (int)index[k];
+                                if (weight[k] <= 0 || local >= submesh.Bones.Count) continue;
+                                int bone = submesh.Bones[local];
+                                if (bone < rest.Count)
+                                    reach = Math.Max(reach, (position - rest[bone].Translation).Length());
+                            }
+                        }
+                        submesh.MinBounds = new Vector3(reach, reach, reach);
+                        submesh.MaxBounds = max;
+                    }
+        }
+
+        /// <summary>
         /// <see cref="ScoreFit(Skeleton, Models.CS2, out bool)"/> for several rigs at once, answered in the
         /// order given. The model's weights are read once rather than once per rig, which is nearly all
         /// of the cost of ranking every rig the game has against one mesh.

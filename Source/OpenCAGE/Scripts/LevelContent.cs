@@ -165,6 +165,10 @@ namespace OpenCAGE
         {
             //Pristine copies of every still-vanilla file in the level, before the save rewrites them
             Modding.ModServices.CaptureLevelBeforeSave(Level.Name);
+            //Skinned models imported before their bounds were kept the game's way drew nothing in game
+            ModelIO.RepairSkinnedBounds(Level, Singleton.AnimationsLoaded ? Singleton.Animations : null);
+            //Materials whose samplers were cleared or features changed are laid out as the game reads them (texture slots in sampler order)
+            Level.Materials?.NormaliseSamplerSlots();
             LastBakeWarnings = null;
             LastWarnings = null;
             LastSaveFailures = new CathodeFile.SaveFailure[0];

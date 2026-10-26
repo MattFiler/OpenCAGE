@@ -700,6 +700,11 @@ namespace OpenCAGE
             int greenBit = FeatureBit(family, "SEPARATE_ALPHA_MAP_USE_GREEN_CHANNEL");
             int separateAlphaBit = FeatureBit(family, "SEPARATE_ALPHA");
 
+            /* Vertex colour the mesh hasn't got has to be made up: the model save gives it a white colour stream
+             * (ModelUtility.EnsureShaderInputs), as the game draws garbage without one. That looks the same, but costs
+             * a stream, so it is worth more than a feature that has nothing to do with the mesh. */
+            int vertexColourBit = FeatureBit(family, "VERTEX_COLOUR");
+
             long best = 0;
             int bestCost = int.MaxValue;
             foreach (ShaderPermutationService.Permutation permutation in available)
@@ -713,6 +718,7 @@ namespace OpenCAGE
                     if ((diff & bit) == 0) continue;
                     if (b == alphaTestBit) cost += 50;                             //cut out, or a solid card
                     else if (b == greenBit && bothSeparateAlpha) cost += 50;      //the mask read from the wrong channel
+                    else if (b == vertexColourBit && (permutation.Mask & bit) != 0) cost += 6; //colours the mesh hasn't got
                     else if ((samplerBits & bit) == 0) cost += 1;                  //not about a texture at all
                     else if ((permutation.Mask & bit) != 0) cost += 100;           //wants a map we do not have
                     else cost += 8;                                               //drops a map we do have
