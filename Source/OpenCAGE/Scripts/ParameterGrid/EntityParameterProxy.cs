@@ -468,11 +468,19 @@ namespace OpenCAGE
                     parameter.content = new cResource(null, ShortGuid.Invalid);
                 return new MappingParameterDescriptor(this, parameter, paramName, attributes);
             }
-            if (paramName == "Texture" && Entity is FunctionEntity textureHost && textureHost.function == FunctionType.EnvironmentMap)
+            if (Entity is FunctionEntity function)
             {
-                if (parameter.content.dataType != DataType.STRING)
-                    parameter.content = new cString(parameter.content is cString existing ? existing.value : "");
-                return new TexturePathParameterDescriptor(this, parameter, paramName, attributes);
+                //A texture named by its path: picked in the texture editor
+                if (IsTexturePathParameter(function, paramName, out bool environmentMapsOnly))
+                {
+                    if (parameter.content.dataType != DataType.STRING)
+                        parameter.content = new cString(parameter.content is cString existing ? existing.value : "");
+                    return new TexturePathParameterDescriptor(this, parameter, paramName, attributes, environmentMapsOnly);
+                }
+
+                //An inventory item's name: picked from the Item & Inventory editor's items
+                if (parameter.content.dataType == DataType.STRING && IsInventoryItemParameter(function, paramName))
+                    return new InventoryItemParameterDescriptor(this, parameter, paramName, attributes);
             }
 
             switch (parameter.content.dataType)
@@ -507,6 +515,48 @@ namespace OpenCAGE
                 default:
                     return new ReadOnlyParameterDescriptor(this, parameter, paramName, attributes);
             }
+        }
+
+        /* String parameters that name a texture by its path, per function, and whether each takes an environment map (cubemap) */
+        private static readonly (FunctionType function, string parameter, bool environmentMap)[] _texturePathParameters =
+        {
+            (FunctionType.EnvironmentMap, "Texture", true),
+            (FunctionType.SimpleWater, "NORMAL_MAP", false),
+            (FunctionType.SimpleWater, "ALPHA_MASK", false),
+            (FunctionType.SimpleWater, "FLOW_MAP", false),
+            (FunctionType.SimpleWater, "ENVIRONMENT_MAP", true),
+        };
+
+        /* String parameters that name an inventory item (GBL_ITEM.BML), per function */
+        private static readonly (FunctionType function, string parameter)[] _inventoryItemParameters =
+        {
+            (FunctionType.InventoryItem, "item"),
+            (FunctionType.InventoryItem, "itemName"),
+            (FunctionType.PickupSpawner, "item_name"),
+        };
+
+        private static bool IsTexturePathParameter(FunctionEntity entity, string paramName, out bool environmentMapsOnly)
+        {
+            foreach ((FunctionType function, string parameter, bool environmentMap) in _texturePathParameters)
+            {
+                if (parameter == paramName && entity.function == function)
+                {
+                    environmentMapsOnly = environmentMap;
+                    return true;
+                }
+            }
+            environmentMapsOnly = false;
+            return false;
+        }
+
+        private static bool IsInventoryItemParameter(FunctionEntity entity, string paramName)
+        {
+            foreach ((FunctionType function, string parameter) in _inventoryItemParameters)
+            {
+                if (parameter == paramName && entity.function == function)
+                    return true;
+            }
+            return false;
         }
 
         private Attribute[] BuildAttributes(Parameter parameter, Dictionary<ShortGuid, string> parameterGroups)

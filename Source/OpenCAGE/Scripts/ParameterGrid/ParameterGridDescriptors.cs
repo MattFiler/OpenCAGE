@@ -678,11 +678,24 @@ namespace OpenCAGE
         }
     }
 
-    /// <summary>EnvironmentMap "Texture" parameter - a string path picked via the texture browser.</summary>
+    /// <summary>A texture named by its path (EnvironmentMap "Texture", SimpleWater's maps) - typed, or picked in the texture editor.</summary>
     public class TexturePathParameterDescriptor : StringParameterDescriptor
     {
-        public TexturePathParameterDescriptor(EntityParameterProxy proxy, Parameter parameter, string name, Attribute[] attributes) : base(proxy, parameter, name, attributes) { }
+        /// <summary>The picker lists only the level's environment maps (cubemaps) - for parameters that take one.</summary>
+        public bool EnvironmentMapsOnly { get; }
+
+        public TexturePathParameterDescriptor(EntityParameterProxy proxy, Parameter parameter, string name, Attribute[] attributes, bool environmentMapsOnly) : base(proxy, parameter, name, attributes)
+        {
+            EnvironmentMapsOnly = environmentMapsOnly;
+        }
         protected override UITypeEditor CreateValueEditor() => new TexturePopupEditor();
+    }
+
+    /// <summary>An inventory item's name (InventoryItem "item"/"itemName", PickupSpawner "item_name") - typed, or picked from the items the Item &amp; Inventory editor lists.</summary>
+    public class InventoryItemParameterDescriptor : StringParameterDescriptor
+    {
+        public InventoryItemParameterDescriptor(EntityParameterProxy proxy, Parameter parameter, string name, Attribute[] attributes) : base(proxy, parameter, name, attributes) { }
+        protected override UITypeEditor CreateValueEditor() => new InventoryItemPopupEditor();
     }
     #endregion
 
@@ -981,7 +994,7 @@ namespace OpenCAGE
         }
     }
 
-    /// <summary>Opens the environment map texture picker and applies the choice to every selected entity.</summary>
+    /// <summary>Opens the texture picker (environment maps only where the parameter takes one) and applies the choice to every selected entity.</summary>
     public class TexturePopupEditor : UITypeEditor
     {
         private static EditTexture _popup;
@@ -1004,7 +1017,7 @@ namespace OpenCAGE
                 current = content.Level.Textures.GetEnvironmentMapByPath(path);
             }
 
-            _popup = new EditTexture(current, showSelectBtn: true, environmentMapsOnly: true);
+            _popup = new EditTexture(current, showSelectBtn: true, environmentMapsOnly: targets[0].EnvironmentMapsOnly);
             _popup.FormClosed += (s, e) => { if (ReferenceEquals(_popup, s)) _popup = null; };
             _popup.OnTextureSelected += (texture) =>
             {
@@ -1013,6 +1026,42 @@ namespace OpenCAGE
                 if (!StringParameterDescriptor.CheckPickedValue(newPath)) return;
                 foreach (TexturePathParameterDescriptor target in targets)
                     target.SetValue(target.Proxy, newPath);
+                ParameterGridPanel.Current?.RefreshValues();
+            };
+            _popup.Show();
+            return value;
+        }
+    }
+
+    /// <summary>Lists the inventory items (as the Item &amp; Inventory editor shows them) and applies the choice to every selected entity.</summary>
+    public class InventoryItemPopupEditor : UITypeEditor
+    {
+        private static SelectEnumString _popup;
+
+        public override UITypeEditorEditStyle GetEditStyle(ITypeDescriptorContext context) => UITypeEditorEditStyle.Modal;
+        public override object EditValue(ITypeDescriptorContext context, IServiceProvider provider, object value)
+        {
+            List<InventoryItemParameterDescriptor> targets = ParameterGridTargets.Get<InventoryItemParameterDescriptor>(context);
+            if (targets.Count == 0)
+                return value;
+
+            List<KeyValuePair<string, string>> items = ConfigEditors.InventoryItemEditor.ReadItemNames();
+            if (items.Count == 0)
+            {
+                MessageBox.Show("No inventory items could be read from DATA\\GBL_ITEM.BML.", "No items", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return value;
+            }
+
+            if (_popup != null)
+                _popup.Close();
+
+            _popup = new SelectEnumString(targets[0].Name, ((cString)targets[0].Parameter.content).value, items);
+            _popup.FormClosed += (s, e) => { if (ReferenceEquals(_popup, s)) _popup = null; };
+            _popup.OnSelected += (name) =>
+            {
+                if (!StringParameterDescriptor.CheckPickedValue(name)) return;
+                foreach (InventoryItemParameterDescriptor target in targets)
+                    target.SetValue(target.Proxy, name);
                 ParameterGridPanel.Current?.RefreshValues();
             };
             _popup.Show();

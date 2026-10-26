@@ -28,7 +28,7 @@ namespace OpenCAGE
     {
         public Action<string> OnSelected;
 
-        private cEnumString _defaultVal;
+        private string _currentText; //the value to select when the list opens
 
         private ListViewColumnSorter _sorter = new ListViewColumnSorter();
         private ListViewItem[] _filteredItems;
@@ -53,6 +53,29 @@ namespace OpenCAGE
         {
             _browse = true;
             Initialise(title, new cEnumString(type), false);
+        }
+
+        /// <summary>
+        /// A picker over names the caller supplies rather than an enum string type's list - e.g. the inventory items an
+        /// InventoryItem entity names, read from the Item &amp; Inventory editor's file. Each item is (name, description).
+        /// </summary>
+        public SelectEnumString(string paramName, string currentValue, List<KeyValuePair<string, string>> items) : base(WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION | WindowClosesOn.COMMANDS_RELOAD)
+        {
+            _browse = false;
+            InitializeComponent();
+            StayAboveEditor = true;
+
+            Singleton.OnEnumStringUIShown?.Invoke(this);
+            Singleton.OnEnumStringUIShown += OnAnotherEnumStringWindowShown;
+
+            _currentText = currentValue;
+            this.Text = "Select for '" + paramName + "'";
+            enumStringTypeSelect.Visible = false;
+            _filteredItems = items.Select(o => new ListViewItem(new string[] { o.Key, o.Value })).ToArray();
+
+            clearSearchBtn.Visible = false;
+            strings.ListViewItemSorter = _sorter;
+            this.FormClosing += SelectEnumString_FormClosing;
         }
 
         private void Initialise(string title, cEnumString enumString, bool allowTypeSelect)
@@ -80,7 +103,7 @@ namespace OpenCAGE
             Singleton.OnEnumStringUIShown?.Invoke(this);
             Singleton.OnEnumStringUIShown += OnAnotherEnumStringWindowShown;
 
-            _defaultVal = enumString;
+            _currentText = enumString?.value;
             this.Text = title;
 
             if (_browse)
@@ -264,7 +287,7 @@ namespace OpenCAGE
             for (int i = 0; i < strings.Items.Count; i++)
             {
                 strings.Items[i].Selected = false;
-                if (strings.Items[i].Text == _defaultVal.value)
+                if (strings.Items[i].Text == _currentText)
                 {
                     selectedIndex = i;
                     strings.Items[i].Selected = true;

@@ -70,6 +70,30 @@ namespace OpenCAGE.ConfigEditors
             CloseOnConfigReset();
         }
 
+        /// <summary>
+        /// Every item this editor lists (DATA\GBL_ITEM.BML, item_database/objects), as (name, type) - the names InventoryItem and
+        /// PickupSpawner entities take. Read from disk each time, so an item added or renamed here shows straight away. Empty when
+        /// the file can't be read.
+        /// </summary>
+        public static List<KeyValuePair<string, string>> ReadItemNames()
+        {
+            List<KeyValuePair<string, string>> names = new List<KeyValuePair<string, string>>();
+            try
+            {
+                BML gblItem = new BML(Singleton.PathToAI + @"\DATA\GBL_ITEM.BML");
+                foreach (XmlNode node in gblItem.Content["item_database"]["objects"])
+                {
+                    if (node is XmlElement obj && obj.HasAttribute("name"))
+                        names.Add(new KeyValuePair<string, string>(obj.GetAttribute("name"), obj.Name));
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Failed to read inventory items: " + ex.Message);
+            }
+            return names;
+        }
+
         private void InventoryItemEditor_FormClosing(object sender, FormClosingEventArgs e)
         {
             this.FormClosing -= InventoryItemEditor_FormClosing;

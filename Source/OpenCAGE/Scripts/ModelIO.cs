@@ -1343,21 +1343,25 @@ namespace AlienPAK
                     Models.CS2.Component.LOD lod = new Models.CS2.Component.LOD(plannedLOD.Name ?? "");
                     foreach (PlannedSubmesh plannedSubmesh in included)
                     {
-                        Models.CS2.Component.LOD.Submesh submesh = ToSubmesh(scene.Meshes[plannedSubmesh.MeshIndex], plannedSubmesh.Transform, plannedSubmesh.Metadata, out List<string> submeshWarnings, plan.UnitScale, plan.Scale, plan.BoneNames);
-                        if (submesh == null)
+                        List<Models.CS2.Component.LOD.Submesh> made = ToSubmeshes(scene.Meshes[plannedSubmesh.MeshIndex], plannedSubmesh.Transform, plannedSubmesh.Metadata, out List<string> submeshWarnings, plan.UnitScale, plan.Scale, plan.BoneNames);
+                        if (made.Count == 0)
                         {
-                            warnings.Add(plannedSubmesh.MeshName + ": could not be converted (it needs at least 3 vertices, triangular faces, and no more than " + ushort.MaxValue.ToString("N0") + " vertices and " + (ushort.MaxValue / 3).ToString("N0") + " triangles).");
+                            warnings.Add(plannedSubmesh.MeshName + ": could not be converted (it needs at least 3 vertices and triangular faces).");
                             continue;
                         }
+                        if (made.Count > 1)
+                            warnings.Add(plannedSubmesh.MeshName + ": cut into " + made.Count + CutIntoSubmeshes + MaxTrianglesPerSubmesh.ToString("N0") + " triangles and " + ushort.MaxValue.ToString("N0") + " vertices.");
                         foreach (string warning in submeshWarnings)
                             warnings.Add(plannedSubmesh.MeshName + ": " + warning);
 
                         Materials.Material material = plannedSubmesh.Material;
                         if (material == null && plannedSubmesh.Metadata?.Material != null)
                             material = findMaterial?.Invoke(plannedSubmesh.Metadata.Material);
-                        submesh.Material = material ?? fallbackMaterial;
-
-                        lod.Submeshes.Add(submesh);
+                        foreach (Models.CS2.Component.LOD.Submesh submesh in made)
+                        {
+                            submesh.Material = material ?? fallbackMaterial;
+                            lod.Submeshes.Add(submesh);
+                        }
                     }
                     if (lod.Submeshes.Count != 0)
                         component.LODs.Add(lod);
@@ -1432,6 +1436,131 @@ namespace AlienPAK
                 && Math.Abs(m.M41) < reach && Math.Abs(m.M42) < reach && Math.Abs(m.M43) < reach && Math.Abs(m.M44 - 1) < turn;
         }
 
+        /* A submesh holds at most 65,535 indices (21,845 triangles) and 65,535 vertices - the file keeps both counts in 16
+         * bits - and a mesh over either was left out whole: more than half of a Halo level, three meshes of 22,000 to 34,000
+         * triangles, went missing on import (26 Oct 2026). */
+        public const int MaxTrianglesPerSubmesh = ushort.MaxValue / 3;
+
+        /// <summary>
+        /// Convert an Assimp mesh into as many submeshes as it takes: one when it fits, otherwise pieces of it in the file's
+        /// own triangle order, about 20,000 triangles each, and any piece that still won't fit (moving UVs back into range can
+        /// add vertices) cut in half again. Empty when the mesh can't be converted at all.
+        /// </summary>
+        public static List<Models.CS2.Component.LOD.Submesh> ToSubmeshes(Mesh mesh, Matrix4x4 transform, SubmeshMetadata metadata, out List<string> warnings, float unitScale = UnitScale, float scale = 1.0f, Dictionary<string, int> boneNames = null)
+        {
+            warnings = new List<string>();
+            List<Models.CS2.Component.LOD.Submesh> made = new List<Models.CS2.Component.LOD.Submesh>();
+            if (mesh == null)
+                return made;
+
+            List<Face> triangles = mesh.Faces.Where(o => o.IndexCount == 3).ToList();
+            int pieces = triangles.Count > MaxTrianglesPerSubmesh ? (int)Math.Ceiling(triangles.Count / 20000.0) : 1;
+            if (pieces == 1)
+            {
+                Models.CS2.Component.LOD.Submesh whole = ToSubmesh(mesh, transform, metadata, out List<string> wholeWarnings, unitScale, scale, boneNames);
+                warnings.AddRange(wholeWarnings);
+                if (whole != null || triangles.Count < 2 || (triangles.Count <= MaxTrianglesPerSubmesh && mesh.VertexCount <= ushort.MaxValue && !MayOutgrowVertexLimit(mesh)))
+                {
+                    if (whole != null) made.Add(whole);
+                    return made;
+                }
+                pieces = 2;
+                warnings.Clear();
+            }
+
+            int per = (triangles.Count + pieces - 1) / pieces;
+            for (int start = 0; start < triangles.Count; start += per)
+            {
+                made.AddRange(ToSubmeshes(MeshPiece(mesh, triangles, start, Math.Min(per, triangles.Count - start)), transform, metadata, out List<string> pieceWarnings, unitScale, scale, boneNames));
+                foreach (string warning in pieceWarnings)
+                    if (!warnings.Contains(warning)) warnings.Add(warning);
+            }
+            return made;
+        }
+
+        private const string TurnedRound = "its triangles faced the opposite way to its normals, so the game would have drawn it inside out; they have been turned round.";
+
+        /* Whether nearly all of a mesh's triangles (nine in ten) run clockwise round their own normals, where the front runs
+         * counter-clockwise once the importer has brought the file into CATHODE's handedness. A triangle whose normals lie
+         * along it, as smoothing over a sharp edge leaves them, says nothing either way. */
+        private static bool WoundAgainstNormals(Mesh mesh, List<int> triangles)
+        {
+            if (mesh.Normals.Count != mesh.VertexCount) return false;
+
+            Vector3 At(List<Assimp.Vector3D> list, int index) => new Vector3(list[index].X, list[index].Y, list[index].Z);
+            int along = 0, against = 0;
+            for (int i = 0; i + 2 < triangles.Count; i += 3)
+            {
+                Vector3 a = At(mesh.Vertices, triangles[i]);
+                Vector3 face = Vector3.Cross(At(mesh.Vertices, triangles[i + 1]) - a, At(mesh.Vertices, triangles[i + 2]) - a);
+                Vector3 normal = At(mesh.Normals, triangles[i]) + At(mesh.Normals, triangles[i + 1]) + At(mesh.Normals, triangles[i + 2]);
+                float lengths = face.Length() * normal.Length();
+                if (!(lengths > 0)) continue;
+
+                float cosine = Vector3.Dot(face, normal) / lengths;
+                if (cosine > 0.2f) along++;
+                else if (cosine < -0.2f) against++;
+            }
+            return against > 0 && against >= 9 * along;
+        }
+
+        /// <summary>
+        /// Whether a warning only says what the import put right by itself - a mesh cut into several submeshes, or turned the
+        /// right way out - rather than something lost. The import dialog doesn't ask about those.
+        /// </summary>
+        public static bool IsPutRight(string warning)
+        {
+            return warning != null && (warning.EndsWith(TurnedRound) || warning.Contains(CutIntoSubmeshes));
+        }
+
+        private const string CutIntoSubmeshes = " submeshes, as one holds at most ";
+
+        /* Whether ToSubmesh may have failed on vertices rather than for want of triangles: UVs out of range get moved back,
+         * which can add vertices to a mesh already near the limit */
+        private static bool MayOutgrowVertexLimit(Mesh mesh)
+        {
+            return mesh.VertexCount > ushort.MaxValue / 2;
+        }
+
+        /* The triangles [start, start + count) of a mesh as a mesh of their own, with only the vertices they use */
+        private static Mesh MeshPiece(Mesh source, List<Face> triangles, int start, int count)
+        {
+            Mesh piece = new Mesh(source.Name, source.PrimitiveType) { MaterialIndex = source.MaterialIndex };
+            Dictionary<int, int> taken = new Dictionary<int, int>();
+            bool normals = source.Normals.Count == source.VertexCount, tangents = source.Tangents.Count == source.VertexCount, bitangents = source.BiTangents.Count == source.VertexCount;
+            int Take(int vertex)
+            {
+                if (taken.TryGetValue(vertex, out int at)) return at;
+                at = piece.Vertices.Count;
+                taken[vertex] = at;
+                piece.Vertices.Add(source.Vertices[vertex]);
+                if (normals) piece.Normals.Add(source.Normals[vertex]);
+                if (tangents) piece.Tangents.Add(source.Tangents[vertex]);
+                if (bitangents) piece.BiTangents.Add(source.BiTangents[vertex]);
+                for (int channel = 0; channel < source.TextureCoordinateChannelCount; channel++)
+                    if (source.TextureCoordinateChannels[channel].Count == source.VertexCount)
+                        piece.TextureCoordinateChannels[channel].Add(source.TextureCoordinateChannels[channel][vertex]);
+                for (int channel = 0; channel < source.VertexColorChannelCount; channel++)
+                    if (source.VertexColorChannels[channel].Count == source.VertexCount)
+                        piece.VertexColorChannels[channel].Add(source.VertexColorChannels[channel][vertex]);
+                return at;
+            }
+            for (int t = start; t < start + count; t++)
+                piece.Faces.Add(new Face(triangles[t].Indices.Select(Take).ToArray()));
+            for (int channel = 0; channel < source.TextureCoordinateChannelCount; channel++)
+                piece.UVComponentCount[channel] = source.UVComponentCount[channel];
+            foreach (Bone bone in source.Bones)
+            {
+                Bone copy = new Bone() { Name = bone.Name, OffsetMatrix = bone.OffsetMatrix };
+                foreach (VertexWeight weight in bone.VertexWeights)
+                    if (taken.TryGetValue(weight.VertexID, out int at))
+                        copy.VertexWeights.Add(new VertexWeight(at, weight.Weight));
+                if (copy.VertexWeights.Count != 0)
+                    piece.Bones.Add(copy);
+            }
+            return piece;
+        }
+
         /* Convert a single Assimp mesh into a submesh, re-using the original vertex format where we have one */
         public static Models.CS2.Component.LOD.Submesh ToSubmesh(Mesh mesh, Matrix4x4 transform, SubmeshMetadata metadata, out List<string> warnings, float unitScale = UnitScale, float scale = 1.0f, Dictionary<string, int> boneNames = null)
         {
@@ -1454,11 +1583,28 @@ namespace AlienPAK
             int[] indices = triangles.ToArray();
             if (indices.Length > ushort.MaxValue) return null;
 
+            //Judged on the file as it is, before anything below turns it round
+            bool insideOut = WoundAgainstNormals(mesh, triangles);
+
             /* A part whose vertices carry a placement that mirrors had its triangles wound the other
              * way when it went out (see ModelExporter.WithSkinnedMeshesBaked), so taking the
-             * placement off winds them back - with its shading turned back too, see VertexSource */
-            if (unplaceShading && TryGetPlacement(metadata, out Matrix4x4 unplaced) && unplaced.GetDeterminant() < 0)
+             * placement off winds them back - with its shading turned back too, see VertexSource.
+             * Any other mesh whose node mirrors it is wound back the same way, as its shading turns
+             * with the node too. */
+            if (unplaceShading ? TryGetPlacement(metadata, out Matrix4x4 unplaced) && unplaced.GetDeterminant() < 0 : transform.GetDeterminant() < 0)
                 ReverseWinding(indices);
+
+            /* The game draws the front of a triangle only, and a file wound the other way round its
+             * normals throughout came in inside out: Halo's Flood level as a Sketchfab glTF is clockwise
+             * round every one of its 146,963 normals, which went unnoticed where it came from because
+             * Sketchfab draws both sides (26 Oct 2026). The normals say which side is meant to be seen,
+             * so a mesh wound against nearly all of them is turned round. Retail meshes, and so our own
+             * exports of them, agree with theirs (TECH_HUB: 99.9% of 5.6 million triangles). */
+            if (insideOut)
+            {
+                ReverseWinding(indices);
+                warnings.Add(TurnedRound);
+            }
 
             //Importers weld and renumber vertices, so put the original numbering back where we still recognise the mesh
             int[] vertexMap = ResolveVertexNumbering(mesh, ref indices, metadata, out bool numberingRestored);
@@ -1515,7 +1661,7 @@ namespace AlienPAK
             ResolveSkinning(mesh, vertexMap, numberingRestored ? metadata : null, metadata, out byte[] blendIndices, out byte[] blendWeights, out List<int> bonePalette, warnings, boneNames);
             if (bonePalette != null) submesh.Bones.AddRange(bonePalette);
 
-            VertexSource source = new VertexSource(mesh, vertexMap, positions, submesh.VertexScale, numberingRestored ? metadata : null, metadata, needsTangents, indices, blendIndices, blendWeights, unplaceShading, uvShifts);
+            VertexSource source = new VertexSource(mesh, vertexMap, positions, submesh.VertexScale, numberingRestored ? metadata : null, metadata, needsTangents, indices, blendIndices, blendWeights, unplaceShading, transform, uvShifts);
 
             VertexFormat full = FromMetadata(metadata?.VertexFormatFull);
             VertexFormat partial = FromMetadata(metadata?.VertexFormatPartial);
@@ -1835,14 +1981,21 @@ namespace AlienPAK
             /* A part our export moved to where the level draws it by moving its vertices had its shading
              * turned with it, so it turns back with the positions (see VertexTransform): normals through
              * the placement's transpose, which is the inverse transpose of taking it off, and tangents
-             * through its inverse. A part placed by its node never had its shading touched. */
+             * through its inverse. A part placed by its node never had its shading touched.
+             *
+             * Any other mesh whose positions go through its node's transform has its shading turned by
+             * the same: normals through the transform's inverse transpose, tangents through the transform.
+             * Left as the file has them, a mesh under a turned node was lit as if it had never been turned
+             * - a Sketchfab glTF stands up through a quarter turn on its root node, and half of Halo's
+             * Flood level came in with its normals lying along its faces (26 Oct 2026). */
             private readonly bool _unplaced;
             private readonly Matrix4x4 _unplaceNormals;
             private readonly Matrix4x4 _unplaceDirections;
 
             /* <paramref name="perVertex"/> is only set when the original vertex numbering was recovered, so anything
-             * indexed by vertex can be trusted; <paramref name="metadata"/> is always the submesh's own entry. */
-            public VertexSource(Mesh mesh, int[] vertexMap, List<Vector3> positions, int vertexScale, SubmeshMetadata perVertex, SubmeshMetadata metadata, bool generateTangents, int[] indices, byte[] blendIndices, byte[] blendWeights, bool unplaceShading, Dictionary<int, List<Vector2>> uvShifts = null)
+             * indexed by vertex can be trusted; <paramref name="metadata"/> is always the submesh's own entry.
+             * <paramref name="transform"/> is what the positions went through (VertexTransform). */
+            public VertexSource(Mesh mesh, int[] vertexMap, List<Vector3> positions, int vertexScale, SubmeshMetadata perVertex, SubmeshMetadata metadata, bool generateTangents, int[] indices, byte[] blendIndices, byte[] blendWeights, bool unplaceShading, Matrix4x4 transform, Dictionary<int, List<Vector2>> uvShifts = null)
             {
                 Mesh = mesh;
                 VertexMap = vertexMap;
@@ -1858,6 +2011,12 @@ namespace AlienPAK
                     _unplaced = true;
                     _unplaceDirections = unplace;
                     _unplaceNormals = Matrix4x4.Transpose(FromArray(metadata.Placement));
+                }
+                else if (!NearlyIdentity(transform, 1e-5f, float.MaxValue) && Matrix4x4.Invert(transform, out Matrix4x4 inverse))
+                {
+                    _unplaced = true;
+                    _unplaceDirections = transform;
+                    _unplaceNormals = Matrix4x4.Transpose(inverse);
                 }
 
                 for (int i = 0; i < mesh.TextureCoordinateChannelCount; i++)

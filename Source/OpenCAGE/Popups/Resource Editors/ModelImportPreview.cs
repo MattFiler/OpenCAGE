@@ -928,6 +928,12 @@ namespace AlienPAK
             }
             ModelIO.SetSkinnedBounds(cs2, CompositeSkeleton);
 
+            /* A mesh cut into several submeshes, or turned the right way out, comes in as the file meant
+             * it - nothing to ask about, so it's only logged */
+            foreach (string putRight in warnings.Where(ModelIO.IsPutRight))
+                Debug.Log("Model Import", putRight);
+            warnings.RemoveAll(ModelIO.IsPutRight);
+
             if (warnings.Count != 0)
             {
                 string message = string.Join("\n", warnings.Take(15));

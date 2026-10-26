@@ -1141,15 +1141,20 @@ namespace OpenCAGE.MCP
                 List<Models.CS2.Component.LOD.Submesh> built = new List<Models.CS2.Component.LOD.Submesh>();
                 foreach (ModelIO.PlannedSubmesh mesh in meshes)
                 {
-                    Models.CS2.Component.LOD.Submesh made = ModelIO.ToSubmesh(scene.Meshes[mesh.MeshIndex], mesh.Transform, mesh.Metadata, out List<string> meshWarnings, plan.UnitScale, scale, plan.BoneNames);
-                    if (made == null)
+                    List<Models.CS2.Component.LOD.Submesh> made = ModelIO.ToSubmeshes(scene.Meshes[mesh.MeshIndex], mesh.Transform, mesh.Metadata, out List<string> meshWarnings, plan.UnitScale, scale, plan.BoneNames);
+                    if (made.Count == 0)
                     {
-                        warnings.Add(mesh.MeshName + ": could not be converted (it needs at least 3 vertices, triangular faces, and no more than " + ushort.MaxValue.ToString("N0") + " vertices and " + (ushort.MaxValue / 3).ToString("N0") + " triangles).");
+                        warnings.Add(mesh.MeshName + ": could not be converted (it needs at least 3 vertices and triangular faces).");
                         continue;
                     }
+                    if (made.Count > 1)
+                        warnings.Add(mesh.MeshName + ": cut into " + made.Count + " submeshes, as one holds at most " + ModelIO.MaxTrianglesPerSubmesh.ToString("N0") + " triangles and " + ushort.MaxValue.ToString("N0") + " vertices.");
                     warnings.AddRange(meshWarnings.Select(o => mesh.MeshName + ": " + o));
-                    if (made.Material == null) made.Material = fallback;
-                    built.Add(made);
+                    foreach (Models.CS2.Component.LOD.Submesh submesh in made)
+                    {
+                        if (submesh.Material == null) submesh.Material = fallback;
+                        built.Add(submesh);
+                    }
                 }
                 if (built.Count == 0)
                     throw new McpError("None of the meshes could be converted. " + string.Join(" ", warnings.Take(10)));

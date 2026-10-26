@@ -46,8 +46,8 @@
                             <TextBlock x:Name="materialInfo">text</TextBlock>
                         </WrapPanel>
                         <WrapPanel>
-                            <TextBox x:Name="scaleFactor" Width="50" ToolTip="How much bigger to make this submesh - 2 doubles it, 0.5 halves it. Fractions are fine.">1</TextBox>
-                            <Button x:Name="applyScale" Margin="5 0 0 0" Padding="8 0" Click="ApplyScaleBtn" ToolTip="Resize the submesh's geometry by this much.">Apply</Button>
+                            <TextBox x:Name="scaleFactor" Width="50" ToolTip="How much bigger to make what's selected - the whole model, a component, a part or one mesh. 2 doubles it, 0.5 halves it. Fractions are fine.">1</TextBox>
+                            <Button x:Name="applyScale" Margin="5 0 0 0" Padding="8 0" Click="ApplyScaleBtn" ToolTip="Resize the selection's geometry by this much (select the model at the top of the tree to resize all of it).">Apply</Button>
                         </WrapPanel>
                     </StackPanel>
                 </WrapPanel>

@@ -48,7 +48,7 @@ namespace AlienPAK
             }));
         }
 
-        public void SetModelPreview(Model3DGroup content, string filename, int vertCount, string material, int sf = -1, bool doZoom = true)
+        public void SetModelPreview(Model3DGroup content, string filename, int vertCount, string material, bool canResize = false, bool doZoom = true)
         {
             filePreviewModel.Content = content;
             if (doZoom)
@@ -65,9 +65,10 @@ namespace AlienPAK
             materialInfo.Text = material;
             materialInfo.Visibility = materialLabel.Visibility;
             /* The box is a resize factor, not a readout of anything: applying one bakes it into the
-             * geometry, so it goes back to 1 rather than showing the submesh's quantisation range. */
-            scaleFactorLabel.Visibility = sf != -1 ? Visibility.Visible : Visibility.Collapsed;
-            if (sf != -1) scaleFactor.Text = "1";
+             * geometry, so it goes back to 1 rather than showing the submesh's quantisation range.
+             * It resizes whatever is selected - the whole model, a component, a part or a mesh. */
+            scaleFactorLabel.Visibility = canResize ? Visibility.Visible : Visibility.Collapsed;
+            if (canResize) scaleFactor.Text = "1";
             scaleFactor.Visibility = scaleFactorLabel.Visibility;
             applyScale.Visibility = scaleFactorLabel.Visibility;
         }
@@ -123,7 +124,7 @@ namespace AlienPAK
             if (!float.TryParse((scaleFactor.Text ?? "").Trim(), System.Globalization.NumberStyles.Float,
                                 System.Globalization.CultureInfo.InvariantCulture, out factor) || factor <= 0.0f)
             {
-                MessageBox.Show("Enter a positive number to resize by - 2 doubles the submesh, 0.5 halves it.",
+                MessageBox.Show("Enter a positive number to resize by - 2 doubles the size, 0.5 halves it.",
                     "Resize", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }

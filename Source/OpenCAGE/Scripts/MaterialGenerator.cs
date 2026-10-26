@@ -109,6 +109,8 @@ namespace OpenCAGE
             public bool ExactMask;                 //false when we had to settle for the nearest shipped permutation
             public PermutationSource Source;
             public CutOutSource CutOut;
+            public float Opacity = 1.0f;           //below 1: see-through as a whole (glass), drawn in the transparent pass (FORCE_TO_ALPHA)
+            public bool NeedsBothSides;            //the meshes' faces point both ways, so only a double-sided material draws all of them
             public List<PlannedTexture> Textures = new List<PlannedTexture>();
             public List<string> Features = new List<string>();      //feature names the mask turns on
             public List<string> Notes = new List<string>();
@@ -232,6 +234,11 @@ namespace OpenCAGE
 
             plan.CutOut = PlanCutOut(source, plan);
 
+            int flippedEdges, sharedEdges;
+            plan.NeedsBothSides = FacesPointBothWays(scene, source, mesh, out flippedEdges, out sharedEdges);
+            if (plan.NeedsBothSides)
+                plan.Notes.Add("Some of this mesh's faces point the opposite way to the faces beside them (" + flippedEdges.ToString("N0") + " of its " + sharedEdges.ToString("N0") + " shared edges), which only looks right drawn from both sides, so the material is made double-sided.");
+
             //Everything a model can't tell us comes from the level's own most typical material of this family
             long baseMask;
             if (!TryMostUsedMask(level.Materials, level.Shaders, family, gameRoot, out baseMask))
@@ -268,6 +275,7 @@ namespace OpenCAGE
             }
 
             ReconcileCutOut(plan, family, plan.Mask);
+            ReconcileSeeThrough(plan, family, plan.Mask);
             plan.Features = DescribeFeatures(family, plan.Mask);
             return plan;
         }
@@ -321,7 +329,20 @@ namespace OpenCAGE
             PlannedTexture mask = plan.Textures.FirstOrDefault(o => o.Role.Sampler == "SEPARATE_ALPHA_MAP");
 
             if (blended)
-                plan.Notes.Add("This model material is alpha blended. Environment materials can't blend, so it's been set up to cut out wherever it is less than half opaque instead.");
+            {
+                /* A blended material that is see-through as a whole - glass, a visor: its base colour is less than
+                 * opaque - goes in the transparent pass, as retail's windows do (GLASS_Clean, GLASS_Dirty, KEY_CARD_GLASS
+                 * are all FORCE_TO_ALPHA). One whose see-through parts come from its texture's alpha (netting, decals,
+                 * screens) is cut out where that alpha falls under a half: sharp, and drawn with the solid geometry. */
+                float opacity = BlendOpacity(source);
+                if (opacity < 0.99f)
+                {
+                    plan.Opacity = Math.Max(0.0f, opacity);
+                    plan.Notes.Add("This model material is see-through (" + (plan.Opacity * 100).ToString("0") + "% opaque), so it is drawn in the game's transparent pass, as its glass is.");
+                    return CutOutSource.None;
+                }
+                plan.Notes.Add("This model material is alpha blended through its texture's alpha, so it has been set up to cut out wherever that is less than half opaque.");
+            }
 
             if (mask != null && mask.Usable && !SameImage(mask, diffuse))
                 return CutOutSource.OpacityMap;
@@ -354,6 +375,83 @@ namespace OpenCAGE
                 plan.CutOut = plan.Textures.Any(o => o.Usable && o.Role.Sampler == "DIFFUSE_MAP") ? CutOutSource.BaseColourAlpha : CutOutSource.None;
                 plan.Notes.Add("The nearest shader has no separate alpha map, so the cut-out comes from the base colour's own alpha instead of the opacity map. If that has none, this will draw solid.");
             }
+        }
+
+        /* How opaque a blended material is as a whole: glTF's base colour alpha, which assimp hands over as the
+         * diffuse colour's (and, from some exporters, as the material's opacity too) */
+        private static float BlendOpacity(Assimp.Material source)
+        {
+            float opacity = 1.0f;
+            if (source.HasColorDiffuse) opacity = Math.Min(opacity, source.ColorDiffuse.A);
+            if (source.HasOpacity) opacity = Math.Min(opacity, source.Opacity);
+            return opacity;
+        }
+
+        /* The nearest shipped permutation can lose the transparent pass or the double-siding the plan
+         * wanted, and the material then draws solid or with faces missing: say so. */
+        private static void ReconcileSeeThrough(Plan plan, SHADER_LIST family, long mask)
+        {
+            int forceToAlpha = FeatureBit(family, "FORCE_TO_ALPHA");
+            if (plan.Opacity < 1.0f && (forceToAlpha == -1 || (mask & (1L << forceToAlpha)) == 0))
+            {
+                plan.Opacity = 1.0f;
+                plan.Notes.Add("This model material is see-through, but no shader drawn in the transparent pass is available here for it, so it will draw solid.");
+            }
+            int doubleSided = FeatureBit(family, "DOUBLE_SIDED");
+            if (plan.NeedsBothSides && (doubleSided == -1 || (mask & (1L << doubleSided)) == 0))
+                plan.Notes.Add("No double-sided shader is available here for it, so the faces that point the other way won't draw from the side they face away from.");
+        }
+
+        /* Whether the meshes drawn with this material have faces pointing both ways: neighbouring
+         * triangles that run round their shared edge in the same direction, so one of the pair faces
+         * the other way. Modelling packages draw both sides of everything, so a model can come out like
+         * that and still look whole there; the game culls back faces, so half of it goes missing - the
+         * Falcon's windows had 57 of their 116 triangles facing into the cockpit (26 Oct 2026). A whole
+         * mesh wound backwards is consistent and is turned round on import instead (ModelIO). */
+        private static bool FacesPointBothWays(Scene scene, Assimp.Material source, Mesh mesh, out int flippedEdges, out int sharedEdges)
+        {
+            flippedEdges = 0;
+            sharedEdges = 0;
+            int materialIndex = scene?.Materials == null || source == null ? -1 : scene.Materials.IndexOf(source);
+            IEnumerable<Mesh> meshes = materialIndex >= 0 ? scene.Meshes.Where(o => o.MaterialIndex == materialIndex)
+                                     : mesh != null ? new[] { mesh } : Enumerable.Empty<Mesh>();
+            foreach (Mesh m in meshes)
+            {
+                //Corners welded by position: a mesh splits its vertices wherever normals or UVs differ
+                Dictionary<(long, long, long), int> welded = new Dictionary<(long, long, long), int>();
+                int[] corner = new int[m.VertexCount];
+                for (int v = 0; v < m.VertexCount; v++)
+                {
+                    Vector3D p = m.Vertices[v];
+                    (long, long, long) key = ((long)Math.Round(p.X * 10000.0), (long)Math.Round(p.Y * 10000.0), (long)Math.Round(p.Z * 10000.0));
+                    if (!welded.TryGetValue(key, out int id)) { id = welded.Count; welded[key] = id; }
+                    corner[v] = id;
+                }
+
+                //Each edge: how many triangles run along it in each direction
+                Dictionary<(int, int), (int forward, int backward)> edges = new Dictionary<(int, int), (int, int)>();
+                foreach (Face face in m.Faces)
+                {
+                    if (face.IndexCount != 3) continue;
+                    for (int k = 0; k < 3; k++)
+                    {
+                        int a = corner[face.Indices[k]], b = corner[face.Indices[(k + 1) % 3]];
+                        if (a == b) continue;
+                        (int, int) key = a < b ? (a, b) : (b, a);
+                        edges.TryGetValue(key, out (int forward, int backward) count);
+                        edges[key] = a < b ? (count.forward + 1, count.backward) : (count.forward, count.backward + 1);
+                    }
+                }
+                foreach ((int forward, int backward) count in edges.Values)
+                {
+                    if (count.forward + count.backward != 2) continue;     //an open edge, or more than two faces meeting
+                    sharedEdges++;
+                    if (count.forward == 2 || count.backward == 2) flippedEdges++;
+                }
+            }
+
+            //A few such edges are modelling noise; a real share of them is a mesh made to be seen from both sides
+            return flippedEdges >= 3 && flippedEdges * 50 >= sharedEdges;
         }
 
         private static bool DeclaresCutOut(Assimp.Material source, out bool blended)
@@ -620,9 +718,10 @@ namespace OpenCAGE
                 else mask &= ~(1L << bit);
             }
 
-            SetIf(ref mask, family, "DOUBLE_SIDED", source != null && source.HasTwoSided && source.IsTwoSided);
+            SetIf(ref mask, family, "DOUBLE_SIDED", (source != null && source.HasTwoSided && source.IsTwoSided) || plan.NeedsBothSides);
             SetIf(ref mask, family, "VERTEX_COLOUR", mesh != null && mesh.VertexColorChannelCount > 0);
             SetIf(ref mask, family, "ALPHA_TEST", plan.CutOut != CutOutSource.None);
+            SetIf(ref mask, family, "FORCE_TO_ALPHA", plan.Opacity < 1.0f);
             SetIf(ref mask, family, "SEPARATE_ALPHA_MAP_USE_GREEN_CHANNEL", plan.CutOut == CutOutSource.OpacityMap);
 
             /* Emissive is deliberately left alone. CA_ENVIRONMENT has an EMISSIVE feature but no
@@ -705,6 +804,12 @@ namespace OpenCAGE
              * a stream, so it is worth more than a feature that has nothing to do with the mesh. */
             int vertexColourBit = FeatureBit(family, "VERTEX_COLOUR");
 
+            /* The transparent pass is the same either way round: glass drawn solid, or a solid wall drawn see-through.
+             * Double-siding usually costs nothing to lose - a model file asks for it everywhere - except on a mesh whose
+             * faces point both ways, where half of them would go missing. */
+            int forceToAlphaBit = FeatureBit(family, "FORCE_TO_ALPHA");
+            int doubleSidedBit = FeatureBit(family, "DOUBLE_SIDED");
+
             long best = 0;
             int bestCost = int.MaxValue;
             foreach (ShaderPermutationService.Permutation permutation in available)
@@ -717,6 +822,8 @@ namespace OpenCAGE
                     long bit = 1L << b;
                     if ((diff & bit) == 0) continue;
                     if (b == alphaTestBit) cost += 50;                             //cut out, or a solid card
+                    else if (b == forceToAlphaBit) cost += 50;                    //see-through, or solid
+                    else if (b == doubleSidedBit && plan.NeedsBothSides) cost += 50; //faces missing
                     else if (b == greenBit && bothSeparateAlpha) cost += 50;      //the mask read from the wrong channel
                     else if (b == vertexColourBit && (permutation.Mask & bit) != 0) cost += 6; //colours the mesh hasn't got
                     else if ((samplerBits & bit) == 0) cost += 1;                  //not about a texture at all
@@ -804,7 +911,7 @@ namespace OpenCAGE
                 return null;
 
             SeedConstantsFromDonor(material, level.Materials, plan.Family);
-            ApplySourceMaterialValues(material, source, plan.Family);
+            ApplySourceMaterialValues(material, source, plan.Family, plan.Opacity);
 
             foreach (KeyValuePair<PlannedTexture, Textures.TEX4> entry in imported)
                 BindTexture(material, entry.Key.SamplerIndex, entry.Value);
@@ -1149,7 +1256,7 @@ namespace OpenCAGE
         /* The values a model file genuinely carries. Tints only: a DCC's shininess and reflectivity
          * are on scales that have no agreed meaning, and guessing at them would quietly overwrite
          * donor values that are known to work. */
-        private static void ApplySourceMaterialValues(Materials.Material material, Assimp.Material source, SHADER_LIST family)
+        private static void ApplySourceMaterialValues(Materials.Material material, Assimp.Material source, SHADER_LIST family, float opacity)
         {
             /* UV multipliers are the one donor value that is always wrong here. They tile a texture
              * across geometry the donor was authored for - a donor with NORMAL_UV_MULT 7 tiles its
@@ -1161,8 +1268,9 @@ namespace OpenCAGE
 
             if (source == null) return;
 
+            //The tint's alpha is how see-through a material drawn in the transparent pass is (1 for everything else)
             if (source.HasColorDiffuse)
-                SetParameter(material, family, "DIFFUSE_TINT", source.ColorDiffuse.R, source.ColorDiffuse.G, source.ColorDiffuse.B, 1.0f);
+                SetParameter(material, family, "DIFFUSE_TINT", source.ColorDiffuse.R, source.ColorDiffuse.G, source.ColorDiffuse.B, opacity);
 
             if (source.HasColorSpecular)
                 SetParameter(material, family, "SPECULAR_TINT", Luminance(source.ColorSpecular), Luminance(source.ColorSpecular), Luminance(source.ColorSpecular), 1.0f);
