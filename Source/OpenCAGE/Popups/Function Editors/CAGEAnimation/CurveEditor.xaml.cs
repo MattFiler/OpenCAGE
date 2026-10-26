@@ -61,10 +61,21 @@ namespace OpenCAGE
         private EventInfo _selectedEvent;
         private CAGEAnimation.EventTrack _selectedEventTrack;
 
+        /* Several keyframes and event markers can be selected at once (Shift+click, or a box dragged over the graph).
+         * _selectedKey / _selectedEvent is the one of them the side panel shows - the last one clicked - and is always
+         * in its set. */
+        private readonly Dictionary<CAGEAnimation.FloatTrack.Keyframe, CurveInfo> _selectedKeys = new Dictionary<CAGEAnimation.FloatTrack.Keyframe, CurveInfo>();
+        private readonly HashSet<EventInfo> _selectedEvents = new HashSet<EventInfo>();
+        private int SelectedCount { get { return _selectedKeys.Count + _selectedEvents.Count; } }
+
         public CAGEAnimation.FloatTrack.Keyframe SelectedKeyframe { get { return _selectedKey; } }
         public CAGEAnimation.FloatTrack SelectedTrack { get { return _selectedCurve == null ? null : _selectedCurve.Track; } }
         public CAGEAnimation.EventTrack.Keyframe SelectedEvent { get { return _selectedEvent == null ? null : _selectedEvent.Key; } }
         public CAGEAnimation.EventTrack SelectedEventTrack { get { return _selectedEventTrack ?? (_selectedEvent == null ? null : _selectedEvent.Track); } }
+        /// <summary>Every selected float keyframe, including <see cref="SelectedKeyframe"/>.</summary>
+        public List<CAGEAnimation.FloatTrack.Keyframe> SelectedKeyframes { get { return _selectedKeys.Keys.ToList(); } }
+        /// <summary>Every selected event keyframe, including <see cref="SelectedEvent"/>.</summary>
+        public List<CAGEAnimation.EventTrack.Keyframe> SelectedEvents { get { return _selectedEvents.Select(o => o.Key).ToList(); } }
 
         /// <summary>Raised when a keyframe becomes selected or its data changes via a drag.</summary>
         public event Action<CAGEAnimation.FloatTrack.Keyframe> KeyframeSelected;
@@ -86,6 +97,11 @@ namespace OpenCAGE
         public event Action<ANIM_TRACK_TYPE> EventTrackAddRequested;
         /// <summary>Raised when the user requests deleting an entire event track from the graph context menu.</summary>
         public event Action<CAGEAnimation.EventTrack> EventTrackDeleteRequested;
+        /// <summary>
+        /// Raised when Delete is pressed (or picked from the graph's menu) with keyframes or events selected: the host
+        /// confirms and calls <see cref="RemoveSelection"/>. With no handler the graph removes them itself.
+        /// </summary>
+        public event Action DeleteSelectionRequested;
         /// <summary>Raised when the playable animation length is changed via the timeline handle.</summary>
         public event Action<float> AnimLengthChanged;
         /// <summary>Raised as the playhead is scrubbed (Animation Mode only).</summary>
@@ -161,9 +177,29 @@ namespace OpenCAGE
         private const double EVENT_HIT_X = 8.0;
         private const double CURVE_HIT_Y = 10.0;
 
-        private enum DragMode { None, Keyframe, TanIn, TanOut, Event, Pan, AnimLength, EventLaneResize, Playhead }
+        private enum DragMode { None, Keyframe, TanIn, TanOut, Event, Pan, AnimLength, EventLaneResize, Playhead, Marquee }
         private DragMode _drag = DragMode.None;
         private bool _dragging = false;
+
+        /// <summary>How far the mouse goes before a press on a selected keyframe moves it, or one on empty graph draws a box.</summary>
+        private const double DRAG_THRESHOLD = 3.0;
+
+        /* A move takes every selected keyframe and event along by the same time (keyframes by the same value too),
+           measured from where each was when the drag began */
+        private readonly Dictionary<CAGEAnimation.FloatTrack.Keyframe, Vector2> _moveKeyStarts = new Dictionary<CAGEAnimation.FloatTrack.Keyframe, Vector2>();
+        private readonly Dictionary<EventInfo, float> _moveEventStarts = new Dictionary<EventInfo, float>();
+        private Point _moveOrigin;
+        private float _moveAnchorTime;
+        private bool _moveStarted;
+        private CAGEAnimation.FloatTrack.Keyframe _moveGrabbedKey;
+        private EventInfo _moveGrabbedEvent;
+
+        private Point _marqueeOrigin;
+        private Rect _marqueeRect;
+        private bool _marqueeShown;
+        private bool _marqueeAdditive;
+        private Dictionary<CAGEAnimation.FloatTrack.Keyframe, CurveInfo> _marqueeBaseKeys = new Dictionary<CAGEAnimation.FloatTrack.Keyframe, CurveInfo>();
+        private HashSet<EventInfo> _marqueeBaseEvents = new HashSet<EventInfo>();
         private Point _panOrigin;
         private float _panStartView;
         private float _panEndView;
@@ -553,10 +589,52 @@ namespace OpenCAGE
             RemoveEventKeyframe(_selectedEvent);
         }
 
+        /// <summary>
+        /// Remove every selected keyframe and event. Raises DataChanged once, unless the caller is saving the change
+        /// itself.
+        /// </summary>
+        public void RemoveSelection(bool raiseDataChanged = true)
+        {
+            if (SelectedCount == 0) return;
+            foreach (KeyValuePair<CAGEAnimation.FloatTrack.Keyframe, CurveInfo> selected in _selectedKeys)
+                selected.Value.Track.keyframes.Remove(selected.Key);
+            foreach (EventInfo info in _selectedEvents)
+            {
+                info.Track.keyframes.Remove(info.Key);
+                _events.Remove(info);
+            }
+            if (_hoveredKey != null && _selectedKeys.ContainsKey(_hoveredKey)) _hoveredKey = null;
+            if (_hoveredEvent != null && _selectedEvents.Contains(_hoveredEvent)) _hoveredEvent = null;
+            _selectedKeys.Clear();
+            _selectedEvents.Clear();
+            //The lane stays selected, as it does when its one selected event is deleted
+            if (_selectedKey != null)
+            {
+                _selectedKey = null;
+                _selectedCurve = null;
+                if (SelectionCleared != null) SelectionCleared();
+            }
+            if (_selectedEvent != null)
+            {
+                _selectedEvent = null;
+                if (EventSelectionCleared != null) EventSelectionCleared();
+            }
+            Render();
+            if (raiseDataChanged && DataChanged != null) DataChanged();
+        }
+
+        private void RequestDeleteSelection()
+        {
+            if (SelectedCount == 0) return;
+            if (DeleteSelectionRequested != null) DeleteSelectionRequested();
+            else RemoveSelection();
+        }
+
         private void RemoveFloatKeyframe(CurveInfo curve, CAGEAnimation.FloatTrack.Keyframe key)
         {
             if (curve == null || key == null) return;
             curve.Track.keyframes.Remove(key);
+            _selectedKeys.Remove(key);
             if (_selectedKey == key)
             {
                 _selectedKey = null;
@@ -573,6 +651,7 @@ namespace OpenCAGE
             if (info == null || info.Track == null || info.Key == null) return;
             info.Track.keyframes.Remove(info.Key);
             _events.Remove(info);
+            _selectedEvents.Remove(info);
             if (_selectedEvent == info)
             {
                 _selectedEvent = null;
@@ -587,16 +666,15 @@ namespace OpenCAGE
         {
             EventInfo match = _events.FirstOrDefault(o => o.Key == key);
             if (match == null) return;
-            ClearKeyframeSelectionSilent();
-            _selectedEvent = match;
-            _selectedEventTrack = match.Track;
+            SelectOnly(match);
             Render();
             RaiseEventSelected();
         }
 
         public void ClearKeyframeSelection()
         {
-            if (_selectedKey == null) return;
+            if (_selectedKey == null && _selectedKeys.Count == 0) return;
+            _selectedKeys.Clear();
             _selectedKey = null;
             _selectedCurve = null;
             Render();
@@ -605,7 +683,8 @@ namespace OpenCAGE
 
         public void ClearEventSelection()
         {
-            bool cleared = false;
+            bool cleared = _selectedEvents.Count > 0;
+            _selectedEvents.Clear();
             if (_selectedEvent != null)
             {
                 _selectedEvent = null;
@@ -625,6 +704,7 @@ namespace OpenCAGE
         {
             if (track == null) return;
             ClearKeyframeSelectionSilent();
+            _selectedEvents.Clear();
             _selectedEvent = null;
             _selectedEventTrack = track;
             Render();
@@ -912,6 +992,32 @@ namespace OpenCAGE
 
             DrawViewScrollbar(p);
             DrawPlayhead(p);
+            DrawMarquee();
+        }
+
+        private static readonly Brush MarqueeStrokeLight = CreateFrozenBrush(0x33, 0x66, 0xCC);
+        private static readonly Brush MarqueeStrokeDark = CreateFrozenBrush(0x6C, 0xAC, 0xF0);
+        private static Brush MarqueeStroke => Dark ? MarqueeStrokeDark : MarqueeStrokeLight;
+        private static readonly Brush MarqueeFillLight = CreateFrozenBrush(0x33, 0x66, 0xCC, 0x22);
+        private static readonly Brush MarqueeFillDark = CreateFrozenBrush(0x6C, 0xAC, 0xF0, 0x26);
+        private static Brush MarqueeFill => Dark ? MarqueeFillDark : MarqueeFillLight;
+
+        /// <summary>The box being dragged out to select keyframes and events.</summary>
+        private void DrawMarquee()
+        {
+            if (_drag != DragMode.Marquee || !_marqueeShown) return;
+            Rectangle box = new Rectangle()
+            {
+                Width = _marqueeRect.Width,
+                Height = _marqueeRect.Height,
+                Fill = MarqueeFill,
+                Stroke = MarqueeStroke,
+                StrokeThickness = 1,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(box, _marqueeRect.Left);
+            Canvas.SetTop(box, _marqueeRect.Top);
+            mainCanvas.Children.Add(box);
         }
 
         private static readonly Brush PlayheadBrush = new SolidColorBrush(Color.FromRgb(0xD6, 0x2B, 0x4A));
@@ -1169,7 +1275,7 @@ namespace OpenCAGE
                     double screenX = ToX(ev.Key.time, p);
                     if (screenX < lane.Left - 2 || screenX > lane.Left + lane.Width + 2) continue;
 
-                    bool keySelected = ev == _selectedEvent;
+                    bool keySelected = _selectedEvents.Contains(ev);
                     double midY = lane.Top + lane.Height * 0.5;
                     Line line = new Line()
                     {
@@ -1226,7 +1332,7 @@ namespace OpenCAGE
         private void ApplyEventVisual(EventHit hit)
         {
             if (hit == null || hit.Line == null) return;
-            bool selected = hit.Info == _selectedEvent;
+            bool selected = _selectedEvents.Contains(hit.Info);
             bool hovered = hit.Info == _hoveredEvent;
             bool guid = IsGuidEvent(hit.Info);
 
@@ -1347,7 +1453,7 @@ namespace OpenCAGE
         {
             if (path == null) return;
             bool hovered = curve == _hoveredCurve;
-            bool selected = _selectedCurve == curve && _selectedKey != null;
+            bool selected = _selectedKeys.ContainsValue(curve);
             path.StrokeThickness = hovered ? 4.0 : (selected ? 2.75 : 2.0);
         }
 
@@ -1360,7 +1466,7 @@ namespace OpenCAGE
         private void ApplyKeyVisual(KeyHit hit)
         {
             if (hit == null || hit.Dot == null) return;
-            bool selected = hit.Key == _selectedKey;
+            bool selected = _selectedKeys.ContainsKey(hit.Key);
             bool hovered = hit.Key == _hoveredKey;
 
             double r = selected ? 7 : (hovered ? 6 : 4);
@@ -1391,6 +1497,8 @@ namespace OpenCAGE
             if (_selectedKey == null) return;
             // Handles only in bezier mode; tangent data is still stored on the keyframe
             if (!_bezierMode) return;
+            //With several keyframes selected a drag moves them all, so no handle sits over one to catch it
+            if (_selectedKeys.Count != 1) return;
 
             double kx = ToX(_selectedKey.time, p);
             double ky = ToY(_selectedKey.value.Y, p);
@@ -1640,6 +1748,11 @@ namespace OpenCAGE
                 ResetZoom();
                 e.Handled = true;
             }
+            else if (e.Key == Key.Delete && Keyboard.Modifiers == ModifierKeys.None && !_dragging && SelectedCount > 0)
+            {
+                RequestDeleteSelection();
+                e.Handled = true;
+            }
         }
 
         private void Canvas_MouseWheel(object sender, MouseWheelEventArgs e)
@@ -1778,11 +1891,14 @@ namespace OpenCAGE
 
             if (hitEvent != null)
             {
-                ClearKeyframeSelectionSilent();
-                _selectedEvent = hitEvent;
-                _selectedEventTrack = hitEvent.Track;
-                Render();
-                RaiseEventSelected();
+                //One of several selected keeps them all, so the menu can delete the lot
+                bool inGroup = _selectedEvents.Contains(hitEvent) && SelectedCount > 1;
+                if (!inGroup)
+                {
+                    SelectOnly(hitEvent);
+                    Render();
+                    RaiseEventSelected();
+                }
 
                 float t = QuantizeTime((float)TimeAt(pos.X, p));
                 CAGEAnimation.EventTrack track = hitEvent.Track;
@@ -1794,8 +1910,9 @@ namespace OpenCAGE
                 };
                 menu.Items.Add(addEvt);
 
-                MenuItem delEvt = new MenuItem() { Header = "Delete Event" };
-                delEvt.Click += (s, ev) => RemoveEventKeyframe(hitEvent);
+                //Through the host, like the Delete key, so it warns about connected pins first
+                MenuItem delEvt = new MenuItem() { Header = inGroup ? "Delete Selected (" + SelectedCount + ")" : "Delete Event" };
+                delEvt.Click += (s, ev) => RequestDeleteSelection();
                 menu.Items.Add(delEvt);
 
                 menu.Items.Add(new Separator());
@@ -1812,15 +1929,7 @@ namespace OpenCAGE
 
             if (laneHit != null)
             {
-                ClearKeyframeSelectionSilent();
-                if (_selectedEvent != null)
-                {
-                    _selectedEvent = null;
-                    if (EventSelectionCleared != null) EventSelectionCleared();
-                }
-                _selectedEventTrack = laneHit.Track;
-                Render();
-                if (EventTrackSelected != null) EventTrackSelected(laneHit.Track);
+                SelectLane(laneHit);
 
                 float t = QuantizeTime((float)TimeAt(pos.X, p));
                 CAGEAnimation.EventTrack track = laneHit.Track;
@@ -1844,14 +1953,16 @@ namespace OpenCAGE
 
             if (hitKey != null)
             {
-                ClearEventSelectionSilent();
-                _selectedCurve = hitKey.Curve;
-                _selectedKey = hitKey.Key;
-                Render();
-                RaiseSelected();
+                bool inGroup = _selectedKeys.ContainsKey(hitKey.Key) && SelectedCount > 1;
+                if (!inGroup)
+                {
+                    SelectOnly(hitKey.Curve, hitKey.Key);
+                    Render();
+                    RaiseSelected();
+                }
 
-                MenuItem delKey = new MenuItem() { Header = "Delete Keyframe" };
-                delKey.Click += (s, ev) => RemoveFloatKeyframe(hitKey.Curve, hitKey.Key);
+                MenuItem delKey = new MenuItem() { Header = inGroup ? "Delete Selected (" + SelectedCount + ")" : "Delete Keyframe" };
+                delKey.Click += (s, ev) => RequestDeleteSelection();
                 menu.Items.Add(delKey);
                 AppendAddEventTrackMenuItems(menu, true);
                 return menu;
@@ -1896,7 +2007,15 @@ namespace OpenCAGE
 
         private void Canvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            Point pos = e.GetPosition(mainCanvas);
+            //Delete acts on what is selected here, so a click takes the keyboard back from the side panel
+            Focus();
+            if (LeftButtonDown(e.GetPosition(mainCanvas), (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift))
+                e.Handled = true;
+        }
+
+        /// <summary>A left press at a point on the canvas. Returns true when the press was used up (the event is handled).</summary>
+        private bool LeftButtonDown(Point pos, bool shift)
+        {
             Rect p = Plot();
 
             // Animation length handle on the timeline strip
@@ -1906,8 +2025,7 @@ namespace OpenCAGE
                 _hoveredAnimLengthHandle = true;
                 mainCanvas.Cursor = Cursors.SizeWE;
                 BeginDrag();
-                e.Handled = true;
-                return;
+                return true;
             }
 
             // Playhead scrub (Animation Mode). Sits under the length handle so that stays grabbable.
@@ -1917,8 +2035,7 @@ namespace OpenCAGE
                 mainCanvas.Cursor = Cursors.SizeWE;
                 MovePlayheadTo(pos, p);
                 BeginDrag();
-                e.Handled = true;
-                return;
+                return true;
             }
 
             // Event-lane height resize grip (between plot and lanes)
@@ -1930,45 +2047,51 @@ namespace OpenCAGE
                 _laneResizeStartH = _eventLaneH;
                 mainCanvas.Cursor = Cursors.SizeNS;
                 BeginDrag();
-                e.Handled = true;
-                return;
+                return true;
+            }
+
+            // Shift+click on a keyframe or event marker adds it to the selection, or takes it back out
+            if (shift)
+            {
+                KeyHit shiftKey = HitTestKey(pos);
+                EventInfo shiftEvent = shiftKey == null ? HitTestEvent(pos, p) : null;
+                if (shiftKey != null || shiftEvent != null)
+                {
+                    ToggleSelected(shiftKey, shiftEvent);
+                    return true;
+                }
             }
 
             // Shift+click on an event lane → host prompts for a new event keyframe
             EventLaneInfo laneHit = HitTestEventLane(pos);
-            if (laneHit != null && (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
+            if (laneHit != null && shift)
             {
                 float t = QuantizeTime((float)TimeAt(pos.X, p));
                 if (EventAddRequested != null) EventAddRequested(t, laneHit.Track);
-                e.Handled = true;
-                return;
+                return true;
             }
 
             // Shift+click on a curve → add a float keyframe on the nearest line
-            if ((Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift && p.Contains(pos))
+            if (shift && p.Contains(pos))
             {
                 if (TryAddKeyframeNearCurve(pos, p))
-                {
-                    e.Handled = true;
-                    return;
-                }
+                    return true;
             }
 
             // Tangent handles take priority (they sit on top of the selected keyframe)
             if (_hasTanHandles)
             {
-                if (Dist(pos, _tanOutScreen) <= HIT_RADIUS) { _drag = DragMode.TanOut; BeginDrag(); return; }
-                if (Dist(pos, _tanInScreen) <= HIT_RADIUS) { _drag = DragMode.TanIn; BeginDrag(); return; }
+                if (Dist(pos, _tanOutScreen) <= HIT_RADIUS) { _drag = DragMode.TanOut; BeginDrag(); return false; }
+                if (Dist(pos, _tanInScreen) <= HIT_RADIUS) { _drag = DragMode.TanIn; BeginDrag(); return false; }
             }
 
             // Event marker hit test (within its lane)
             EventInfo hitEvent = HitTestEvent(pos, p);
             if (hitEvent != null)
             {
-                bool alreadySelected = (_selectedEvent == hitEvent);
-                ClearKeyframeSelectionSilent();
-                _selectedEvent = hitEvent;
-                _selectedEventTrack = hitEvent.Track;
+                bool alreadySelected = _selectedEvents.Contains(hitEvent);
+                if (alreadySelected) MakePrimary(hitEvent);
+                else SelectOnly(hitEvent);
                 _hoveredEvent = hitEvent;
                 Render();
                 RaiseEventSelected();
@@ -1977,77 +2100,270 @@ namespace OpenCAGE
                 // First click selects only; drag starts on a later click while already selected
                 if (alreadySelected)
                 {
-                    _drag = DragMode.Event;
                     mainCanvas.Cursor = Cursors.SizeWE;
-                    BeginDrag();
+                    BeginMove(DragMode.Event, pos, null, hitEvent);
                 }
-                return;
+                return false;
             }
 
-            // Event lane bar click (connections UI)
+            // Event lane bar click (connections UI); dragging on from it boxes in event markers
             if (laneHit != null)
             {
-                ClearKeyframeSelectionSilent();
-                if (_selectedEvent != null)
-                {
-                    _selectedEvent = null;
-                    if (EventSelectionCleared != null) EventSelectionCleared();
-                }
-                _selectedEventTrack = laneHit.Track;
-                Render();
-                if (EventTrackSelected != null) EventTrackSelected(laneHit.Track);
-                return;
+                SelectLane(laneHit);
+                BeginMarquee(pos, false);
+                return false;
             }
 
             // Keyframe hit test (nearest within radius)
             KeyHit best = HitTestKey(pos);
             if (best != null)
             {
-                bool alreadySelected = (_selectedKey == best.Key);
-                ClearEventSelectionSilent();
-                _selectedCurve = best.Curve;
-                _selectedKey = best.Key;
+                bool alreadySelected = _selectedKeys.ContainsKey(best.Key);
+                if (alreadySelected) MakePrimary(best.Curve, best.Key);
+                else SelectOnly(best.Curve, best.Key);
                 _hoveredKey = best.Key;
                 Render();
                 RaiseSelected();
                 // First click selects only; drag starts on a later click while already selected
                 if (alreadySelected)
                 {
-                    _drag = DragMode.Keyframe;
                     mainCanvas.Cursor = Cursors.SizeAll;
-                    BeginDrag();
+                    BeginMove(DragMode.Keyframe, pos, best.Key, null);
                 }
-                return;
+                return false;
             }
 
-            // Empty area -> clear selection
-            bool cleared = false;
-            if (_selectedKey != null)
+            // Empty area -> clear selection (Shift keeps it, to box more in), and a drag from here draws a box
+            if (!shift)
             {
-                _selectedKey = null;
-                _selectedCurve = null;
-                cleared = true;
-                if (SelectionCleared != null) SelectionCleared();
+                bool cleared = SelectedCount > 0 || _selectedKey != null || _selectedEvent != null || _selectedEventTrack != null;
+                ClearKeyframeSelectionSilent();
+                ClearEventSelectionSilent();
+                if (cleared) Render();
             }
-            if (_selectedEvent != null)
-            {
-                _selectedEvent = null;
-                cleared = true;
-                if (EventSelectionCleared != null) EventSelectionCleared();
-            }
-            if (_selectedEventTrack != null)
-            {
-                _selectedEventTrack = null;
-                cleared = true;
-                if (EventTrackSelectionCleared != null) EventTrackSelectionCleared();
-            }
-            if (cleared) Render();
+            if (p.Contains(pos))
+                BeginMarquee(pos, shift);
+            return false;
         }
 
         private void BeginDrag()
         {
             _dragging = true;
             mainCanvas.CaptureMouse();
+        }
+
+        /// <summary>A press on a selected keyframe or event: dragging moves everything selected with it.</summary>
+        private void BeginMove(DragMode mode, Point pos, CAGEAnimation.FloatTrack.Keyframe grabbedKey, EventInfo grabbedEvent)
+        {
+            _moveKeyStarts.Clear();
+            foreach (CAGEAnimation.FloatTrack.Keyframe key in _selectedKeys.Keys)
+                _moveKeyStarts[key] = new Vector2(key.time, key.value.Y);
+            _moveEventStarts.Clear();
+            foreach (EventInfo ev in _selectedEvents)
+                _moveEventStarts[ev] = ev.Key.time;
+            _moveOrigin = pos;
+            _moveAnchorTime = grabbedKey != null ? grabbedKey.time : grabbedEvent.Key.time;
+            _moveStarted = false;
+            _moveGrabbedKey = grabbedKey;
+            _moveGrabbedEvent = grabbedEvent;
+            _drag = mode;
+            BeginDrag();
+        }
+
+        /* The grabbed keyframe or event follows the mouse from where it was pressed (landing on a snap step), and the
+           rest of the selection keeps its distance from it. Events only move in time; keyframes take the value change
+           too when it is a keyframe being dragged. */
+        private void MoveSelection(Point pos, Rect p, bool moveValues)
+        {
+            float t = SnapTime(_moveAnchorTime + (float)(TimeAt(pos.X, p) - TimeAt(_moveOrigin.X, p)));
+            float dt = t - _moveAnchorTime;
+
+            //Nothing goes before the start
+            float earliest = float.MaxValue;
+            foreach (Vector2 start in _moveKeyStarts.Values)
+                earliest = Math.Min(earliest, start.X);
+            foreach (float start in _moveEventStarts.Values)
+                earliest = Math.Min(earliest, start);
+            if (earliest + dt < 0f) dt = -earliest;
+
+            float dv = moveValues ? (float)(ValueAt(pos.Y, p) - ValueAt(_moveOrigin.Y, p)) : 0f;
+
+            foreach (KeyValuePair<CAGEAnimation.FloatTrack.Keyframe, Vector2> start in _moveKeyStarts)
+            {
+                CageAnimationCurves.SetTime(start.Key, ClampContentTime(start.Value.X + dt));
+                start.Key.value.Y = start.Value.Y + dv;
+            }
+            foreach (KeyValuePair<EventInfo, float> start in _moveEventStarts)
+                start.Key.Key.time = ClampContentTime(start.Value + dt);
+        }
+
+        /// <summary>A press on empty graph or a lane: dragging from it draws a box that selects what it covers.</summary>
+        private void BeginMarquee(Point pos, bool additive)
+        {
+            _drag = DragMode.Marquee;
+            _marqueeOrigin = pos;
+            _marqueeAdditive = additive;
+            _marqueeShown = false;
+            BeginDrag();
+        }
+
+        /// <summary>The selection is what it was when the box started (if Shift was held) plus everything inside the box.</summary>
+        private void UpdateMarqueeSelection()
+        {
+            _selectedKeys.Clear();
+            foreach (KeyValuePair<CAGEAnimation.FloatTrack.Keyframe, CurveInfo> kept in _marqueeBaseKeys)
+                _selectedKeys[kept.Key] = kept.Value;
+            _selectedEvents.Clear();
+            _selectedEvents.UnionWith(_marqueeBaseEvents);
+
+            foreach (KeyHit hit in _keyHits)
+            {
+                if (_marqueeRect.Contains(hit.Screen))
+                    _selectedKeys[hit.Key] = hit.Curve;
+            }
+            foreach (EventHit hit in _eventHits)
+            {
+                if (hit.ScreenX < _marqueeRect.Left || hit.ScreenX > _marqueeRect.Right) continue;
+                if (hit.LaneBottom < _marqueeRect.Top || hit.LaneTop > _marqueeRect.Bottom) continue;
+                _selectedEvents.Add(hit.Info);
+            }
+        }
+
+        /// <summary>Shift+click: add a keyframe or event marker to the selection, or take it back out.</summary>
+        private void ToggleSelected(KeyHit keyHit, EventInfo ev)
+        {
+            if (keyHit != null)
+            {
+                if (_selectedKeys.Remove(keyHit.Key))
+                {
+                    if (_selectedKey == keyHit.Key)
+                    {
+                        _selectedKey = null;
+                        _selectedCurve = null;
+                        if (SelectionCleared != null) SelectionCleared();
+                        PickPrimary();
+                    }
+                }
+                else
+                {
+                    _selectedKeys[keyHit.Key] = keyHit.Curve;
+                    MakePrimary(keyHit.Curve, keyHit.Key);
+                }
+            }
+            else if (ev != null)
+            {
+                if (_selectedEvents.Remove(ev))
+                {
+                    if (_selectedEvent == ev)
+                    {
+                        _selectedEvent = null;
+                        if (EventSelectionCleared != null) EventSelectionCleared();
+                        PickPrimary();
+                    }
+                }
+                else
+                {
+                    _selectedEvents.Add(ev);
+                    MakePrimary(ev);
+                }
+            }
+            Render();
+            RaisePrimary();
+        }
+
+        /// <summary>Make one keyframe the whole selection. The caller renders and raises.</summary>
+        private void SelectOnly(CurveInfo curve, CAGEAnimation.FloatTrack.Keyframe key)
+        {
+            ClearEventSelectionSilent();
+            _selectedKeys.Clear();
+            _selectedKeys[key] = curve;
+            _selectedCurve = curve;
+            _selectedKey = key;
+        }
+
+        /// <summary>Make one event marker the whole selection. The caller renders and raises.</summary>
+        private void SelectOnly(EventInfo ev)
+        {
+            ClearKeyframeSelectionSilent();
+            _selectedEvents.Clear();
+            _selectedEvents.Add(ev);
+            _selectedEvent = ev;
+            _selectedEventTrack = ev.Track;
+        }
+
+        /// <summary>Select an event lane itself (its connections), and nothing else.</summary>
+        private void SelectLane(EventLaneInfo lane)
+        {
+            ClearKeyframeSelectionSilent();
+            _selectedEvents.Clear();
+            if (_selectedEvent != null)
+            {
+                _selectedEvent = null;
+                if (EventSelectionCleared != null) EventSelectionCleared();
+            }
+            _selectedEventTrack = lane.Track;
+            Render();
+            if (EventTrackSelected != null) EventTrackSelected(lane.Track);
+        }
+
+        /// <summary>Show a keyframe that is already selected in the side panel, keeping the rest of the selection.</summary>
+        private void MakePrimary(CurveInfo curve, CAGEAnimation.FloatTrack.Keyframe key)
+        {
+            if (_selectedEvent != null)
+            {
+                _selectedEvent = null;
+                if (EventSelectionCleared != null) EventSelectionCleared();
+            }
+            if (_selectedEventTrack != null)
+            {
+                _selectedEventTrack = null;
+                if (EventTrackSelectionCleared != null) EventTrackSelectionCleared();
+            }
+            _selectedCurve = curve;
+            _selectedKey = key;
+        }
+
+        /// <summary>Show an event that is already selected in the side panel, keeping the rest of the selection.</summary>
+        private void MakePrimary(EventInfo ev)
+        {
+            if (_selectedKey != null)
+            {
+                _selectedKey = null;
+                _selectedCurve = null;
+                if (SelectionCleared != null) SelectionCleared();
+            }
+            _selectedEvent = ev;
+            _selectedEventTrack = ev.Track;
+        }
+
+        /// <summary>If nothing selected is in the side panel, put the earliest selected keyframe (or else event) there.</summary>
+        private void PickPrimary()
+        {
+            if (_selectedKey != null || _selectedEvent != null) return;
+            if (_selectedKeys.Count > 0)
+            {
+                KeyValuePair<CAGEAnimation.FloatTrack.Keyframe, CurveInfo> first = _selectedKeys.OrderBy(o => o.Key.time).First();
+                MakePrimary(first.Value, first.Key);
+            }
+            else if (_selectedEvents.Count > 0)
+            {
+                MakePrimary(_selectedEvents.OrderBy(o => o.Key.time).First());
+            }
+        }
+
+        /// <summary>Tell the host which part of the selection the side panel shows.</summary>
+        private void RaisePrimary()
+        {
+            if (_selectedKey != null)
+            {
+                RaiseSelected();
+            }
+            else if (_selectedEvent != null)
+            {
+                RaiseEventSelected();
+                if (EventTrackSelected != null && _selectedEvent.Track != null)
+                    EventTrackSelected(_selectedEvent.Track);
+            }
         }
 
         /* Scrub to the time under the cursor. Snapping applies here as it does to keyframe drags, so a
@@ -2236,7 +2552,11 @@ namespace OpenCAGE
 
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
         {
-            Point pos = e.GetPosition(mainCanvas);
+            MouseMovedTo(e.GetPosition(mainCanvas));
+        }
+
+        private void MouseMovedTo(Point pos)
+        {
             Rect p = Plot();
 
             if (!_dragging)
@@ -2299,26 +2619,41 @@ namespace OpenCAGE
                         break;
                     }
                 case DragMode.Keyframe:
+                case DragMode.Event:
                     {
-                        if (_selectedKey == null) return;
-                        float t = QuantizeTime((float)TimeAt(pos.X, p));
-                        float v = (float)ValueAt(pos.Y, p);
-                        CageAnimationCurves.SetTime(_selectedKey, t);
-                        _selectedKey.value.Y = v;
-                        mainCanvas.Cursor = Cursors.SizeAll;
+                        if (_moveKeyStarts.Count == 0 && _moveEventStarts.Count == 0) return;
+                        if (!_moveStarted)
+                        {
+                            if (Dist(pos, _moveOrigin) < DRAG_THRESHOLD) return;
+                            _moveStarted = true;
+                        }
+                        bool keyframe = _drag == DragMode.Keyframe;
+                        MoveSelection(pos, p, keyframe);
+                        mainCanvas.Cursor = keyframe ? Cursors.SizeAll : Cursors.SizeWE;
                         Render();
-                        RaiseSelected();
+                        if (keyframe) RaiseSelected();
+                        else RaiseEventSelected();
                         if (DataChanged != null) DataChanged();
                         break;
                     }
-                case DragMode.Event:
+                case DragMode.Marquee:
                     {
-                        if (_selectedEvent == null) return;
-                        _selectedEvent.Key.time = QuantizeTime((float)TimeAt(pos.X, p));
-                        mainCanvas.Cursor = Cursors.SizeWE;
+                        if (!_marqueeShown)
+                        {
+                            if (Dist(pos, _marqueeOrigin) < DRAG_THRESHOLD) return;
+                            //Without Shift the box replaces the selection, including a lane its press selected
+                            if (!_marqueeAdditive)
+                            {
+                                ClearKeyframeSelectionSilent();
+                                ClearEventSelectionSilent();
+                            }
+                            _marqueeBaseKeys = new Dictionary<CAGEAnimation.FloatTrack.Keyframe, CurveInfo>(_selectedKeys);
+                            _marqueeBaseEvents = new HashSet<EventInfo>(_selectedEvents);
+                            _marqueeShown = true;
+                        }
+                        _marqueeRect = new Rect(_marqueeOrigin, pos);
+                        UpdateMarqueeSelection();
                         Render();
-                        RaiseEventSelected();
-                        if (DataChanged != null) DataChanged();
                         break;
                     }
                 case DragMode.TanOut:
@@ -2345,17 +2680,52 @@ namespace OpenCAGE
 
         private void Canvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
+            LeftButtonUp(e.GetPosition(mainCanvas));
+        }
+
+        private void LeftButtonUp(Point pos)
+        {
             if (!_dragging) return;
             DragMode finished = _drag;
             _dragging = false;
             _drag = DragMode.None;
             mainCanvas.ReleaseMouseCapture();
 
-            // Keep the underlying keyframe list ordered by time after a move.
-            if (finished == DragMode.Keyframe && _selectedCurve != null)
-                SortTrack(_selectedCurve.Track);
-            if (finished == DragMode.Event && _selectedEvent != null)
-                _selectedEvent.Track.keyframes.Sort((a, b) => a.time.CompareTo(b.time));
+            if (finished == DragMode.Marquee)
+            {
+                if (_marqueeShown)
+                {
+                    _marqueeShown = false;
+                    PickPrimary();
+                    Render();
+                    RaisePrimary();
+                }
+                UpdateHover(pos, Plot());
+                return;
+            }
+
+            if (finished == DragMode.Keyframe || finished == DragMode.Event)
+            {
+                if (_moveStarted)
+                {
+                    // Keep the underlying keyframe lists ordered by time after a move.
+                    foreach (CurveInfo curve in _selectedKeys.Values.Distinct())
+                        SortTrack(curve.Track);
+                    foreach (CAGEAnimation.EventTrack track in _selectedEvents.Select(o => o.Track).Distinct())
+                        track.keyframes.Sort((a, b) => a.time.CompareTo(b.time));
+                }
+                else if (SelectedCount > 1)
+                {
+                    //A click (no drag) on one of several selected narrows the selection to it
+                    CurveInfo grabbedCurve;
+                    if (_moveGrabbedKey != null && _selectedKeys.TryGetValue(_moveGrabbedKey, out grabbedCurve))
+                        SelectOnly(grabbedCurve, _moveGrabbedKey);
+                    else if (_moveGrabbedEvent != null)
+                        SelectOnly(_moveGrabbedEvent);
+                }
+                _moveKeyStarts.Clear();
+                _moveEventStarts.Clear();
+            }
 
             if (finished == DragMode.Keyframe || finished == DragMode.Event || finished == DragMode.AnimLength)
                 RefreshContentBounds();
@@ -2374,7 +2744,7 @@ namespace OpenCAGE
             else RaiseSelected();
 
             // Restore hover cursor after a drag
-            UpdateHover(e.GetPosition(mainCanvas), Plot());
+            UpdateHover(pos, Plot());
         }
 
         private void SortTrack(CAGEAnimation.FloatTrack track)
@@ -2431,8 +2801,7 @@ namespace OpenCAGE
             target.Track.keyframes.Add(key);
             SortTrack(target.Track);
 
-            _selectedCurve = target;
-            _selectedKey = key;
+            SelectOnly(target, key);
             Render();
             RaiseSelected();
             if (DataChanged != null) DataChanged();
@@ -2455,6 +2824,7 @@ namespace OpenCAGE
 
         private void ClearKeyframeSelectionSilent()
         {
+            _selectedKeys.Clear();
             if (_selectedKey == null) return;
             _selectedKey = null;
             _selectedCurve = null;
@@ -2463,6 +2833,7 @@ namespace OpenCAGE
 
         private void ClearEventSelectionSilent()
         {
+            _selectedEvents.Clear();
             if (_selectedEvent != null)
             {
                 _selectedEvent = null;

@@ -649,7 +649,8 @@ namespace OpenCAGE.MCP
                 Title = "Replace sound",
                 Description = "Replace a sound event's audio with a mono or stereo .wav, encoded to the original's codec, in every bank and package that ships a copy. One variation by default; " +
                     "variations takes several or 'all' (a footstep's switch takes are per surface - check container_path in describe_sound_event). gain_db, normalize_db and trims shape the .wav first. " +
-                    "Writes the game's sound files at once for every level that plays the event; not undoable (only the mod baseline or verifying the game restores them). dry_run reports without writing.",
+                    "Writes the game's sound files at once for every level that plays the event; not undoable (only the mod baseline or verifying the game restores them). " +
+                    "level_only instead puts the audio in the open level's own sound package (WORLD/LEVEL_SOUND_OVERRIDE.PCK, which the game reads ahead of DATA/SOUND for that level alone), copying in any soundbank that holds it. dry_run reports without writing.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("event", "The sound event."),
                     McpSchema.Integer("variation", "The variation's index in describe_sound_event (default 0)."),
@@ -661,6 +662,7 @@ namespace OpenCAGE.MCP
                     McpSchema.Number("normalize_db", "Scale the .wav so its peak sits at this many dBFS, e.g. -1 (replaces gain_db)."),
                     McpSchema.Number("trim_start", "Seconds cut from the start of the .wav."),
                     McpSchema.Number("trim_end", "Seconds cut from the end of the .wav."),
+                    McpSchema.Boolean("level_only", "Replace it for the open level alone, in the level's own sound package; the game's shared sound files are left as they are."),
                     McpSchema.Boolean("dry_run", "Encode and report what would be written, writing nothing."),
                     McpSchema.Boolean("close_game", "Close a running game first (it holds the sound files open).")),
                 Destructive = true,
@@ -5378,6 +5380,12 @@ namespace OpenCAGE.MCP
             bool dryRun = call.Bool("dry_run");
             if (call.Has("variations") && (call.Has("variation") || call.Has("source_id")))
                 throw new McpError("Give variations, or variation / source_id, not both.");
+            string package = null;
+            if (call.Bool("level_only"))
+            {
+                package = McpEditor.UI(() => LevelSoundOverride.PathForOpenLevel());
+                if (package == null) throw new McpError("level_only needs a level open: the sound package is the level's.");
+            }
 
             WwiseSoundLibrary library = SoundLibrary(call);
             string eventName = call.Str("event")?.Trim();
@@ -5413,7 +5421,9 @@ namespace OpenCAGE.MCP
                 IList<WwiseMediaLocation> copies = library.AllCopies(variation.SourceId);
                 SoundImport.Reading reading;
                 using (McpEditorTools.Heartbeat(call, "Encoding " + Path.GetFileName(wav)))
-                    reading = SoundImport.Read(wav, variation.Media, copies, options);
+                    reading = package != null
+                        ? SoundImport.ReadForLevel(wav, variation.SourceId, variation.Media, library, package, options)
+                        : SoundImport.Read(wav, variation.Media, copies, options);
                 if (!reading.Ok)
                     throw new McpError("That audio can't be used" + (targets.Count > 1 ? " for source " + variation.SourceId : "") + ": " + reading.Problem);
                 readings.Add(Tuple.Create(variation, reading));
@@ -5450,9 +5460,25 @@ namespace OpenCAGE.MCP
                     }
                 }
             }
+            if (package != null)
+                result["level_package"] = Relative(package);
             if (dryRun)
             {
                 result["dry_run"] = true;
+                return result;
+            }
+
+            if (package != null)
+            {
+                //Every source in one write of the package: a soundbank copied in for one is changed in place for the next
+                CloseOrRefuse(call, "it holds the level's sound package open");
+                LevelSoundOverride.Plan written;
+                using (McpEditorTools.Heartbeat(call, "Writing the level's sound package"))
+                    written = LevelSoundOverride.Replace(package, library, readings.ToDictionary(o => o.Item1.SourceId, o => o.Item2.Wem), true);
+                McpEditor.UI(() => LevelSoundOverride.RaiseChanged());
+                if (!written.Ok) throw new McpError("The sound was not replaced: " + written.Problem);
+                result["replaced"] = readings.Count;
+                result["level_package_bytes"] = written.SizeAfter;
                 return result;
             }
 

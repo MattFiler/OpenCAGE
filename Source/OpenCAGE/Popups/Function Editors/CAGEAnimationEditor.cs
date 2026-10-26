@@ -957,6 +957,7 @@ namespace OpenCAGE
             editor.EventAddRequested += AnimCurve_EventAddRequested;
             editor.EventTrackAddRequested += AnimCurve_EventTrackAddRequested;
             editor.EventTrackDeleteRequested += AnimCurve_EventTrackDeleteRequested;
+            editor.DeleteSelectionRequested += AnimCurve_DeleteSelectionRequested;
             editor.AnimLengthChanged += AnimCurve_AnimLengthChanged;
             editor.PlayheadMoved += AnimCurve_PlayheadMoved;
             editor.DataChanged += AnimCurve_DataChanged;
@@ -978,6 +979,22 @@ namespace OpenCAGE
         private void AnimCurve_DataChanged()
         {
             CommitLive(null, mergeable: true);
+            if (IsAnimationModeActive)
+                _session.Refresh();
+        }
+
+        /* Delete pressed on the graph (or picked from its right-click menu) with keyframes or events selected */
+        private void AnimCurve_DeleteSelectionRequested()
+        {
+            if (animCurveEditor == null) return;
+            List<CAGEAnimation.EventTrack.Keyframe> events = animCurveEditor.SelectedEvents;
+            if (!ConfirmRemovingStringEvents(events))
+                return;
+            //Saved here as one undo step, rather than by the graph's DataChanged as a mergeable one
+            animCurveEditor.RemoveSelection(false);
+            if (events.Count > 0)
+                RefreshEventTrackLists();
+            CommitLiveStructural(null);
             if (IsAnimationModeActive)
                 _session.Refresh();
         }
