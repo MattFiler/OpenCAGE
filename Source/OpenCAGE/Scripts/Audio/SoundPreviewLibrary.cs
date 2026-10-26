@@ -145,23 +145,8 @@ namespace OpenCAGE.Audio
         /// </summary>
         private static string LevelOverridePackage()
         {
-            try
-            {
-                LevelContent content = Singleton.Editor == null || Singleton.Editor.CompositeBrowser == null
-                    ? null
-                    : Singleton.Editor.CompositeBrowser.Content;
-
-                if (content == null || content.Level == null || string.IsNullOrEmpty(content.Level.Filepath))
-                    return null;
-
-                string world = content.Level.Filepath + (content.Level.Patched ? "_PATCH" : "") + "/WORLD/";
-                string package = world + "level_sound_override.pck";
-                return File.Exists(package) ? package : null;
-            }
-            catch
-            {
-                return null;
-            }
+            string package = LevelSoundOverride.PathForOpenLevel();
+            return package != null && File.Exists(package) ? package : null;
         }
 
         private static string PreferredLanguage(string directory)

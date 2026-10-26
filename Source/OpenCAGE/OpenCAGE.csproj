@@ -774,6 +774,9 @@
     <Compile Include="Popups\ErrorLog.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\LevelSoundOverrideEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Popups\LaunchGame.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -1004,6 +1007,8 @@
     <Compile Include="Scripts\Audio\WwiseAudioDecoder.cs" />
     <Compile Include="Scripts\Audio\WwiseCodebooks.cs" />
     <Compile Include="Scripts\Audio\WwiseFilePackage.cs" />
+    <Compile Include="Scripts\Audio\WwiseFilePackageBuilder.cs" />
+    <Compile Include="Scripts\Audio\LevelSoundOverride.cs" />
     <Compile Include="Scripts\Audio\WwiseObjects.cs" />
     <Compile Include="Scripts\Audio\WwiseSoundBank.cs" />
     <Compile Include="Scripts\Audio\WwiseSoundLibrary.cs" />

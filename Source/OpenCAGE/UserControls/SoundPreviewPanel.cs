@@ -34,6 +34,12 @@ namespace OpenCAGE.UserControls
         private readonly CheckBox _autoPlay = new CheckBox();
         private readonly Timer _tick = new Timer();
 
+        //Replace asks where the new audio goes: the open level's own sound package, or the game's shared files
+        private readonly ContextMenuStrip _replaceMenu = new ContextMenuStrip();
+        private readonly ToolStripMenuItem _replaceForLevel = new ToolStripMenuItem("For This Level Only...");
+        private readonly ToolStripMenuItem _replaceEverywhere = new ToolStripMenuItem("For Every Level...");
+        private readonly ToolStripMenuItem _revertForLevel = new ToolStripMenuItem("Use the Base Game's Audio on This Level");
+
         private readonly Random _random = new Random();
 
         private string _eventName;
@@ -84,7 +90,18 @@ namespace OpenCAGE.UserControls
             _replace.Text = "Replace";
             _replace.Width = 68;
             _replace.FlatStyle = FlatStyle.System;
-            _replace.Click += (s, e) => Replace();
+            _replace.Click += (s, e) => ShowReplaceMenu();
+
+            _replaceForLevel.ToolTipText = "Put the new audio in this level's own sound package (WORLD\\" + LevelSoundOverride.FileName + "). Every other level keeps the original.";
+            _replaceForLevel.Click += (s, e) => Replace(true);
+            _replaceEverywhere.ToolTipText = "Write the new audio into the game's shared sound files, for every level that plays this sound.";
+            _replaceEverywhere.Click += (s, e) => Replace(false);
+            _revertForLevel.ToolTipText = "Take this sound out of this level's sound package, so the level plays the base game's audio for it again.";
+            _revertForLevel.Click += (s, e) => RevertForLevel();
+            _replaceMenu.Items.AddRange(new ToolStripItem[] { _replaceForLevel, _replaceEverywhere, new ToolStripSeparator(), _revertForLevel });
+            _replaceMenu.ShowItemToolTips = true;
+
+            LevelSoundOverride.Changed += OnLevelOverrideChanged;
 
             _autoPlay.Text = "Auto-play";
             _autoPlay.Width = 72;
@@ -122,7 +139,19 @@ namespace OpenCAGE.UserControls
 
         #region LOADING
 
-        private void LoadResolved()
+        /// <summary>
+        /// Resolve the event again - after its audio has moved in or out of the level's sound package, where it is read
+        /// from has changed - and go back to the variation that was showing.
+        /// </summary>
+        private void OnLevelOverrideChanged()
+        {
+            if (IsDisposed || string.IsNullOrEmpty(_eventName))
+                return;
+
+            LoadResolved(Math.Max(0, _variations.SelectedIndex));
+        }
+
+        private void LoadResolved(int variation = 0)
         {
             int generation = ++_generation;
             ReleasePlayer();
@@ -150,7 +179,7 @@ namespace OpenCAGE.UserControls
                 {
                     WwiseSoundLibrary library = SoundPreviewLibrary.Get();
                     WwiseEventResolution resolved = library.Resolve(wanted);
-                    Report(generation, () => OnResolved(resolved));
+                    Report(generation, () => OnResolved(resolved, variation));
                 }
                 catch (Exception e)
                 {
@@ -201,7 +230,7 @@ namespace OpenCAGE.UserControls
             return false;
         }
 
-        private void OnResolved(WwiseEventResolution resolved)
+        private void OnResolved(WwiseEventResolution resolved, int variation)
         {
             _resolved = resolved.Variations;
             UpdateVariationList();
@@ -214,7 +243,7 @@ namespace OpenCAGE.UserControls
                 return;
             }
 
-            LoadVariation(0);
+            LoadVariation(variation < _resolved.Count ? variation : 0);
         }
 
         private void LoadVariation(int index)
@@ -524,26 +553,78 @@ namespace OpenCAGE.UserControls
             }
         }
 
+        private void ShowReplaceMenu()
+        {
+            int index = _variations.SelectedIndex;
+            WwiseSoundVariation variation = index >= 0 && index < _resolved.Count ? _resolved[index] : null;
+            string package = LevelSoundOverride.PathForOpenLevel();
+
+            //Audio in a soundbank the game keeps loaded from start-up is in memory before any level's package is read
+            string permanent = null;
+            if (variation != null && package != null && SoundPreviewLibrary.IsReady)
+            {
+                try { permanent = LevelSoundOverride.PermanentBankHolding(SoundPreviewLibrary.Get(), variation.SourceId); }
+                catch { }
+            }
+
+            _replaceForLevel.Enabled = package != null && permanent == null;
+            _replaceForLevel.Text = package == null ? "For This Level Only... (open a level first)"
+                : permanent != null ? "For This Level Only... (not possible: in " + permanent + ")"
+                : "For This Level Only...";
+            _replaceForLevel.ToolTipText = permanent != null
+                ? permanent + " is a permanent soundbank: the game loads it as it starts, before any level's sound package is read, and plays its copy of this sound on every level. Replace it for every level instead."
+                : "Put the new audio in this level's own sound package (WORLD\\" + LevelSoundOverride.FileName + "). Every other level keeps the original.";
+            _revertForLevel.Enabled = variation != null && package != null && InLevelPackage(variation, package);
+
+            _replaceMenu.Show(_replace, new Point(0, _replace.Height));
+        }
+
+        /// <summary>Whether the level's own sound package holds a copy of this variation's audio.</summary>
+        private static bool InLevelPackage(WwiseSoundVariation variation, string package)
+        {
+            if (!File.Exists(package))
+                return false;
+
+            //Without the index to hand, offered anyway: going back finds out for itself, and asking would stall the menu
+            if (!SoundPreviewLibrary.IsReady)
+                return true;
+
+            try
+            {
+                return SoundPreviewLibrary.Get().AllCopies(variation.SourceId).Any(o => string.Equals(Path.GetFullPath(o.File), package, StringComparison.OrdinalIgnoreCase));
+            }
+            catch
+            {
+                return true;
+            }
+        }
+
         /// <summary>
-        /// Swap the audio behind the selected variation for a .wav.
+        /// Swap the audio behind the selected variation for a .wav - in the game's shared sound files, or for the open
+        /// level alone, in its own sound package.
         ///
         /// Replacing one take of a random container replaces that take alone, which is why this sits
         /// beside the variation list rather than acting on the event as a whole. Nothing is written until
         /// the summary has been read and accepted, because the file being edited is the game's own.
         /// </summary>
-        private void Replace()
+        private void Replace(bool forLevel)
         {
             int index = _variations.SelectedIndex;
             if (index < 0 || index >= _resolved.Count)
                 return;
 
+            string title = forLevel ? "Replace for This Level" : "Replace";
             WwiseSoundVariation variation = _resolved[index];
             if (variation.Media == null)
             {
-                MessageBox.Show("This sound has no audio of its own to replace.", "Replace",
+                MessageBox.Show("This sound has no audio of its own to replace.", title,
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
+
+            string package = forLevel ? LevelSoundOverride.PathForOpenLevel() : null;
+            if (forLevel && package == null)
+                return;
 
             using (OpenFileDialog dialog = new OpenFileDialog())
             {
@@ -563,23 +644,44 @@ namespace OpenCAGE.UserControls
                     WwiseSoundLibrary library = SoundPreviewLibrary.Get();
                     target = library.MediaFor(variation.SourceId) ?? variation.Media;
                     IList<WwiseMediaLocation> copies = library.AllCopies(variation.SourceId);
-                    reading = SoundImport.Read(dialog.FileName, target, copies, null);
+                    reading = forLevel
+                        ? SoundImport.ReadForLevel(dialog.FileName, variation.SourceId, target, library, package, null)
+                        : SoundImport.Read(dialog.FileName, target, copies, null);
                 }
                 finally { Cursor.Current = Cursors.Default; }
 
                 if (!reading.Ok)
                 {
-                    MessageBox.Show("That audio can't be imported:\n\n" + reading.Problem, "Replace",
+                    MessageBox.Show("That audio can't be imported:\n\n" + reading.Problem, title,
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                if (MessageBox.Show(SoundImport.Describe(reading) + "\n\nReplace the sound?", "Replace",
+                if (MessageBox.Show(SoundImport.Describe(reading) + (forLevel ? "\n\nReplace the sound on this level?" : "\n\nReplace the sound?"), title,
                         MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                     return;
 
                 StopPlayback();
                 ReleasePlayer();
+
+                if (forLevel)
+                {
+                    LevelSoundOverride.Plan written;
+                    Cursor.Current = Cursors.WaitCursor;
+                    try
+                    {
+                        written = LevelSoundOverride.Replace(package, SoundPreviewLibrary.Get(), new Dictionary<uint, byte[]> { { variation.SourceId, reading.Wem } }, true);
+                    }
+                    finally { Cursor.Current = Cursors.Default; }
+
+                    if (!written.Ok)
+                        MessageBox.Show("The sound could not be replaced:\n\n" + written.Problem, title,
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+
+                    //Resolves the event again, now its audio is read from the package, and plays the new audio straight back
+                    LevelSoundOverride.RaiseChanged();
+                    return;
+                }
 
                 //Pristine copies of every container this write touches, while they're still pristine
                 Modding.ModServices.CaptureBeforeWrite(target.File);
@@ -610,6 +712,54 @@ namespace OpenCAGE.UserControls
             //Play the new audio straight back, which is the only way to see that it worked (or, after a
             //failure, what the file holds now)
             LoadVariation(index);
+        }
+
+        /// <summary>
+        /// Take the selected variation's audio back out of the level's own sound package, so the level plays what the
+        /// base game ships for it. A bank copied into the package for it goes too, once it matches the base game's again.
+        /// </summary>
+        private void RevertForLevel()
+        {
+            const string title = "Use the Base Game's Audio";
+            int index = _variations.SelectedIndex;
+            string package = LevelSoundOverride.PathForOpenLevel();
+            if (index < 0 || index >= _resolved.Count || package == null)
+                return;
+
+            WwiseSoundVariation variation = _resolved[index];
+            LevelSoundOverride.Plan plan;
+            Cursor.Current = Cursors.WaitCursor;
+            try
+            {
+                plan = LevelSoundOverride.Revert(package, SoundPreviewLibrary.Get(), new[] { variation.SourceId }, false);
+            }
+            finally { Cursor.Current = Cursors.Default; }
+
+            if (!plan.Ok)
+            {
+                MessageBox.Show(plan.Problem, title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (MessageBox.Show(string.Join("\n\n", plan.Notes) + "\n\nPlay the base game's audio for this sound on this level?", title,
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+
+            StopPlayback();
+            ReleasePlayer();
+
+            Cursor.Current = Cursors.WaitCursor;
+            try
+            {
+                plan = LevelSoundOverride.Revert(package, SoundPreviewLibrary.Get(), new[] { variation.SourceId }, true);
+            }
+            finally { Cursor.Current = Cursors.Default; }
+
+            if (!plan.Ok)
+                MessageBox.Show("The level's sound package could not be changed:\n\n" + plan.Problem, title,
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+
+            LevelSoundOverride.RaiseChanged();
         }
 
         private void SetIdle(string status)
@@ -690,8 +840,10 @@ namespace OpenCAGE.UserControls
             if (disposing)
             {
                 _generation++;
+                LevelSoundOverride.Changed -= OnLevelOverrideChanged;
                 _tick.Stop();
                 _tick.Dispose();
+                _replaceMenu.Dispose();
                 ReleasePlayer();
             }
 

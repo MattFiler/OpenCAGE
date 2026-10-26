@@ -213,6 +213,76 @@ namespace OpenCAGE.Audio
         {
             byte[] bank = File.ReadAllBytes(media.File);
 
+            //The audio is found by where it is, and swapped by its id - which is what the directory keys it on
+            uint id = 0;
+            bool found = false;
+            foreach (KeyValuePair<uint, KeyValuePair<long, int>> entry in MediaIn(bank))
+            {
+                if (entry.Value.Key != media.Offset)
+                    continue;
+
+                id = entry.Key;
+                found = true;
+                break;
+            }
+
+            if (!found)
+                throw new InvalidDataException("That sound is no longer in the soundbank where it was found.");
+
+            File.WriteAllBytes(media.File, ReplaceInBank(bank, id, wem));
+
+            //Everything in the bank has moved, so where the audio ended up is read back out of the file
+            //it was just written to rather than tracked through the rebuild
+            media.Length = wem.Length;
+            WwiseMediaLocation moved;
+            if (WwiseSoundBank.Load(media.File).EmbeddedMedia.TryGetValue(id, out moved))
+                media.Offset = moved.Offset;
+        }
+
+        /// <summary>
+        /// The audio a soundbank holds, from its media directory: each piece's id, and where it is (counted from the start
+        /// of the bank) and how long. Empty for a bank that holds none.
+        /// </summary>
+        public static List<KeyValuePair<uint, KeyValuePair<long, int>>> MediaIn(byte[] bank)
+        {
+            List<KeyValuePair<uint, KeyValuePair<long, int>>> media = new List<KeyValuePair<uint, KeyValuePair<long, int>>>();
+
+            long didxAt = -1, dataAt = -1;
+            int didxLength = 0;
+            int position = 0;
+            while (position + 8 <= bank.Length)
+            {
+                string tag = Encoding.ASCII.GetString(bank, position, 4);
+                int size = BitConverter.ToInt32(bank, position + 4);
+                if (size < 0 || position + 8 + size > bank.Length)
+                    break;
+
+                if (tag == "DIDX") { didxAt = position + 8; didxLength = size; }
+                else if (tag == "DATA") dataAt = position + 8;
+
+                position += 8 + size;
+            }
+
+            if (didxAt < 0 || dataAt < 0)
+                return media;
+
+            for (int i = 0; i < didxLength / 12; i++)
+            {
+                int at = (int)didxAt + i * 12;
+                media.Add(new KeyValuePair<uint, KeyValuePair<long, int>>(BitConverter.ToUInt32(bank, at),
+                    new KeyValuePair<long, int>(dataAt + BitConverter.ToUInt32(bank, at + 4), (int)BitConverter.ToUInt32(bank, at + 8))));
+            }
+
+            return media;
+        }
+
+        /// <summary>
+        /// The soundbank <paramref name="bank"/> with the audio <paramref name="sourceId"/> swapped for <paramref name="wem"/>,
+        /// laid out again around it. Works on the bank's bytes alone, so the bank may as well be one packed inside a level's
+        /// sound package as a file of its own.
+        /// </summary>
+        public static byte[] ReplaceInBank(byte[] bank, uint sourceId, byte[] wem)
+        {
             long didxAt = -1, dataAt = -1;
             int didxLength = 0, dataLength = 0;
             uint version = 0;
@@ -254,7 +324,7 @@ namespace OpenCAGE.Audio
                 uint length = BitConverter.ToUInt32(bank, at + 8);
 
                 ids.Add(id);
-                if (dataAt + offset == media.Offset)
+                if (id == sourceId && replacedIndex < 0)
                 {
                     bodies.Add(wem);
                     replacedIndex = i;
@@ -321,16 +391,9 @@ namespace OpenCAGE.Audio
                         output.Write(body, 0, body.Length);
                     }
 
-                    File.WriteAllBytes(media.File, output.ToArray());
+                    return output.ToArray();
                 }
             }
-
-            //Everything in the bank has moved, so where the audio ended up is read back out of the file
-            //it was just written to rather than tracked through the rebuild
-            media.Length = wem.Length;
-            WwiseMediaLocation moved;
-            if (WwiseSoundBank.Load(media.File).EmbeddedMedia.TryGetValue(ids[replacedIndex], out moved))
-                media.Offset = moved.Offset;
         }
 
         /// <summary>

@@ -267,8 +267,31 @@ namespace OpenCAGE
             _soundPreview.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             this.Controls.Add(_soundPreview);
 
+            //The open level's own sound package - what it replaces of the base game's sounds - opposite the other buttons
+            Button levelOverride = new Button();
+            levelOverride.Text = "Level Sound Override...";
+            levelOverride.Bounds = new System.Drawing.Rectangle(strings.Left + 10, ShowMetadata.Top, ShowMetadata.Width, ShowMetadata.Height);
+            levelOverride.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            levelOverride.UseVisualStyleBackColor = true;
+            levelOverride.Click += (s, e) => ShowLevelSoundOverride();
+            new ToolTip().SetToolTip(levelOverride, "The soundbanks and streams this level reads in place of the base game's (WORLD\\" + LevelSoundOverride.FileName + ").");
+            this.Controls.Add(levelOverride);
+
             strings.SelectedIndexChanged += SoundSelectionChanged;
             SoundPreviewLibrary.GetAsync();
+        }
+
+        private void ShowLevelSoundOverride()
+        {
+            string package = LevelSoundOverride.PathForOpenLevel();
+            if (package == null)
+            {
+                MessageBox.Show(this, "Open a level first: the sound override package belongs to a level.", "Level Sound Override", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (LevelSoundOverrideEditor editor = new LevelSoundOverrideEditor(package))
+                editor.ShowDialog(this);
         }
 
         private void SoundSelectionChanged(object sender, EventArgs e)

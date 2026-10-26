@@ -107,6 +107,9 @@ namespace OpenCAGE.Audio
             /// <summary>Every copy of this audio the game ships, all of which get replaced.</summary>
             public IList<WwiseMediaLocation> Copies = new List<WwiseMediaLocation>();
 
+            /// <summary>For a replacement on one level only: what it does to that level's sound package.</summary>
+            public LevelSoundOverride.Plan Level;
+
             public List<string> Notes = new List<string>();
             public string Problem;
 
@@ -133,6 +136,88 @@ namespace OpenCAGE.Audio
         /// loads a different copy, so they all go together or the import is only half done.
         /// </summary>
         public static Reading Read(string file, WwiseMediaLocation target, IList<WwiseMediaLocation> copies, Options options)
+        {
+            Reading reading = Encode(file, target, options);
+            if (reading.Problem != null)
+                return reading;
+
+            reading.Plan = WwiseMediaInjector.Examine(target, reading.NewBytes);
+            if (!reading.Plan.Supported)
+            {
+                reading.Problem = reading.Plan.Problem;
+                return reading;
+            }
+
+            //Everywhere else the same audio is shipped, so it can be replaced there too
+            List<WwiseMediaLocation> all = new List<WwiseMediaLocation> { target };
+            List<string> unreachable = new List<string>();
+            foreach (WwiseMediaLocation copy in copies ?? new WwiseMediaLocation[0])
+            {
+                if (copy == target || (copy.File == target.File && copy.Offset == target.Offset))
+                    continue;
+
+                WwiseMediaInjector.Plan plan = WwiseMediaInjector.Examine(copy, reading.NewBytes);
+                if (plan.Supported)
+                    all.Add(copy);
+                else
+                    unreachable.Add(Path.GetFileName(copy.File));
+            }
+            reading.Copies = all;
+
+            if (all.Count > 1)
+                reading.Notes.Add("The game ships this audio " + all.Count + " times over - "
+                    + "in " + Distinct(all) + ". All of them are replaced, because the game plays whichever "
+                    + "copy the level it is loading happens to carry.");
+            if (unreachable.Count != 0)
+                reading.Notes.Add("One copy could not be reached and is left as it was, so this sound may "
+                    + "still play its original audio somewhere: " + string.Join(", ", unreachable.Distinct()) + ".");
+
+            long growth = 0;
+            foreach (WwiseMediaLocation copy in all)
+                growth += WwiseMediaInjector.Examine(copy, reading.NewBytes).Growth;
+
+            if (growth > 0)
+                reading.Notes.Add("This is larger than the audio it replaces, so the files holding it grow "
+                    + "by " + Describe(growth) + " in total.");
+
+            return reading;
+        }
+
+        /// <summary>
+        /// As <see cref="Read(string, WwiseMediaLocation, IList{WwiseMediaLocation}, Options)"/>, but for one level: the
+        /// audio goes into the level's own sound package (<see cref="LevelSoundOverride"/>) and the game's shared sound
+        /// files are left as they are. Nothing is written; <see cref="Reading.Level"/> says what would be.
+        /// </summary>
+        public static Reading ReadForLevel(string file, uint sourceId, WwiseMediaLocation target, WwiseSoundLibrary library, string package, Options options)
+        {
+            Reading reading = Encode(file, target, options);
+            if (reading.Problem != null)
+                return reading;
+
+            LevelSoundOverride.Plan level = LevelSoundOverride.Replace(package, library, new Dictionary<uint, byte[]> { { sourceId, reading.Wem } }, false);
+            reading.Level = level;
+            if (!level.Ok)
+            {
+                reading.Problem = level.Problem;
+                return reading;
+            }
+
+            reading.Plan = new WwiseMediaInjector.Plan
+            {
+                File = package,
+                Kind = "this level's sound package",
+                Supported = true,
+                Growth = Math.Max(0, level.SizeAfter - level.SizeBefore),
+            };
+            reading.Notes.AddRange(level.Notes);
+            return reading;
+        }
+
+        /// <summary>
+        /// The .wav read, shaped and encoded to the codec of the sound it replaces, with nothing yet worked out about where
+        /// it goes. <see cref="Reading.Plan"/> is left empty.
+        /// </summary>
+        private static Reading Encode(string file, WwiseMediaLocation target, Options options)
         {
             if (options == null)
                 options = new Options();
@@ -188,45 +273,6 @@ namespace OpenCAGE.Audio
                 reading.Problem = e.Message;
                 return reading;
             }
-
-            reading.Plan = WwiseMediaInjector.Examine(target, reading.NewBytes);
-            if (!reading.Plan.Supported)
-            {
-                reading.Problem = reading.Plan.Problem;
-                return reading;
-            }
-
-            //Everywhere else the same audio is shipped, so it can be replaced there too
-            List<WwiseMediaLocation> all = new List<WwiseMediaLocation> { target };
-            List<string> unreachable = new List<string>();
-            foreach (WwiseMediaLocation copy in copies ?? new WwiseMediaLocation[0])
-            {
-                if (copy == target || (copy.File == target.File && copy.Offset == target.Offset))
-                    continue;
-
-                WwiseMediaInjector.Plan plan = WwiseMediaInjector.Examine(copy, reading.NewBytes);
-                if (plan.Supported)
-                    all.Add(copy);
-                else
-                    unreachable.Add(Path.GetFileName(copy.File));
-            }
-            reading.Copies = all;
-
-            if (all.Count > 1)
-                reading.Notes.Add("The game ships this audio " + all.Count + " times over - "
-                    + "in " + Distinct(all) + ". All of them are replaced, because the game plays whichever "
-                    + "copy the level it is loading happens to carry.");
-            if (unreachable.Count != 0)
-                reading.Notes.Add("One copy could not be reached and is left as it was, so this sound may "
-                    + "still play its original audio somewhere: " + string.Join(", ", unreachable.Distinct()) + ".");
-
-            long growth = 0;
-            foreach (WwiseMediaLocation copy in all)
-                growth += WwiseMediaInjector.Examine(copy, reading.NewBytes).Growth;
-
-            if (growth > 0)
-                reading.Notes.Add("This is larger than the audio it replaces, so the files holding it grow "
-                    + "by " + Describe(growth) + " in total.");
 
             return reading;
         }

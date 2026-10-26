@@ -5415,6 +5415,7 @@ namespace OpenCAGE.MCP
 
             JArray rows = new JArray();
             List<Tuple<WwiseSoundVariation, SoundImport.Reading>> readings = new List<Tuple<WwiseSoundVariation, SoundImport.Reading>>();
+            List<string> permanentTakes = new List<string>();
             foreach (WwiseSoundVariation variation in targets)
             {
                 //The same audio is often shipped in several banks at once: all of them change, or the old sound comes back wherever another copy loads
@@ -5424,6 +5425,12 @@ namespace OpenCAGE.MCP
                     reading = package != null
                         ? SoundImport.ReadForLevel(wav, variation.SourceId, variation.Media, library, package, options)
                         : SoundImport.Read(wav, variation.Media, copies, options);
+                if (!reading.Ok && package != null && targets.Count > 1 && reading.Level != null && reading.Level.HeldPermanently)
+                {
+                    //One of several takes held in a permanent soundbank: no level can replace it, the others go ahead
+                    permanentTakes.Add(variation.SourceId.ToString());
+                    continue;
+                }
                 if (!reading.Ok)
                     throw new McpError("That audio can't be used" + (targets.Count > 1 ? " for source " + variation.SourceId : "") + ": " + reading.Problem);
                 readings.Add(Tuple.Create(variation, reading));
@@ -5444,8 +5451,16 @@ namespace OpenCAGE.MCP
                 rows.Add(row);
             }
 
+            if (readings.Count == 0)
+                throw new McpError("None of those variations can be replaced on one level: their audio is all in permanent soundbanks (DATA/LIST_OF_PERMANENT_SOUND_BANKS.TXT), which the game loads as it starts, before any level's sound package is read.");
+
             //One variation keeps the flat result it always had; several are listed
             JObject result = targets.Count == 1 ? (JObject)rows[0].DeepClone() : new JObject() { ["replacing"] = rows };
+            if (permanentTakes.Count != 0)
+            {
+                result["not_replaced"] = new JArray(permanentTakes);
+                call.Note(permanentTakes.Count + " of the variations (not_replaced) are held in permanent soundbanks, which the game loads as it starts and plays on every level: a level's package can't replace them, so they are left out. Replace them without level_only to change them everywhere.");
+            }
             if (eventName != null)
             {
                 result.AddFirst(new JProperty("event", eventName));
