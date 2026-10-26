@@ -29,11 +29,6 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SelectEnumString));
-            System.Windows.Forms.ListViewGroup listViewGroup1 = new System.Windows.Forms.ListViewGroup("Parameters", System.Windows.Forms.HorizontalAlignment.Left);
-            System.Windows.Forms.ListViewGroup listViewGroup2 = new System.Windows.Forms.ListViewGroup("Functions", System.Windows.Forms.HorizontalAlignment.Left);
-            System.Windows.Forms.ListViewGroup listViewGroup3 = new System.Windows.Forms.ListViewGroup("Composite Instances", System.Windows.Forms.HorizontalAlignment.Left);
-            System.Windows.Forms.ListViewGroup listViewGroup4 = new System.Windows.Forms.ListViewGroup("Proxies", System.Windows.Forms.HorizontalAlignment.Left);
-            System.Windows.Forms.ListViewGroup listViewGroup5 = new System.Windows.Forms.ListViewGroup("Aliases", System.Windows.Forms.HorizontalAlignment.Left);
             this.clearSearchBtn = new System.Windows.Forms.Button();
             this.strings = new System.Windows.Forms.ListView();
             this.ID = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
@@ -65,22 +60,6 @@
             this.ID,
             this.EntityType});
             this.strings.FullRowSelect = true;
-            listViewGroup1.Header = "Parameters";
-            listViewGroup1.Name = "Variables";
-            listViewGroup2.Header = "Functions";
-            listViewGroup2.Name = "Functions";
-            listViewGroup3.Header = "Composite Instances";
-            listViewGroup3.Name = "Composites";
-            listViewGroup4.Header = "Proxies";
-            listViewGroup4.Name = "Proxies";
-            listViewGroup5.Header = "Aliases";
-            listViewGroup5.Name = "Aliases";
-            this.strings.Groups.AddRange(new System.Windows.Forms.ListViewGroup[] {
-            listViewGroup1,
-            listViewGroup2,
-            listViewGroup3,
-            listViewGroup4,
-            listViewGroup5});
             this.strings.HideSelection = false;
             this.strings.LabelWrap = false;
             this.strings.Location = new System.Drawing.Point(2, 29);
