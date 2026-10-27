@@ -3257,7 +3257,8 @@ namespace OpenCAGE.DockPanels
                 PinTypeGUID = new ShortGuid((uint)pinType),
                 PinEnumTypeGUID = enumType
             });
-            Content.Level.Commands.Utils.AddAllDefaultParameters(newEntity, Composite, true, ParameterVariant.REFERENCE_PIN | ParameterVariant.TARGET_PIN | ParameterVariant.STATE_PARAMETER | ParameterVariant.INPUT_PIN | ParameterVariant.OUTPUT_PIN | ParameterVariant.PARAMETER | ParameterVariant.INTERNAL | ParameterVariant.METHOD_FUNCTION | ParameterVariant.METHOD_PIN);
+            if (pinType.HoldsValue())
+                Content.Level.Commands.Utils.AddAllDefaultParameters(newEntity, Composite, true, ParameterVariant.REFERENCE_PIN | ParameterVariant.TARGET_PIN | ParameterVariant.STATE_PARAMETER | ParameterVariant.INPUT_PIN | ParameterVariant.OUTPUT_PIN | ParameterVariant.PARAMETER | ParameterVariant.INTERNAL | ParameterVariant.METHOD_FUNCTION | ParameterVariant.METHOD_PIN);
             if (newEntity.parameters.Count > 0 && newEntity.parameters[0].content.dataType == DataType.ENUM)
             {
                 cEnum enumParam = (cEnum)newEntity.parameters[0].content;

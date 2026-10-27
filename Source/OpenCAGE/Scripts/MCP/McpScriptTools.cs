@@ -537,6 +537,8 @@ namespace OpenCAGE.MCP
             //New content to check zone membership of, and animation entities to check, once the change is in
             public readonly List<(Composite Composite, Entity Entity)> Placed = new List<(Composite, Entity)>();
             public readonly List<(Composite Composite, Entity Entity)> AnimationChecks = new List<(Composite, Entity)>();
+            //SoundLoadBanks given a sound_bank value, checked for the link the game reads it through once the call's links are in
+            public readonly List<(Composite Composite, Entity Entity)> BankChecks = new List<(Composite, Entity)>();
             //What the game only takes after a Save & Build (named for the note), and what was worked out on the way
             public readonly List<string> Built = new List<string>();
             public readonly Dictionary<Composite, bool> Carries = new Dictionary<Composite, bool>();
@@ -1256,7 +1258,8 @@ namespace OpenCAGE.MCP
         }
 
         private static readonly ShortGuid AnimationSet = ShortGuidUtils.Generate("AnimationSet"), Animation = ShortGuidUtils.Generate("Animation"),
-            AnimSet = ShortGuidUtils.Generate("anim_set"), DataFile = ShortGuidUtils.Generate("data_file"), GoboTexture = ShortGuidUtils.Generate("gobo_texture"), Texture = ShortGuidUtils.Generate("Texture");
+            AnimSet = ShortGuidUtils.Generate("anim_set"), DataFile = ShortGuidUtils.Generate("data_file"), GoboTexture = ShortGuidUtils.Generate("gobo_texture"), Texture = ShortGuidUtils.Generate("Texture"),
+            SoundBank = ShortGuidUtils.Generate("sound_bank");
 
         private static ParameterData Write(McpScriptEdit edit, Composite composite, Entity entity, string name, JToken value, bool allowCustom, Scope scope)
         {
@@ -1288,6 +1291,10 @@ namespace OpenCAGE.MCP
                     scope.Note(McpScript.EntityName(commands, composite, entity) + "." + McpScript.ParamName(id) + " was written, but a link feeds it, so the game reads that instead: " + (string)source + ". Set the value at that source" +
                         (type == FunctionType.LightReference ? " (set_lights changes a light's colour and intensity where they are really held)" : "") + ", or take the link away (remove_links) for this value to count.");
             }
+
+            //A SoundLoadBank loads the banks of the entities linked to its sound_bank pin, never a bank typed on it
+            if (type == FunctionType.SoundLoadBank && id == SoundBank)
+                scope.BankChecks.Add((composite, entity));
 
             //What it plays: checked as a whole once the call's changes are in (a set-only change re-checks the stored clip)
             bool playsAnimation = entity is FunctionEntity && ((id == AnimationSet || id == Animation) && (type == FunctionType.CMD_PlayAnimation || type == FunctionType.CHR_PlaySecondaryAnimation || type == FunctionType.PlayEnvironmentAnimation)
@@ -2081,6 +2088,15 @@ namespace OpenCAGE.MCP
                 if (composite.GetEntityByID(entity.shortGUID) != entity) continue;
                 foreach (string problem in McpGlobalAssetChecks.AnimationProblems(commands, composite, entity))
                     scope.Note(McpScript.EntityName(commands, composite, entity) + ": " + problem);
+            }
+            //Seen in game (27 Oct 2026): a SoundLoadBank with its bank only typed on sound_bank left the bank unloaded
+            foreach ((Composite composite, Entity entity) in scope.BankChecks.Distinct().ToList())
+            {
+                if (composite.GetEntityByID(entity.shortGUID) != entity || entity.childLinks.Any(o => o.thisParamID == SoundBank)) continue;
+                string bank = McpGlobalAssetChecks.TextOf(entity, "sound_bank");
+                if (string.IsNullOrEmpty(bank)) continue;
+                scope.Note(McpScript.EntityName(commands, composite, entity) + ": the game never reads a bank typed on a SoundLoadBank's sound_bank, so it loads nothing - link the pin to a VariableString {initial_value: '" +
+                    bank + "'} (sound_bank -> VariableString.reference), as retail does (one loader takes up to 16 such links).");
             }
             try { NoteUnzoned(commands, scope); }
             catch (Exception e) when (!(e is McpError)) { Debug.Log("MCP", "Could not check zone membership: " + e.Message); }

@@ -186,6 +186,15 @@ namespace OpenCAGE.Modding
             return false;
         }
 
+        /// <summary>
+        /// A level's own sound package (WORLD/LEVEL_SOUND_OVERRIDE.PCK). Saving the level doesn't write it, so like the level's
+        /// text it is a loose file: its own part when exporting, merged as a whole file when mods are combined.
+        /// </summary>
+        public static bool IsLevelSoundPackage(string normalisedPath)
+        {
+            return normalisedPath.EndsWith("/WORLD/LEVEL_SOUND_OVERRIDE.PCK", StringComparison.OrdinalIgnoreCase);
+        }
+
         public const string LevelListPath = "DATA/PACKAGES/MAIN.PKG";
 
         /// <summary>

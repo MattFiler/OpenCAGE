@@ -79,6 +79,26 @@ namespace OpenCAGE.MCP
                 Idempotent = true,
                 Run = FindSpareSoundEvents,
             };
+
+            yield return new McpTool()
+            {
+                Name = "level_sound_package",
+                Title = "Level sound package",
+                Description = "The open level's own sound package (WORLD/LEVEL_SOUND_OVERRIDE.PCK, which the game reads ahead of DATA/SOUND for this level alone), as the Level Sound Override window shows it: " +
+                    "list what it holds, add a whole soundbank (.bnk) or stream (a .wem named for its id) in place of anything with the same id - e.g. a bank changed outside OpenCAGE - or remove files. " +
+                    "replace_sound level_only puts single sounds in it. Permanent soundbanks are refused (a level's copy is never read). Not undoable.",
+                InputSchema = McpSchema.Object(
+                    McpSchema.String("action", "list (default), add or remove.", options: new[] { "list", "add", "remove" }),
+                    McpSchema.String("file", "add: absolute path of the .bnk, or of the .wem named for its id."),
+                    McpSchema.Strings("banks", "remove: soundbank names (as list_sound_banks gives them) or ids."),
+                    McpSchema.Strings("streams", "remove: stream ids."),
+                    McpSchema.Boolean("dry_run", "add/remove: say what would change, writing nothing."),
+                    McpSchema.Boolean("close_game", "Close a running game first (it holds the package open)."),
+                    McpSchema.Limit(100, "streams listed", 5000),
+                    McpSchema.Offset("streams listed")),
+                Destructive = true,
+                Run = LevelSoundPackage,
+            };
         }
 
         #region Helpers
@@ -127,7 +147,7 @@ namespace OpenCAGE.MCP
             return banks;
         }
 
-        /// <summary>A SoundLoadBank entity: the bank it loads and when.</summary>
+        /// <summary>A bank a SoundLoadBank entity loads (one per bank: a loader can load several) and when.</summary>
         public sealed class BankLoader
         {
             public Composite Composite;
@@ -135,28 +155,60 @@ namespace OpenCAGE.MCP
             public string Bank;
             /// <summary>It loads when the level starts (trigger_via_pin is off); otherwise only when its load_bank method is triggered.</summary>
             public bool OnReset;
+            /// <summary>
+            /// The bank is only typed on the loader's sound_bank pin, with no String entity linked to it. The game never reads that
+            /// value - it loads the banks the entities linked to sound_bank name - so this loader loads nothing.
+            /// </summary>
+            public bool TypedOnly;
             public List<string> TriggeredBy = new List<string>();
         }
 
-        /// <summary>Every SoundLoadBank in the open level's script.</summary>
+        /// <summary>
+        /// Every bank the open level's SoundLoadBanks load. The game loads the banks named by the entities linked to a loader's
+        /// sound_bank pin (retail: sound_bank -> VariableString.reference, up to 16 per loader) and ignores a bank typed on the pin
+        /// itself (seen in game, 27 Oct 2026: loaders with only a typed bank left it unloaded); those come back TypedOnly.
+        /// </summary>
         public static List<BankLoader> BankLoaders(Commands commands)
         {
             List<BankLoader> loaders = new List<BankLoader>();
             if (commands == null) return loaders;
             ShortGuid loadBank = ShortGuidUtils.Generate("load_bank");
+            ShortGuid soundBank = ShortGuidUtils.Generate("sound_bank");
             foreach (Composite composite in commands.Entries)
                 foreach (FunctionEntity function in composite.functions)
                 {
                     if (!function.function.IsFunctionType || function.function.AsFunctionType != FunctionType.SoundLoadBank) continue;
-                    BankLoader loader = new BankLoader() { Composite = composite, Entity = function, Bank = McpGlobalAssetChecks.TextOf(function, "sound_bank") ?? "" };
-                    loader.OnReset = !(function.GetParameter("trigger_via_pin")?.content is cBool viaPin && viaPin.value);
+                    bool onReset = !(function.GetParameter("trigger_via_pin")?.content is cBool viaPin && viaPin.value);
+                    List<string> triggeredBy = new List<string>();
                     foreach (Entity source in composite.GetEntities())
                         foreach (EntityConnector link in source.childLinks)
                             if (link.linkedEntityID == function.shortGUID && link.linkedParamID == loadBank)
-                                loader.TriggeredBy.Add(McpScript.EntityName(commands, composite, source) + "." + ShortGuidUtils.FindString(link.thisParamID));
-                    loaders.Add(loader);
+                                triggeredBy.Add(McpScript.EntityName(commands, composite, source) + "." + ShortGuidUtils.FindString(link.thisParamID));
+
+                    //The banks it really loads: what the entities linked to sound_bank hold (a VariableString's initial_value); a
+                    //composite pin's value comes from each instance, so only its name can be given
+                    List<string> linked = new List<string>();
+                    foreach (EntityConnector link in function.childLinks.Where(o => o.thisParamID == soundBank))
+                    {
+                        Entity other = composite.GetEntityByID(link.linkedEntityID);
+                        if (other == null) continue;
+                        string bank = other is VariableEntity pin ? "(composite pin '" + ShortGuidUtils.FindString(pin.name) + "')" : McpGlobalAssetChecks.TextOf(other, "initial_value");
+                        if (!string.IsNullOrEmpty(bank)) linked.Add(bank);
+                    }
+                    string typed = McpGlobalAssetChecks.TextOf(function, "sound_bank");
+                    if (linked.Count == 0 && !string.IsNullOrEmpty(typed))
+                        loaders.Add(new BankLoader() { Composite = composite, Entity = function, Bank = typed, OnReset = onReset, TypedOnly = true, TriggeredBy = triggeredBy });
+                    foreach (string bank in linked)
+                        loaders.Add(new BankLoader() { Composite = composite, Entity = function, Bank = bank, OnReset = onReset, TriggeredBy = triggeredBy });
                 }
             return loaders;
+        }
+
+        /// <summary>What to add so a bank loads as the level starts, as retail does it.</summary>
+        public static string HowToLoad(string bank)
+        {
+            return "a SoundLoadBank whose sound_bank pin links to a VariableString {initial_value: '" + bank + "'} (create both, then the link sound_bank -> VariableString.reference; " +
+                "it loads as the level starts unless trigger_via_pin) - a bank typed on sound_bank itself is not read by the game";
         }
 
         /// <summary>
@@ -167,13 +219,15 @@ namespace OpenCAGE.MCP
         {
             JObject loading = new JObject();
             List<string> permanent = PermanentBanks().Where(p => declaredIn.Any(b => Same(b, p))).ToList();
-            List<BankLoader> loaders = BankLoaders(commands).Where(o => declaredIn.Any(b => Same(b, o.Bank))).ToList();
+            List<BankLoader> all = BankLoaders(commands).Where(o => declaredIn.Any(b => Same(b, o.Bank))).ToList();
+            List<BankLoader> loaders = all.Where(o => !o.TypedOnly).ToList();
+            List<BankLoader> typedOnly = all.Where(o => o.TypedOnly).ToList();
             List<string> zones = LoadZoneBanks(level, out bool zonesFound).Where(z => declaredIn.Any(b => Same(b, z))).ToList();
             loading["permanent_banks"] = new JArray(permanent);
-            loading["loaded_by"] = new JArray(loaders.Take(10).Select(o =>
+            loading["loaded_by"] = new JArray(all.Take(10).Select(o =>
             {
                 JObject row = new JObject() { ["composite"] = o.Composite.name, ["id"] = McpScript.Id(o.Entity.shortGUID), ["name"] = McpScript.EntityName(commands, o.Composite, o.Entity), ["bank"] = o.Bank };
-                row["when"] = o.OnReset ? "level start" : "when load_bank is triggered";
+                row["when"] = o.TypedOnly ? "never: the bank is only typed on sound_bank, which the game does not read (link a VariableString to it)" : o.OnReset ? "level start" : "when load_bank is triggered";
                 if (o.TriggeredBy.Count != 0) row["triggered_by"] = new JArray(o.TriggeredBy.Take(5));
                 return row;
             }));
@@ -183,9 +237,10 @@ namespace OpenCAGE.MCP
             if (permanent.Count != 0) verdict = "loaded everywhere: " + permanent[0] + " is a permanent bank.";
             else if (loaders.Any(o => o.OnReset)) verdict = "loaded when the level starts, by a SoundLoadBank of " + loaders.First(o => o.OnReset).Bank + ".";
             else if (loaders.Count != 0) verdict = "loaded only once a SoundLoadBank's load_bank is triggered (" + loaders[0].Bank + "); before that it plays nothing.";
-            else if (zones.Count != 0) verdict = "listed in the level's SOUNDLOADZONES.DAT (" + zones[0] + "); whether that alone loads it is not established - add a SoundLoadBank to be sure.";
+            else if (typedOnly.Count != 0) verdict = "NOT loaded: " + McpScript.EntityName(commands, typedOnly[0].Composite, typedOnly[0].Entity) + " only has " + typedOnly[0].Bank + " typed on its sound_bank pin, which the game does not read - link that pin to a VariableString {initial_value: '" + typedOnly[0].Bank + "'} (sound_bank -> VariableString.reference), as retail does.";
+            else if (zones.Count != 0) verdict = "listed in the level's SOUNDLOADZONES.DAT (" + zones[0] + "); whether that alone loads it is not established - add " + HowToLoad(zones[0]) + " to be sure.";
             else if (declaredIn.Count == 0) verdict = "no bank declares it, so it never plays.";
-            else verdict = "nothing in this level loads " + string.Join(" or ", declaredIn.Take(3)) + ": add a SoundLoadBank {sound_bank: '" + declaredIn[0] + "'} (it loads when the level starts unless trigger_via_pin), or pick an event in a loaded bank.";
+            else verdict = "nothing in this level loads " + string.Join(" or ", declaredIn.Take(3)) + ": add " + HowToLoad(declaredIn[0]) + ", or pick an event in a loaded bank.";
             loading["verdict"] = verdict;
             return loading;
         }
@@ -493,6 +548,77 @@ namespace OpenCAGE.MCP
             call.Note("replace_sound {event, variations:'all', wav_path} puts your audio on one; place_sound then plays it. Other levels' scripts may still use it: check with search_level first.");
             JObject result = new JObject();
             McpPaging.Page(call, ordered, result, "events", o => o, 50, 1000);
+            return result;
+        }
+        #endregion
+
+        #region level_sound_package
+        private static object LevelSoundPackage(McpCall call)
+        {
+            string action = (call.Str("action") ?? "list").Trim().ToLowerInvariant();
+            if (action != "list" && action != "add" && action != "remove") throw new McpError("'action' is list, add or remove.");
+            string package = McpEditor.UI(() => LevelSoundOverride.PathForOpenLevel());
+            if (package == null) throw new McpError("Open a level first: the sound package is the level's own.");
+            bool dryRun = call.Bool("dry_run");
+            JObject result = new JObject() { ["package"] = McpAnimationAssetTools.Relative(package) };
+
+            LevelSoundOverride.Plan plan = null;
+            if (action == "add")
+            {
+                string file = call.Str("file", required: true).Trim();
+                if (!File.Exists(file)) throw new McpError("No file at " + file + ".");
+                if (!dryRun) McpAnimationAssetTools.CloseOrRefuse(call, "it holds the level's sound package open");
+                plan = LevelSoundOverride.Add(package, file, !dryRun);
+            }
+            else if (action == "remove")
+            {
+                List<KeyValuePair<bool, uint>> files = new List<KeyValuePair<bool, uint>>();
+                foreach (string bank in call.StrList("banks") ?? new List<string>())
+                {
+                    string name = bank.Trim();
+                    if (name.EndsWith(".bnk", StringComparison.OrdinalIgnoreCase)) name = name.Substring(0, name.Length - 4);
+                    files.Add(new KeyValuePair<bool, uint>(true, uint.TryParse(name, out uint id) ? id : Utilities.SoundHashedString(name)));
+                }
+                foreach (string stream in call.StrList("streams") ?? new List<string>())
+                {
+                    if (!uint.TryParse(Path.GetFileNameWithoutExtension(stream.Trim()), out uint id)) throw new McpError("'" + stream + "' is not a stream id.");
+                    files.Add(new KeyValuePair<bool, uint>(false, id));
+                }
+                if (files.Count == 0) throw new McpError("remove takes banks and/or streams.");
+                if (!File.Exists(package)) throw new McpError("This level has no sound package.");
+                if (!dryRun) McpAnimationAssetTools.CloseOrRefuse(call, "it holds the level's sound package open");
+                plan = LevelSoundOverride.Remove(package, files, !dryRun);
+            }
+            if (plan != null)
+            {
+                if (!plan.Ok) throw new McpError("The package was not changed: " + plan.Problem);
+                if (!dryRun) McpEditor.UI(() => LevelSoundOverride.RaiseChanged());
+                result["dry_run"] = dryRun;
+                if (plan.BanksCopied.Count != 0) result["banks_added"] = new JArray(plan.BanksCopied);
+                if (plan.BanksChanged.Count != 0) result["banks_replaced"] = new JArray(plan.BanksChanged);
+                if (plan.BanksRemoved.Count != 0) result["banks_removed"] = new JArray(plan.BanksRemoved);
+                if (plan.StreamsSet != 0) result["streams_set"] = plan.StreamsSet;
+                if (plan.StreamsRemoved != 0) result["streams_removed"] = plan.StreamsRemoved;
+                if (plan.Notes.Count != 0) result["notes"] = new JArray(plan.Notes);
+                result["bytes"] = plan.SizeAfter;
+                if (dryRun) return result;
+            }
+
+            //What it holds now
+            if (!File.Exists(package)) { result["exists"] = false; return result; }
+            WwiseFilePackageBuilder read = WwiseFilePackageBuilder.Load(package);
+            string soundDirectory = SoundPreviewLibrary.SoundDirectory;
+            result["exists"] = true;
+            result["bytes"] = new FileInfo(package).Length;
+            result["banks"] = new JArray(read.Banks.Select(o => new JObject()
+            {
+                ["name"] = LevelSoundOverride.BankName(o, null),
+                ["id"] = o.Id.ToString(),
+                ["bytes"] = o.Length,
+                ["on_this_level"] = LevelSoundOverride.IsPermanent(o.Id, soundDirectory) ? "never read: a permanent soundbank" : LevelSoundOverride.BaseBankFile(o.Id, null) != null ? "read instead of the base game's" : "only this level has it",
+            }));
+            result["stream_count"] = read.Streams.Count;
+            McpPaging.Page(call, read.Streams, result, "streams", o => new JObject() { ["id"] = o.Id.ToString(), ["bytes"] = o.Length }, 100, 5000);
             return result;
         }
         #endregion

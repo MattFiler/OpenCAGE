@@ -1324,7 +1324,7 @@ namespace OpenCAGE.MCP
                 }
                 if (known != null)
                 {
-                    List<string> loaded = McpSoundTools.PermanentBanks().Concat(McpSoundTools.LoadZoneBanks(content.Level, out bool listFound)).Concat(McpSoundTools.BankLoaders(commands).Select(o => o.Bank)).Where(o => o != null).ToList();
+                    List<string> loaded = McpSoundTools.PermanentBanks().Concat(McpSoundTools.LoadZoneBanks(content.Level, out bool listFound)).Concat(McpSoundTools.BankLoaders(commands).Where(o => !o.TypedOnly).Select(o => o.Bank)).Where(o => o != null).ToList();
                     List<string> missing = known.Banks.Where(b => !loaded.Any(o => string.Equals(o, b, StringComparison.OrdinalIgnoreCase))).ToList();
                     needs["sound_banks"] = new JObject() { ["wants"] = new JArray(known.Banks), ["missing"] = new JArray(missing) };
                     if (missing.Count != 0)

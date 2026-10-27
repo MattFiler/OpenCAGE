@@ -104,8 +104,9 @@ namespace OpenCAGE
                     PinTypeGUID = new ShortGuid((uint)pinType),
                     PinEnumTypeGUID = enumType
                 });
-                Content.Level.Commands.Utils.AddAllDefaultParameters(newEntity, _composite, true, ParameterVariant.REFERENCE_PIN | ParameterVariant.TARGET_PIN | ParameterVariant.STATE_PARAMETER | ParameterVariant.INPUT_PIN | ParameterVariant.OUTPUT_PIN | ParameterVariant.PARAMETER | ParameterVariant.INTERNAL | ParameterVariant.METHOD_FUNCTION | ParameterVariant.METHOD_PIN);
-                if (newEntity.parameters[0].content.dataType == DataType.ENUM)
+                if (pinType.HoldsValue())
+                    Content.Level.Commands.Utils.AddAllDefaultParameters(newEntity, _composite, true, ParameterVariant.REFERENCE_PIN | ParameterVariant.TARGET_PIN | ParameterVariant.STATE_PARAMETER | ParameterVariant.INPUT_PIN | ParameterVariant.OUTPUT_PIN | ParameterVariant.PARAMETER | ParameterVariant.INTERNAL | ParameterVariant.METHOD_FUNCTION | ParameterVariant.METHOD_PIN);
+                if (newEntity.parameters.Count > 0 && newEntity.parameters[0].content.dataType == DataType.ENUM)
                 {
                     cEnum enumParam = (cEnum)newEntity.parameters[0].content;
                     enumParam.enumID = enumType; //todo: this should be applied above...

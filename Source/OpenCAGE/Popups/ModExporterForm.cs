@@ -42,7 +42,7 @@ namespace OpenCAGE.Popups
             public bool Built; //Its lighting and navigation were rebuilt: a part of it is built too
             public List<CompositeRow> Composites = new List<CompositeRow>();
             public List<AssetRow> Assets = new List<AssetRow>();
-            public List<string> LooseFiles = new List<string>(); //Files its save doesn't write (its text)
+            public List<string> LooseFiles = new List<string>(); //Files its save doesn't write (its text, its sound package)
             public bool HasHistory => Composites.Count != 0 || Assets.Count != 0;
             public bool Whole => New || UnderMods;
         }
@@ -95,6 +95,7 @@ namespace OpenCAGE.Popups
             if (files.Any(o => o.EndsWith("/WORLD/COMMANDS.PAK"))) parts.Add("scripts");
             if (files.Any(ModLevelMerger.IsBuildOutput)) parts.Add("rebuilt lighting and navigation");
             if (files.Any(o => o.Contains("/TEXT/"))) parts.Add("level text");
+            if (files.Any(ModToolkit.IsLevelSoundPackage)) parts.Add("level sounds");
             string what = parts.Count == 0 ? "level files" : string.Join(", ", parts) + " and the files saved with them";
             return what + " (" + files.Count + " file" + (files.Count == 1 ? "" : "s") + ")";
         }
@@ -718,7 +719,7 @@ namespace OpenCAGE.Popups
                 changes.Built = files.Any(ModLevelMerger.IsBuildOutput);
                 if (changes.Whole)
                     return changes;
-                changes.LooseFiles = files.Where(o => o.Contains("/TEXT/")).ToList();
+                changes.LooseFiles = files.Where(o => o.Contains("/TEXT/") || ModToolkit.IsLevelSoundPackage(o)).ToList();
 
                 //A Nostromo level keeps its scripts (and their history) in its _PATCH folder
                 string commandsPath = ModToolkit.Denormalise(ModServices.GameRoot, ModToolkit.LevelFolder(level + "_PATCH") + "WORLD/COMMANDS.PAK");
@@ -787,7 +788,7 @@ namespace OpenCAGE.Popups
                 foreach (string loose in level.LooseFiles)
                 {
                     DateTime? edited = EditHistory.SharedFileEdited(ModServices.GameRoot, loose);
-                    AddPart(levelNode.Nodes.Add("Text: " + ShortName(loose) + (edited.HasValue ? "  -  " + EditedText(edited.Value) : "")), new LooseRow() { Level = level, Path = loose }, level);
+                    AddPart(levelNode.Nodes.Add((ModToolkit.IsLevelSoundPackage(loose) ? "Sound package: " : "Text: ") + ShortName(loose) + (edited.HasValue ? "  -  " + EditedText(edited.Value) : "")), new LooseRow() { Level = level, Path = loose }, level);
                 }
                 TreeNode rest = levelNode.Nodes.Add(level.HasHistory
                     ? "The whole level - every change in it, including any from before OpenCAGE kept a history"

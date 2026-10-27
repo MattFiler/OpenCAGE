@@ -1181,6 +1181,20 @@ namespace OpenCAGE
             }
         }
 
+        //Whether a new variable for this pin gets a value of its own: method, target and reference pins only take links, and the game's
+        //levels give theirs none (a target pin given the FLOAT default here did not relay its trigger out of the instance in game)
+        public static bool HoldsValue(this CompositePinType pinType)
+        {
+            switch (pinType)
+            {
+                case CompositePinType.CompositeMethodPin:
+                case CompositePinType.CompositeTargetPin:
+                case CompositePinType.CompositeReferencePin:
+                    return false;
+            }
+            return true;
+        }
+
         public static string ToUIString(this DataType type)
         {
             return _dataType[type];

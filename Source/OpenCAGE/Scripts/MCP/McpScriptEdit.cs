@@ -598,7 +598,8 @@ namespace OpenCAGE.MCP
                 PinTypeGUID = new ShortGuid((uint)pinType),
                 PinEnumTypeGUID = enumId,
             });
-            Commands.Utils.AddAllDefaultParameters(variable, composite, true, ParameterVariant.REFERENCE_PIN | ParameterVariant.TARGET_PIN | ParameterVariant.STATE_PARAMETER | ParameterVariant.INPUT_PIN | ParameterVariant.OUTPUT_PIN | ParameterVariant.PARAMETER | ParameterVariant.INTERNAL | ParameterVariant.METHOD_FUNCTION | ParameterVariant.METHOD_PIN);
+            if (pinType.HoldsValue())
+                Commands.Utils.AddAllDefaultParameters(variable, composite, true, ParameterVariant.REFERENCE_PIN | ParameterVariant.TARGET_PIN | ParameterVariant.STATE_PARAMETER | ParameterVariant.INPUT_PIN | ParameterVariant.OUTPUT_PIN | ParameterVariant.PARAMETER | ParameterVariant.INTERNAL | ParameterVariant.METHOD_FUNCTION | ParameterVariant.METHOD_PIN);
             if (variable.parameters.Count != 0 && variable.parameters[0].content is cEnum enumValue)
             {
                 enumValue.enumID = enumId;

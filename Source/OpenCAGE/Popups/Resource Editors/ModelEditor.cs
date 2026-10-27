@@ -73,9 +73,8 @@ namespace AlienPAK
                 if (MessageBox.Show(message, "Resize", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
             }
 
-            int resized = 0;
-            foreach (Submesh submesh in submeshes)
-                if (ModelIO.RescaleSubmesh(submesh, factor)) resized++;
+            //All in one go, so meshes that meet still meet afterwards
+            int resized = ModelIO.RescaleSubmeshes(submeshes, factor).Count;
             if (resized == 0)
             {
                 MessageBox.Show(submeshes.Count == 1 ? "This mesh has no position data to resize." : "None of these meshes has position data to resize.", "Resize", MessageBoxButtons.OK, MessageBoxIcon.Warning);

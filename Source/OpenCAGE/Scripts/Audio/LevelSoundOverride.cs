@@ -116,6 +116,7 @@ namespace OpenCAGE.Audio
             Dictionary<string, byte[]> baseBanks = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
             HashSet<WwiseFilePackageBuilder.Item> changedBanks = new HashSet<WwiseFilePackageBuilder.Item>();
             List<string> voiced = new List<string>();
+            HashSet<string> otherLevels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (KeyValuePair<uint, byte[]> replacement in replacements)
             {
@@ -130,7 +131,7 @@ namespace OpenCAGE.Audio
                 if (permanent != null)
                 {
                     plan.Problem = "This sound is held in " + permanent + ", one of the soundbanks the game loads as it starts and keeps loaded "
-                        + "(DATA\\LIST_OF_PERMANENT_SOUND_BANKS.TXT). That copy is in memory before any level's sound package is read, and the game "
+                        + "(Init, UI and those in DATA\\LIST_OF_PERMANENT_SOUND_BANKS.TXT). That copy is in memory before any level's sound package is read, and the game "
                         + "plays it even where a level's own soundbank has the sound too - so this sound can only be replaced for every level.";
                     plan.HeldPermanently = true;
                     return plan;
@@ -169,6 +170,12 @@ namespace OpenCAGE.Audio
                         if (!IsSharedSoundEffect(file, library))
                         {
                             voiced.Add(Path.GetFileName(file));
+                            continue;
+                        }
+
+                        if (IsOtherLevelsDynamicBank(file, package))
+                        {
+                            otherLevels.Add(Path.GetFileName(file));
                             continue;
                         }
 
@@ -236,6 +243,8 @@ namespace OpenCAGE.Audio
                 {
                     plan.Problem = voiced.Count != 0
                         ? "This is voiced audio (" + string.Join(", ", voiced.Distinct().Take(3)) + "), which the game looks up by voice language - it can only be replaced for every level."
+                        : otherLevels.Count != 0
+                        ? "This sound is only in other levels' DynamicLoad soundbanks (" + string.Join(", ", otherLevels.Take(3)) + (otherLevels.Count > 3 ? "..." : "") + "), which this level never loads."
                         : "Source " + id + " isn't in any soundbank or stream the game loads, so there is nothing to replace on this level.";
                     return plan;
                 }
@@ -243,6 +252,9 @@ namespace OpenCAGE.Audio
 
             if (voiced.Count != 0)
                 plan.Notes.Add("Left as it is, because it's voiced audio the game looks up by voice language: " + string.Join(", ", voiced.Distinct()) + ".");
+            if (otherLevels.Count != 0)
+                plan.Notes.Add("Left out: " + otherLevels.Count + " other levels' DynamicLoad soundbank" + (otherLevels.Count == 1 ? "" : "s")
+                    + " holding this sound too (" + string.Join(", ", otherLevels.Take(3)) + (otherLevels.Count > 3 ? "..." : "") + ") - a level only ever loads its own.");
 
             return Finish(builder, plan, write);
         }
@@ -415,7 +427,7 @@ namespace OpenCAGE.Audio
                     if (IsPermanent(id, SoundPreviewLibrary.SoundDirectory))
                     {
                         plan.Problem = Path.GetFileName(file) + " is one of the soundbanks the game loads as it starts and keeps loaded "
-                            + "(DATA\\LIST_OF_PERMANENT_SOUND_BANKS.TXT), so a level's copy of it would never be read.";
+                            + "(Init, UI and those in DATA\\LIST_OF_PERMANENT_SOUND_BANKS.TXT), so a level's copy of it would never be read.";
                         return plan;
                     }
 
@@ -544,6 +556,29 @@ namespace OpenCAGE.Audio
             return plan;
         }
 
+        /// <summary>
+        /// Whether a soundbank is another level's DynamicLoad bank. As it opens a level the game loads one DynamicLoad soundbank,
+        /// the one named for the level's folder (DynamicLoad_TECH_HUB, DynamicLoad_ChallengeMap1), so every other is never read
+        /// there - the same sound is in dozens of them, and copying them all would only make the package bigger.
+        /// </summary>
+        private static bool IsOtherLevelsDynamicBank(string file, string package)
+        {
+            string name = Path.GetFileNameWithoutExtension(file);
+            if (!name.StartsWith("DynamicLoad_", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            //<level>[_PATCH]\WORLD\LEVEL_SOUND_OVERRIDE.PCK
+            DirectoryInfo world = new FileInfo(package).Directory;
+            if (world == null || world.Parent == null)
+                return false;
+
+            string level = world.Parent.Name;
+            if (level.EndsWith("_PATCH", StringComparison.OrdinalIgnoreCase))
+                level = level.Substring(0, level.Length - "_PATCH".Length);
+
+            return !string.Equals(name, "DynamicLoad_" + level, StringComparison.OrdinalIgnoreCase);
+        }
+
         /// <summary>Audio every level shares and nobody voices: a loose bank or stream straight in the SOUND folder.</summary>
         private static bool IsSharedSoundEffect(string file, WwiseSoundLibrary library)
         {
@@ -597,12 +632,18 @@ namespace OpenCAGE.Audio
         }
 
         /// <summary>
-        /// The ids of the soundbanks named in DATA/LIST_OF_PERMANENT_SOUND_BANKS.TXT (a bank's id is its name hashed, as Wwise
-        /// hashes every name). Read every time: the Permanent Soundbanks editor changes it.
+        /// The ids of the soundbanks the game loads as it starts and keeps (a bank's id is its name hashed, as Wwise hashes
+        /// every name): Init and UI, which it loads by name as it opens, then those named in DATA/LIST_OF_PERMANENT_SOUND_BANKS.TXT.
+        /// The list is read every time: the Permanent Soundbanks editor changes it. Measured in game: with a level's package
+        /// holding changed copies of UI.BNK and WEAPONS.BNK, the base game's copies were the ones in memory.
         /// </summary>
         private static HashSet<uint> PermanentBanks(string soundDirectory)
         {
-            HashSet<uint> ids = new HashSet<uint>();
+            HashSet<uint> ids = new HashSet<uint>
+            {
+                CathodeLib.Utilities.SoundHashedString("Init"),
+                CathodeLib.Utilities.SoundHashedString("UI"),
+            };
             try
             {
                 if (string.IsNullOrEmpty(soundDirectory))

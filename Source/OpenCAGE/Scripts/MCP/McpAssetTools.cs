@@ -936,11 +936,13 @@ namespace OpenCAGE.MCP
                         if (required)
                             throw new McpError(model.Name + " is one of the models every level is required to carry; it cannot be resized.");
                         var scope = Scope(call, model);
+                        //All in one go, so submeshes that meet still meet afterwards
+                        HashSet<Models.CS2.Component.LOD.Submesh> moved = new HashSet<Models.CS2.Component.LOD.Submesh>(ModelIO.RescaleSubmeshes(scope.Select(o => o.submesh), (float)factor), McpAssets.ByReference<Models.CS2.Component.LOD.Submesh>.Instance);
                         int resized = 0;
                         List<string> skipped = new List<string>();
                         foreach (var target in scope)
                         {
-                            if (ModelIO.RescaleSubmesh(target.submesh, (float)factor)) resized++;
+                            if (moved.Contains(target.submesh)) resized++;
                             else skipped.Add(Address(target.c, target.l, target.s));
                         }
                         if (resized != 0)

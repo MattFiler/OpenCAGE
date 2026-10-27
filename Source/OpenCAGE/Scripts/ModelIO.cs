@@ -1332,6 +1332,7 @@ namespace AlienPAK
             warnings = new List<string>();
 
             Models.CS2 cs2 = new Models.CS2() { Name = plan.Name };
+            List<KeyValuePair<Models.CS2.Component.LOD.Submesh, List<Vector3>>> built = new List<KeyValuePair<Models.CS2.Component.LOD.Submesh, List<Vector3>>>();
             foreach (PlannedComponent plannedComponent in plan.Components)
             {
                 Models.CS2.Component component = new Models.CS2.Component();
@@ -1343,7 +1344,7 @@ namespace AlienPAK
                     Models.CS2.Component.LOD lod = new Models.CS2.Component.LOD(plannedLOD.Name ?? "");
                     foreach (PlannedSubmesh plannedSubmesh in included)
                     {
-                        List<Models.CS2.Component.LOD.Submesh> made = ToSubmeshes(scene.Meshes[plannedSubmesh.MeshIndex], plannedSubmesh.Transform, plannedSubmesh.Metadata, out List<string> submeshWarnings, plan.UnitScale, plan.Scale, plan.BoneNames);
+                        List<Models.CS2.Component.LOD.Submesh> made = ToSubmeshes(scene.Meshes[plannedSubmesh.MeshIndex], plannedSubmesh.Transform, plannedSubmesh.Metadata, out List<string> submeshWarnings, plan.UnitScale, plan.Scale, plan.BoneNames, built);
                         if (made.Count == 0)
                         {
                             warnings.Add(plannedSubmesh.MeshName + ": could not be converted (it needs at least 3 vertices and triangular faces).");
@@ -1369,6 +1370,7 @@ namespace AlienPAK
                 if (component.LODs.Count != 0)
                     cs2.Components.Add(component);
             }
+            ShareGridAtSeams(built);
             return cs2;
         }
 
@@ -1444,9 +1446,10 @@ namespace AlienPAK
         /// <summary>
         /// Convert an Assimp mesh into as many submeshes as it takes: one when it fits, otherwise pieces of it in the file's
         /// own triangle order, about 20,000 triangles each, and any piece that still won't fit (moving UVs back into range can
-        /// add vertices) cut in half again. Empty when the mesh can't be converted at all.
+        /// add vertices) cut in half again. Empty when the mesh can't be converted at all. Pass <paramref name="built"/> to
+        /// collect each submesh made with its positions, for <see cref="ShareGridAtSeams"/>.
         /// </summary>
-        public static List<Models.CS2.Component.LOD.Submesh> ToSubmeshes(Mesh mesh, Matrix4x4 transform, SubmeshMetadata metadata, out List<string> warnings, float unitScale = UnitScale, float scale = 1.0f, Dictionary<string, int> boneNames = null)
+        public static List<Models.CS2.Component.LOD.Submesh> ToSubmeshes(Mesh mesh, Matrix4x4 transform, SubmeshMetadata metadata, out List<string> warnings, float unitScale = UnitScale, float scale = 1.0f, Dictionary<string, int> boneNames = null, List<KeyValuePair<Models.CS2.Component.LOD.Submesh, List<Vector3>>> built = null)
         {
             warnings = new List<string>();
             List<Models.CS2.Component.LOD.Submesh> made = new List<Models.CS2.Component.LOD.Submesh>();
@@ -1457,7 +1460,7 @@ namespace AlienPAK
             int pieces = triangles.Count > MaxTrianglesPerSubmesh ? (int)Math.Ceiling(triangles.Count / 20000.0) : 1;
             if (pieces == 1)
             {
-                Models.CS2.Component.LOD.Submesh whole = ToSubmesh(mesh, transform, metadata, out List<string> wholeWarnings, unitScale, scale, boneNames);
+                Models.CS2.Component.LOD.Submesh whole = ToSubmesh(mesh, transform, metadata, out List<string> wholeWarnings, unitScale, scale, boneNames, built);
                 warnings.AddRange(wholeWarnings);
                 if (whole != null || triangles.Count < 2 || (triangles.Count <= MaxTrianglesPerSubmesh && mesh.VertexCount <= ushort.MaxValue && !MayOutgrowVertexLimit(mesh)))
                 {
@@ -1471,7 +1474,7 @@ namespace AlienPAK
             int per = (triangles.Count + pieces - 1) / pieces;
             for (int start = 0; start < triangles.Count; start += per)
             {
-                made.AddRange(ToSubmeshes(MeshPiece(mesh, triangles, start, Math.Min(per, triangles.Count - start)), transform, metadata, out List<string> pieceWarnings, unitScale, scale, boneNames));
+                made.AddRange(ToSubmeshes(MeshPiece(mesh, triangles, start, Math.Min(per, triangles.Count - start)), transform, metadata, out List<string> pieceWarnings, unitScale, scale, boneNames, built));
                 foreach (string warning in pieceWarnings)
                     if (!warnings.Contains(warning)) warnings.Add(warning);
             }
@@ -1562,7 +1565,7 @@ namespace AlienPAK
         }
 
         /* Convert a single Assimp mesh into a submesh, re-using the original vertex format where we have one */
-        public static Models.CS2.Component.LOD.Submesh ToSubmesh(Mesh mesh, Matrix4x4 transform, SubmeshMetadata metadata, out List<string> warnings, float unitScale = UnitScale, float scale = 1.0f, Dictionary<string, int> boneNames = null)
+        public static Models.CS2.Component.LOD.Submesh ToSubmesh(Mesh mesh, Matrix4x4 transform, SubmeshMetadata metadata, out List<string> warnings, float unitScale = UnitScale, float scale = 1.0f, Dictionary<string, int> boneNames = null, List<KeyValuePair<Models.CS2.Component.LOD.Submesh, List<Vector3>>> built = null)
         {
             warnings = new List<string>();
 
@@ -1686,6 +1689,7 @@ namespace AlienPAK
             //A submesh with nothing encoded in it is worse than no submesh at all
             submesh.Data = Encode(submesh.VertexFormatFull, source, indices);
             if (submesh.Data == null || submesh.Data.Length == 0) return null;
+            built?.Add(new KeyValuePair<Models.CS2.Component.LOD.Submesh, List<Vector3>>(submesh, positions));
             return submesh;
         }
 
@@ -1877,7 +1881,7 @@ namespace AlienPAK
         }
 
         /// <summary>
-        /// Resize a submesh that is already in the level by any factor, including a fractional one.
+        /// Resize submeshes that are already in the level by any factor, including a fractional one.
         ///
         /// A submesh's <c>VertexScale</c> is a whole number because the file stores it as one, so it
         /// cannot express "1.5x" on its own. What it can do is set the range the 16-bit positions are
@@ -1888,21 +1892,113 @@ namespace AlienPAK
         /// weights, and the position's own W, whose meaning in this format is still unknown - is left
         /// exactly as it was. That is why this rewrites the vertex buffer in place rather than going
         /// through <c>ToMesh</c>/<c>ToSubmeshData</c>, which would round-trip W away.
+        ///
+        /// Resize submeshes that belong together in one call: where they share a point it goes on the
+        /// coarsest of their new grids, as <see cref="ShareGridAtSeams"/> does on import, so they still
+        /// meet. Positions are rounded onto the new grid. They used to be cut toward zero, which pulled
+        /// each submesh toward the model's origin by up to a step of its own grid - a different distance
+        /// for each - and Solace imported at x1 and resized x1.5 had 41,570 of its 61,361 shared points
+        /// apart, by up to 1.85 cm (27 Oct 2026).
         /// </summary>
+        /// <returns>The submeshes resized; one with no position data to move is left untouched and out of it.</returns>
+        public static List<Models.CS2.Component.LOD.Submesh> RescaleSubmeshes(IEnumerable<Models.CS2.Component.LOD.Submesh> submeshes, float factor)
+        {
+            List<Models.CS2.Component.LOD.Submesh> resized = new List<Models.CS2.Component.LOD.Submesh>();
+            if (submeshes == null || factor <= 0.0f) return resized;
+
+            List<(Models.CS2.Component.LOD.Submesh submesh, List<(long offset, VertexFormat.Type type, Vector4 value)> stored, int oldScale)> jobs = new List<(Models.CS2.Component.LOD.Submesh, List<(long, VertexFormat.Type, Vector4)>, int)>();
+            foreach (Models.CS2.Component.LOD.Submesh submesh in submeshes)
+            {
+                if (submesh?.Data == null || submesh.Data.Length == 0) continue;
+                if (ReferenceEquals(submesh.VertexFormatFull, null) || submesh.VertexFormatFull.Attributes == null) continue;
+                if (factor == 1.0f) { resized.Add(submesh); continue; }
+
+                List<(long offset, VertexFormat.Type type, Vector4 value)> stored = ReadPositions(submesh);
+                if (stored.Count == 0) continue;
+
+                //Stored positions are normalised against the old scale; work out the new size in metres
+                int oldScale = submesh.VertexScale <= 0 ? 1 : submesh.VertexScale;
+                Vector3 min = new Vector3(float.MaxValue), max = new Vector3(float.MinValue);
+                float extent = 0;
+                foreach ((long offset, VertexFormat.Type type, Vector4 value) slot in stored)
+                {
+                    Vector3 position = new Vector3(slot.value.X, slot.value.Y, slot.value.Z) * oldScale;
+                    extent = Math.Max(extent, position.Length());
+                    min = Vector3.Min(min, position * factor);
+                    max = Vector3.Max(max, position * factor);
+                }
+                /* A skinned submesh keeps a distance in MinBounds, not a corner (see SetSkinnedBounds): how far any vertex sits
+                   from a bone weighting it, which the game grows the bones by to cull the mesh. Writing the corner there made a
+                   character resized x1.15 vanish in game whenever the save's repair couldn't match it to a rig any more (27 Oct
+                   2026). The rig doesn't move, so the vertices only scale about the origin: |f*v - b| <= f*|v - b| + |f - 1|*|b|,
+                   and |b| <= |v| + |v - b| - the old distance grown by that much always covers the new one. */
+                bool skinnedReach = submesh.Bones.Count != 0 && submesh.MinBounds.X >= 0 && submesh.MinBounds.X == submesh.MinBounds.Y && submesh.MinBounds.Y == submesh.MinBounds.Z;
+                if (skinnedReach)
+                {
+                    float reach = submesh.MinBounds.X * factor + Math.Abs(factor - 1.0f) * (extent + submesh.MinBounds.X);
+                    submesh.MinBounds = new Vector3(reach, reach, reach);
+                }
+                else
+                    submesh.MinBounds = min;
+                submesh.MaxBounds = max;
+                submesh.VertexScale = (ushort)CalculateScaleFactor(min, max);
+                jobs.Add((submesh, stored, oldScale));
+                resized.Add(submesh);
+            }
+
+            //Copies of one point were stored at exactly the same place: the same steps times scale, whatever each one's scale
+            Dictionary<(long, long, long), (int coarse, int fine)> grids = new Dictionary<(long, long, long), (int, int)>();
+            foreach (var job in jobs)
+                foreach ((long offset, VertexFormat.Type type, Vector4 value) slot in job.stored)
+                {
+                    if (slot.type != VertexFormat.Type.S16_4N) continue;
+                    (long, long, long) place = StoredPlace(slot.value, job.oldScale);
+                    int scale = job.submesh.VertexScale;
+                    grids[place] = grids.TryGetValue(place, out (int coarse, int fine) held) ? (Math.Max(held.coarse, scale), Math.Min(held.fine, scale)) : (scale, scale);
+                }
+
+            foreach (var job in jobs)
+            {
+                //One multiplier takes a value normalised against the old scale to one against the new
+                float renormalise = job.oldScale * factor / job.submesh.VertexScale;
+                using (MemoryStream stream = new MemoryStream(job.submesh.Data, true))
+                using (BinaryWriter writer = new BinaryWriter(stream))
+                {
+                    foreach ((long offset, VertexFormat.Type type, Vector4 value) slot in job.stored)
+                    {
+                        stream.Position = slot.offset;
+                        if (slot.type != VertexFormat.Type.S16_4N)
+                        {
+                            ModelUtility.WriteVertexData(writer, new Vector4(slot.value.X * renormalise, slot.value.Y * renormalise, slot.value.Z * renormalise, slot.value.W), slot.type);
+                            continue;
+                        }
+
+                        //XYZ only: the W after them stays as it was
+                        (long x, long y, long z) place = StoredPlace(slot.value, job.oldScale);
+                        (int coarse, int fine) grid = grids[place];
+                        int ratio = grid.coarse / job.submesh.VertexScale;
+                        writer.Write((short)(StepsOnGrid(place.x / (double)short.MaxValue * factor, grid.coarse, grid.fine) * ratio));
+                        writer.Write((short)(StepsOnGrid(place.y / (double)short.MaxValue * factor, grid.coarse, grid.fine) * ratio));
+                        writer.Write((short)(StepsOnGrid(place.z / (double)short.MaxValue * factor, grid.coarse, grid.fine) * ratio));
+                    }
+                }
+            }
+            return resized;
+        }
+
+        /// <summary>Resize one submesh: see <see cref="RescaleSubmeshes"/>.</summary>
         /// <returns>False when the submesh has no position data to move; it is left untouched.</returns>
         public static bool RescaleSubmesh(Models.CS2.Component.LOD.Submesh submesh, float factor)
         {
-            if (submesh?.Data == null || submesh.Data.Length == 0 || factor <= 0.0f) return false;
-            if (ReferenceEquals(submesh.VertexFormatFull, null) || submesh.VertexFormatFull.Attributes == null) return false;
-            if (factor == 1.0f) return true;
+            return RescaleSubmeshes(new[] { submesh }, factor).Count == 1;
+        }
 
-            List<long> offsets = new List<long>();
-            List<VertexFormat.Type> types = new List<VertexFormat.Type>();
-            List<Vector4> stored = new List<Vector4>();
-
-            /* Walks the buffer exactly as ModelUtility.ToMesh does, alignment and all, so the offset
-             * recorded for each position is the one it really sits at. Measured against 4,892 shipped
-             * submeshes: this walk ends on the last byte of Data every time. */
+        /* Each vertex's position as stored, and where in the buffer it sits. Walks the buffer exactly as
+         * ModelUtility.ToMesh does, alignment and all, so the offset recorded for each position is the one it
+         * really sits at. Measured against 4,892 shipped submeshes: this walk ends on the last byte of Data every time. */
+        private static List<(long offset, VertexFormat.Type type, Vector4 value)> ReadPositions(Models.CS2.Component.LOD.Submesh submesh)
+        {
+            List<(long offset, VertexFormat.Type type, Vector4 value)> positions = new List<(long, VertexFormat.Type, Vector4)>();
             using (BinaryReader reader = new BinaryReader(new MemoryStream(submesh.Data)))
             {
                 for (int i = 0; i < submesh.VertexFormatFull.Attributes.Count; ++i)
@@ -1916,46 +2012,82 @@ namespace AlienPAK
                             long at = reader.BaseStream.Position;
                             Vector4 value = ModelUtility.ReadVertexData(reader, attribute.Type);
                             if (attribute.Usage != VertexFormat.Usage.Position) continue;
-
-                            offsets.Add(at);
-                            types.Add(attribute.Type);
-                            stored.Add(value);
+                            positions.Add((at, attribute.Type, value));
                         }
                     }
                     Utilities.Align(reader, 16);
                 }
             }
-            if (offsets.Count == 0) return false;
+            return positions;
+        }
 
-            //Stored positions are normalised against the old scale; work out the new size in metres
-            int oldScale = submesh.VertexScale <= 0 ? 1 : submesh.VertexScale;
-            Vector3 min = new Vector3(float.MaxValue), max = new Vector3(float.MinValue);
-            for (int i = 0; i < stored.Count; i++)
-            {
-                Vector3 position = new Vector3(stored[i].X, stored[i].Y, stored[i].Z) * (oldScale * factor);
-                min = Vector3.Min(min, position);
-                max = Vector3.Max(max, position);
-            }
+        /* Where a stored S16_4N position is, exactly, in steps of a scale-1 grid: its own steps times its scale */
+        private static (long, long, long) StoredPlace(Vector4 stored, int scale)
+        {
+            return ((long)Math.Round(stored.X * short.MaxValue) * scale, (long)Math.Round(stored.Y * short.MaxValue) * scale, (long)Math.Round(stored.Z * short.MaxValue) * scale);
+        }
 
-            int newScale = CalculateScaleFactor(min, max);
-            submesh.MinBounds = min;
-            submesh.MaxBounds = max;
-            submesh.VertexScale = (ushort)newScale;
-
-            //One multiplier takes a value normalised against the old scale to one against the new
-            float renormalise = oldScale * factor / newScale;
-            using (MemoryStream stream = new MemoryStream(submesh.Data, true))
-            using (BinaryWriter writer = new BinaryWriter(stream))
-            {
-                for (int i = 0; i < offsets.Count; i++)
+        /// <summary>
+        /// Make the submeshes of one import meet exactly wherever they share a point.
+        ///
+        /// Each submesh stores its positions in 16 bits against its own VertexScale - the power of two
+        /// its own extent needs - so a point two submeshes share (wherever one of the file's meshes meets
+        /// another, and along every cut ToSubmeshes makes) was rounded onto two different grids, and the
+        /// copies came apart: Halo 4's Solace, 69 submeshes on scales 16 to 512, imported at x1.5 opened
+        /// 36,000 of its 61,361 shared points by up to a centimetre, and the sky showed through (27 Oct 2026). The
+        /// scales being powers of two, a point on the coarsest grid among the submeshes holding it lies
+        /// exactly on every finer one, so that is where it goes: every copy then decodes to the same place,
+        /// and everything else keeps its own submesh's precision. One scale for the whole model closes the
+        /// cracks too, but Solace's 512 flattened 22,000 of its smaller triangles. Shipped models never mix
+        /// scales within a component (TECH_HUB, BSP_TORRENS, SCI_HUB: none of 3,534), so a round trip of
+        /// one comes back as it was.
+        /// </summary>
+        private static void ShareGridAtSeams(List<KeyValuePair<Models.CS2.Component.LOD.Submesh, List<Vector3>>> built)
+        {
+            //The coarsest and finest grid each point is held on (+0 makes -0 and 0 one point)
+            Dictionary<Vector3, (int coarse, int fine)> grids = new Dictionary<Vector3, (int, int)>();
+            foreach (KeyValuePair<Models.CS2.Component.LOD.Submesh, List<Vector3>> entry in built)
+                foreach (Vector3 position in entry.Value)
                 {
-                    stream.Position = offsets[i];
-                    Vector4 value = stored[i];
-                    ModelUtility.WriteVertexData(writer, new Vector4(
-                        value.X * renormalise, value.Y * renormalise, value.Z * renormalise, value.W), types[i]);
+                    Vector3 point = position + Vector3.Zero;
+                    int scale = entry.Key.VertexScale;
+                    grids[point] = grids.TryGetValue(point, out (int coarse, int fine) held) ? (Math.Max(held.coarse, scale), Math.Min(held.fine, scale)) : (scale, scale);
+                }
+
+            foreach (KeyValuePair<Models.CS2.Component.LOD.Submesh, List<Vector3>> entry in built)
+            {
+                Models.CS2.Component.LOD.Submesh submesh = entry.Key;
+                if (submesh.VertexScale <= 0 || !entry.Value.Any(o => grids[o + Vector3.Zero].coarse != grids[o + Vector3.Zero].fine)) continue;
+                List<(long offset, VertexFormat.Type type, Vector4 value)> stored = ReadPositions(submesh);
+                if (stored.Count != entry.Value.Count) continue;
+
+                using (MemoryStream stream = new MemoryStream(submesh.Data, true))
+                using (BinaryWriter writer = new BinaryWriter(stream))
+                {
+                    for (int i = 0; i < stored.Count; i++)
+                    {
+                        //A point held on one grid only already rounds the same way in every copy
+                        (int coarse, int fine) grid = grids[entry.Value[i] + Vector3.Zero];
+                        if (stored[i].type != VertexFormat.Type.S16_4N || grid.coarse == grid.fine) continue;
+
+                        //XYZ only: the W after them stays as it was
+                        int ratio = grid.coarse / submesh.VertexScale;
+                        stream.Position = stored[i].offset;
+                        writer.Write((short)(StepsOnGrid(entry.Value[i].X, grid.coarse, grid.fine) * ratio));
+                        writer.Write((short)(StepsOnGrid(entry.Value[i].Y, grid.coarse, grid.fine) * ratio));
+                        writer.Write((short)(StepsOnGrid(entry.Value[i].Z, grid.coarse, grid.fine) * ratio));
+                    }
                 }
             }
-            return true;
+        }
+
+        /* A coordinate in metres as the nearest step of the coarse grid - which is exactly (coarse / own) steps
+         * of any finer grid, the scales being powers of two. Held to what the finest grid holding the point can
+         * still store, so a point at the very edge of its range is pulled in a step rather than overflow there. */
+        private static int StepsOnGrid(double metres, int coarse, int fine)
+        {
+            int limit = (int)((long)short.MaxValue * fine / coarse);
+            return (int)Math.Max(-limit, Math.Min(limit, Math.Round(metres / coarse * short.MaxValue)));
         }
 
         #endregion

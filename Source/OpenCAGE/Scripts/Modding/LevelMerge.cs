@@ -345,13 +345,13 @@ namespace OpenCAGE.Modding
                 File.WriteAllBytes(path, file.Value);
             }
         }
-        /* The level's text, and anything else in its folder that saving the level doesn't write */
+        /* The level's text, its sound package, and anything else in its folder that saving the level doesn't write */
         private static void MergeLooseFiles(string gameRoot, string level, IList<LevelVersion> versions, LevelMergeResult result)
         {
             HashSet<string> paths = new HashSet<string>(versions.SelectMany(o => o.Files.Keys));
             foreach (string path in paths)
             {
-                bool loose = path.Contains("/TEXT/") || !File.Exists(ModToolkit.Denormalise(gameRoot, path));
+                bool loose = path.Contains("/TEXT/") || ModToolkit.IsLevelSoundPackage(path) || !File.Exists(ModToolkit.Denormalise(gameRoot, path));
                 if (!loose) continue;
                 string full = ModToolkit.Denormalise(gameRoot, path);
                 List<Contribution> changed = versions.Where(o => o.Files.ContainsKey(path) && o.Files[path] != null)

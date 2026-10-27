@@ -791,7 +791,7 @@ namespace OpenCAGE.MCP
         }
 
         /// <summary>Refuse, or close the game when asked, before a global file is written: the game holds them open.</summary>
-        private static void CloseOrRefuse(McpCall call, string why)
+        internal static void CloseOrRefuse(McpCall call, string why)
         {
             if (!GameRunning()) return;
             if (!call.Bool("close_game"))
@@ -5192,9 +5192,10 @@ namespace OpenCAGE.MCP
                 {
                     if (permanent.Any(p => Same(p, bank))) return "permanent";
                     List<McpSoundTools.BankLoader> by = loaders.Where(l => Same(l.Bank, bank)).ToList();
-                    if (by.Any(l => l.OnReset)) return "level start (SoundLoadBank)";
-                    if (by.Count != 0) return "when triggered (SoundLoadBank)";
-                    return zones.Any(z => Same(z, bank)) ? "load-zone list only" : null;
+                    if (by.Any(l => l.OnReset && !l.TypedOnly)) return "level start (SoundLoadBank)";
+                    if (by.Any(l => !l.TypedOnly)) return "when triggered (SoundLoadBank)";
+                    if (zones.Any(z => Same(z, bank))) return "load-zone list only";
+                    return by.Count != 0 ? "not loaded: typed on a SoundLoadBank's sound_bank, which the game does not read (link a VariableString to it)" : null;
                 }
 
                 string[] words = Words(filter);
@@ -5452,7 +5453,7 @@ namespace OpenCAGE.MCP
             }
 
             if (readings.Count == 0)
-                throw new McpError("None of those variations can be replaced on one level: their audio is all in permanent soundbanks (DATA/LIST_OF_PERMANENT_SOUND_BANKS.TXT), which the game loads as it starts, before any level's sound package is read.");
+                throw new McpError("None of those variations can be replaced on one level: their audio is all in permanent soundbanks (Init, UI and those in DATA/LIST_OF_PERMANENT_SOUND_BANKS.TXT), which the game loads as it starts, before any level's sound package is read.");
 
             //One variation keeps the flat result it always had; several are listed
             JObject result = targets.Count == 1 ? (JObject)rows[0].DeepClone() : new JObject() { ["replacing"] = rows };
