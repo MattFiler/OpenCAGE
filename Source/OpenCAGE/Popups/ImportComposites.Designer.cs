@@ -43,6 +43,8 @@
             this.summaryLabel = new System.Windows.Forms.Label();
             this.importButton = new System.Windows.Forms.Button();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
+            this.previewLabel = new System.Windows.Forms.Label();
+            this.compositePreview = new OpenCAGE.Popups.UserControls.CompositePreviewPane();
             this.SuspendLayout();
             //
             // label1
@@ -56,6 +58,8 @@
             //
             // levelList
             //
+            this.levelList.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)));
             this.levelList.FormattingEnabled = true;
             this.levelList.HorizontalScrollbar = true;
             this.levelList.IntegralHeight = false;
@@ -76,16 +80,19 @@
             //
             // filterBox
             //
+            this.filterBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.filterBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.filterBox.Location = new System.Drawing.Point(247, 28);
             this.filterBox.Name = "filterBox";
-            this.filterBox.Size = new System.Drawing.Size(425, 20);
+            this.filterBox.Size = new System.Drawing.Size(381, 20);
             this.filterBox.TabIndex = 3;
             this.toolTip1.SetToolTip(this.filterBox, "Show only composites whose name contains this text: press Search (or Enter) to apply it, and empty the box to show them all again.");
             //
             // searchButton
             //
-            this.searchButton.Location = new System.Drawing.Point(678, 27);
+            this.searchButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.searchButton.Location = new System.Drawing.Point(634, 27);
             this.searchButton.Name = "searchButton";
             this.searchButton.Size = new System.Drawing.Size(70, 23);
             this.searchButton.TabIndex = 4;
@@ -95,15 +102,19 @@
             //
             // compositeTree
             //
+            this.compositeTree.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.compositeTree.CheckBoxes = true;
             this.compositeTree.HideSelection = false;
             this.compositeTree.Location = new System.Drawing.Point(247, 54);
             this.compositeTree.Name = "compositeTree";
-            this.compositeTree.Size = new System.Drawing.Size(501, 320);
+            this.compositeTree.Size = new System.Drawing.Size(457, 320);
             this.compositeTree.TabIndex = 5;
             //
             // checkShown
             //
+            this.checkShown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.checkShown.Location = new System.Drawing.Point(247, 380);
             this.checkShown.Name = "checkShown";
             this.checkShown.Size = new System.Drawing.Size(120, 23);
@@ -115,6 +126,7 @@
             //
             // uncheckShown
             //
+            this.uncheckShown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.uncheckShown.Location = new System.Drawing.Point(373, 380);
             this.uncheckShown.Name = "uncheckShown";
             this.uncheckShown.Size = new System.Drawing.Size(120, 23);
@@ -126,6 +138,7 @@
             //
             // overwriteComposites
             //
+            this.overwriteComposites.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.overwriteComposites.AutoSize = true;
             this.overwriteComposites.Location = new System.Drawing.Point(15, 412);
             this.overwriteComposites.Name = "overwriteComposites";
@@ -137,6 +150,7 @@
             //
             // overwriteAssets
             //
+            this.overwriteAssets.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.overwriteAssets.AutoSize = true;
             this.overwriteAssets.Location = new System.Drawing.Point(247, 412);
             this.overwriteAssets.Name = "overwriteAssets";
@@ -148,6 +162,7 @@
             //
             // openAfterImport
             //
+            this.openAfterImport.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.openAfterImport.AutoSize = true;
             this.openAfterImport.Location = new System.Drawing.Point(15, 435);
             this.openAfterImport.Name = "openAfterImport";
@@ -160,6 +175,7 @@
             //
             // summaryLabel
             //
+            this.summaryLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.summaryLabel.AutoSize = true;
             this.summaryLabel.Location = new System.Drawing.Point(244, 438);
             this.summaryLabel.Name = "summaryLabel";
@@ -169,7 +185,8 @@
             //
             // importButton
             //
-            this.importButton.Location = new System.Drawing.Point(632, 410);
+            this.importButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.importButton.Location = new System.Drawing.Point(872, 410);
             this.importButton.Name = "importButton";
             this.importButton.Size = new System.Drawing.Size(116, 42);
             this.importButton.TabIndex = 12;
@@ -177,11 +194,33 @@
             this.importButton.UseVisualStyleBackColor = true;
             this.importButton.Click += new System.EventHandler(this.importButton_Click);
             //
+            // previewLabel
+            //
+            this.previewLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.previewLabel.AutoSize = true;
+            this.previewLabel.Location = new System.Drawing.Point(713, 12);
+            this.previewLabel.Name = "previewLabel";
+            this.previewLabel.Size = new System.Drawing.Size(48, 13);
+            this.previewLabel.TabIndex = 13;
+            this.previewLabel.Text = "Preview:";
+            //
+            // compositePreview
+            //
+            this.compositePreview.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.compositePreview.Location = new System.Drawing.Point(716, 28);
+            this.compositePreview.Name = "compositePreview";
+            this.compositePreview.Size = new System.Drawing.Size(272, 375);
+            this.compositePreview.TabIndex = 14;
+            this.compositePreview.TabStop = false;
+            //
             // ImportComposites
             //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(760, 464);
+            this.ClientSize = new System.Drawing.Size(1000, 464);
+            this.Controls.Add(this.compositePreview);
+            this.Controls.Add(this.previewLabel);
             this.Controls.Add(this.importButton);
             this.Controls.Add(this.summaryLabel);
             this.Controls.Add(this.openAfterImport);
@@ -195,9 +234,10 @@
             this.Controls.Add(this.label2);
             this.Controls.Add(this.levelList);
             this.Controls.Add(this.label1);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.Sizable;
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.MaximizeBox = false;
+            this.MinimumSize = new System.Drawing.Size(816, 440);
             this.Name = "ImportComposites";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Import Composites";
@@ -222,5 +262,7 @@
         private System.Windows.Forms.Label summaryLabel;
         private System.Windows.Forms.Button importButton;
         private System.Windows.Forms.ToolTip toolTip1;
+        private System.Windows.Forms.Label previewLabel;
+        private OpenCAGE.Popups.UserControls.CompositePreviewPane compositePreview;
     }
 }

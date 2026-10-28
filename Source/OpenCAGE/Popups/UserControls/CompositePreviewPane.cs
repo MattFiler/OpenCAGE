@@ -29,6 +29,11 @@ namespace OpenCAGE.Popups.UserControls
         private string _message;
         private Font _titleFont;
 
+        //A composite of a level that is not the loaded one (see ShowOtherLevelComposite): its preview is the caller's
+        private bool _otherLevel;
+        private Image _otherPreview;
+        private bool _otherDrawsNothing;
+
         public CompositePreviewPane()
         {
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
@@ -46,6 +51,7 @@ namespace OpenCAGE.Popups.UserControls
         /// <summary>Show this composite's preview. Null (nothing selected) clears it.</summary>
         public void ShowComposite(Composite composite)
         {
+            ForgetOtherLevel();
             _composite = composite;
             _message = null;
             if (composite == null)
@@ -68,11 +74,37 @@ namespace OpenCAGE.Popups.UserControls
         /// <summary>A folder is selected: its name, and a line saying to pick a composite in it.</summary>
         public void ShowFolder(string path)
         {
+            ForgetOtherLevel();
             _composite = null;
             SplitPath((path ?? "").Replace('\\', '/').TrimEnd('/'), out _title, out _subtitle);
             _message = "A folder. Select a composite in it to see its preview.";
             AccessibleDescription = _title;
             Invalidate();
+        }
+
+        /// <summary>
+        /// A composite of a level other than the loaded one, which a window lists without loading it (Import Composites From
+        /// Level): its name, and the preview that level holds for it, which the caller found and keeps (null: it has none;
+        /// <paramref name="drawsNothing"/>: that level's own table says it draws nothing). The loaded level's previews are
+        /// not asked - the same ID there can be a different composite.
+        /// </summary>
+        public void ShowOtherLevelComposite(string name, Image preview, bool drawsNothing)
+        {
+            _composite = null;
+            _message = null;
+            _otherLevel = true;
+            _otherPreview = preview;
+            _otherDrawsNothing = drawsNothing;
+            SplitPath(string.IsNullOrWhiteSpace(name) ? "(Root)" : name.Replace('\\', '/'), out _title, out _subtitle);
+            AccessibleDescription = _title;
+            Invalidate();
+        }
+
+        private void ForgetOtherLevel()
+        {
+            _otherLevel = false;
+            _otherPreview = null;
+            _otherDrawsNothing = false;
         }
 
         /// <summary>
@@ -146,6 +178,18 @@ namespace OpenCAGE.Popups.UserControls
             Rectangle body = new Rectangle(area.Left, top, area.Width, area.Bottom - top);
             if (body.Height <= 0)
                 return;
+
+            if (_otherLevel)
+            {
+                //Nothing here knows whether it was edited since: its own level's preview is all there is
+                if (_otherPreview != null)
+                    DrawPreview(g, _otherPreview, body);
+                else
+                    DrawMissing(g, body, "No preview", _otherDrawsNothing
+                        ? "Composites with nothing to draw, such as scripts and lights, have none."
+                        : "Composites with nothing to draw, such as scripts and lights, have none. Others get one when their level is saved with the Level Viewer open.");
+                return;
+            }
 
             if (_composite == null)
             {

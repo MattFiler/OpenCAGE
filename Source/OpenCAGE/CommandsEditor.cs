@@ -176,6 +176,9 @@ namespace OpenCAGE
             compositeViewerToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
             entityDisplayToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
             entityDisplayToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
+            saveBuildToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
+            saveBuildToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
+            saveBuildToolStripMenuItem.DropDownOpening += SaveBuildOptionsDropDownOpening;
             miscToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
             miscToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
             viewportOptionsToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
@@ -2593,6 +2596,22 @@ namespace OpenCAGE
             ToggleBoolSetting(Settings.AlwaysFullyRebuildRadiosity);
         }
 
+        private void skipRadiosityRebuildToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.SkipRadiosityRebuild);
+        }
+
+        /* Options > Save/Build's radiosity pair. Don't Rebuild Radiosity skips the bake that Always Fully Rebuild Radiosity
+           changes, so while it is on the other is greyed out and shown unticked, keeping its own setting for when the bake
+           comes back (LevelContent.RadiositySettingsFromOptions lets the skip win the same way). */
+        private void ApplyRadiosityOptionGates()
+        {
+            bool skip = SettingsManager.GetBool(Settings.SkipRadiosityRebuild);
+            skipRadiosityRebuildToolStripMenuItem.Checked = skip;
+            alwaysFullyRebuildRadiosityToolStripMenuItem.Enabled = !skip;
+            alwaysFullyRebuildRadiosityToolStripMenuItem.Checked = !skip && SettingsManager.GetBool(Settings.AlwaysFullyRebuildRadiosity);
+        }
+
         private void hideLiveLinkLabelToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ToggleBoolSetting(Settings.HideLiveLinkLabel);
@@ -3043,8 +3062,8 @@ namespace OpenCAGE
                 hideNestedScriptEntitiesToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.HideNestedScriptEntities);
             if (ShouldApplySetting(Settings.ResetRenderFilters, changedKeys))
                 resetRenderFiltersOnLoadToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ResetRenderFilters);
-            if (ShouldApplySetting(Settings.AlwaysFullyRebuildRadiosity, changedKeys))
-                alwaysFullyRebuildRadiosityToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.AlwaysFullyRebuildRadiosity);
+            if (ShouldApplySetting(Settings.AlwaysFullyRebuildRadiosity, changedKeys) || ShouldApplySetting(Settings.SkipRadiosityRebuild, changedKeys))
+                ApplyRadiosityOptionGates();
             if (ShouldApplySetting(Settings.CubemapCaptureSize, changedKeys))
                 ApplyCubemapCaptureSizeSelectionFromSettings();
             if (ShouldApplySetting(Settings.HideLiveLinkLabel, changedKeys))
@@ -4149,11 +4168,11 @@ namespace OpenCAGE
             ToggleBoolSetting(Settings.AskBeforeDeletingNode);
         }
 
-        private void miscToolStripMenuItem_Click(object sender, EventArgs e)
+        private void SaveBuildOptionsDropDownOpening(object sender, EventArgs e)
         {
             //NOTE: We don't actually allow this to be changed (even though it could be done) because it's not much use, for now at least. Maybe some sort of conversion between compressed and uncompressed levels in future.
             writeCompressedToolStripMenuItem.Checked = _compositeBrowser?.Content?.Level?.Commands != null && _compositeBrowser.Content.Level.Commands.Compressed;
-            writeCompressedToolStripMenuItem.Enabled = false; 
+            writeCompressedToolStripMenuItem.Enabled = false;
         }
 
         ControlsWindow _controlsWindow = null;

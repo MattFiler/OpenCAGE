@@ -100,6 +100,8 @@ namespace OpenCAGE
         public const string DidSteamReviewPrompt = "DidSteamReviewPrompt";
         public const string ResetRenderFilters = "ResetRenderFilters";
         public const string AlwaysFullyRebuildRadiosity = "AlwaysFullyRebuildRadiosity";
+        //Options > Save/Build > Don't Rebuild Radiosity: a build keeps the level's radiosity as it is, without baking (wins over the above)
+        public const string SkipRadiosityRebuild = "SkipRadiosityRebuild";
         public const string CubemapCaptureSize = "CubemapCaptureSize";
         //Options > Misc > Hide Live Link Label In-Game: the game doesn't show "OpenCAGE Live Link" in its top-right corner
         public const string HideLiveLinkLabel = "HideLiveLinkLabel";

@@ -55,6 +55,9 @@ namespace OpenCAGE.Popups.UserControls
 
         public event Action SelectionChanged;
 
+        /// <summary>The nodes were made again (a new list, or a search): whatever node was selected is gone.</summary>
+        public event Action Rebuilt;
+
         public CompositeTree(TreeView view)
         {
             _view = view;
@@ -438,6 +441,7 @@ namespace OpenCAGE.Popups.UserControls
                 _view.EndUpdate();
                 _updating = false;
             }
+            Rebuilt?.Invoke();
         }
 
         private static int IconFor(ItemKind kind)

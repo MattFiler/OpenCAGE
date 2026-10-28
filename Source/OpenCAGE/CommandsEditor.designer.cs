@@ -162,6 +162,9 @@ namespace OpenCAGE
             this.writeCompressedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.resetRenderFiltersOnLoadToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.alwaysFullyRebuildRadiosityToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.saveBuildToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.saveBuildToolStripSeparatorRadiosity = new System.Windows.Forms.ToolStripSeparator();
+            this.skipRadiosityRebuildToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.cubemapCaptureSizeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.hideLiveLinkLabelToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.cubemapCaptureSizeReplacedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -704,6 +707,7 @@ namespace OpenCAGE
             this.compositeViewerToolStripMenuItem,
             this.entityDisplayToolStripMenuItem,
             this.viewportOptionsToolStripMenuItem,
+            this.saveBuildToolStripMenuItem,
             this.miscToolStripMenuItem,
             this.controlsToolStripMenuItem,
             this.manageGameDirectoriesToolStripMenuItem});
@@ -1223,28 +1227,51 @@ namespace OpenCAGE
             this.drawDistanceUnlimitedToolStripMenuItem.ToolTipText = "Every model drawn however far away it is. Nothing pops out, but big levels are much slower.";
             this.drawDistanceUnlimitedToolStripMenuItem.Click += new System.EventHandler(this.drawDistanceToolStripMenuItem_Click);
             //
-            // miscToolStripMenuItem
-            // 
-            this.miscToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            // saveBuildToolStripMenuItem
+            //
+            this.saveBuildToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.showConfirmationWhenSavingToolStripMenuItem,
             this.promptToSaveOnCloseToolStripMenuItem,
+            this.openGameOnSaveToolStripMenuItem,
+            this.writeCompressedToolStripMenuItem,
+            this.saveBuildToolStripSeparatorRadiosity,
+            this.alwaysFullyRebuildRadiosityToolStripMenuItem,
+            this.skipRadiosityRebuildToolStripMenuItem});
+            this.saveBuildToolStripMenuItem.Name = "saveBuildToolStripMenuItem";
+            this.saveBuildToolStripMenuItem.Size = new System.Drawing.Size(210, 22);
+            this.saveBuildToolStripMenuItem.Text = "Save/Build";
+            //
+            // saveBuildToolStripSeparatorRadiosity
+            //
+            this.saveBuildToolStripSeparatorRadiosity.Name = "saveBuildToolStripSeparatorRadiosity";
+            this.saveBuildToolStripSeparatorRadiosity.Size = new System.Drawing.Size(251, 6);
+            //
+            // skipRadiosityRebuildToolStripMenuItem
+            //
+            this.skipRadiosityRebuildToolStripMenuItem.Name = "skipRadiosityRebuildToolStripMenuItem";
+            this.skipRadiosityRebuildToolStripMenuItem.Size = new System.Drawing.Size(254, 22);
+            this.skipRadiosityRebuildToolStripMenuItem.Text = "Don\'t Rebuild Radiosity";
+            this.skipRadiosityRebuildToolStripMenuItem.ToolTipText = "If enabled, Save and Build keeps the level\'s radiosity as it is instead of baking it: much faster where the bak" +
+    "e is long, as on custom levels. Models you add have no baked lighting and models you move keep the lighting of wh" +
+    "ere they were, until you build with this off. Always Fully Rebuild Radiosity has no effect while this is on.";
+            this.skipRadiosityRebuildToolStripMenuItem.Click += new System.EventHandler(this.skipRadiosityRebuildToolStripMenuItem_Click);
+            //
+            // miscToolStripMenuItem
+            //
+            this.miscToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.useTexturedModelViewExperimentalToolStripMenuItem,
             this.keepFunctionUsesWindowOpenToolStripMenuItem,
             this.resetUILayoutsToolStripMenuItem,
             this.setNumericStepToolStripMenuItem,
-            this.openGameOnSaveToolStripMenuItem,
             this.showGamePlatformToolStripMenuItem,
-            this.writeCompressedToolStripMenuItem,
             this.resetRenderFiltersOnLoadToolStripMenuItem,
-            this.alwaysFullyRebuildRadiosityToolStripMenuItem,
             this.cubemapCaptureSizeToolStripMenuItem,
             this.hideLiveLinkLabelToolStripMenuItem,
             this.allowAiAssistantsToolStripMenuItem});
             this.miscToolStripMenuItem.Name = "miscToolStripMenuItem";
             this.miscToolStripMenuItem.Size = new System.Drawing.Size(210, 22);
             this.miscToolStripMenuItem.Text = "Misc";
-            this.miscToolStripMenuItem.Click += new System.EventHandler(this.miscToolStripMenuItem_Click);
-            // 
+            //
             // showConfirmationWhenSavingToolStripMenuItem
             // 
             this.showConfirmationWhenSavingToolStripMenuItem.Name = "showConfirmationWhenSavingToolStripMenuItem";
@@ -1303,6 +1330,7 @@ namespace OpenCAGE
             this.openGameOnSaveToolStripMenuItem.Name = "openGameOnSaveToolStripMenuItem";
             this.openGameOnSaveToolStripMenuItem.Size = new System.Drawing.Size(254, 22);
             this.openGameOnSaveToolStripMenuItem.Text = "Open Game On Save";
+            this.openGameOnSaveToolStripMenuItem.ToolTipText = "If enabled, saving starts the game straight into the level you\'re editing, set up as the Launch Game window says.";
             this.openGameOnSaveToolStripMenuItem.Click += new System.EventHandler(this.openGameOnSaveToolStripMenuItem_Click);
             // 
             // showGamePlatformToolStripMenuItem
@@ -1317,6 +1345,8 @@ namespace OpenCAGE
             this.writeCompressedToolStripMenuItem.Name = "writeCompressedToolStripMenuItem";
             this.writeCompressedToolStripMenuItem.Size = new System.Drawing.Size(254, 22);
             this.writeCompressedToolStripMenuItem.Text = "Write Compressed";
+            this.writeCompressedToolStripMenuItem.ToolTipText = "Ticked when the open level\'s script is compressed (as on Switch and mobile): saving writes it back compressed. " +
+    "It follows the level, so it can\'t be changed here.";
             // 
             // resetRenderFiltersOnLoadToolStripMenuItem
             // 
@@ -1331,7 +1361,8 @@ namespace OpenCAGE
             this.alwaysFullyRebuildRadiosityToolStripMenuItem.Size = new System.Drawing.Size(254, 22);
             this.alwaysFullyRebuildRadiosityToolStripMenuItem.Text = "Always Fully Rebuild Radiosity";
             this.alwaysFullyRebuildRadiosityToolStripMenuItem.ToolTipText = "If enabled, saving rebuilds the level\'s radiosity from scratch every time, instead of keeping the existing light" +
-    "ing and only baking what changed. Slower, and replaces the game\'s own lighting on unedited areas too.";
+    "ing and only baking what changed. Slower, and replaces the game\'s own lighting on unedited areas too. Greyed out" +
+    " while Don\'t Rebuild Radiosity is on.";
             this.alwaysFullyRebuildRadiosityToolStripMenuItem.Click += new System.EventHandler(this.alwaysFullyRebuildRadiosityToolStripMenuItem_Click);
             //
             // cubemapCaptureSizeToolStripMenuItem
@@ -1748,6 +1779,9 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripButton manageBackupsBtn;
         private System.Windows.Forms.ToolStripMenuItem resetRenderFiltersOnLoadToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem alwaysFullyRebuildRadiosityToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem saveBuildToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator saveBuildToolStripSeparatorRadiosity;
+        private System.Windows.Forms.ToolStripMenuItem skipRadiosityRebuildToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem cubemapCaptureSizeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem hideLiveLinkLabelToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem cubemapCaptureSizeReplacedToolStripMenuItem;

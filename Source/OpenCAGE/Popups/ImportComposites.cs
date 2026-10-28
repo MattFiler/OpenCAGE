@@ -6,6 +6,7 @@ using OpenCAGE.Popups.UserControls;
 using OpenCAGE.UnityConnection;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -28,6 +29,14 @@ namespace OpenCAGE
         private string _shownLevel;
         private Dictionary<ShortGuid, CompositeIndexEntry> _shownIndex = new Dictionary<ShortGuid, CompositeIndexEntry>();
 
+        //Each source level's previews, read when one of its composites is first selected and kept while the window is open
+        private class SourcePreviews
+        {
+            public DateTime Written;
+            public CompositePreviewManager.LevelPreviews Previews;
+        }
+        private readonly Dictionary<string, SourcePreviews> _previews = new Dictionary<string, SourcePreviews>(StringComparer.OrdinalIgnoreCase);
+
         /// <param name="pickOnly">Return the selection instead of importing it into the loaded level.</param>
         /// <param name="excludeLevel">A level to leave out of the list (the one being imported into).</param>
         /// <param name="selection">A selection to start from, so a picker can be reopened to adjust it.</param>
@@ -42,6 +51,9 @@ namespace OpenCAGE
             _tree = new CompositeTree(compositeTree);
             _tree.SelectionChanged += OnTreeSelectionChanged;
             _tree.AttachSearch(filterBox, searchButton);
+            _tree.Rebuilt += UpdatePreview;
+            compositeTree.AfterSelect += (s, e) => UpdatePreview();
+            Disposed += (s, e) => DropPreviews();
 
             if (PickOnly)
             {
@@ -151,6 +163,60 @@ namespace OpenCAGE
                     pick.Implied[id] = _tree.NameOf(id) ?? "";
             }
             UpdateSummary();
+        }
+
+        /* The pane beside the tree follows its selection: a composite's preview as its own level holds it, a folder, or nothing */
+        private void UpdatePreview()
+        {
+            TreeNode node = compositeTree.SelectedNode;
+            if (node == null || _shownLevel == null)
+                compositePreview.ShowComposite(null);
+            else if (node.Tag is CompositeTree.Item item)
+            {
+                CompositePreviewManager.LevelPreviews previews = PreviewsOf(_shownLevel);
+                compositePreview.ShowOtherLevelComposite(item.Name, previews?.GetImageAsCaptured(item.Id), previews?.DrawsNothing(item.Id) ?? false);
+            }
+            else
+                compositePreview.ShowFolder(node.FullPath);
+        }
+
+        /* That level's COMMANDS.PAK table first, then the shipped previews - never the loaded level's, whose composite of the
+           same ID can be another one. Read again if the level has been written since (an export into it, say). */
+        private CompositePreviewManager.LevelPreviews PreviewsOf(string level)
+        {
+            string commands;
+            DateTime written;
+            try
+            {
+                commands = new Level(Singleton.PathToAI + "/DATA/ENV/" + level, Singleton.Global, false).CommandsFilepath;
+                string tables = File.Exists(commands + ".META") ? commands + ".META" : commands;
+                written = File.Exists(tables) ? File.GetLastWriteTimeUtc(tables) : DateTime.MinValue;
+            }
+            catch (Exception ex)
+            {
+                Debug.Log("Import", "Could not find the composite previews of " + level + ": " + ex.Message);
+                return null;
+            }
+
+            if (_previews.TryGetValue(level, out SourcePreviews source))
+            {
+                if (source.Written == written)
+                    return source.Previews;
+                source.Previews.Dispose();
+            }
+
+            Cursor.Current = Cursors.WaitCursor;
+            source = new SourcePreviews() { Written = written, Previews = new CompositePreviewManager.LevelPreviews(commands) };
+            Cursor.Current = Cursors.Default;
+            _previews[level] = source;
+            return source.Previews;
+        }
+
+        private void DropPreviews()
+        {
+            foreach (SourcePreviews source in _previews.Values)
+                source.Previews.Dispose();
+            _previews.Clear();
         }
 
         private void checkShown_Click(object sender, EventArgs e)

@@ -72,7 +72,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "editor_options",
                 Title = "Editor options",
-                Description = "Read or change the editor's preferences from the Options menu (Composite Display, Entity Display, Misc, Dark Mode, numeric step) through the menu's own setters, or reset the UI layout. Saved in OpenCAGE's settings at once; not undoable; nothing in the game or level changes. No argument: report them.",
+                Description = "Read or change the editor's preferences from the Options menu (Composite Display, Entity Display, Save/Build, Misc, Dark Mode, numeric step) through the menu's own setters, or reset the UI layout. Saved in OpenCAGE's settings at once; not undoable; nothing in the game or level changes. No argument: report them.",
                 InputSchema = McpSchema.Object(EditorOptionProps().ToArray()),
                 Idempotent = true,
                 Run = EditorOptions,
@@ -746,14 +746,15 @@ namespace OpenCAGE.MCP
             new BoolOption() { Arg = "focus_canvas_on_new_node", Key = Settings.FocusCanvasOnNewNode, Description = "Entity Display > Focus Canvas On Newly Created Node." },
             new BoolOption() { Arg = "node_icons_when_zoomed_out", Key = Settings.NodeIconsWhenZoomedOut, Description = "Entity Display > Show Node Icons When Zoomed Out: zoomed far out, flowgraph and animation tree nodes are drawn as their icons. false: nodes are drawn in full at every zoom, their text just getting smaller." },
             new BoolOption() { Arg = "confirm_node_delete", Key = Settings.AskBeforeDeletingNode, Description = "Entity Display > Show Confirmation When Deleting Node." },
-            new BoolOption() { Arg = "confirm_on_save", Key = Settings.ShowSavedMsgOpt, Description = "Misc > Show Confirmation When Saving (save_level never shows it)." },
-            new BoolOption() { Arg = "prompt_save_on_close", Key = Settings.PromptSaveOnClose, Description = "Misc > Prompt to Save on Close." },
+            new BoolOption() { Arg = "confirm_on_save", Key = Settings.ShowSavedMsgOpt, Description = "Save/Build > Show Confirmation When Saving (save_level never shows it)." },
+            new BoolOption() { Arg = "prompt_save_on_close", Key = Settings.PromptSaveOnClose, Description = "Save/Build > Prompt to Save on Close." },
             new BoolOption() { Arg = "textured_model_view", Key = Settings.ShowTexOpt, Description = "Misc > Use Textured Model View." },
             new BoolOption() { Arg = "keep_uses_window_open", Key = Settings.KeepUsesWindowOpen, Description = "Misc > Keep Global Search Window Open." },
-            new BoolOption() { Arg = "open_game_on_save", Key = Settings.LaunchGameWhenSaved, Description = "Misc > Open Game On Save (release builds; save_level never launches the game)." },
+            new BoolOption() { Arg = "open_game_on_save", Key = Settings.LaunchGameWhenSaved, Description = "Save/Build > Open Game On Save (release builds; save_level never launches the game)." },
             new BoolOption() { Arg = "show_game_platform", Key = Settings.ShowGamePlatform, Description = "Misc > Show Game Platform in the title bar." },
             new BoolOption() { Arg = "reset_render_filters_on_load", Key = Settings.ResetRenderFilters, Description = "Misc > Reset Render Filters On Load: viewport filters go back to default at each level load." },
-            new BoolOption() { Arg = "always_fully_rebuild_radiosity", Key = Settings.AlwaysFullyRebuildRadiosity, Description = "Misc > Always Fully Rebuild Radiosity: every save rebuilds the level's radiosity from scratch instead of keeping the existing lighting and baking only what changed." },
+            new BoolOption() { Arg = "always_fully_rebuild_radiosity", Key = Settings.AlwaysFullyRebuildRadiosity, Description = "Save/Build > Always Fully Rebuild Radiosity: every save rebuilds the level's radiosity from scratch instead of keeping the existing lighting and baking only what changed. No effect while skip_radiosity_rebuild is on." },
+            new BoolOption() { Arg = "skip_radiosity_rebuild", Key = Settings.SkipRadiosityRebuild, Description = "Save/Build > Don't Rebuild Radiosity: a build bakes no radiosity - the level keeps the lighting it has, re-bound to the rebuilt models so the game reads it as before (much faster on big levels). Added models have no baked lighting and moved ones keep the lighting of where they were, until a build with it off (which then bakes them). A level with no radiosity yet stays without. Wins over always_fully_rebuild_radiosity. The Mod Manager's builds always bake." },
             new BoolOption() { Arg = "hide_live_link_label", Key = Settings.HideLiveLinkLabel, Description = "Misc > Hide Live Link Label In-Game: the game doesn't show \"OpenCAGE Live Link\" in its top-right corner while connected (a connected game is told at once; the activity notes under it still show)." },
         };
 

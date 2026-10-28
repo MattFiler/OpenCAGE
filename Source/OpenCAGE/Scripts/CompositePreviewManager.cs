@@ -274,12 +274,18 @@ namespace OpenCAGE
         /// </summary>
         public static bool TryGetPreviewPng(ShortGuid id, out byte[] png)
         {
+            return TryGetPreviewPng(_user, id, out png);
+        }
+
+        /* The lookup for any level: its own table (null: it has none) first, else the shipped one */
+        private static bool TryGetPreviewPng(CompositePreviewTable level, ShortGuid id, out byte[] png)
+        {
             png = null;
-            if (_user.previews.TryGetValue(id, out CompositePreviewTable.Preview user))
+            if (level != null && level.previews.TryGetValue(id, out CompositePreviewTable.Preview own))
             {
-                if (user.png_gzip == null || user.png_gzip.Length == 0)
+                if (own.png_gzip == null || own.png_gzip.Length == 0)
                     return false;
-                png = _user.GetPreviewPng(id);
+                png = level.GetPreviewPng(id);
                 return png != null && png.Length != 0;
             }
 
@@ -462,6 +468,70 @@ namespace OpenCAGE
             if (!_user.previews.TryGetValue(id, out CompositePreviewTable.Preview preview) || preview.png_gzip == null)
                 return null;
             return new CompositePreviewTable.Preview() { captured_at = preview.captured_at, png_gzip = preview.png_gzip };
+        }
+        #endregion
+
+        #region OTHER LEVELS
+        /// <summary>
+        /// The previews of a level other than the loaded one, for a window that lists its composites without loading it
+        /// (Import Composites From Level): its own table, read from its COMMANDS.PAK, answers first and the shipped one
+        /// after it - the order the loaded level's are found in. The loaded level's table is never asked: the same ID there
+        /// can be a different composite. Each preview is decoded the first time it is asked for and kept until this is
+        /// disposed. UI thread only.
+        /// </summary>
+        public sealed class LevelPreviews : IDisposable
+        {
+            private readonly CompositePreviewTable _own;
+            private readonly Dictionary<ShortGuid, Image> _images = new Dictionary<ShortGuid, Image>();
+            private readonly HashSet<ShortGuid> _none = new HashSet<ShortGuid>();
+
+            /// <param name="commandsPath">The level's COMMANDS.PAK. Null, or a level that has no table of its own, leaves only the shipped previews.</param>
+            public LevelPreviews(string commandsPath)
+            {
+                if (string.IsNullOrEmpty(commandsPath))
+                    return;
+                try
+                {
+                    _own = CustomTable.ReadTable(commandsPath, CustomTableType.COMPOSITE_PREVIEWS) as CompositePreviewTable;
+                }
+                catch (Exception e)
+                {
+                    Debug.Log(LogSystem, "Could not read the preview table of " + commandsPath + ": " + e.Message);
+                }
+            }
+
+            /// <summary>
+            /// A composite's preview at the size it was captured (see <see cref="GetPreviewImageAsCaptured"/>), or null when it
+            /// has none. The image is this cache's: copy it rather than dispose it.
+            /// </summary>
+            public Image GetImageAsCaptured(ShortGuid id)
+            {
+                if (_images.TryGetValue(id, out Image cached))
+                    return cached;
+                if (_none.Contains(id))
+                    return null;
+
+                Image image = TryGetPreviewPng(_own, id, out byte[] png) ? DecodeAsCaptured(png) : null;
+                if (image == null)
+                    _none.Add(id);
+                else
+                    _images[id] = image;
+                return image;
+            }
+
+            /// <summary>The level's own table says this composite draws nothing now (it was captured empty), whatever the shipped one has.</summary>
+            public bool DrawsNothing(ShortGuid id)
+            {
+                return _own != null && _own.previews.TryGetValue(id, out CompositePreviewTable.Preview own) && (own.png_gzip == null || own.png_gzip.Length == 0);
+            }
+
+            public void Dispose()
+            {
+                foreach (Image image in _images.Values)
+                    image.Dispose();
+                _images.Clear();
+                _none.Clear();
+            }
         }
         #endregion
 

@@ -144,22 +144,35 @@ namespace OpenCAGE
         }
 
         /// <summary>
-        /// Radiosity settings for a save, honouring Options > Misc > Always Fully Rebuild Radiosity: when it is on, the whole
-        /// level's radiosity is regenerated from scratch instead of keeping the shipped lighting and baking only what changed.
+        /// Radiosity settings for a save, honouring the Options > Save/Build radiosity options. Always Fully Rebuild Radiosity
+        /// regenerates the whole level's radiosity from scratch instead of keeping the shipped lighting and baking only what
+        /// changed. Don't Rebuild Radiosity (when <paramref name="allowSkippingTheBake"/>) bakes nothing: the level keeps the
+        /// radiosity it has, re-bound to the rebuilt models so the game can still read it - moved models keep the lighting of
+        /// where they were, added ones are drawn without any until a build with it off. It wins over Always Fully Rebuild.
         /// </summary>
-        public static CathodeLib.Radiosity.RadiosityBakeSettings RadiositySettingsFromOptions()
+        /// <param name="allowSkippingTheBake">False for a build whose result is shipped rather than edited further (the Mod
+        /// Manager's), which always bakes.</param>
+        public static CathodeLib.Radiosity.RadiosityBakeSettings RadiositySettingsFromOptions(bool allowSkippingTheBake = true)
         {
-            return new CathodeLib.Radiosity.RadiosityBakeSettings() { PatchRetailRuntime = !SettingsManager.GetBool(Settings.AlwaysFullyRebuildRadiosity) };
+            return new CathodeLib.Radiosity.RadiosityBakeSettings()
+            {
+                PatchRetailRuntime = !SettingsManager.GetBool(Settings.AlwaysFullyRebuildRadiosity),
+                KeepExisting = allowSkippingTheBake && SettingsManager.GetBool(Settings.SkipRadiosityRebuild),
+            };
         }
 
         /// <summary>
-        /// An instanced save with every baker, as <see cref="Level.SaveInstanced()"/>, but with radiosity settings from the options.
+        /// An instanced save with every baker, as <see cref="Level.SaveInstanced()"/>, but with radiosity settings from the options
+        /// (see <see cref="RadiositySettingsFromOptions"/>).
         /// </summary>
-        public static Instancing SaveInstancedWithOptions(Level level)
+        public static Instancing SaveInstancedWithOptions(Level level, bool allowSkippingTheBake = true)
         {
-            return level.SaveInstanced(new CathodeLib.NavMesh.NavMeshBakeSettings(), new CathodeLib.NavMesh.CoverBakeSettings(), RadiositySettingsFromOptions(),
+            return level.SaveInstanced(new CathodeLib.NavMesh.NavMeshBakeSettings(), new CathodeLib.NavMesh.CoverBakeSettings(), RadiositySettingsFromOptions(allowSkippingTheBake),
                 new CathodeLib.NavMesh.JobPositionBakeSettings(), new CathodeLib.Alphalight.AlphalightBakeSettings(), new CathodeLib.Sound.SoundNetworkBakeSettings());
         }
+
+        /// <summary>What the last instanced save's radiosity pass did (null when it ran none): see <see cref="Instancing.RadiosityResult"/>.</summary>
+        public CathodeLib.Radiosity.RadiosityBaker.BakeResult LastRadiosityResult { get; private set; }
 
         public void Save(bool doInstancing, BakeSelection bakers)
         {
@@ -171,6 +184,7 @@ namespace OpenCAGE
             Level.Materials?.NormaliseSamplerSlots();
             LastBakeWarnings = null;
             LastWarnings = null;
+            LastRadiosityResult = null;
             LastSaveFailures = new CathodeFile.SaveFailure[0];
             LastSaveWritten = false;
 
@@ -214,6 +228,7 @@ namespace OpenCAGE
                         }
                         LastBakeWarnings = pass?.BakeWarnings;
                         LastWarnings = pass?.Warnings;
+                        LastRadiosityResult = pass?.RadiosityResult;
                     }
                     else
                     {

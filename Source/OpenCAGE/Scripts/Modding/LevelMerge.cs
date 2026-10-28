@@ -103,7 +103,8 @@ namespace OpenCAGE.Modding
                 if (versions.Any(v => v.Files.Keys.Any(IsBuildOutput)))
                 {
                     progress("Building " + name + " (navigation, collision, lighting)...");
-                    Instancing pass = LevelContent.SaveInstancedWithOptions(dest);
+                    //Always baked: Don't Rebuild Radiosity is for a level being edited, and this is what the game will run
+                    Instancing pass = LevelContent.SaveInstancedWithOptions(dest, allowSkippingTheBake: false);
                     if (pass?.BakeWarnings != null)
                         foreach (string warning in pass.BakeWarnings)
                             result.Warnings.Add(name + ": " + warning);
@@ -248,7 +249,8 @@ namespace OpenCAGE.Modding
                 if (build)
                 {
                     progress("Building " + name + " (navigation, collision, lighting)...");
-                    Instancing pass = LevelContent.SaveInstancedWithOptions(dest);
+                    //Always baked: Don't Rebuild Radiosity is for a level being edited, and this is what a mod ships
+                    Instancing pass = LevelContent.SaveInstancedWithOptions(dest, allowSkippingTheBake: false);
                     if (pass?.BakeWarnings != null)
                         foreach (string warning in pass.BakeWarnings)
                             notes.Add(name + ": " + warning);

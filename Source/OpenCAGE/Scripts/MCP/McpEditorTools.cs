@@ -163,7 +163,7 @@ namespace OpenCAGE.MCP
                 Description = "Write the open level to the game install. A plain save writes the script and assets: enough for logic changes (links, triggers, parameters of logic entities, CAGEAnimations of cameras). build=true is Save & Build: it also regenerates what the game derives from the script - the movers that draw models and lights, collision and physics, zone membership, navmesh, cover, job positions, sound networks, radiosity - needed after placing, moving or deleting models, lights, collision, zones, navigation or sound entities, or composites holding them. build='auto' builds only when get_editor_state's level.build says it is needed (and says why). 'bakers' can skip slow ones. Takes seconds (plain) to minutes (build). Closes the game if it runs, as the editor's Save does (closed_game says so; Live Link drops). Not undoable.",
                 InputSchema = McpSchema.Object(
                     McpSchema.Any("build", "true: Save & Build; false (default): a plain save; 'auto': build only if the level needs it (get_editor_state level.build)."),
-                    McpSchema.Nested("bakers", "With build: which bakers run (default all). Skipping radiosity CLEARS the baked lighting - on a level still carrying its original lighting that loses it for good, as later bakes then regenerate it from scratch; skipped navmesh/cover/jobs/sound keep their old data.", BakersSchema)),
+                    McpSchema.Nested("bakers", "With build: which bakers run (default all). Skipping radiosity CLEARS the baked lighting - on a level still carrying its original lighting that loses it for good, as later bakes then regenerate it from scratch; skipped navmesh/cover/jobs/sound keep their old data. To build faster while KEEPING the lighting instead, turn on editor_options skip_radiosity_rebuild (Options > Save/Build > Don't Rebuild Radiosity).", BakersSchema)),
                 Destructive = true,
                 Run = SaveLevel,
             };
@@ -487,7 +487,7 @@ namespace OpenCAGE.MCP
         private static readonly JObject BakersSchema = McpSchema.Object(
             McpSchema.Boolean("navmesh", "Rebuild the AI navigation mesh."),
             McpSchema.Boolean("cover", "Rebuild AI cover."),
-            McpSchema.Boolean("radiosity", "Rebuild baked lighting. false CLEARS it: static geometry is unlit until a build with it."),
+            McpSchema.Boolean("radiosity", "Rebuild baked lighting. false CLEARS it: static geometry is unlit until a build with it (editor_options skip_radiosity_rebuild keeps the existing lighting, unbaked, instead)."),
             McpSchema.Boolean("job_positions", "Rebuild AI job positions (spotting, crawl, assault)."),
             McpSchema.Boolean("alphalight", "Rebuild the alphalight atlas."),
             McpSchema.Boolean("sound", "Rebuild the sound node networks."));
@@ -526,7 +526,7 @@ namespace OpenCAGE.MCP
                     ["root_composite"] = commands.EntryPoints[0]?.name,
                     ["composites"] = commands.Entries.Count,
                     ["created_level"] = !content.Level.Name.Contains("/"),
-                    //Options > Misc > Write Compressed: a compressed (Switch/mobile style) script is written back compressed
+                    //Options > Save/Build > Write Compressed: a compressed (Switch/mobile style) script is written back compressed
                     ["compressed"] = commands.Compressed,
                     ["build"] = BuildState(),
                 };
@@ -1473,6 +1473,23 @@ namespace OpenCAGE.MCP
                 };
                 if (!ran.Radiosity)
                     call.Note("Radiosity was skipped, so the level's baked lighting files were CLEARED: static geometry renders without it until a build with radiosity.");
+                else
+                {
+                    //Options > Save/Build > Don't Rebuild Radiosity: the bake was skipped and the lighting kept
+                    CathodeLib.Radiosity.RadiosityBaker.BakeResult radiosity = McpEditor.UI(() => Singleton.Editor.CompositeBrowser?.Content?.LastRadiosityResult);
+                    if (radiosity != null && radiosity.Kept)
+                    {
+                        result["radiosity_kept"] = true;
+                        if (radiosity.NothingToBake)
+                            call.Note("Radiosity was not baked (Options > Save/Build > Don't Rebuild Radiosity, editor_options skip_radiosity_rebuild) and the level had none to keep, so it has no baked lighting: build with the option off to bake it.");
+                        else
+                        {
+                            result["radiosity_waiting_models"] = radiosity.PendingMovers;
+                            call.Note("Radiosity was not baked (Options > Save/Build > Don't Rebuild Radiosity, editor_options skip_radiosity_rebuild): the level kept its lighting" +
+                                (radiosity.PendingMovers > 0 ? ", and " + radiosity.PendingMovers + " added or moved model(s) wait for a bake - added ones have no baked lighting, moved ones keep the lighting of where they were. A build with the option off bakes them." : "."));
+                        }
+                    }
+                }
                 List<string> stale = new List<string>();
                 if (!ran.NavMesh) stale.Add("navmesh");
                 if (!ran.Cover) stale.Add("cover");
