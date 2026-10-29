@@ -178,9 +178,9 @@ namespace OpenCAGE.MCP
                     McpSchema.String("description", "export: its description."),
                     McpSchema.String("installs", "export: how it installs - combine (default: combined with other mods and the player's own changes to the same levels and files) or replace (a replacement mod: installed exactly as made - whole levels, whole config files, nothing rebuilt - and apply refuses to have it on with any other mod changing the same level or file).", options: new[] { "combine", "replace" }),
                     McpSchema.Strings("levels", "export: only changed files of these levels (as list_levels names them; custom levels and a Nostromo level's _PATCH folder included)."),
-                    McpSchema.Strings("files", "export: only these changed files, as game-relative paths (e.g. DATA/ENV/PRODUCTION/X/WORLD/COMMANDS.PAK)."),
+                    McpSchema.Strings("files", "export: only these changed files, as game-relative paths (e.g. DATA/ENV/PRODUCTION/X/WORLD/COMMANDS.PAK). A copy of one of the game's own files where the game doesn't use it (a folder renamed and put back, a backup) is no change and only goes in when named here."),
                     McpSchema.Strings("include_shared", "export with levels/files: also changed files every level shares - text (DATA/TEXT), configs, ui (UI.PAK), animation (ANIMATION.PAK, which holds its tree layouts too), all, or game-relative paths."),
-                    McpSchema.Boolean("include_configs", "export: include changed config (.BML) values (default true)."),
+                    McpSchema.Boolean("include_configs", "export: include changed config values (default true) - the .BML configs, and settings .XML files outside the levels such as ENGINE_SETTINGS.XML (each setting's quality level on its own) and INPUT.XML."),
                     McpSchema.Integer("limit", "list/export: at most this many entries in the report (default 100)."),
                     McpSchema.Boolean("dry_run", "Report what would happen, changing nothing.")),
                 Destructive = true,
@@ -2238,6 +2238,13 @@ namespace OpenCAGE.MCP
 
             List<string> levels = call.StrList("levels").Select(o => McpLevels.Resolve(o, call: call, argument: "levels")).ToList();
             List<string> files = call.StrList("files").Select(o => Modding.ModToolkit.Normalise(o)).ToList();
+            //A copy of one of the game's own files where the game doesn't use it (a folder renamed and put back, a backup) is no
+            //change: it only goes in when named
+            foreach (string copy in scan.WithStatus(Modding.FileStatus.Copy).Where(files.Contains).ToList())
+            {
+                changed.Add(copy);
+                changedSet.Add(copy);
+            }
             bool configs = call.Bool("include_configs", true);
             //A level's files by where they are: DATA/ENV/<level>/ (custom levels too), and a Nostromo level's _PATCH companion
             List<string> levelPrefixes = levels.SelectMany(o => new[] { "DATA/ENV/" + o + "/", "DATA/ENV/" + o + "_PATCH/" }).ToList();
@@ -2278,13 +2285,13 @@ namespace OpenCAGE.MCP
                 if (levels.Count != 0 || files.Count != 0)
                 {
                     bool wanted = InLevels(path) || files.Contains(path) || SharedWanted(path);
-                    if (!wanted && !(configs && level == null && path.EndsWith(".BML")))
+                    if (!wanted && !(configs && level == null && Modding.ConfigDiff.ByValue(path)))
                     {
                         if (level == null) leftOut.Add(path);
                         continue;
                     }
                 }
-                if (level == null && path.EndsWith(".BML"))
+                if (level == null && Modding.ConfigDiff.ByValue(path))
                 {
                     if (!configs) continue;
                     byte[] vanilla = Modding.VanillaConfigs.GetBest(path);

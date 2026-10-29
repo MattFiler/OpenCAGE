@@ -1469,6 +1469,30 @@ namespace OpenCAGE.Modding
         }
 
         /// <summary>
+        /// Put right what's kept as the original of each file a check of the game files found back as the game shipped it,
+        /// where what's kept says otherwise: "this file wasn't there" for a shipped file (its folder was renamed when a mod went
+        /// in, and has been put back since - removing the mod would delete it again), or changes of the user's kept as the
+        /// version to go back to that are gone from the file now no mod is on it (installing a mod would bring them back).
+        /// The shipped bytes are what's kept then. Changes the user still has, and files mods are on (the next repair puts
+        /// back the user's changes under them), are left as they are. Returns how many were put right.
+        /// </summary>
+        public int HealOriginals(ScanResult scan)
+        {
+            List<string> heal;
+            lock (_mutex)
+                heal = _state.Baseline.Where(o => !o.Value.IsVanilla && _manifest.Contains(o.Key)
+                    && scan.Files.TryGetValue(o.Key, out FileStatus status) && status == FileStatus.Vanilla
+                    && (o.Value.Sha256Hex == null || (!_state.Composition.ContainsKey(o.Key) && !_state.Own.ContainsKey(o.Key))))
+                    .Select(o => o.Key).ToList();
+            if (heal.Count == 0)
+                return 0;
+            foreach (string path in heal)
+                CaptureVanillaBaseline(path, false);
+            SaveState();
+            return heal.Count(HasVanillaBaseline);
+        }
+
+        /// <summary>
         /// Write a level as the game shipped it (and its _PATCH folder) into another folder laid out as a game folder: each
         /// file from the game folder where it's still as shipped, else the original kept for it. Throws when a changed file's
         /// original isn't kept.

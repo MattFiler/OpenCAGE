@@ -63,6 +63,21 @@ namespace OpenCAGE.Audio
         }
 
         /// <summary>
+        /// Whether audio of this layout can be encoded into a form the game plays at any quality on the ladder. Nothing is
+        /// encoded: only the encoder's setup for each quality is asked for.
+        /// </summary>
+        public static bool CanEncode(int channels, int sampleRate)
+        {
+            if (channels < 1 || sampleRate < 8000 || sampleRate > 192000)
+                return false;
+
+            VorbisNative.EnsureLoaded();
+            float chosen;
+            string note;
+            return ChooseQuality(channels, sampleRate, Ladder[0], out chosen, out note);
+        }
+
+        /// <summary>
         /// Find the lowest quality at or above <paramref name="wanted"/> whose setup the game can play.
         /// Nothing is encoded here - the setup is settled by the encoder's own configuration, which is
         /// available as soon as it has been initialised.

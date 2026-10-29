@@ -141,6 +141,17 @@ namespace OpenCAGE
             AddItems(EnumStringType.SOUND_EVENT, _levelSpecificEntries);
         }
 
+        /* Re-populate the sound event and soundbank lists from the level's sound data, after a soundbank of the level's own changed
+         * the events it lists (the Level Sound Override window's New Soundbank) - they are otherwise only filled once per level */
+        public static void RefreshSoundEntries()
+        {
+            LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
+            if (content == null || !content.IsLevelDataLoaded)
+                return;
+            AddItems(EnumStringType.SOUND_EVENT, _levelSpecificEntries);
+            AddItems(EnumStringType.SOUND_BANK, _levelSpecificEntries);
+        }
+
         /* Get the items for a given type (the bool is if the desc column should show) */
         public static Tuple<ListViewItem[], bool> GetItems(EnumStringType type)
         {

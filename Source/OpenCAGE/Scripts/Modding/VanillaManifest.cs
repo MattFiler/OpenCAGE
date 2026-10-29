@@ -2,6 +2,7 @@ using CATHODE.Scripting.Internal;
 using CathodeLib;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace OpenCAGE.Modding
 {
@@ -93,6 +94,41 @@ namespace OpenCAGE.Modding
         {
             FileHashTable.Entry entry = Lookup(normalisedPath);
             return entry != null && entry.Sha256 != null && sha256 != null && SameBytes(entry.Sha256, sha256);
+        }
+
+        /* Every file this platform ships, by the hash of its bytes - made the first time a copy is looked for */
+        private Dictionary<string, List<string>> _pathsByContent;
+        private readonly object _pathsByContentLock = new object();
+
+        /// <summary>
+        /// The shipped file this one is a copy of: a file of the same name somewhere else in the game, with the very same
+        /// bytes - or null. A game folder renamed and then put back (by the store's file check, say), or a backup of one,
+        /// leaves nothing but these behind: they're the game's own files, not changes.
+        /// </summary>
+        public string CopyOf(string normalisedPath, byte[] sha256)
+        {
+            if (normalisedPath == null || sha256 == null || _table == null)
+                return null;
+            lock (_pathsByContentLock)
+            {
+                if (_pathsByContent == null)
+                {
+                    _pathsByContent = new Dictionary<string, List<string>>();
+                    foreach (FileHashTable.Entry entry in Entries)
+                    {
+                        if (entry.Sha256 == null)
+                            continue;
+                        string key = ModToolkit.ToHex(entry.Sha256);
+                        if (!_pathsByContent.TryGetValue(key, out List<string> paths))
+                            _pathsByContent[key] = paths = new List<string>();
+                        paths.Add(entry.Path);
+                    }
+                }
+            }
+            if (!_pathsByContent.TryGetValue(ModToolkit.ToHex(sha256), out List<string> same))
+                return null;
+            string name = normalisedPath.Substring(normalisedPath.LastIndexOf('/') + 1);
+            return same.FirstOrDefault(o => o != normalisedPath && o.Substring(o.LastIndexOf('/') + 1) == name);
         }
 
         private static bool SameBytes(byte[] a, byte[] b)

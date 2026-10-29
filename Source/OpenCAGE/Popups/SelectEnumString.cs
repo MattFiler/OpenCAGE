@@ -108,9 +108,8 @@ namespace OpenCAGE
 
             if (_browse)
             {
-                //Nothing to select: the buttons close up to the right edge
+                //Nothing to select
                 selectBtn.Visible = false;
-                ShowMetadata.Location = selectBtn.Location;
             }
 
             //Calling these to refresh anything that may have changed during runtime. It's likely it's already loaded.
@@ -228,6 +227,11 @@ namespace OpenCAGE
                 }
                 _filteredItems = filteredItems.ToArray();
             }
+            else if (type == EnumStringType.SOUND_EVENT)
+            {
+                _filteredItems = WithSoundbanks(items.Item1);
+                useDescColumn = true;
+            }
             else
             {
                 _filteredItems = items.Item1;
@@ -240,10 +244,38 @@ namespace OpenCAGE
                 strings.Columns[0].Width = 600;
             }
 
-            ShowMetadata.Visible = type == EnumStringType.SOUND_EVENT;
-
             if (type == EnumStringType.SOUND_EVENT)
                 ShowSoundPreview();
+        }
+
+        /// <summary>
+        /// The sound events with the soundbanks each is in (from the level's sound data) in the second column, in place of
+        /// the text it shows for other lists - so which bank to load for an event is there on every row, and searching for a
+        /// bank's name finds its events. The few events that have text of their own (a line's subtitle) keep it, in a
+        /// third column. New items: the cached ones are shared with every other list of this type.
+        /// </summary>
+        private ListViewItem[] WithSoundbanks(ListViewItem[] events)
+        {
+            strings.Columns[1].Text = "Soundbanks";
+
+            bool anyText = events.Any(o => o.SubItems.Count > 1);
+            if (anyText)
+            {
+                strings.Columns[0].Width = 250;
+                strings.Columns[1].Width = 290;
+                strings.Columns.Add("Text", 190);
+            }
+
+            ListViewItem[] withBanks = new ListViewItem[events.Length];
+            for (int i = 0; i < events.Length; i++)
+            {
+                List<string> banks = SoundEventMetadata.BanksFor(events[i].Text);
+                ListViewItem item = new ListViewItem(new[] { events[i].Text, string.Join(", ", banks.OrderBy(o => o, StringComparer.OrdinalIgnoreCase)) });
+                if (anyText)
+                    item.SubItems.Add(events[i].SubItems.Count > 1 ? events[i].SubItems[1].Text : "");
+                withBanks[i] = item;
+            }
+            return withBanks;
         }
 
         /// <summary>
@@ -270,7 +302,7 @@ namespace OpenCAGE
             //The open level's own sound package - what it replaces of the base game's sounds - opposite the other buttons
             Button levelOverride = new Button();
             levelOverride.Text = "Level Sound Override...";
-            levelOverride.Bounds = new System.Drawing.Rectangle(strings.Left + 10, ShowMetadata.Top, ShowMetadata.Width, ShowMetadata.Height);
+            levelOverride.Bounds = new System.Drawing.Rectangle(strings.Left + 10, selectBtn.Top, selectBtn.Width, selectBtn.Height);
             levelOverride.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             levelOverride.UseVisualStyleBackColor = true;
             levelOverride.Click += (s, e) => ShowLevelSoundOverride();
@@ -364,10 +396,12 @@ namespace OpenCAGE
             if (_filteredItems == null)
                 return; //Nothing listed for this type
 
+            //Matched on the value and on every column beside it (a sound event's soundbanks and its text, say)
+            string wanted = search_box.Text.ToUpper().Replace(" ", "");
             strings.BeginUpdate();
             strings.SuspendLayout();
             strings.Items.Clear();
-            strings.Items.AddRange(_filteredItems.Where(o => o.Text.ToUpper().Replace(" ", "").Contains(search_box.Text.ToUpper().Replace(" ", "")) || o.SubItems[o.SubItems.Count - 1].Text.ToUpper().Replace(" ", "").Contains(search_box.Text.ToUpper().Replace(" ", ""))).ToList().ToArray());
+            strings.Items.AddRange(_filteredItems.Where(o => o.SubItems.Cast<ListViewItem.ListViewSubItem>().Any(s => s.Text.ToUpper().Replace(" ", "").Contains(wanted))).ToArray());
             strings.EndUpdate();
         }
 
@@ -391,32 +425,6 @@ namespace OpenCAGE
 
             public ListViewItem[] items = null;
             public bool use_desc_column = false;
-        }
-
-        private void ShowMetadata_Click(object sender, EventArgs e)
-        {
-            if (strings.SelectedItems.Count == 0)
-                return;
-
-            string selectedString = strings.SelectedItems[0].Text;
-            List<string> banks = SoundEventMetadata.BanksFor(selectedString);
-
-            string message;
-            if (banks.Count == 0)
-            {
-                message = "'" + selectedString + "' isn't listed in any soundbank.";
-            }
-            else
-            {
-                banks.Sort(StringComparer.OrdinalIgnoreCase);
-
-                message = "'" + selectedString + "' is in "
-                    + (banks.Count == 1 ? "1 soundbank:" : banks.Count + " soundbanks:")
-                    + Environment.NewLine + Environment.NewLine
-                    + string.Join(Environment.NewLine, banks.Select(o => "    " + o).ToArray());
-            }
-
-            MessageBox.Show(message, "Soundbanks", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void enumStringTypeSelect_SelectedIndexChanged(object sender, EventArgs e)

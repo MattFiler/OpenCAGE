@@ -66,6 +66,8 @@ namespace OpenCAGE.Modding.Merging
             if (t.StartsWith("DATA/VIEW_CONE_SETS/")) return "what characters can see (" + file + ")";
             if (t == "DATA/GBL_ITEM.BML") return "the item settings";
             if (t == "DATA/GLOBALCONSTANTS.BML") return "the game-wide settings";
+            if (t == "DATA/ENGINE_SETTINGS.XML") return "the graphics and sound options (" + file + ")";
+            if (t == "DATA/INPUT.XML") return "the controls (" + file + ")";
             if (t.StartsWith("DATA/TEXT/")) return "the game's text (" + file + ")";
             if (t == "DATA/UI.PAK" || t == "DATA/GLOBAL/UI.PAK") return "the user interface";
             if (t == "DATA/GLOBAL/ANIMATION.PAK" || t == "DATA/GLOBAL/ANIMATION_SWITCH.PAK") return "the animations (" + file + ")";

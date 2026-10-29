@@ -618,7 +618,16 @@ namespace OpenCAGE.MCP
                 ["on_this_level"] = LevelSoundOverride.IsPermanent(o.Id, soundDirectory) ? "never read: a permanent soundbank" : LevelSoundOverride.BaseBankFile(o.Id, null) != null ? "read instead of the base game's" : "only this level has it",
             }));
             result["stream_count"] = read.Streams.Count;
-            McpPaging.Page(call, read.Streams, result, "streams", o => new JObject() { ["id"] = o.Id.ToString(), ["bytes"] = o.Length }, 100, 5000);
+            //Each stream by the sound event that plays it too, as the Level Sound Override window lists them
+            WwiseSoundLibrary named = null;
+            try { named = SoundPreviewLibrary.IsAvailable ? SoundPreviewLibrary.Get() : null; } catch { }
+            McpPaging.Page(call, read.Streams, result, "streams", o =>
+            {
+                JObject stream = new JObject() { ["id"] = o.Id.ToString(), ["bytes"] = o.Length };
+                string sound = named == null ? null : SoundNames.Describe(named, o.Id);
+                if (sound != null) stream["sound"] = sound;
+                return stream;
+            }, 100, 5000);
             return result;
         }
         #endregion

@@ -220,6 +220,22 @@ namespace OpenCAGE.Modding
             Forget(normalisedPath);
         }
 
+        /// <summary>
+        /// Forget every file, so the next check reads each one again whatever its size and time say: the Mod Manager's "Check
+        /// every file again", for a file a tool changed while putting its size and time back as they were.
+        /// </summary>
+        public void ForgetAll()
+        {
+            lock (_lock)
+            {
+                if (_model.Entries.Count == 0)
+                    return;
+                _model.Entries.Clear();
+                _dirty = true;
+            }
+            Save();
+        }
+
         /* The hash recorded for the file as it is now (same size and time), or null */
         private byte[] Cached(string normalisedPath, FileInfo info)
         {

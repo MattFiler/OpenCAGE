@@ -589,6 +589,26 @@ namespace OpenCAGE.Audio
             return Resolve(eventName).HasAudio;
         }
 
+        /// <summary>Whether any bank, package or loose stream carries an object or a piece of audio with this id.</summary>
+        public bool HasId(uint id)
+        {
+            return _objects.ContainsKey(id) || _copies.ContainsKey(id);
+        }
+
+        /// <summary>Every sound object (each bank's copy of it) that plays this piece of audio.</summary>
+        public List<WwiseSound> SoundsWithSource(uint sourceId)
+        {
+            List<WwiseSound> sounds = new List<WwiseSound>();
+            foreach (List<WwiseObject> group in _objects.Values)
+                foreach (WwiseObject o in group)
+                {
+                    WwiseSound sound = o as WwiseSound;
+                    if (sound != null && sound.SourceId == sourceId)
+                        sounds.Add(sound);
+                }
+            return sounds;
+        }
+
         /// <summary>Whether any bank declares an event (or a dialogue event) by this name.</summary>
         public bool HasEvent(string eventName)
         {

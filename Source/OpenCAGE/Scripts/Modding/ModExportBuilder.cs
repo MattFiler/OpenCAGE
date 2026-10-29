@@ -390,9 +390,7 @@ namespace OpenCAGE.Modding
                 _configVanilla.TryGetValue(config.Key, out byte[] vanilla);
                 if (vanilla == null)
                     throw new Exception("No original copy of " + config.Key + " to build its changed values on.");
-                XmlDocument document = new BML(vanilla).Content;
-                BmlPatch.Apply(document, config.Value);
-                AddContent(writer, result, config.Key, Merging.FileMerger.WriteBml(vanilla, document), vanilla);
+                AddContent(writer, result, config.Key, ConfigDiff.Build(config.Key, vanilla, config.Value), vanilla);
             }
 
             foreach (string path in _deleted.OrderBy(o => o))
@@ -452,7 +450,7 @@ namespace OpenCAGE.Modding
             else if (animationPaks.Count != 0)
                 parts.Add("changes animations");
             //Settings files carried whole (a replacement mod's), by what they're for
-            List<string> wholeSettings = others.Where(o => o.EndsWith(".BML") && !o.StartsWith("DATA/BINARY_BEHAVIOR/")).ToList();
+            List<string> wholeSettings = others.Where(o => ConfigDiff.ByValue(o) && !o.StartsWith("DATA/BINARY_BEHAVIOR/")).ToList();
             if (wholeSettings.Count != 0)
                 parts.Add("changes the settings for " + string.Join(", ", wholeSettings.Select(FriendlyConfigName).Distinct()));
             int rest = others.Count(o => !o.StartsWith("DATA/BINARY_BEHAVIOR/") && !o.StartsWith("DATA/TEXT/") && !o.StartsWith("DATA/SOUND/") && !IsInterface(o) && !IsAnimationPak(o) && !wholeSettings.Contains(o));
@@ -572,9 +570,11 @@ namespace OpenCAGE.Modding
             if (p == "DATA/GBL_ITEM.BML") return "items";
             if (p == "DATA/GLOBALCONSTANTS.BML") return "the whole game";
             if (p == "DATA/COVERANDTRAVERSALRULES.BML") return "cover and movement";
-            if (p == "DATA/FONT_CONFIG.BML") return "fonts";
+            if (p == "DATA/FONT_CONFIG.BML" || p == "DATA/FONT_CONFIG.XML") return "fonts";
             if (p == "DATA/LEVEL_TEXT_DATABASES.BML") return "level text";
             if (p == "DATA/MATERIAL_DATA/MATERIALS.BML") return "surface materials";
+            if (p == ConfigDiff.EngineSettingsPath) return "the graphics and sound options";
+            if (p == "DATA/INPUT.XML") return "the controls";
             return p.Substring(p.LastIndexOf('/') + 1);
         }
 
@@ -795,6 +795,73 @@ namespace OpenCAGE.Modding
     /* The value-level view of a changed config file, shared by the exporter UI and tests */
     public static class ConfigDiff
     {
+        /// <summary>The graphics and sound options: named settings, each with named quality levels.</summary>
+        public const string EngineSettingsPath = "DATA/ENGINE_SETTINGS.XML";
+
+        /// <summary>
+        /// Whether a changed file goes in a mod as the values changed in it rather than whole, so mods changing different values
+        /// of it all keep theirs: a settings file outside the levels - a .BML config, or an .XML one (the graphics and sound
+        /// options, the controls). Not DATA/LEVEL_TEXT_DATABASES.XML: that goes block by block, each level's with the level.
+        /// </summary>
+        public static bool ByValue(string normalisedPath)
+        {
+            if (normalisedPath == null || ModInstaller.LevelUnitOf(normalisedPath) != null)
+                return false;
+            if (normalisedPath.EndsWith(".BML", StringComparison.OrdinalIgnoreCase))
+                return true;
+            return normalisedPath.EndsWith(".XML", StringComparison.OrdinalIgnoreCase) && normalisedPath != LevelTextBlocks.Path;
+        }
+
+        /// <summary>A config file's document: a .BML read as the XML it holds, an .XML as itself. Null when it can't be read.</summary>
+        public static XmlDocument Read(string normalisedPath, byte[] bytes)
+        {
+            if (bytes == null)
+                return null;
+            try
+            {
+                if (normalisedPath.EndsWith(".BML", StringComparison.OrdinalIgnoreCase))
+                    return new BML(bytes).Content;
+                return Merging.FileMerger.ReadXml(bytes, out _, out _);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// The config file as it shipped with these of its changes made, and nothing else changed: what a mod carries for it.
+        /// An .XML keeps the original's own layout (<see cref="Merging.XmlLayout"/>), so the file differs from the original by
+        /// exactly those values.
+        /// </summary>
+        public static byte[] Build(string normalisedPath, byte[] vanillaBytes, List<BmlPatchOp> ops)
+        {
+            if (normalisedPath.EndsWith(".BML", StringComparison.OrdinalIgnoreCase))
+            {
+                XmlDocument config = new BML(vanillaBytes).Content;
+                BmlPatch.Apply(config, ops);
+                return Merging.FileMerger.WriteBml(vanillaBytes, config);
+            }
+            XmlDocument document = Merging.FileMerger.ReadXml(vanillaBytes, out Encoding encoding, out bool declared);
+            BmlPatch.Apply(document, ops);
+            return Merging.XmlLayout.Rewrite(vanillaBytes, document) ?? Merging.FileMerger.WriteXml(document, encoding, declared);
+        }
+
+        /// <summary>
+        /// A change in words, as Create a Mod lists it (<see cref="BmlPatch.Describe"/>). The graphics and sound options are said
+        /// by their setting's and quality level's names, and the value a level gives its setting as that level's value:
+        /// "Graphics › Streaming Texture Heap Size › Default: 300 → 512".
+        /// </summary>
+        public static string Describe(string normalisedPath, BmlPatchOp op, XmlDocument original)
+        {
+            if (normalisedPath != EngineSettingsPath)
+                return BmlPatch.Describe(op, original);
+            //Said with its whole place: "removes Field Of View › 90" rather than "removes Quality '90'"
+            string text = op.Kind == "remove" ? "removes " + BmlPatch.FriendlyPath(op.Path) : BmlPatch.Describe(op, original);
+            text = System.Text.RegularExpressions.Regex.Replace(text, @"\b(?:Setting|Quality) '([^']*)'", "$1");
+            return System.Text.RegularExpressions.Regex.Replace(text, @" › (?:int|float|bool): ", ": ");
+        }
+
         /// <summary>
         /// The ops that separate the current config from vanilla, or null when the vanilla bytes
         /// aren't obtainable or either side fails to parse.
@@ -813,10 +880,13 @@ namespace OpenCAGE.Modding
                 if (vanillaBytes == null || currentBytes == null)
                     return null;
 
-                XmlDocument vanilla = new BML(vanillaBytes).Content;
-                XmlDocument current = new BML(currentBytes).Content;
+                XmlDocument vanilla = Read(normalisedPath, vanillaBytes);
+                XmlDocument current = Read(normalisedPath, currentBytes);
                 if (vanilla == null || current == null)
                     return null;
+                //(Only a .BML config inherits values from a template)
+                if (!normalisedPath.EndsWith(".BML", StringComparison.OrdinalIgnoreCase))
+                    return BmlPatch.Diff(vanilla, current);
                 return BmlPatch.Diff(vanilla, current, Inherited(current, normalisedPath, path => ModExportBuilder.UsersVersion(gameRoot, installer, path)));
             }
             catch

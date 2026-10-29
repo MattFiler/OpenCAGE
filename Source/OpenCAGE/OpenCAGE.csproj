@@ -777,6 +777,12 @@
     <Compile Include="Popups\LevelSoundOverrideEditor.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\LevelSoundImportDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\LevelSoundBankDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Popups\LaunchGame.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -1022,6 +1028,9 @@
     <Compile Include="Scripts\Audio\VorbisEncoder.cs" />
     <Compile Include="Scripts\Audio\WaveFile.cs" />
     <Compile Include="Scripts\Audio\SoundImport.cs" />
+    <Compile Include="Scripts\Audio\AudioConform.cs" />
+    <Compile Include="Scripts\Audio\SoundNames.cs" />
+    <Compile Include="Scripts\Audio\WwiseBankBuilder.cs" />
     <Compile Include="UserControls\SoundPreviewPanel.cs">
       <SubType>UserControl</SubType>
     </Compile>

@@ -390,8 +390,8 @@ namespace OpenCAGE.Modding
             return name.EndsWith(".bml", StringComparison.OrdinalIgnoreCase) ? name.Substring(0, name.Length - 4) : name;
         }
 
-        /* An address without its root, each step as a person would say it: AreaSweep › keycard 'Erik Mosser' */
-        private static string FriendlyPath(string path)
+        /// <summary>An address without its root, each step as a person would say it: AreaSweep › keycard 'Erik Mosser'</summary>
+        public static string FriendlyPath(string path)
         {
             if (string.IsNullOrEmpty(path)) return "";
             string[] steps = path.Split('/');

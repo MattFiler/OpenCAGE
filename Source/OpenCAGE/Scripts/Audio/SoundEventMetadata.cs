@@ -19,6 +19,7 @@ namespace OpenCAGE.Audio
         private static readonly object _lock = new object();
         private static Dictionary<string, List<string>> _banksByEvent;
         private static Dictionary<string, SoundEventData.Soundbank.Event> _infoByEvent;
+        private static Dictionary<uint, string> _bankNames;
         private static SoundEventData _cachedFor;
 
         /// <summary>
@@ -62,6 +63,22 @@ namespace OpenCAGE.Audio
             return lookup == null ? new List<string>() : lookup.Keys.ToList();
         }
 
+        /// <summary>
+        /// A soundbank's name from its id (the name hashed, as Wwise does), as the level's SOUNDBANKDATA spells it - e.g.
+        /// M04_WelcomeToSevastopol. Null when the level isn't loaded or doesn't name it.
+        /// </summary>
+        public static string BankName(uint bankId)
+        {
+            if (Lookup() == null)
+                return null;
+
+            lock (_lock)
+            {
+                string name;
+                return _bankNames != null && _bankNames.TryGetValue(bankId, out name) ? name : null;
+            }
+        }
+
         /// <summary>Drop the cache, so the next lookup reads the level again.</summary>
         public static void Invalidate()
         {
@@ -69,6 +86,7 @@ namespace OpenCAGE.Audio
             {
                 _banksByEvent = null;
                 _infoByEvent = null;
+                _bankNames = null;
                 _cachedFor = null;
             }
         }
@@ -129,6 +147,7 @@ namespace OpenCAGE.Audio
 
                 _banksByEvent = lookup;
                 _infoByEvent = info;
+                _bankNames = namesById;
                 _cachedFor = events;
                 return _banksByEvent;
             }

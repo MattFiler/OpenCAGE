@@ -35,7 +35,6 @@
             this.EntityType = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.search_box = new System.Windows.Forms.TextBox();
             this.selectBtn = new System.Windows.Forms.Button();
-            this.ShowMetadata = new System.Windows.Forms.Button();
             this.enumStringTypeSelect = new System.Windows.Forms.ComboBox();
             this.SuspendLayout();
             // 
@@ -103,17 +102,6 @@
             this.selectBtn.UseVisualStyleBackColor = true;
             this.selectBtn.Click += new System.EventHandler(this.selectBtn_Click);
             // 
-            // ShowMetadata
-            // 
-            this.ShowMetadata.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.ShowMetadata.Location = new System.Drawing.Point(441, 634);
-            this.ShowMetadata.Name = "ShowMetadata";
-            this.ShowMetadata.Size = new System.Drawing.Size(151, 26);
-            this.ShowMetadata.TabIndex = 182;
-            this.ShowMetadata.Text = "Show Soundbanks";
-            this.ShowMetadata.UseVisualStyleBackColor = true;
-            this.ShowMetadata.Click += new System.EventHandler(this.ShowMetadata_Click);
-            // 
             // enumStringTypeSelect
             // 
             this.enumStringTypeSelect.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
@@ -133,7 +121,6 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(759, 670);
             this.Controls.Add(this.enumStringTypeSelect);
-            this.Controls.Add(this.ShowMetadata);
             this.Controls.Add(this.selectBtn);
             this.Controls.Add(this.clearSearchBtn);
             this.Controls.Add(this.strings);
@@ -157,7 +144,6 @@
         private System.Windows.Forms.ColumnHeader EntityType;
         private System.Windows.Forms.TextBox search_box;
         private System.Windows.Forms.Button selectBtn;
-        private System.Windows.Forms.Button ShowMetadata;
         private System.Windows.Forms.ComboBox enumStringTypeSelect;
     }
 }

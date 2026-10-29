@@ -138,7 +138,8 @@ namespace OpenCAGE.Modding.Merging
             List<(string, XmlDocument)> docs = versions.Select(o => (o.ModName, ReadXml(o.Bytes, out _, out _))).ToList();
             XmlMerge merge = new XmlMerge(target);
             XmlDocument merged = merge.Merge(baseDoc, docs);
-            return new MergeOutcome() { Bytes = WriteXml(merged, encoding, hadDeclaration), Conflicts = merge.Conflicts };
+            //Written into the original's own text, so the file differs from it only where the mods change it
+            return new MergeOutcome() { Bytes = XmlLayout.Rewrite(vanilla, merged) ?? WriteXml(merged, encoding, hadDeclaration), Conflicts = merge.Conflicts };
         }
 
         public static XmlDocument ReadXml(byte[] bytes, out Encoding encoding, out bool hadDeclaration)

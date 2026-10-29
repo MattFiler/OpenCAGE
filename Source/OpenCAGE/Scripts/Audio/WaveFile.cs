@@ -24,6 +24,12 @@ namespace OpenCAGE.Audio
 
             public int SampleRate;
 
+            /// <summary>
+            /// The first loop of the file's smpl chunk, as sample frames (the end inclusive), as audio editors write a loop
+            /// region; -1 for none.
+            /// </summary>
+            public long LoopStart = -1, LoopEnd = -1;
+
             public int Channels
             {
                 get { return Samples == null ? 0 : Samples.Length; }
@@ -53,6 +59,7 @@ namespace OpenCAGE.Audio
                 throw new InvalidDataException("That is not a WAV file.");
 
             int formatAt = -1, formatLength = 0, dataAt = -1, dataLength = 0;
+            long loopStart = -1, loopEnd = -1;
             int position = 12;
             while (position + 8 <= file.Length)
             {
@@ -63,6 +70,12 @@ namespace OpenCAGE.Audio
 
                 if (tag == "fmt ") { formatAt = position + 8; formatLength = size; }
                 else if (tag == "data") { dataAt = position + 8; dataLength = Math.Min(size, file.Length - position - 8); }
+                else if (tag == "smpl" && size >= 36 + 24 && position + 8 + 36 + 24 <= file.Length && BitConverter.ToInt32(file, position + 8 + 28) > 0)
+                {
+                    //The first loop record: cue id, type, start, end (inclusive), fraction, play count
+                    loopStart = BitConverter.ToUInt32(file, position + 8 + 36 + 8);
+                    loopEnd = BitConverter.ToUInt32(file, position + 8 + 36 + 12);
+                }
 
                 position += 8 + size + (size & 1); //chunks are word aligned
             }
@@ -107,7 +120,13 @@ namespace OpenCAGE.Audio
                     samples[channel][frame] = ReadSample(file, at + channel * bytesPerSample, format, bits);
             }
 
-            return new Audio { Samples = samples, SampleRate = sampleRate };
+            Audio audio = new Audio { Samples = samples, SampleRate = sampleRate };
+            if (loopStart >= 0 && loopEnd > loopStart && loopStart < frames)
+            {
+                audio.LoopStart = loopStart;
+                audio.LoopEnd = Math.Min(loopEnd, frames - 1);
+            }
+            return audio;
         }
 
         private static float ReadSample(byte[] file, int offset, ushort format, int bits)

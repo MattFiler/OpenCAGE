@@ -374,11 +374,15 @@ namespace OpenCAGE.Modding.Merging
         {
             if (earlier == _modName)
                 return;
+            //Shown without the file's root element, which every location in the file shares
+            where = where.IndexOf(" › ", StringComparison.Ordinal) >= 0 ? where.Substring(where.IndexOf(" › ", StringComparison.Ordinal) + 3) : where;
+            //The graphics and sound options by their settings' and quality levels' names, a level's value as the level
+            if (string.Equals(_target, "DATA/ENGINE_SETTINGS.XML", StringComparison.OrdinalIgnoreCase))
+                where = System.Text.RegularExpressions.Regex.Replace(System.Text.RegularExpressions.Regex.Replace(where, @"\b(?:Setting|Quality) '([^']*)'", "$1"), @" › @(?:int|float|bool)$", "");
             Conflicts.Add(new MergeConflict()
             {
                 Target = _target,
-                //Shown without the file's root element, which every location in the file shares
-                Where = where.IndexOf(" › ", StringComparison.Ordinal) >= 0 ? where.Substring(where.IndexOf(" › ", StringComparison.Ordinal) + 3) : where,
+                Where = where,
                 Kind = kind,
                 Kept = _modName,
                 Lost = earlier ?? _previousMods ?? "an earlier mod",
@@ -452,6 +456,477 @@ namespace OpenCAGE.Modding.Merging
             return value.Length > 40 ? value.Substring(0, 37) + "..." : value;
         }
         #endregion
+    }
+
+    /// <summary>
+    /// An XML file written back in its own layout. An XmlDocument written out whole spaces every element's attributes its own
+    /// way (ENGINE_SETTINGS.XML lines its values up with tabs), so two changed values come back as hundreds of changed lines.
+    /// Here the changes are written into the original text instead - a value where the old one was, an added entry on a line of
+    /// its own after its neighbour, a removed one with its line - and everything else stays exactly as it was: the file differs
+    /// from the original by what changed, and nothing more.
+    /// </summary>
+    public static class XmlLayout
+    {
+        /* Where an element is in the text: its start tag, and its end tag (none for an empty one, <x/>) */
+        private class Span
+        {
+            public int Start;           //The start tag's '<'
+            public int StartEnd;        //Just after the start tag's '>'
+            public int CloseStart = -1; //The end tag's '<'
+            public int End;             //Just after the element
+            public bool Empty => CloseStart < 0;
+        }
+
+        /// <summary>
+        /// The original file's text changed to say what <paramref name="result"/> says - its elements, attributes and values;
+        /// comments and the spacing between elements are the original's. Null when it can't be (the original doesn't read back
+        /// as itself, it has a document type, its root is another, or what's written doesn't say what the document does): the
+        /// document is written out whole then.
+        /// </summary>
+        public static byte[] Rewrite(byte[] original, XmlDocument result)
+        {
+            try
+            {
+                string text = TextDbMerge.Decode(original, out Encoding encoding);
+                if (!TextDbMerge.Encode(text, encoding).AsSpan().SequenceEqual(original))
+                    return null;
+                XmlDocument before = new XmlDocument() { PreserveWhitespace = true };
+                before.LoadXml(text);
+                List<Span> spans = Scan(text);
+                XmlNodeList elements = before.GetElementsByTagName("*");
+                if (spans == null || spans.Count != elements.Count || before.DocumentElement == null || result?.DocumentElement == null || before.DocumentElement.Name != result.DocumentElement.Name)
+                    return null;
+                //The elements in the order their start tags are in the text
+                Dictionary<XmlElement, Span> where = new Dictionary<XmlElement, Span>();
+                for (int i = 0; i < spans.Count; i++)
+                {
+                    XmlElement element = (XmlElement)elements[i];
+                    if (string.CompareOrdinal(text, spans[i].Start + 1, element.Name, 0, element.Name.Length) != 0)
+                        return null;
+                    where[element] = spans[i];
+                }
+
+                Writer writer = new Writer(text, where);
+                writer.Element(before.DocumentElement, result.DocumentElement);
+                string written = writer.Apply();
+                if (written == null)
+                    return null;
+                XmlDocument check = new XmlDocument() { PreserveWhitespace = true };
+                check.LoadXml(written);
+                if (Canonical(check.DocumentElement) != Canonical(result.DocumentElement))
+                    return null;
+                return TextDbMerge.Encode(written, encoding);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        /* Each element's start and end tags, in the order the start tags come; null for anything this doesn't read (a document type) */
+        private static List<Span> Scan(string text)
+        {
+            List<Span> spans = new List<Span>();
+            Stack<Span> open = new Stack<Span>();
+            int at = 0;
+            while (true)
+            {
+                int lt = text.IndexOf('<', at);
+                if (lt < 0)
+                    break;
+                if (string.CompareOrdinal(text, lt, "<!--", 0, 4) == 0)
+                    at = Past(text, "-->", lt + 4);
+                else if (string.CompareOrdinal(text, lt, "<![CDATA[", 0, 9) == 0)
+                    at = Past(text, "]]>", lt + 9);
+                else if (string.CompareOrdinal(text, lt, "<?", 0, 2) == 0)
+                    at = Past(text, "?>", lt + 2);
+                else if (string.CompareOrdinal(text, lt, "<!", 0, 2) == 0)
+                    return null;
+                else if (string.CompareOrdinal(text, lt, "</", 0, 2) == 0)
+                {
+                    int gt = text.IndexOf('>', lt);
+                    if (gt < 0 || open.Count == 0)
+                        return null;
+                    Span closed = open.Pop();
+                    closed.CloseStart = lt;
+                    closed.End = at = gt + 1;
+                }
+                else
+                {
+                    //A start tag: to its '>', past any in quoted values
+                    int i = lt + 1;
+                    char quote = '\0';
+                    for (; i < text.Length; i++)
+                    {
+                        char c = text[i];
+                        if (quote != '\0') { if (c == quote) quote = '\0'; }
+                        else if (c == '"' || c == '\'') quote = c;
+                        else if (c == '>') break;
+                    }
+                    if (i >= text.Length)
+                        return null;
+                    Span span = new Span() { Start = lt, StartEnd = i + 1 };
+                    spans.Add(span);
+                    if (text[i - 1] == '/')
+                        span.End = i + 1;
+                    else
+                        open.Push(span);
+                    at = i + 1;
+                }
+                if (at < 0)
+                    return null;
+            }
+            return open.Count == 0 ? spans : null;
+        }
+
+        private static int Past(string text, string end, int from)
+        {
+            int found = text.IndexOf(end, from, StringComparison.Ordinal);
+            return found < 0 ? -1 : found + end.Length;
+        }
+
+        /* The changes, as edits of the original text */
+        private class Writer
+        {
+            private readonly string _text;
+            private readonly Dictionary<XmlElement, Span> _where;
+            private readonly string _newline;
+            private readonly List<(int Start, int End, string Text)> _edits = new List<(int, int, string)>();
+
+            public Writer(string text, Dictionary<XmlElement, Span> where)
+            {
+                _text = text;
+                _where = where;
+                _newline = text.Contains("\r\n") ? "\r\n" : "\n";
+            }
+
+            /// <summary>Write the result's version of an element of the original over it.</summary>
+            public void Element(XmlElement was, XmlElement now)
+            {
+                if (was.OuterXml == now.OuterXml)
+                    return;
+                Span span = _where[was];
+                string tag = _text.Substring(span.Start, span.StartEnd - span.Start);
+                string newTag = was.Name == now.Name ? StartTag(tag, was, now) : null;
+                bool hadChildren = HasElementChildren(was), hasChildren = HasElementChildren(now);
+                Dictionary<XmlElement, XmlElement> pairs = hadChildren && hasChildren ? Pairs(was, now) : null;
+                //Nothing to line up (another element, a value become a group or the other way round, no child still there): it's replaced
+                if (newTag == null || hadChildren != hasChildren || (hadChildren && pairs == null))
+                {
+                    Replace(span.Start, span.End, Fragment(now));
+                    return;
+                }
+                //An empty element given a value: written out open, with it
+                if (!hadChildren && span.Empty && was.InnerXml != now.InnerXml)
+                {
+                    Replace(span.Start, span.End, Opened(newTag) + now.InnerXml + "</" + now.Name + ">");
+                    return;
+                }
+                if (newTag != tag)
+                    Replace(span.Start, span.StartEnd, newTag);
+                if (!hadChildren)
+                {
+                    //A value: what's in it
+                    if (was.InnerXml != now.InnerXml)
+                        Replace(span.StartEnd, span.CloseStart, now.InnerXml);
+                    return;
+                }
+
+                List<XmlElement> wasKids = Kids(was), nowKids = Kids(now);
+                HashSet<XmlElement> kept = new HashSet<XmlElement>(pairs.Values);
+                foreach (XmlElement kid in wasKids)
+                    if (!kept.Contains(kid))
+                        RemoveWithLine(_where[kid]);
+                foreach (KeyValuePair<XmlElement, XmlElement> pair in pairs)
+                    Element(pair.Value, pair.Key);
+                //Added ones go in after the kept one before them (or before the first kept one), one to a line as their neighbours are
+                XmlElement after = null;
+                List<XmlElement> added = new List<XmlElement>();
+                foreach (XmlElement kid in nowKids)
+                {
+                    if (pairs.TryGetValue(kid, out XmlElement match))
+                    {
+                        if (added.Count != 0)
+                            Insert(after, match, added);
+                        added.Clear();
+                        after = match;
+                    }
+                    else
+                        added.Add(kid);
+                }
+                if (added.Count != 0)
+                    Insert(after, null, added);
+            }
+
+            /* Each of the result's children with the original child it is - or null when none is. By key (tag and name, else tag
+               and place among those of its tag), keeping the most of those that are in the same order in both (one moved is taken
+               out and put in again); then one whose key changed (its name did) is still the one in its place: between the same
+               two kept ones, the next of its tag along - so it's written over where it is, not taken out and put in again */
+            private static Dictionary<XmlElement, XmlElement> Pairs(XmlElement was, XmlElement now)
+            {
+                List<XmlElement> wasKids = Kids(was), nowKids = Kids(now);
+                Dictionary<XmlElement, int> wasIndex = new Dictionary<XmlElement, int>();
+                for (int i = 0; i < wasKids.Count; i++)
+                    wasIndex[wasKids[i]] = i;
+                Dictionary<string, XmlElement> wasByKey = Keys(wasKids).ToDictionary(o => o.Value, o => o.Key);
+                Dictionary<XmlElement, string> nowKeys = Keys(nowKids);
+
+                List<(XmlElement Now, XmlElement Was)> keyed = new List<(XmlElement, XmlElement)>();
+                foreach (XmlElement kid in nowKids)
+                    if (wasByKey.TryGetValue(nowKeys[kid], out XmlElement match))
+                        keyed.Add((kid, match));
+                //The longest run of them in the same order in both
+                int[] tails = new int[keyed.Count], before = new int[keyed.Count];
+                int length = 0;
+                for (int i = 0; i < keyed.Count; i++)
+                {
+                    int low = 0, high = length;
+                    while (low < high)
+                    {
+                        int mid = (low + high) / 2;
+                        if (wasIndex[keyed[tails[mid]].Was] < wasIndex[keyed[i].Was]) low = mid + 1;
+                        else high = mid;
+                    }
+                    before[i] = low > 0 ? tails[low - 1] : -1;
+                    tails[low] = i;
+                    if (low == length)
+                        length++;
+                }
+                Dictionary<XmlElement, XmlElement> pairs = new Dictionary<XmlElement, XmlElement>();
+                for (int i = length == 0 ? -1 : tails[length - 1]; i >= 0; i = before[i])
+                    pairs[keyed[i].Now] = keyed[i].Was;
+
+                HashSet<XmlElement> anchors = new HashSet<XmlElement>(pairs.Values);
+                int floor = -1;
+                foreach (XmlElement kid in nowKids)
+                {
+                    if (pairs.TryGetValue(kid, out XmlElement kept))
+                    {
+                        floor = wasIndex[kept];
+                        continue;
+                    }
+                    for (int i = floor + 1; i < wasKids.Count && !anchors.Contains(wasKids[i]); i++)
+                    {
+                        if (wasKids[i].Name != kid.Name)
+                            continue;
+                        pairs[kid] = wasKids[i];
+                        floor = i;
+                        break;
+                    }
+                }
+                return pairs.Count == 0 ? null : pairs;
+            }
+
+            /* Each child's key: its tag and name when no other of its tag has that name, else its tag and place among those of its tag */
+            private static Dictionary<XmlElement, string> Keys(List<XmlElement> kids)
+            {
+                Dictionary<string, int> named = new Dictionary<string, int>();
+                foreach (XmlElement kid in kids)
+                {
+                    string key = kid.Name + "\u0001" + kid.GetAttribute("name");
+                    named.TryGetValue(key, out int count);
+                    named[key] = count + 1;
+                }
+                Dictionary<XmlElement, string> keys = new Dictionary<XmlElement, string>();
+                Dictionary<string, int> places = new Dictionary<string, int>();
+                foreach (XmlElement kid in kids)
+                {
+                    places.TryGetValue(kid.Name, out int place);
+                    places[kid.Name] = place + 1;
+                    string name = kid.GetAttribute("name");
+                    keys[kid] = name.Length != 0 && named[kid.Name + "\u0001" + name] == 1 ? kid.Name + "\u0001" + name : kid.Name + "#" + place;
+                }
+                return keys;
+            }
+
+            /* The original start tag with the result's attributes: a changed value where the old one was, a removed attribute
+               with the space before it, a new one after the last - null when its attributes can't all be found in it */
+            private static readonly System.Text.RegularExpressions.Regex _attribute = new System.Text.RegularExpressions.Regex(@"(\s+)([^\s=/>]+)(\s*=\s*)(?:""([^""]*)""|'([^']*)')");
+            private static string StartTag(string tag, XmlElement was, XmlElement now)
+            {
+                System.Text.RegularExpressions.MatchCollection found = _attribute.Matches(tag);
+                if (found.Count != was.Attributes.Count)
+                    return null;
+                StringBuilder written = new StringBuilder();
+                HashSet<string> there = new HashSet<string>();
+                //"<name", then each attribute as it was, changed or taken out, then any new ones
+                int at = 1 + was.Name.Length;
+                written.Append(tag, 0, at);
+                foreach (System.Text.RegularExpressions.Match match in found)
+                {
+                    string name = match.Groups[2].Value;
+                    if (!was.HasAttribute(name) || !there.Add(name))
+                        return null;
+                    written.Append(tag, at, match.Index - at);
+                    at = match.Index + match.Length;
+                    if (!now.HasAttribute(name))
+                        continue;
+                    string value = now.GetAttribute(name);
+                    if (value == was.GetAttribute(name))
+                    {
+                        written.Append(match.Value);
+                        continue;
+                    }
+                    char quote = match.Groups[4].Success ? '"' : '\'';
+                    written.Append(match.Groups[1].Value).Append(name).Append(match.Groups[3].Value).Append(quote).Append(Escape(value, quote)).Append(quote);
+                }
+                foreach (XmlAttribute attribute in now.Attributes)
+                    if (!there.Contains(attribute.Name))
+                        written.Append(' ').Append(attribute.Name).Append("=\"").Append(Escape(attribute.Value, '"')).Append('"');
+                written.Append(tag, at, tag.Length - at);
+                return written.ToString();
+            }
+
+            /* <x .../> as <x ...> */
+            private static string Opened(string tag)
+            {
+                return tag.Substring(0, tag.LastIndexOf('/')).TrimEnd() + ">";
+            }
+
+            /* An element as text to put in the file: without the namespace declarations it's written with only for being written
+               on its own (where it goes in the file, they're declared already) */
+            private static string Fragment(XmlElement element)
+            {
+                string xml = element.OuterXml;
+                int end = 0;
+                char quote = '\0';
+                for (; end < xml.Length; end++)
+                {
+                    char c = xml[end];
+                    if (quote != '\0') { if (c == quote) quote = '\0'; }
+                    else if (c == '"' || c == '\'') quote = c;
+                    else if (c == '>') break;
+                }
+                string tag = xml.Substring(0, end);
+                string kept = _attribute.Replace(tag, match =>
+                {
+                    string name = match.Groups[2].Value;
+                    return (name == "xmlns" || name.StartsWith("xmlns:")) && !element.HasAttribute(name) ? "" : match.Value;
+                });
+                return kept + xml.Substring(end);
+            }
+
+            private static string Escape(string value, char quote)
+            {
+                StringBuilder escaped = new StringBuilder(value.Length);
+                foreach (char c in value)
+                {
+                    switch (c)
+                    {
+                        case '&': escaped.Append("&amp;"); break;
+                        case '<': escaped.Append("&lt;"); break;
+                        case '"': escaped.Append(quote == '"' ? "&quot;" : "\""); break;
+                        case '\'': escaped.Append(quote == '\'' ? "&apos;" : "'"); break;
+                        case '\t': escaped.Append("&#x9;"); break;
+                        case '\n': escaped.Append("&#xA;"); break;
+                        case '\r': escaped.Append("&#xD;"); break;
+                        default: escaped.Append(c); break;
+                    }
+                }
+                return escaped.ToString();
+            }
+
+            /* The whitespace an element's line starts with before it - or null when something else comes first on its line */
+            private string IndentOf(int position)
+            {
+                int lineStart = position == 0 ? 0 : _text.LastIndexOf('\n', position - 1) + 1;
+                string indent = _text.Substring(lineStart, position - lineStart);
+                return indent.Trim().Length == 0 ? indent : null;
+            }
+
+            /* Where the line an element ends on ends (just after its newline) when nothing but whitespace follows it, or -1 */
+            private int LineAfter(int position)
+            {
+                int newline = _text.IndexOf('\n', position);
+                return newline >= 0 && _text.Substring(position, newline - position).Trim().Length == 0 ? newline + 1 : -1;
+            }
+
+            private void RemoveWithLine(Span span)
+            {
+                string indent = IndentOf(span.Start);
+                int next = LineAfter(span.End);
+                if (indent != null && next >= 0)
+                    Replace(span.Start - indent.Length, next, "");
+                else
+                    Replace(span.Start, span.End, "");
+            }
+
+            private void Insert(XmlElement after, XmlElement before, List<XmlElement> added)
+            {
+                if (after != null)
+                {
+                    Span anchor = _where[after];
+                    string indent = IndentOf(anchor.Start);
+                    int next = LineAfter(anchor.End);
+                    if (indent != null && next >= 0)
+                        Replace(next, next, string.Concat(added.Select(o => indent + Fragment(o) + _newline)));
+                    else
+                        Replace(anchor.End, anchor.End, string.Concat(added.Select(o => _newline + (indent ?? "") + Fragment(o))));
+                }
+                else
+                {
+                    Span anchor = _where[before];
+                    string indent = IndentOf(anchor.Start);
+                    int at = indent == null ? anchor.Start : anchor.Start - indent.Length;
+                    Replace(at, at, string.Concat(added.Select(o => (indent ?? "") + Fragment(o) + _newline)));
+                }
+            }
+
+            private void Replace(int start, int end, string text)
+            {
+                _edits.Add((start, end, text));
+            }
+
+            /// <summary>The original text with every change made, or null when two of them overlap.</summary>
+            public string Apply()
+            {
+                StringBuilder text = new StringBuilder(_text);
+                int limit = _text.Length;
+                //From the end, so the places of those still to make hold; a removal before an insertion where it ends
+                foreach ((int start, int end, string replacement) in _edits.OrderByDescending(o => o.Start).ThenByDescending(o => o.End))
+                {
+                    if (end > limit)
+                        return null;
+                    text.Remove(start, end - start).Insert(start, replacement);
+                    limit = start;
+                }
+                return text.ToString();
+            }
+        }
+
+        /* What a document says, its layout aside: each element, its attributes in any order, and a value's text */
+        private static string Canonical(XmlElement element)
+        {
+            StringBuilder text = new StringBuilder();
+            void Write(XmlElement e)
+            {
+                text.Append('<').Append(e.Name);
+                foreach (XmlAttribute attribute in e.Attributes.Cast<XmlAttribute>().OrderBy(o => o.Name, StringComparer.Ordinal))
+                    text.Append(' ').Append(attribute.Name).Append('=').Append(attribute.Value.Length).Append(':').Append(attribute.Value);
+                text.Append('>');
+                if (HasElementChildren(e))
+                    foreach (XmlElement kid in Kids(e))
+                        Write(kid);
+                else
+                    text.Append(e.InnerText);
+                text.Append("</>");
+            }
+            Write(element);
+            return text.ToString();
+        }
+
+        private static bool HasElementChildren(XmlElement element)
+        {
+            foreach (XmlNode node in element.ChildNodes)
+                if (node.NodeType == XmlNodeType.Element)
+                    return true;
+            return false;
+        }
+
+        private static List<XmlElement> Kids(XmlElement element)
+        {
+            return element.ChildNodes.OfType<XmlElement>().ToList();
+        }
     }
 }
 #endif

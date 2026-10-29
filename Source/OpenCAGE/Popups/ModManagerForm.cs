@@ -19,9 +19,13 @@ namespace OpenCAGE.Popups
      * one are all the same safe operation, and turning everything off gives back the original game. */
     public class ModManagerForm : Form
     {
+        private Panel _header;
         private Label _headline;
         private Label _installState;
         private LinkLabel _installAction;
+        private LinkLabel _recheck;
+        private Label _copiesNote;
+        private readonly ToolTip _copiesNoteTip = new ToolTip() { AutoPopDelay = 30000 };
         private ListView _modList;
         private PictureBox _preview;
         private Label _detailTitle;
@@ -40,6 +44,7 @@ namespace OpenCAGE.Popups
         private ScanResult _scan;
         private bool _scanning;
         private bool _scanAgain;
+        private bool _rereading;
         private bool _refreshingList;
         private bool _pending;
         private List<string> _stale = new List<string>();
@@ -80,7 +85,7 @@ namespace OpenCAGE.Popups
         private void BuildLayout()
         {
             //Top: what this is, and the state of the game files
-            Panel header = new Panel() { Dock = DockStyle.Top, Height = 64, Padding = new Padding(12, 8, 12, 6) };
+            Panel header = _header = new Panel() { Dock = DockStyle.Top, Height = 64, Padding = new Padding(12, 8, 12, 6) };
             _headline = new Label()
             {
                 Dock = DockStyle.Top,
@@ -96,8 +101,16 @@ namespace OpenCAGE.Popups
                 if (ModServices.State?.Unreadable != null) StartAfresh();
                 else RunPristineWizard();
             };
+            //Every file read again, whatever its size and time say (a tool can change a file and put both back)
+            _recheck = new LinkLabel() { AutoSize = true, Visible = false, Text = "Check every file again", Margin = new Padding(6, 4, 0, 0) };
+            _recheck.LinkClicked += (s, e) => CheckEveryFileAgain();
             stateRow.Controls.Add(_installState);
             stateRow.Controls.Add(_installAction);
+            stateRow.Controls.Add(_recheck);
+            //Copies of the game's own files (a folder renamed and put back, a backup) aren't changes: said apart, so the space
+            //they take isn't a mystery (shown when there are any)
+            _copiesNote = new Label() { Dock = DockStyle.Top, Height = 20, AutoEllipsis = true, Visible = false, Padding = new Padding(0, 2, 0, 0) };
+            header.Controls.Add(_copiesNote);
             header.Controls.Add(stateRow);
             header.Controls.Add(_headline);
 
@@ -311,7 +324,10 @@ namespace OpenCAGE.Popups
             }
             _installState.Text = "Checking your game files...";
             _installAction.Visible = false;
+            _recheck.Visible = false;
             _scanning = true;
+            bool rereading = _rereading;
+            _rereading = false;
 
             Thread thread = new Thread(() =>
             {
@@ -324,9 +340,13 @@ namespace OpenCAGE.Popups
                     {
                         //Files are only read when they've changed since they were last read: reading them all is the first check's
                         string text = "Checking your game files... " + (done * 100 / Math.Max(1, total)) + "%"
-                            + (total > 2L * 1024 * 1024 * 1024 ? " (the first check reads every file - later ones only read the files that have changed)" : "");
+                            + (rereading ? " (reading every file again)" : total > 2L * 1024 * 1024 * 1024 ? " (the first check reads every file - later ones only read the files that have changed)" : "");
                         SafeInvoke(() => _installState.Text = text);
                     });
+                    //What's kept as the original of a file found back as the game shipped it, where that says otherwise (a folder
+                    //renamed while a mod went in, and put back since), is put right now it can be - or left for the next check
+                    try { ModServices.Installer.HealOriginals(result); }
+                    catch { }
                 }
                 catch (Exception e) { error = e.Message; }
                 //Which of the mods' files aren't as they were installed: quick once the check has read every file
@@ -343,6 +363,7 @@ namespace OpenCAGE.Popups
                         _installState.Text = "Your game files couldn't be checked: " + error;
                     else
                         ShowScanSummary();
+                    _recheck.Visible = !_scanAgain;
                     RefreshModList();
                     //Asked for while this one ran (it started before an apply, say): it says how things were, not how they are
                     if (_scanAgain)
@@ -354,6 +375,17 @@ namespace OpenCAGE.Popups
             });
             thread.IsBackground = true;
             thread.Start();
+        }
+
+        /* Every game file read again, not only those whose size or time changed since they were last read: the check is
+           only as good as those, and a tool can change a file and put both back */
+        private void CheckEveryFileAgain()
+        {
+            if (_scanning || ModServices.Cache == null)
+                return;
+            ModServices.Cache.ForgetAll();
+            _rereading = true;
+            StartScan();
         }
 
         /* The scan outlives the form if the user closes it - updates must never throw off-thread */
@@ -372,6 +404,7 @@ namespace OpenCAGE.Popups
             if (_scan == null)
                 return;
             _installAction.Visible = false;
+            ShowCopies();
             //Changes OpenCAGE has the originals of are safe: mods are combined with them. Ones it hasn't need keeping safe first.
             List<string> changed = _scan.WithStatus(FileStatus.Modified).Concat(_scan.WithStatus(FileStatus.Missing)).Where(o => !ModToolkit.IsRegenerated(o)).ToList();
             List<string> unsafeChanges = changed.Where(o => !ModServices.Installer.HasOriginal(o)).ToList();
@@ -409,6 +442,34 @@ namespace OpenCAGE.Popups
                 + (levels.Count > 0 ? " (in " + string.Join(", ", levels.Take(3).Select(ModToolkit.LevelName)) + (levels.Count > 3 ? " and more" : "") + ")" : "") + ". Mods can't be combined with those changes until it has one.";
             _installAction.Text = "Keep those changes safe...";
             _installAction.Visible = true;
+        }
+
+        /* Copies of the game's own files where the game doesn't use them - a folder renamed and put back by the store's file
+           check, a backup - are no change of the user's, and aren't counted as one: said apart, by folder, so a few GB of them
+           aren't a mystery */
+        private void ShowCopies()
+        {
+            List<string> copies = _scan.WithStatus(FileStatus.Copy).ToList();
+            _copiesNote.Visible = copies.Count != 0;
+            _header.Height = copies.Count != 0 ? 84 : 64;
+            if (copies.Count == 0)
+                return;
+            List<string> folders = copies.Select(o => o.Substring(0, o.LastIndexOf('/'))).Distinct().OrderBy(o => o).ToList();
+            //A folder inside another one listed is said with it
+            folders = folders.Where(o => !folders.Any(other => other != o && o.StartsWith(other + "/"))).ToList();
+            long bytes = 0;
+            foreach (string copy in copies)
+            {
+                try { bytes += new FileInfo(ModToolkit.Denormalise(ModServices.GameRoot, copy)).Length; }
+                catch { }
+            }
+            string where = folders.Count <= 2 ? string.Join(" and ", folders) : folders[0] + " and " + (folders.Count - 1) + " other folders";
+            _copiesNote.Text = "Not counted as changes: " + copies.Count + " cop" + (copies.Count == 1 ? "y" : "ies") + " of the game's own files (" + ModExportBuilder.PrettySize(bytes)
+                + ") in " + where + " - a folder renamed and put back, or a backup.";
+            //Which, where it's cut short
+            _copiesNoteTip.SetToolTip(_copiesNote, string.Join("\n", copies.Take(30).Select(o => o + "  (the same as " + _scan.Copies[o] + ")")) + (copies.Count > 30 ? "\n..." : "")
+                + "\n\nThe game doesn't use " + (copies.Count == 1 ? "it" : "them") + " where " + (copies.Count == 1 ? "it is" : "they are") + ", and mods leave " + (copies.Count == 1 ? "it" : "them")
+                + " alone. Delete " + (copies.Count == 1 ? "it" : "them") + " if you don't need " + (copies.Count == 1 ? "it." : "them."));
         }
 
         /* A level the game doesn't ship anything of - one made in OpenCAGE - the same test Create a Mod uses */

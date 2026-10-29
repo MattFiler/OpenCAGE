@@ -44,6 +44,12 @@ namespace OpenCAGE.Audio
             public int Blocksize1Pow;
 
             public List<Packet> Audio = new List<Packet>();
+
+            /// <summary>
+            /// A loop region narrower than the whole sound, in sample frames (the end inclusive, as a .wav's smpl chunk has
+            /// it), or -1 to loop all of it - which is what all but a few of the game's sounds do.
+            /// </summary>
+            public long LoopStart = -1, LoopEnd = -1;
         }
 
         /// <summary>
@@ -99,6 +105,9 @@ namespace OpenCAGE.Audio
             long granule = 0;
             int previousBlocksize = 0;
 
+            //Where each packet starts and ends in the data chunk, and the sample it has decoded up to: a loop is recorded by them
+            long[] packetStart = new long[stream.Audio.Count], packetEnd = new long[stream.Audio.Count], packetGranule = new long[stream.Audio.Count];
+
             for (int i = 0; i < stream.Audio.Count; i++)
             {
                 byte[] stripped = StripPacket(stream.Audio[i], modes[i], modeBlockflag, modeBits);
@@ -107,12 +116,15 @@ namespace OpenCAGE.Audio
 
                 if (stripped.Length > largestPacket)
                     largestPacket = stripped.Length;
+                packetStart[i] = data.Position;
                 WritePacket(data, stripped);
+                packetEnd[i] = data.Position;
 
                 int blocksize = 1 << (modeBlockflag[modes[i]] ? blocksize1Pow : blocksize0Pow);
                 if (i > 0)
                     granule += (previousBlocksize + blocksize) / 4;
                 previousBlocksize = blocksize;
+                packetGranule[i] = granule;
             }
 
             byte[] dataChunk = data.ToArray();
@@ -123,8 +135,54 @@ namespace OpenCAGE.Audio
             if (overhang < 0 || overhang > ushort.MaxValue)
                 throw new InvalidDataException("The sound's length and its packets disagree by " + overhang + " samples.");
 
+            //The whole sound, unless the stream carries a loop region of its own
+            Loop loop = new Loop { Start = (uint)firstAudioOffset, End = (uint)dataChunk.Length, EndExtra = (ushort)overhang };
+            if (stream.LoopStart >= 0 && stream.LoopEnd > stream.LoopStart && stream.LoopStart < stream.SampleCount)
+                loop = LoopRegion(Math.Min(stream.LoopStart, stream.SampleCount - 1), Math.Min(stream.LoopEnd, stream.SampleCount - 1), packetStart, packetEnd, packetGranule);
+
             return Wrap(stream, dataChunk, firstAudioOffset, largestPacket, (ushort)overhang,
-                blocksize0Pow, blocksize1Pow, decoder);
+                blocksize0Pow, blocksize1Pow, decoder, loop);
+        }
+
+        /// <summary>A loop as the format header records it: where in the data it starts and ends, and the samples to drop at each.</summary>
+        private sealed class Loop
+        {
+            public uint Start, End;
+            public ushort StartExtra, EndExtra;
+
+            /// <summary>In sample frames, end inclusive, for a smpl chunk; -1 for a loop of the whole sound (no chunk).</summary>
+            public long FirstSample = -1, LastSample = -1;
+        }
+
+        /* A loop region, measured against all 269 looping sounds the game ships (each with a smpl chunk): it starts at the
+         * last packet that has decoded no further than its first sample - the decoder needs that packet for the overlap -
+         * dropping the samples between, and ends at the end of the first packet that has decoded its last, dropping what
+         * that packet runs past it. Offsets count from the setup packet, which this writer puts at the start of the data. */
+        private static Loop LoopRegion(long first, long last, long[] packetStart, long[] packetEnd, long[] packetGranule)
+        {
+            int start = 0;
+            for (int i = 0; i < packetGranule.Length && packetGranule[i] <= first; i++)
+                start = i;
+
+            int end = packetGranule.Length - 1;
+            for (int i = 0; i < packetGranule.Length; i++)
+            {
+                if (packetGranule[i] >= last + 1)
+                {
+                    end = i;
+                    break;
+                }
+            }
+
+            return new Loop
+            {
+                Start = (uint)packetStart[start],
+                StartExtra = (ushort)Math.Min(ushort.MaxValue, first - packetGranule[start]),
+                End = (uint)packetEnd[end],
+                EndExtra = (ushort)Math.Min(ushort.MaxValue, Math.Max(0, packetGranule[end] - (last + 1))),
+                FirstSample = first,
+                LastSample = last,
+            };
         }
 
         private static int EstimateSize(Stream stream)
@@ -149,7 +207,7 @@ namespace OpenCAGE.Audio
         /// inline rather than in a chunk of its own, which is why it is 66 bytes rather than 18.
         /// </summary>
         private static byte[] Wrap(Stream stream, byte[] dataChunk, int firstAudioOffset, int largestPacket,
-            ushort overhang, int blocksize0Pow, int blocksize1Pow, WwiseVorbisSetups.Decoder decoder)
+            ushort overhang, int blocksize0Pow, int blocksize1Pow, WwiseVorbisSetups.Decoder decoder, Loop loop)
         {
             const int FormatLength = 66;
             byte[] format = new byte[FormatLength];
@@ -171,11 +229,11 @@ namespace OpenCAGE.Audio
 
             int vorb = 0x18;
             Put32(format, vorb + 0x00, stream.SampleCount);
-            //The loop covers the whole sound, and both offsets are counted from the setup packet
-            Put32(format, vorb + 0x04, (uint)firstAudioOffset);
-            Put32(format, vorb + 0x08, (uint)dataChunk.Length);
-            Put16(format, vorb + 0x0C, 0);        //samples to drop at the loop point
-            Put16(format, vorb + 0x0E, overhang); //...and at its end, which for us is the end of the sound
+            //The loop - the whole sound unless the stream has a region of its own - with both offsets counted from the setup packet
+            Put32(format, vorb + 0x04, loop.Start);
+            Put32(format, vorb + 0x08, loop.End);
+            Put16(format, vorb + 0x0C, loop.StartExtra); //samples to drop at the loop point
+            Put16(format, vorb + 0x0E, loop.EndExtra);   //...and at its end: for the whole sound, the decoder's overhang
             Put32(format, vorb + 0x10, 0);        //setup packet offset: we write no seek table
             Put32(format, vorb + 0x14, (uint)firstAudioOffset);
             Put16(format, vorb + 0x18, (ushort)largestPacket);
@@ -186,16 +244,32 @@ namespace OpenCAGE.Audio
             format[vorb + 0x28] = (byte)blocksize0Pow;
             format[vorb + 0x29] = (byte)blocksize1Pow;
 
+            //A loop region also goes in a smpl chunk, between the format and the data, laid out as the game's own: every field
+            //zero bar the loop count (1) and the loop's first and last sample
+            const int SmplLength = 36 + 24;
+            bool smpl = loop.FirstSample >= 0;
+
             using (MemoryStream output = new MemoryStream(dataChunk.Length + 128))
             using (BinaryWriter writer = new BinaryWriter(output, Encoding.ASCII))
             {
                 writer.Write(Encoding.ASCII.GetBytes("RIFF"));
-                writer.Write(4 + (8 + FormatLength) + (8 + dataChunk.Length));
+                writer.Write(4 + (8 + FormatLength) + (smpl ? 8 + SmplLength : 0) + (8 + dataChunk.Length));
                 writer.Write(Encoding.ASCII.GetBytes("WAVE"));
 
                 writer.Write(Encoding.ASCII.GetBytes("fmt "));
                 writer.Write(FormatLength);
                 writer.Write(format);
+
+                if (smpl)
+                {
+                    byte[] chunk = new byte[SmplLength];
+                    Put32(chunk, 28, 1);
+                    Put32(chunk, 36 + 8, (uint)loop.FirstSample);
+                    Put32(chunk, 36 + 12, (uint)loop.LastSample);
+                    writer.Write(Encoding.ASCII.GetBytes("smpl"));
+                    writer.Write(SmplLength);
+                    writer.Write(chunk);
+                }
 
                 writer.Write(Encoding.ASCII.GetBytes("data"));
                 writer.Write(dataChunk.Length);

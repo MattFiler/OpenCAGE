@@ -475,14 +475,14 @@ namespace OpenCAGE.Popups
                     continue;
                 }
 
-                if (path.EndsWith(".BML"))
+                //A settings file (a .BML config, the graphics and sound options, the controls...): value by value
+                if (ConfigDiff.ByValue(path))
                 {
                     byte[] vanilla = VanillaConfigs.GetBest(path);
                     List<BmlPatchOp> ops = vanilla == null ? null : ConfigDiff.Diff(ModServices.GameRoot, path, vanilla, ModServices.Installer);
                     if (ops != null && ops.Count != 0)
                     {
-                        XmlDocument original = null;
-                        try { original = new CATHODE.BML(vanilla).Content; } catch { }
+                        XmlDocument original = ConfigDiff.Read(path, vanilla);
                         configs.Add(new ConfigChange() { Path = path, Ops = ops, VanillaBytes = vanilla, Original = original });
                         continue;
                     }
@@ -524,7 +524,7 @@ namespace OpenCAGE.Popups
                     TreeNode fileNode = settingsRoot.Nodes.Add(ConfigTitle(config.Path) + "  -  " + config.Ops.Count + " change" + (config.Ops.Count == 1 ? "" : "s"));
                     fileNode.Tag = config;
                     foreach (BmlPatchOp op in config.Ops)
-                        fileNode.Nodes.Add(Capitalise(BmlPatch.Describe(op, config.Original))).Tag = op;
+                        fileNode.Nodes.Add(Capitalise(ConfigDiff.Describe(config.Path, op, config.Original))).Tag = op;
                     fileNode.Expand();
                 }
                 settingsRoot.Expand();
@@ -585,9 +585,28 @@ namespace OpenCAGE.Popups
                 }
                 otherRoot.Expand();
             }
-            if (_tree.Nodes.Count == 0)
+            bool changedAnything = _tree.Nodes.Count != 0;
+
+            //Copies of the game's own files where the game doesn't use them (a folder renamed and put back by a file check, a
+            //backup) are no change of the user's: listed last, unticked and folded away - a mod that does want one as a new file
+            //can still have it
+            List<string> copies = _scan.WithStatus(FileStatus.Copy).OrderBy(o => o).ToList();
+            TreeNode copiesRoot = null;
+            if (copies.Count != 0)
             {
-                _tree.Nodes.Add("You haven't changed anything in the game yet - make your changes in OpenCAGE, then come back here.");
+                copiesRoot = _tree.Nodes.Add("Copies of the game's own files - not changes, so left out unless you tick them");
+                copiesRoot.ToolTipText = "Files the game ships somewhere else, byte for byte and under the same names: a folder renamed and put back, or a backup. The game doesn't use them where they are.";
+                foreach (string file in copies)
+                {
+                    TreeNode node = copiesRoot.Nodes.Add(file + "  -  " + Describe(file) + ", the same as " + _scan.Copies[file]);
+                    node.Tag = file;
+                    node.ToolTipText = file;
+                }
+            }
+
+            if (!changedAnything)
+            {
+                _tree.Nodes.Insert(0, "You haven't changed anything in the game yet - make your changes in OpenCAGE, then come back here.");
                 _exportButton.Enabled = false;
             }
             else
@@ -595,7 +614,8 @@ namespace OpenCAGE.Popups
                 //Most mods are everything the author changed: it all starts ticked - except the rest of a level whose edit
                 //history says what in it the user changed: what they changed starts ticked, the rest of the level doesn't
                 foreach (TreeNode root in _tree.Nodes)
-                    root.Checked = true;
+                    if (root != copiesRoot)
+                        root.Checked = true;
                 _cascading = true;
                 foreach (KeyValuePair<LevelChanges, TreeNode> rest in _restNodes)
                     if (rest.Key.HasHistory && !rest.Key.Assets.Any(o => o.WholeOnly))
@@ -1110,8 +1130,8 @@ namespace OpenCAGE.Popups
             {
                 //A replacement mod's: each thing whole
                 int wholeLevels = files.Select(ModInstaller.LevelUnitOf).Where(o => o != null).Distinct().Count();
-                int settingsFiles = files.Count(o => ModInstaller.LevelUnitOf(o) == null && o.EndsWith(".BML") && o != TreeDirectory);
-                int otherFiles = files.Count(o => ModInstaller.LevelUnitOf(o) == null && !(o.EndsWith(".BML") && o != TreeDirectory) && o != TreeDirectory);
+                int settingsFiles = files.Count(o => ConfigDiff.ByValue(o) && o != TreeDirectory);
+                int otherFiles = files.Count(o => ModInstaller.LevelUnitOf(o) == null && !ConfigDiff.ByValue(o) && o != TreeDirectory);
                 if (wholeLevels != 0) counts.Add(wholeLevels + " whole level" + (wholeLevels == 1 ? "" : "s"));
                 if (settingsFiles != 0) counts.Add(settingsFiles + " settings file" + (settingsFiles == 1 ? "" : "s"));
                 if (files.Contains(TreeDirectory)) counts.Add("the behaviour trees");

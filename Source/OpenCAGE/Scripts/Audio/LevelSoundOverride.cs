@@ -462,6 +462,35 @@ namespace OpenCAGE.Audio
             return Finish(builder, plan, write);
         }
 
+        /// <summary>
+        /// Put audio into the package as a stream with this id, in place of any stream of that id - audio made here from a .wav
+        /// for a soundbank of the user's own to stream, or a stream of the base game's replaced whole.
+        /// </summary>
+        public static Plan AddStream(string package, uint id, byte[] wem, bool write)
+        {
+            Plan plan = new Plan { Package = package };
+            WwiseFilePackageBuilder builder;
+            try
+            {
+                if (wem == null || wem.Length < 12 || Encoding.ASCII.GetString(wem, 0, 4) != "RIFF")
+                {
+                    plan.Problem = "That isn't Wwise audio.";
+                    return plan;
+                }
+
+                builder = Open(package, plan);
+                builder.Set(builder.Streams, id, builder.SfxLanguage, wem);
+                plan.StreamsSet++;
+            }
+            catch (Exception e)
+            {
+                plan.Problem = e.Message;
+                return plan;
+            }
+
+            return Finish(builder, plan, write);
+        }
+
         /// <summary>Take files out of the package by table and id (every language of each), deleting it if nothing is left.</summary>
         public static Plan Remove(string package, IEnumerable<KeyValuePair<bool, uint>> files, bool write)
         {
@@ -488,7 +517,147 @@ namespace OpenCAGE.Audio
                 return plan;
             }
 
-            return Finish(builder, plan, write);
+            Plan finished = Finish(builder, plan, write);
+
+            //A soundbank of the level's own (none in DATA/SOUND) takes its events out of the level's sound event table with it
+            if (write && finished.Ok)
+            {
+                List<uint> ownBanks = files.Where(o => o.Key && BaseBankFile(o.Value, (WwiseSoundLibrary)null) == null).Select(o => o.Value).ToList();
+                if (ownBanks.Count != 0)
+                {
+                    string note = SetLevelEvents(package, ownBanks.ToDictionary(o => o, o => (IList<WwiseBankBuilder.EventInfo>)new WwiseBankBuilder.EventInfo[0]), null);
+                    if (note != null)
+                        finished.Notes.Add(note);
+                }
+            }
+            return finished;
+        }
+
+        #endregion
+
+        #region SOUNDBANKS OF THE LEVEL'S OWN
+
+        /// <summary>
+        /// Put a soundbank built here (<see cref="WwiseBankBuilder"/>) in the package, in place of any of the same name, and list its
+        /// events in the level's sound event table - which is where the game finds an event a script names (SOUND_ENTITY::on_load
+        /// looks the name up there and plays nothing without it). The table and the level's soundbank list are written straight
+        /// away, as the package is. Only for the open level's package: the tables are the open level's.
+        /// </summary>
+        public static Plan SaveBank(string package, string bankName, WwiseBankBuilder.Result built, bool write)
+        {
+            Plan plan = new Plan { Package = package };
+            WwiseFilePackageBuilder builder;
+            try
+            {
+                if (!SameFile(Path.GetFullPath(package), PathForOpenLevel() ?? ""))
+                {
+                    plan.Problem = "A soundbank of the level's own can only be made for the open level: its events go in the level's sound event table.";
+                    return plan;
+                }
+                if (IsPermanent(built.BankId, SoundPreviewLibrary.SoundDirectory) || BaseBankFile(built.BankId, (WwiseSoundLibrary)null) != null)
+                {
+                    plan.Problem = "The game already has a soundbank called " + bankName + ": give the new one a name of its own.";
+                    return plan;
+                }
+
+                builder = Open(package, plan);
+                bool replacing = builder.Banks.Any(o => o.Id == built.BankId);
+                builder.Set(builder.Banks, built.BankId, builder.SfxLanguage, built.Bank);
+                (replacing ? plan.BanksChanged : plan.BanksCopied).Add(bankName);
+            }
+            catch (Exception e)
+            {
+                plan.Problem = e.Message;
+                return plan;
+            }
+
+            Finish(builder, plan, write);
+            plan.Notes.RemoveAll(o => o.StartsWith("Copied into the level's package", StringComparison.Ordinal));
+            plan.Notes.Insert(0, "The soundbank " + bankName + " (" + Describe(built.Bank.Length) + ") goes in the level's sound package, with " + built.Events.Count + " event" + (built.Events.Count == 1 ? "" : "s")
+                + ". Its events go in the level's sound event table (WORLD\\SOUNDEVENTDATA.DAT) - scripts can play them once a SoundLoadBank loads the bank.");
+            if (!write || !plan.Ok)
+                return plan;
+
+            string note = SetLevelEvents(package, new Dictionary<uint, IList<WwiseBankBuilder.EventInfo>> { { built.BankId, built.Events } }, bankName);
+            if (note != null)
+            {
+                plan.Problem = note;
+                return plan;
+            }
+            return plan;
+        }
+
+        /// <summary>
+        /// The open level's sound event table (and its soundbank list) made to list exactly these events for these banks - none,
+        /// to take a bank's out - then written. Null when it went through, else what went wrong. Everything that lists sound events
+        /// (the pickers, the Sound Editor, its Soundbanks column) is told to read them again.
+        /// </summary>
+        private static string SetLevelEvents(string package, IDictionary<uint, IList<WwiseBankBuilder.EventInfo>> banks, string addBankName)
+        {
+            try
+            {
+                LevelContent content = Singleton.Editor == null || Singleton.Editor.CompositeBrowser == null ? null : Singleton.Editor.CompositeBrowser.Content;
+                if (content == null || content.Level == null || content.Level.SoundEventData == null || !SameFile(Path.GetFullPath(package), PathForOpenLevel() ?? ""))
+                    return "The level's sound event table wasn't changed: the level isn't open.";
+
+                CATHODE.SoundEventData events = content.Level.SoundEventData;
+                CATHODE.SoundBankData bankList = content.Level.SoundBankData;
+                foreach (KeyValuePair<uint, IList<WwiseBankBuilder.EventInfo>> bank in banks)
+                {
+                    events.Entries.RemoveAll(o => o.id == bank.Key);
+                    List<WwiseBankBuilder.EventInfo> named = bank.Value.Where(o => !string.IsNullOrEmpty(o.Name)).ToList();
+                    if (named.Count != 0)
+                    {
+                        CATHODE.SoundEventData.Soundbank entry = new CATHODE.SoundEventData.Soundbank { id = bank.Key };
+                        foreach (WwiseBankBuilder.EventInfo e in named)
+                        {
+                            entry.events.Add(new CATHODE.SoundEventData.Soundbank.Event { name = e.Name, metadata = "", max_attenuation = e.MaxAttenuation });
+                            CATHODE.Scripting.ShortGuidUtils.Generate(e.Name);
+                        }
+                        events.Entries.Add(entry);
+                    }
+                    if (bankList != null)
+                    {
+                        bankList.Entries.RemoveAll(o => !string.IsNullOrEmpty(o.Name) && CathodeLib.Utilities.SoundHashedString(o.Name) == bank.Key);
+                        if (named.Count != 0 && addBankName != null)
+                            bankList.Entries.Add(new CATHODE.SoundBankData.SoundBank { Name = addBankName, Localised = false });
+                    }
+                }
+
+                Modding.ModServices.CaptureBeforeWrite(events.Filepath);
+                events.Save();
+                if (bankList != null)
+                {
+                    Modding.ModServices.CaptureBeforeWrite(bankList.Filepath);
+                    bankList.Save();
+                }
+            }
+            catch (Exception e)
+            {
+                return "The level's sound event table could not be written: " + e.Message;
+            }
+            finally
+            {
+                SoundEventMetadata.Invalidate();
+                EnumStringListViewItems.RefreshSoundEntries();
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// The events of a soundbank of the level's own, by id, with their names - as the open level's sound event table lists
+        /// them (a bank holds only their hashes).
+        /// </summary>
+        public static Dictionary<uint, string> LevelEventNames(uint bankId)
+        {
+            Dictionary<uint, string> names = new Dictionary<uint, string>();
+            LevelContent content = Singleton.Editor == null || Singleton.Editor.CompositeBrowser == null ? null : Singleton.Editor.CompositeBrowser.Content;
+            if (content == null || content.Level == null || content.Level.SoundEventData == null)
+                return names;
+            foreach (CATHODE.SoundEventData.Soundbank bank in content.Level.SoundEventData.Entries.Where(o => o.id == bankId))
+                foreach (CATHODE.SoundEventData.Soundbank.Event e in bank.events)
+                    names[CathodeLib.Utilities.SoundHashedString(e.name)] = e.name;
+            return names;
         }
 
         #endregion
@@ -629,6 +798,19 @@ namespace OpenCAGE.Audio
         public static bool IsPermanent(uint bankId, string soundDirectory)
         {
             return PermanentBanks(soundDirectory).Contains(bankId);
+        }
+
+        /// <summary>The permanent soundbanks' files in DATA/SOUND (full paths), for telling at a glance which audio no level can replace.</summary>
+        public static HashSet<string> PermanentBankFiles(WwiseSoundLibrary library)
+        {
+            HashSet<string> files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (uint id in PermanentBanks(library.SoundDirectory))
+            {
+                string file = BaseBankFile(id, library);
+                if (file != null)
+                    files.Add(Path.GetFullPath(file));
+            }
+            return files;
         }
 
         /// <summary>

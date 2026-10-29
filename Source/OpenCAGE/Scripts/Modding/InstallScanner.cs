@@ -13,11 +13,14 @@ namespace OpenCAGE.Modding
         Modified,  //A shipped file with unrecognised bytes (unexported OpenCAGE work, or a hand-installed mod)
         Foreign,   //A file the shipped game doesn't have, and no mod claims
         Missing,   //A shipped file that isn't on disk
+        Copy,      //A file the shipped game doesn't have there, byte for byte one it ships elsewhere under the same name (a game folder renamed and put back, a backup): not a change
     }
 
     public class ScanResult
     {
         public Dictionary<string, FileStatus> Files = new Dictionary<string, FileStatus>();
+        /* Each Copy, and the shipped file it's a copy of */
+        public Dictionary<string, string> Copies = new Dictionary<string, string>();
         public DateTime CompletedUtc;
 
         public IEnumerable<string> WithStatus(FileStatus status)
@@ -137,10 +140,32 @@ namespace OpenCAGE.Modding
                         status = FileStatus.Managed;
                     else if (_manifest.Contains(path))
                         status = FileStatus.Modified;
+                    else if (_manifest.CopyOf(path, hash) is string original)
+                    {
+                        status = FileStatus.Copy;
+                        result.Copies[path] = original;
+                    }
                     else
                         status = FileStatus.Foreign;
                 }
                 result.Files[path] = status;
+            }
+
+            /* In a level, copies are copies only in one the game ships that has nothing else of the user's in it (a folder of it
+               renamed and put back). A level the game doesn't ship is the user's whole: one made in OpenCAGE starts out with
+               copies of another level's files (its sound banks, its galaxy), and a duplicated level is nothing but copies until
+               it's changed - they're as much a part of it as the rest. So is any copy in a level the user changed. */
+            HashSet<string> levelsChanged = new HashSet<string>(result.Files.Where(o => o.Value != FileStatus.Vanilla && o.Value != FileStatus.Copy)
+                .Select(o => ModInstaller.LevelUnitOf(o.Key)).Where(o => o != null));
+            HashSet<string> levelsShipped = result.Copies.Count == 0 ? new HashSet<string>()
+                : new HashSet<string>(_manifest.Entries.Select(o => ModInstaller.LevelUnitOf(o.Path)).Where(o => o != null));
+            foreach (string path in result.Copies.Keys.ToList())
+            {
+                string level = ModInstaller.LevelUnitOf(path);
+                if (level == null || (levelsShipped.Contains(level) && !levelsChanged.Contains(level)))
+                    continue;
+                result.Files[path] = FileStatus.Foreign;
+                result.Copies.Remove(path);
             }
 
             _cache.Save();
