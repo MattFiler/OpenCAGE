@@ -34,6 +34,7 @@ namespace OpenCAGE
             this.editGeometryBtn = new System.Windows.Forms.Button();
             this.exportCs2Btn = new System.Windows.Forms.Button();
             this.importModelBtn = new System.Windows.Forms.Button();
+            this.exportAllModelsBtn = new System.Windows.Forms.Button();
             this.modelSearchClearButton = new System.Windows.Forms.Button();
             this.modelSearchButton = new System.Windows.Forms.Button();
             this.modelSearchTextBox = new System.Windows.Forms.TextBox();
@@ -49,7 +50,6 @@ namespace OpenCAGE
             this.renderFlagsPanel = new System.Windows.Forms.FlowLayoutPanel();
             this.submeshFilterGroup = new System.Windows.Forms.GroupBox();
             this.submeshFilterPanel = new System.Windows.Forms.Panel();
-            this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.modelPreviewArea.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -100,14 +100,26 @@ namespace OpenCAGE
             // 
             this.importModelBtn.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.importModelBtn.Location = new System.Drawing.Point(0, 602);
+            this.importModelBtn.Location = new System.Drawing.Point(0, 569);
             this.importModelBtn.Name = "importModelBtn";
             this.importModelBtn.Size = new System.Drawing.Size(352, 29);
             this.importModelBtn.TabIndex = 0;
             this.importModelBtn.Text = "Import New";
             this.importModelBtn.UseVisualStyleBackColor = true;
             this.importModelBtn.Click += new System.EventHandler(this.importModelBtn_Click);
-            // 
+            //
+            // exportAllModelsBtn
+            //
+            this.exportAllModelsBtn.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.exportAllModelsBtn.Location = new System.Drawing.Point(0, 602);
+            this.exportAllModelsBtn.Name = "exportAllModelsBtn";
+            this.exportAllModelsBtn.Size = new System.Drawing.Size(352, 29);
+            this.exportAllModelsBtn.TabIndex = 1;
+            this.exportAllModelsBtn.Text = "Export All";
+            this.exportAllModelsBtn.UseVisualStyleBackColor = true;
+            this.exportAllModelsBtn.Click += new System.EventHandler(this.exportAllModelsBtn_Click);
+            //
             // modelSearchClearButton
             // 
             this.modelSearchClearButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
@@ -150,7 +162,7 @@ namespace OpenCAGE
             this.FileTree.HideSelection = false;
             this.FileTree.Location = new System.Drawing.Point(0, 35);
             this.FileTree.Name = "FileTree";
-            this.FileTree.Size = new System.Drawing.Size(352, 562);
+            this.FileTree.Size = new System.Drawing.Size(352, 529);
             this.FileTree.TabIndex = 100;
             this.FileTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.FileTree_AfterSelect);
             // 
@@ -202,6 +214,7 @@ namespace OpenCAGE
             // 
             // splitContainer1.Panel1
             // 
+            this.splitContainer1.Panel1.Controls.Add(this.exportAllModelsBtn);
             this.splitContainer1.Panel1.Controls.Add(this.importModelBtn);
             this.splitContainer1.Panel1.Controls.Add(this.FileTree);
             this.splitContainer1.Panel1.Controls.Add(this.modelSearchClearButton);
@@ -313,14 +326,6 @@ namespace OpenCAGE
             this.submeshFilterPanel.Size = new System.Drawing.Size(258, 321);
             this.submeshFilterPanel.TabIndex = 0;
             // 
-            // imageList1
-            // 
-            this.imageList1.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList1.ImageStream")));
-            this.imageList1.TransparentColor = System.Drawing.Color.Transparent;
-            this.imageList1.Images.SetKeyName(0, "Folder Icon.png");
-            this.imageList1.Images.SetKeyName(1, "file_icon.png");
-            this.imageList1.Images.SetKeyName(2, "FolderOpened Icon.png");
-            // 
             // EditModel
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -353,6 +358,7 @@ namespace OpenCAGE
 
         private System.Windows.Forms.Integration.ElementHost modelRendererHost;
         private System.Windows.Forms.Button importModelBtn;
+        private System.Windows.Forms.Button exportAllModelsBtn;
         private System.Windows.Forms.Button modelSearchClearButton;
         private System.Windows.Forms.Button modelSearchButton;
         private System.Windows.Forms.TextBox modelSearchTextBox;
@@ -368,7 +374,6 @@ namespace OpenCAGE
         private System.Windows.Forms.Panel submeshFilterPanel;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel2;
         private System.Windows.Forms.Button deleteBtn;
-        private System.Windows.Forms.ImageList imageList1;
         private System.Windows.Forms.GroupBox renderFlagsGroup;
         private System.Windows.Forms.FlowLayoutPanel renderFlagsPanel;
     }

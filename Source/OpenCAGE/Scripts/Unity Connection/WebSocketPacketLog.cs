@@ -15,7 +15,8 @@ namespace OpenCAGE.UnityConnection
 
         private static void Log(string direction, Packet packet, int jsonLength)
         {
-            if (packet?.packet_event == PacketEvent.VIEWER_LOG)
+            //Log lines are logged as themselves; camera poses come up to 30 a second while the game's camera follows the viewport
+            if (packet?.packet_event == PacketEvent.VIEWER_LOG || packet?.packet_event == PacketEvent.VIEWER_CAMERA_POSE)
                 return;
 
             string size = jsonLength >= 0 ? jsonLength + "b | " : string.Empty;
@@ -38,6 +39,10 @@ namespace OpenCAGE.UnityConnection
 
             if (packet.entity != 0)
                 sb.Append(" | entity=").Append(packet.entity);
+
+            if (packet.selection_entities != null && packet.selection_entities.Count > 1)
+                sb.Append(" | selection=").Append(packet.selection_entities.Count)
+                    .Append('[').Append(string.Join(",", packet.selection_entities)).Append(']');
 
             if (packet.path_entities != null && packet.path_entities.Count > 0)
             {
@@ -85,6 +90,37 @@ namespace OpenCAGE.UnityConnection
 
             if (packet.dirty)
                 sb.Append(" | dirty");
+
+            if (packet.packet_event == PacketEvent.VIEWPORT_CONTEXT_MENU)
+            {
+                sb.Append(" | at=(")
+                    .Append(packet.context_menu_viewport_x.ToString("0.###")).Append(',')
+                    .Append(packet.context_menu_viewport_y.ToString("0.###")).Append(')');
+                sb.Append(" | can=[");
+                if (packet.context_menu_has_selection) sb.Append("selection ");
+                if (packet.context_menu_can_paste) sb.Append("paste ");
+                if (packet.context_menu_can_focus) sb.Append(packet.context_menu_focus_frames_all ? "frameAll " : "focus ");
+                if (packet.context_menu_can_snap_to_floor) sb.Append("snap ");
+                if (packet.context_menu_can_hide) sb.Append("hide ");
+                if (packet.context_menu_can_unhide_all) sb.Append("unhide ");
+                if (packet.context_menu_can_step_into) sb.Append("stepInto ");
+                if (packet.context_menu_can_select_parent) sb.Append("parent ");
+                sb.Append(']');
+            }
+
+            if (packet.viewport_action != 0)
+                sb.Append(" | action=").Append((ViewportAction)packet.viewport_action);
+
+            if (packet.drop_function_type != 0)
+                sb.Append(" | dropFunction=").Append((CATHODE.Scripting.FunctionType)packet.drop_function_type);
+
+            if (packet.packet_event == PacketEvent.VIEWPORT_SET_CAMERA)
+            {
+                sb.Append(" | camera=(")
+                    .Append(packet.camera_position.X.ToString("0.###")).Append(',')
+                    .Append(packet.camera_position.Y.ToString("0.###")).Append(',')
+                    .Append(packet.camera_position.Z.ToString("0.###")).Append(')');
+            }
 
             return sb.ToString();
         }

@@ -1,8 +1,9 @@
-using CATHODE;
+﻿using CATHODE;
 using OpenCAGE.Popups.Base;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Windows.Controls.Primitives;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.Linq;
@@ -18,6 +19,7 @@ namespace OpenCAGE.ConfigEditors
         public HackingEditor() : base()
         {
             InitializeComponent();
+            BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/hack-tool-difficulties/");
             ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
             _gblItem = new BML(Singleton.PathToAI + @"\DATA\GBL_ITEM.BML");
@@ -46,7 +48,7 @@ namespace OpenCAGE.ConfigEditors
             }
 
             this.FormClosing += HackingEditor_FormClosing;
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
         }
 
         private void PopulateDifficulties(ComboBox combo, XmlElement difficulties)
@@ -61,12 +63,8 @@ namespace OpenCAGE.ConfigEditors
 
         private void HackingEditor_Load(object sender, EventArgs e)
         {
-            for (int i = 0; i < hackDifficulties.Items.Count; i++)
-            {
-                hackDifficulties.SelectedIndex = i;
-                Save(null, EventArgs.Empty);
-            }
-            hackDifficulties.SelectedIndex = 0;
+            if (hackDifficulties.Items.Count != 0)
+                hackDifficulties.SelectedIndex = 0;
         }
 
         private void HackingEditor_FormClosing(object sender, FormClosingEventArgs e)
@@ -101,13 +99,13 @@ namespace OpenCAGE.ConfigEditors
         {
             var doc = _gblItem.Content;
 
+            //Each level's entry is updated where it is rather than rebuilt: tool level 99's also carries min_difficulty="24", which the game reads
             var gatingLevels = doc["item_database"]["hacking_gating_levels"];
-            gatingLevels.RemoveAll();
-            CreateMaxDifficulty(doc, "0", lvl0Max.Text, gatingLevels);
-            CreateMaxDifficulty(doc, "1", lvl1Max.Text, gatingLevels);
-            CreateMaxDifficulty(doc, "2", lvl2Max.Text, gatingLevels);
-            CreateMaxDifficulty(doc, "3", lvl3Max.Text, gatingLevels);
-            CreateMaxDifficulty(doc, "99", lvl99Max.Text, gatingLevels);
+            SetMaxDifficulty(doc, "0", lvl0Max.Text, gatingLevels);
+            SetMaxDifficulty(doc, "1", lvl1Max.Text, gatingLevels);
+            SetMaxDifficulty(doc, "2", lvl2Max.Text, gatingLevels);
+            SetMaxDifficulty(doc, "3", lvl3Max.Text, gatingLevels);
+            SetMaxDifficulty(doc, "99", lvl99Max.Text, gatingLevels);
 
             var difficulites = doc["item_database"]["hacking_game_difficulties"];
             foreach (XmlElement difficulty in difficulites)
@@ -115,13 +113,13 @@ namespace OpenCAGE.ConfigEditors
                 if (difficulty.GetAttribute("difficulty") != hackDifficulties.Text)
                     continue;
 
-                difficulty.SetAttribute("inner_selection_angle_in_deg", inner_selection_angle_in_deg.Text);
-                difficulty.SetAttribute("outer_selection_angle_in_deg", outer_selection_angle_in_deg.Text);
-                difficulty.SetAttribute("selection_angle_increase_in_deg", selection_angle_increase_in_deg.Text);
-                difficulty.SetAttribute("number_of_rounds", number_of_rounds.Text);
-                difficulty.SetAttribute("length_of_keycode", length_of_keycode.Text);
-                difficulty.SetAttribute("number_of_alarms", number_of_alarms.Text);
-                difficulty.SetAttribute("timer_countdown_seconds", timer_countdown_seconds.Text); 
+                difficulty.SetAttribute("inner_selection_angle_in_deg", ConfigEditorUtils.NumberText(inner_selection_angle_in_deg));
+                difficulty.SetAttribute("outer_selection_angle_in_deg", ConfigEditorUtils.NumberText(outer_selection_angle_in_deg));
+                difficulty.SetAttribute("selection_angle_increase_in_deg", ConfigEditorUtils.NumberText(selection_angle_increase_in_deg));
+                difficulty.SetAttribute("number_of_rounds", ConfigEditorUtils.NumberText(number_of_rounds));
+                difficulty.SetAttribute("length_of_keycode", ConfigEditorUtils.NumberText(length_of_keycode));
+                difficulty.SetAttribute("number_of_alarms", ConfigEditorUtils.NumberText(number_of_alarms));
+                difficulty.SetAttribute("timer_countdown_seconds", ConfigEditorUtils.NumberText(timer_countdown_seconds)); 
             }
 
             _gblItem.Content = doc;
@@ -130,18 +128,29 @@ namespace OpenCAGE.ConfigEditors
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
         }
 
-        private void CreateMaxDifficulty(XmlDocument doc, string toolLvl, string maxDiff, XmlElement parent)
+        private void SetMaxDifficulty(XmlDocument doc, string toolLvl, string maxDiff, XmlElement parent)
         {
-            XmlElement max = doc.CreateElement("hack_max_difficulty");
+            //A list showing nothing (the file's value isn't one of the difficulties) leaves the file's value alone
+            if (string.IsNullOrEmpty(maxDiff))
+                return;
+
+            //Only max_difficulty is the editor's: the entry's other attributes stay as they are
+            bool found = false;
+            foreach (XmlNode node in parent.ChildNodes)
+            {
+                if (!(node is XmlElement level) || level.Name != "hack_max_difficulty" || level.GetAttribute("tool_level") != toolLvl)
+                    continue;
+                level.SetAttribute("max_difficulty", maxDiff);
+                found = true;
+            }
+            if (found)
+                return;
+
+            //In the file's namespace, as its other entries are (a bare CreateElement writes xmlns="" on it)
+            XmlElement max = doc.CreateElement("hack_max_difficulty", parent.NamespaceURI);
             max.SetAttribute("tool_level", toolLvl);
             max.SetAttribute("max_difficulty", maxDiff);
             parent.AppendChild(max);
-        }
-
-        private void helpBtn_Click(object sender, EventArgs e)
-        {
-            Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
-            Process.Start("https://opencage.co.uk/docs/configs/hack-tool-difficulties");
         }
     }
 }

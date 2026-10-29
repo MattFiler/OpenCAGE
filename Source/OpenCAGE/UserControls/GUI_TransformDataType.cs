@@ -20,6 +20,9 @@ namespace OpenCAGE.UserControls
     {
         public Action OnValueChanged;
 
+        /// <summary>Name of the parameter this control is editing (as displayed in the inspector).</summary>
+        public string ParameterName { get; private set; }
+
         cTransform transformVal = null;
         Entity _entity = null;
         private bool _suppressValueChanged = false;
@@ -31,11 +34,12 @@ namespace OpenCAGE.UserControls
             this.deleteToolStripMenuItem.Click += new EventHandler(deleteToolStripMenuItem_Click);
 
             NumericStepSettings.Changed += OnNumericStepSettingsChanged;
-            HandleDestroyed += OnNumericStepSettingsHandleDestroyed;
+            //Disposed rather than HandleDestroyed: a handle can be recreated (a reparent), and one never made is never destroyed
+            Disposed += OnNumericStepSettingsDisposed;
             ApplyNumericStepIncrements();
         }
 
-        private void OnNumericStepSettingsHandleDestroyed(object sender, EventArgs e)
+        private void OnNumericStepSettingsDisposed(object sender, EventArgs e)
         {
             NumericStepSettings.Changed -= OnNumericStepSettingsChanged;
         }
@@ -58,6 +62,7 @@ namespace OpenCAGE.UserControls
         {
             _entity = entity;
 
+            ParameterName = title;
             POSITION_VARIABLE_DUMMY.Text = title;
             transformVal = cTrans;
             this.deleteToolStripMenuItem.Text = "Delete '" + title + "'";

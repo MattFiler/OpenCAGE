@@ -2,13 +2,18 @@
 using CATHODE;
 using CathodeLib.ObjectExtensions;
 using OpenCAGE.Popups.Base;
+using OpenCAGE.TextureTools;
+using OpenCAGE.Popups.UserControls;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using static CATHODE.Textures;
+using AssetKind = CathodeLib.AssetModificationInfoTable.AssetKind;
 
 namespace OpenCAGE
 {
@@ -19,53 +24,40 @@ namespace OpenCAGE
         TreeUtility _treeHelper;
         Textures _activeTextures;
         Textures.TEX4 _selectedTexture;
-        bool _suppressSourceChange = true;
         bool _suppressSearchChanged;
         bool _suppressFlagChange;
+        bool _environmentMapsOnly;
+        bool _suppressCubemapModeChange;
+        GUI_CubemapViewer _cubemapViewer;
         readonly List<(Textures.TextureStateFlag flag, CheckBox cb)> _stateFlagChecks = new List<(Textures.TextureStateFlag, CheckBox)>();
         readonly List<(Textures.TextureUsageFlag flag, CheckBox cb)> _usageFlagChecks = new List<(Textures.TextureUsageFlag, CheckBox)>();
 
-        public EditTexture(Textures.TEX4 currentMapping = null, bool showSelectBtn = true, int initialTextureSourceIndex = 0) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
+        public EditTexture(Textures.TEX4 currentMapping = null, bool showSelectBtn = true, int initialTextureSourceIndex = 0, bool environmentMapsOnly = false) : base(EditorOrPicker(showSelectBtn))
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/texture-editor/");
             PopulateTextureFlagCheckboxes();
+            BuildMipBars();
+
+            _environmentMapsOnly = environmentMapsOnly;
+            _cubemapViewer = new GUI_CubemapViewer();
+            cubemapViewerHost.Child = _cubemapViewer;
+            if (cubemapSourceCombo.Items.Count > 0)
+                cubemapSourceCombo.SelectedIndex = 0;
+            Disposed += (s, e) => DetachCubemapViewer();
+            FormClosing += (s, e) => DetachCubemapViewer();
 
             _treeHelper = new TreeUtility(FileTree, TreeType.GENERIC_FOLDER_AND_FILE);
 
-            textureSourceCombo.Items.Clear();
-            textureSourceCombo.Items.Add(Content.Level.Name);
-            textureSourceCombo.Items.Add("GLOBAL");
-
-            _suppressSourceChange = true;
-            int sourceIdx = initialTextureSourceIndex <= 0 ? 0 : 1;
-            if (Singleton.Global?.Textures == null)
-                sourceIdx = 0;
-            textureSourceCombo.SelectedIndex = sourceIdx;
-
-            _activeTextures = textureSourceCombo.SelectedIndex == 0 ? Content.Level.Textures : Singleton.Global.Textures;
+            _activeTextures = Content.Level.Textures;
             RebuildTextureTree();
-            _suppressSourceChange = false;
 
             if (currentMapping != null && !string.IsNullOrEmpty(currentMapping.Name))
                 _treeHelper.SelectNode(currentMapping.Name);
 
             selectTextureBtn.Visible = showSelectBtn;
-            FileTree.ImageList = imageList1;
-            UpdateTextureToolsState();
-        }
-
-        private void textureSourceCombo_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (_suppressSourceChange)
-                return;
-
-            _activeTextures = textureSourceCombo.SelectedIndex == 0
-                ? Content.Level.Textures
-                : Singleton.Global.Textures;
-
-            RebuildTextureTree();
-            FileTree.SelectedNode = null;
-            ClearPreview();
+            selectTextureBtn.BringToFront();
+            FileTree.ImageList = EditorIcons.FileTree;
             UpdateTextureToolsState();
         }
 
@@ -79,7 +71,18 @@ namespace OpenCAGE
         private List<string> GetAllTextureNames()
         {
             List<string> textureNames = new List<string>();
-            if (_activeTextures?.Entries != null)
+            if (_activeTextures == null)
+                return textureNames;
+
+            if (_environmentMapsOnly)
+            {
+                List<Textures.TEX4> envMaps = _activeTextures.GetEnvironmentMaps();
+                for (int i = 0; i < envMaps.Count; i++)
+                    textureNames.Add(envMaps[i].Name);
+                return textureNames;
+            }
+
+            if (_activeTextures.Entries != null)
             {
                 for (int i = 0; i < _activeTextures.Entries.Count; i++)
                     textureNames.Add(_activeTextures.Entries[i].Name);
@@ -122,6 +125,7 @@ namespace OpenCAGE
         {
             AssignPreviewImage(pictureStreamed, null);
             AssignPreviewImage(picturePersistent, null);
+            _cubemapViewer?.Clear();
             texturePreviewArea.Text = "";
             streamedMetaText.Text = "";
             persistentMetaText.Text = "";
@@ -130,6 +134,8 @@ namespace OpenCAGE
             selectTextureBtn.Enabled = false;
             _selectedTexture = null;
             ResetFlagCheckboxes();
+            UpdateMipBars(null);
+            UpdateCubemapPreviewModeUi(false);
         }
 
         private static string GetTex4Desc(Textures.TEX4.Texture part)
@@ -162,6 +168,14 @@ namespace OpenCAGE
         private static bool HasContent(Textures.TEX4.Texture part)
         {
             return part?.Content != null && part.Content.Length > 0;
+        }
+
+        /// <summary>A texture's shape (its CUBE and VOLUME state flags) in words.</summary>
+        private static string ShapeName(Textures.TextureStateFlag shape)
+        {
+            if (shape.HasFlag(Textures.TextureStateFlag.CUBE)) return "a cubemap";
+            if (shape.HasFlag(Textures.TextureStateFlag.VOLUME)) return "a volume (3D) texture";
+            return "a flat texture";
         }
 
         private Textures.TEX4 FindTexture(string nodeVal)
@@ -302,7 +316,7 @@ namespace OpenCAGE
 
         private void TextureStateFlag_CheckedChanged(object sender, EventArgs e)
         {
-            if (_suppressFlagChange || _selectedTexture == null || IsGlobalSourceSelected())
+            if (_suppressFlagChange || _selectedTexture == null)
                 return;
             Textures.TextureStateFlag combined = 0;
             foreach (var pair in _stateFlagChecks)
@@ -311,13 +325,14 @@ namespace OpenCAGE
                     combined |= pair.flag;
             }
             _selectedTexture.StateFlags = combined;
+            EditHistory.AssetChanged(Content?.Level, AssetKind.TEXTURE, _selectedTexture.Name);
             Singleton.OnResourceModified?.Invoke();
             RefreshTexturePreviewsForSelected();
         }
 
         private void TextureUsageFlag_CheckedChanged(object sender, EventArgs e)
         {
-            if (_suppressFlagChange || _selectedTexture == null || IsGlobalSourceSelected())
+            if (_suppressFlagChange || _selectedTexture == null)
                 return;
             Textures.TextureUsageFlag combined = 0;
             foreach (var pair in _usageFlagChecks)
@@ -326,6 +341,7 @@ namespace OpenCAGE
                     combined |= pair.flag;
             }
             _selectedTexture.UsageFlags = combined;
+            EditHistory.AssetChanged(Content?.Level, AssetKind.TEXTURE, _selectedTexture.Name);
             Singleton.OnResourceModified?.Invoke();
             RefreshTexturePreviewsForSelected();
         }
@@ -337,6 +353,7 @@ namespace OpenCAGE
             Textures.TEX4 texture = _selectedTexture;
             bool hasStreamed = HasContent(texture.TextureStreamed);
             bool hasPersistent = HasContent(texture.TexturePersistent);
+            bool isCubemap = texture.StateFlags.HasFlag(TextureStateFlag.CUBE);
             try
             {
                 if (hasStreamed)
@@ -353,17 +370,98 @@ namespace OpenCAGE
                 AssignPreviewImage(pictureStreamed, null);
                 AssignPreviewImage(picturePersistent, null);
             }
+
+            UpdateMipBars(texture);
+            UpdateCubemapPreviewModeUi(isCubemap);
+            if (isCubemap && cubemapMode3D.Checked)
+                RefreshCubemapViewer();
         }
 
-        private bool IsGlobalSourceSelected()
+        private void cubemapMode_CheckedChanged(object sender, EventArgs e)
         {
-            return textureSourceCombo.SelectedIndex == 1;
+            if (_suppressCubemapModeChange || !(sender is RadioButton rb) || !rb.Checked)
+                return;
+            UpdateCubemapPreviewModeUi(_selectedTexture != null && _selectedTexture.StateFlags.HasFlag(TextureStateFlag.CUBE));
+            if (cubemapMode3D.Checked)
+                RefreshCubemapViewer();
+        }
+
+        private void cubemapSourceCombo_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_suppressCubemapModeChange)
+                return;
+            if (cubemapMode3D.Checked)
+                RefreshCubemapViewer();
+        }
+
+        private void UpdateCubemapPreviewModeUi(bool isCubemap)
+        {
+            cubemapModePanel.Visible = isCubemap;
+            bool show3d = isCubemap && cubemapMode3D.Checked;
+            cubemapViewerHost.Visible = show3d;
+            previewTabControl.Visible = !show3d;
+
+            bool hasStreamed = _selectedTexture != null && HasContent(_selectedTexture.TextureStreamed);
+            bool hasPersistent = _selectedTexture != null && HasContent(_selectedTexture.TexturePersistent);
+            cubemapSourceCombo.Enabled = show3d && hasStreamed && hasPersistent;
+            cubemapSourceLabel.Enabled = cubemapSourceCombo.Enabled;
+
+            if (show3d && cubemapSourceCombo.SelectedIndex < 0 && cubemapSourceCombo.Items.Count > 0)
+            {
+                _suppressCubemapModeChange = true;
+                cubemapSourceCombo.SelectedIndex = hasStreamed ? 0 : 1;
+                _suppressCubemapModeChange = false;
+            }
+        }
+
+        private void RefreshCubemapViewer()
+        {
+            if (_cubemapViewer == null || _selectedTexture == null)
+                return;
+
+            Textures.TEX4.Texture part = ResolveCubemapPreviewPart();
+            if (part == null || !HasContent(part))
+            {
+                _cubemapViewer.Clear();
+                return;
+            }
+
+            if (!_selectedTexture.TryDecodeCubemapFaces(part, out Bitmap[] faces) || faces == null)
+            {
+                _cubemapViewer.Clear();
+                return;
+            }
+
+            try
+            {
+                _cubemapViewer.ShowCubemap(faces);
+            }
+            finally
+            {
+                for (int i = 0; i < faces.Length; i++)
+                    faces[i]?.Dispose();
+            }
+        }
+
+        private Textures.TEX4.Texture ResolveCubemapPreviewPart()
+        {
+            if (_selectedTexture == null)
+                return null;
+
+            bool preferStreamed = cubemapSourceCombo.SelectedIndex != 1;
+            if (preferStreamed && HasContent(_selectedTexture.TextureStreamed))
+                return _selectedTexture.TextureStreamed;
+            if (HasContent(_selectedTexture.TexturePersistent))
+                return _selectedTexture.TexturePersistent;
+            if (HasContent(_selectedTexture.TextureStreamed))
+                return _selectedTexture.TextureStreamed;
+            return null;
         }
 
         private void UpdateTextureToolsState()
         {
             bool file = FileTree.SelectedNode != null && ((TreeItem)FileTree.SelectedNode.Tag).Item_Type == TreeItemType.EXPORTABLE_FILE;
-            bool canEditTextures = _activeTextures != null && !IsGlobalSourceSelected();
+            bool canEditTextures = _activeTextures != null;
             replaceTextureBtn.Enabled = file && canEditTextures;
             deleteTextureBtn.Enabled = file && canEditTextures;
             exportTextureBtn.Enabled = file;
@@ -374,37 +472,65 @@ namespace OpenCAGE
 
         private void importTextureBtn_Click(object sender, EventArgs e)
         {
-            if (_activeTextures == null || IsGlobalSourceSelected())
+            if (_activeTextures == null)
                 return;
 
             using (OpenFileDialog picker = new OpenFileDialog())
             {
-                picker.Filter = "DDS Files|*.dds";
+                picker.Filter = TextureConverter.ImportFilter;
                 if (picker.ShowDialog() != DialogResult.OK)
                     return;
 
-                string texName = Path.GetFileName(picker.FileName);
-                string norm = texName.Replace('\\', '/');
-                if (_activeTextures.Entries.Any(o => o.Name.Replace('\\', '/') == norm))
+                /* The name is settled in the dialog, along with any folders it should sit in, and the
+                 * clash check happens there as it's typed - so by the time this returns the name is
+                 * known to be free. */
+                Textures.TextureFormat chosen;
+                int mipLevels, persistentDrop;
+                bool persistentOnly;
+                string texName;
+                using (TextureImportOptions options = new TextureImportOptions(picker.FileName, null, null,
+                    () => _activeTextures.Entries.Select(x => x.Name)))
                 {
-                    MessageBox.Show("A texture with this name already exists!", "Import", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    if (options.ShowDialog(this) != DialogResult.OK) return;
+                    chosen = options.Format;
+                    mipLevels = options.MipLevels;
+                    persistentDrop = options.PersistentDrop;
+                    persistentOnly = options.PersistentOnly;
+                    texName = options.AssetName;
+                }
+
+                /* Belt and braces: the list could in principle have moved on since the dialog opened,
+                 * and two textures sharing a name merge into one when the level is read back. */
+                if (AssetName.Exists(texName, _activeTextures.Entries.Select(x => x.Name)))
+                {
+                    MessageBox.Show("A texture called '" + texName + "' already exists.", "Import",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
                 Cursor = Cursors.WaitCursor;
                 try
                 {
-                    byte[] fileBytes = File.ReadAllBytes(picker.FileName);
+                    byte[] fileBytes = TextureConverter.Convert(picker.FileName, chosen, mipLevels, out string problem);
+                    if (fileBytes == null)
+                    {
+                        MessageBox.Show(problem ?? "The image could not be converted.", "Import failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
                     Textures.TEX4 texture = new Textures.TEX4 { Name = texName };
                     Textures.TEX4.Texture part = fileBytes.ToTEX4Part(out texture.Format, out texture.StateFlags, out texture.UsageFlags);
                     if (part == null)
                     {
-                        MessageBox.Show("Please select a DX10 DDS image.\nIf you converted this DDS yourself, try the Nvidia Texture Tools Exporter.", "Import failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("The converted image could not be read back as a texture.", "Import failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
-                    texture.TextureStreamed = part.Copy();
-                    texture.TexturePersistent = part.Copy();
+
+                    //A8 and L8 share a DDS format, so the choice is the only thing that separates them
+                    texture.Format = chosen;
+                    ApplyParts(texture, part, persistentDrop, persistentOnly);
                     _activeTextures.Entries.Add(texture);
+                    EditHistory.AssetChanged(Content?.Level, AssetKind.TEXTURE, texture.Name);
                     Singleton.OnResourceModified?.Invoke();
                     _suppressSearchChanged = true;
                     textureSearchBox.Text = "";
@@ -425,7 +551,7 @@ namespace OpenCAGE
 
         private void replaceTextureBtn_Click(object sender, EventArgs e)
         {
-            if (_activeTextures == null || IsGlobalSourceSelected() || FileTree.SelectedNode == null)
+            if (_activeTextures == null || FileTree.SelectedNode == null)
                 return;
             if (((TreeItem)FileTree.SelectedNode.Tag).Item_Type != TreeItemType.EXPORTABLE_FILE)
                 return;
@@ -437,22 +563,68 @@ namespace OpenCAGE
 
             using (OpenFileDialog picker = new OpenFileDialog())
             {
-                picker.Filter = "DDS Files|*.dds";
+                picker.Filter = TextureConverter.ImportFilter;
                 if (picker.ShowDialog() != DialogResult.OK)
                     return;
+
+                /* Default to what's already in the slot - its format, and the way it splits between
+                 * the streamed and persistent copies - so bringing a texture back in leaves it the
+                 * shape the game shipped it in. */
+                Textures.TextureFormat chosen;
+                int mipLevels, persistentDrop;
+                bool persistentOnly;
+                using (TextureImportOptions options = new TextureImportOptions(picker.FileName, texture.Format, texture))
+                {
+                    if (options.ShowDialog(this) != DialogResult.OK) return;
+                    chosen = options.Format;
+                    mipLevels = options.MipLevels;
+                    persistentDrop = options.PersistentDrop;
+                    persistentOnly = options.PersistentOnly || !HasContent(texture.TextureStreamed);
+                }
 
                 Cursor = Cursors.WaitCursor;
                 try
                 {
-                    byte[] content = File.ReadAllBytes(picker.FileName);
-                    Textures.TEX4.Texture part = content.ToTEX4Part(out texture.Format, out texture.StateFlags, out texture.UsageFlags);
-                    if (part == null)
+                    byte[] content = TextureConverter.Convert(picker.FileName, chosen, mipLevels, out string problem);
+                    if (content == null)
                     {
-                        MessageBox.Show("Please select a DX10 DDS image.\nIf you converted this DDS yourself, try the Nvidia Texture Tools Exporter.", "Replace failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show(problem ?? "The image could not be converted.", "Replace failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
-                    texture.TextureStreamed = part.Copy();
-                    texture.TexturePersistent = part.Copy();
+
+                    /* Keep the slot's usage and state flags. The usage flags say which pack the texture
+                     * belongs to and what the engine does with it, the state flags how it is sampled
+                     * (sRGB, see-through) - facts about the slot, not about the file being dropped into
+                     * it: a converted image always reads back as sRGB, so a normal map would turn sRGB.
+                     * The options above shaped only the format and the persistent split, though, not the
+                     * shape: a flat image converts to one flat surface whatever the slot is, so whether it
+                     * is a cubemap or a volume has to come from the file, or the slot would describe six
+                     * faces (or a depth) over one face's data. */
+                    Textures.TEX4.Texture part = content.ToTEX4Part(out Textures.TextureFormat _, out Textures.TextureStateFlag read, out Textures.TextureUsageFlag _);
+                    if (part == null)
+                    {
+                        MessageBox.Show("The converted image could not be read back as a texture.", "Replace failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    const Textures.TextureStateFlag Shape = Textures.TextureStateFlag.CUBE | Textures.TextureStateFlag.VOLUME;
+                    Textures.TextureStateFlag slotShape = texture.StateFlags & Shape, fileShape = read & Shape;
+                    if (slotShape != fileShape)
+                    {
+                        Cursor = Cursors.Default;
+                        string message = texture.Name + " is " + ShapeName(slotShape) + ", but " + Path.GetFileName(picker.FileName) + " is " + ShapeName(fileShape)
+                            + ". Replacing it makes it " + ShapeName(fileShape)
+                            + (slotShape.HasFlag(Textures.TextureStateFlag.CUBE) ? ", and it stops being an environment map: anything using it as one loses it" : "")
+                            + ".\r\n\r\nReplace it anyway?";
+                        if (MessageBox.Show(message, "Replace texture", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                            return;
+                        Cursor = Cursors.WaitCursor;
+                        texture.StateFlags = (texture.StateFlags & ~Shape) | fileShape;
+                    }
+
+                    texture.Format = chosen;
+                    ApplyParts(texture, part, persistentDrop, persistentOnly);
+                    EditHistory.AssetChanged(Content?.Level, AssetKind.TEXTURE, texture.Name);
                     Singleton.OnResourceModified?.Invoke();
                     RefreshTexturePreviewFromSelection();
                 }
@@ -469,19 +641,29 @@ namespace OpenCAGE
 
         private void deleteTextureBtn_Click(object sender, EventArgs e)
         {
-            if (_activeTextures == null || IsGlobalSourceSelected() || FileTree.SelectedNode == null)
+            if (_activeTextures == null || FileTree.SelectedNode == null)
                 return;
             if (((TreeItem)FileTree.SelectedNode.Tag).Item_Type != TreeItemType.EXPORTABLE_FILE)
                 return;
 
             string nodeVal = ((TreeItem)FileTree.SelectedNode.Tag).String_Value;
-            if (MessageBox.Show("Remove '" + nodeVal + "'?", "Delete texture", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            List<string> uses = TextureUses(nodeVal);
+            if (uses.Count == 0)
+            {
+                if (MessageBox.Show("Remove '" + nodeVal + "'?", "Delete texture", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                    return;
+            }
+            else if (MessageBox.Show("'" + nodeVal + "' is still used by:\n\n" + string.Join("\n", uses.Select(o => "    " + o))
+                    + "\n\nThey will be left pointing at a missing texture. Delete it anyway?",
+                    "Texture in use", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
                 return;
 
             Cursor = Cursors.WaitCursor;
             try
             {
                 string norm = nodeVal.Replace('\\', '/');
+                foreach (Textures.TEX4 removed in _activeTextures.Entries.Where(o => o.Name.Replace('\\', '/') == norm))
+                    EditHistory.AssetChanged(Content?.Level, AssetKind.TEXTURE, removed.Name);
                 _activeTextures.Entries.RemoveAll(o => o.Name.Replace('\\', '/') == norm);
                 Singleton.OnResourceModified?.Invoke();
                 FileTree.SelectedNode = null;
@@ -499,13 +681,43 @@ namespace OpenCAGE
             }
         }
 
+        /* What still uses the texture(s) listed under this name, as lines to show (as the material delete names what
+         * draws with a material): the materials binding it and the script entities naming it. A save writes a material
+         * slot still pointing at a removed texture as -1. Empty when nothing uses it. */
+        private List<string> TextureUses(string nodeVal)
+        {
+            List<string> uses = new List<string>();
+            if (Content?.Level == null || _activeTextures?.Entries == null)
+                return uses;
+
+            string norm = nodeVal.Replace('\\', '/');
+            List<Materials.Material> materials = new List<Materials.Material>();
+            HashSet<Materials.Material> seenMaterials = new HashSet<Materials.Material>(BulkExport.ByReference<Materials.Material>.Instance);
+            HashSet<CATHODE.Scripting.Internal.Entity> entities = new HashSet<CATHODE.Scripting.Internal.Entity>(BulkExport.ByReference<CATHODE.Scripting.Internal.Entity>.Instance);
+            foreach (Textures.TEX4 texture in _activeTextures.Entries.Where(o => o.Name.Replace('\\', '/') == norm))
+            {
+                AssetUsage.TextureUsers(Content.Level, texture, out List<Materials.Material> binding, out List<CATHODE.Scripting.Internal.Entity> naming);
+                materials.AddRange(binding.Where(o => seenMaterials.Add(o)));
+                entities.UnionWith(naming);
+            }
+
+            if (materials.Count != 0)
+            {
+                List<string> names = materials.Select(o => Content.Level.Materials.GetMaterialName(o) ?? "(unnamed)").ToList();
+                uses.Add((names.Count == 1 ? "the material " : names.Count + " materials: ") + string.Join(", ", names.Take(5)) + (names.Count > 5 ? ", ..." : ""));
+            }
+            if (entities.Count != 0)
+                uses.Add(entities.Count + (entities.Count == 1 ? " script entity" : " script entities") + ", by name (an EnvironmentMap's cubemap, a light's gobo...)");
+            return uses;
+        }
+
         private void exportTextureBtn_Click(object sender, EventArgs e)
         {
             if (FileTree.SelectedNode == null)
                 return;
             try
             {
-                ExportTextureNode(FileTree.SelectedNode, "");
+                ExportTextureNode(FileTree.SelectedNode);
             }
             catch (Exception ex)
             {
@@ -515,7 +727,8 @@ namespace OpenCAGE
 
         private void exportAllTexturesBtn_Click(object sender, EventArgs e)
         {
-            if (_activeTextures?.Entries == null || _activeTextures.Entries.Count == 0)
+            List<Textures.TEX4> textures = ListedTextures();
+            if (textures.Count == 0)
                 return;
 
             using (FolderBrowserDialog folder = new FolderBrowserDialog())
@@ -525,87 +738,64 @@ namespace OpenCAGE
                 if (folder.ShowDialog() != DialogResult.OK)
                     return;
 
-                string ext = PromptBulkExportExtension();
-                if (string.IsNullOrEmpty(ext))
+                string[] extensions = { ".dds", ".png", ".jpg" };
+                int format = BulkExport.AskFormat(this, new[] { "DDS (*.dds)", "PNG (*.png)", "JPG (*.jpg)" }, 0,
+                    textures.Count.ToString("N0") + (textures.Count == 1 ? " texture" : " textures") + " will be exported.");
+                if (format < 0)
                     return;
 
-                Cursor = Cursors.WaitCursor;
-                int errors = 0;
-                foreach (TreeNode node in FileTree.Nodes)
-                {
-                    try
-                    {
-                        ExportTextureNodeRecursive(node, folder.SelectedPath, ext);
-                    }
-                    catch (Exception ex)
-                    {
-                        errors++;
-                    }
-                }
-#if DEBUG
-                if (errors > 0)
-                    MessageBox.Show("Encountered " + errors + " errors!");
-#endif
+                BulkExport.Result result = ExportTextures(textures, folder.SelectedPath, extensions[format]);
                 Process.Start(folder.SelectedPath);
-                MessageBox.Show("Export complete.", "Textures", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                Cursor = Cursors.Default;
+                MessageBox.Show(result.Describe("texture", "textures"), "Textures", MessageBoxButtons.OK,
+                    result.Failures.Count == 0 ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
             }
         }
 
-        private static string PromptBulkExportExtension()
+        /// <summary>
+        /// Write each texture under <paramref name="folder"/>, in the folders its name gives, as
+        /// <paramref name="extension"/>.
+        /// </summary>
+        private BulkExport.Result ExportTextures(List<Textures.TEX4> textures, string folder, string extension)
         {
-            using (Form f = new Form
+            HashSet<string> taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            return BulkExport.Run(this, "Exporting textures", textures, x => x.Name,
+                texture => WriteTexture(texture, BulkExport.PathFor(folder, texture.Name, extension, taken)));
+        }
+
+        /// <summary>The textures the tree is showing (all of them, or what the search left), in its order.</summary>
+        private List<Textures.TEX4> ListedTextures()
+        {
+            List<Textures.TEX4> listed = new List<Textures.TEX4>();
+            if (_activeTextures?.Entries == null)
+                return listed;
+
+            //One lookup, rather than searching every texture for each one listed
+            Dictionary<string, Textures.TEX4> byName = new Dictionary<string, Textures.TEX4>();
+            foreach (Textures.TEX4 texture in _activeTextures.Entries)
             {
-                Text = "Export all as",
-                FormBorderStyle = FormBorderStyle.FixedDialog,
-                StartPosition = FormStartPosition.CenterParent,
-                MinimizeBox = false,
-                MaximizeBox = false,
-                ShowInTaskbar = false,
-                ClientSize = new Size(280, 88)
-            })
+                string key = texture.Name?.Replace('\\', '/');
+                if (key != null && !byName.ContainsKey(key))
+                    byName.Add(key, texture);
+            }
+
+            HashSet<Textures.TEX4> seen = new HashSet<Textures.TEX4>(BulkExport.ByReference<Textures.TEX4>.Instance);
+            AddListed(FileTree.Nodes);
+            return listed;
+
+            void AddListed(TreeNodeCollection nodes)
             {
-                ComboBox cb = new ComboBox
+                foreach (TreeNode node in nodes)
                 {
-                    DropDownStyle = ComboBoxStyle.DropDownList,
-                    Location = new Point(12, 12),
-                    Width = 256
-                };
-                cb.Items.Add("DDS (*.dds)");
-                cb.Items.Add("PNG (*.png)");
-                cb.Items.Add("JPG (*.jpg)");
-                cb.SelectedIndex = 0;
-                Button ok = new Button { Text = "OK", DialogResult = DialogResult.OK, Location = new Point(100, 48), Width = 80 };
-                Button cancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, Location = new Point(188, 48), Width = 80 };
-                f.Controls.Add(cb);
-                f.Controls.Add(ok);
-                f.Controls.Add(cancel);
-                f.AcceptButton = ok;
-                f.CancelButton = cancel;
-                if (f.ShowDialog() != DialogResult.OK)
-                    return null;
-                switch (cb.SelectedIndex)
-                {
-                    case 1: return ".png";
-                    case 2: return ".jpg";
-                    default: return ".dds";
+                    TreeItem item = (TreeItem)node.Tag;
+                    if (item.Item_Type == TreeItemType.EXPORTABLE_FILE && item.String_Value != null &&
+                        byName.TryGetValue(item.String_Value.Replace('\\', '/'), out Textures.TEX4 texture) && seen.Add(texture))
+                        listed.Add(texture);
+                    AddListed(node.Nodes);
                 }
             }
         }
 
-        private void ExportTextureNodeRecursive(TreeNode node, string outputFolder, string ext)
-        {
-            ExportTextureNode(node, outputFolder, ext);
-            foreach (TreeNode child in node.Nodes)
-                ExportTextureNodeRecursive(child, outputFolder, ext);
-        }
-
-        private void ExportTextureNode(TreeNode node, string outputFolder)
-        {
-            ExportTextureNode(node, outputFolder, null);
-        }
-
-        private void ExportTextureNode(TreeNode node, string outputFolder, string bulkExtension)
+        private void ExportTextureNode(TreeNode node)
         {
             if (node == null)
                 return;
@@ -618,58 +808,64 @@ namespace OpenCAGE
             if (texture == null)
                 return;
 
-            string pickedFileName;
-            if (string.IsNullOrEmpty(outputFolder))
-            {
-                string fileStem = Path.GetFileName(nodeVal);
-                while (!string.IsNullOrEmpty(Path.GetExtension(fileStem)))
-                    fileStem = Path.GetFileNameWithoutExtension(fileStem);
+            string fileStem = Path.GetFileName(nodeVal);
+            while (!string.IsNullOrEmpty(Path.GetExtension(fileStem)))
+                fileStem = Path.GetFileNameWithoutExtension(fileStem);
 
-                SaveFileDialog picker = new SaveFileDialog();
-                picker.Filter = "DDS|*.dds|PNG|*.png|JPG|*.jpg";
-                picker.FileName = fileStem;
-                if (picker.ShowDialog() != DialogResult.OK)
-                    return;
-                pickedFileName = picker.FileName;
-            }
-            else
-            {
-                string rel = nodeVal.Replace('\\', '/');
-                string subDir = Path.GetDirectoryName(rel);
-                string baseName = Path.GetFileNameWithoutExtension(Path.GetFileName(rel));
-                if (string.IsNullOrEmpty(baseName))
-                    baseName = Path.GetFileName(rel);
-                string folder = string.IsNullOrEmpty(subDir)
-                    ? outputFolder
-                    : Path.Combine(outputFolder, subDir.Replace('/', Path.DirectorySeparatorChar));
-                Directory.CreateDirectory(folder);
-                pickedFileName = Path.Combine(folder, baseName + bulkExtension);
-            }
+            SaveFileDialog picker = new SaveFileDialog();
+            picker.Filter = "DDS|*.dds|PNG|*.png|JPG|*.jpg";
+            picker.FileName = fileStem;
+            if (picker.ShowDialog() != DialogResult.OK)
+                return;
 
-            byte[] dds = texture.ToDDS();
-            string ext = Path.GetExtension(pickedFileName);
+            WriteTexture(texture, picker.FileName);
+            MessageBox.Show("Texture exported successfully.", "Export", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        /// <summary>Write a texture out as DDS, PNG or JPG, going by the file's extension.</summary>
+        private static void WriteTexture(Textures.TEX4 texture, string filename)
+        {
+            string ext = Path.GetExtension(filename);
             if (string.Equals(ext, ".dds", StringComparison.OrdinalIgnoreCase))
             {
-                File.WriteAllBytes(pickedFileName, dds);
+                byte[] dds = texture.ToDDS();
+                if (dds == null)
+                    throw new InvalidOperationException("'" + texture.Format + "' has no DDS equivalent, so this texture can't be written as one.");
+                File.WriteAllBytes(filename, dds);
             }
             else
             {
-                using (Bitmap bmp = dds.ToBitmap())
+                /* Through the texture rather than its DDS, so an ASTC one takes the route that can
+                 * actually decode it. The format is given, as a decoded bitmap has none of its own
+                 * and would otherwise go out as PNG whatever the file is called. */
+                using (Bitmap bmp = texture.ToBitmap())
                 {
                     if (bmp == null)
                         throw new InvalidOperationException("Could not decode texture for export.");
-                    bmp.Save(pickedFileName);
+                    bool jpeg = string.Equals(ext, ".jpg", StringComparison.OrdinalIgnoreCase) || string.Equals(ext, ".jpeg", StringComparison.OrdinalIgnoreCase);
+                    bmp.Save(filename, jpeg ? ImageFormat.Jpeg : ImageFormat.Png);
                 }
             }
-
-            if (string.IsNullOrEmpty(outputFolder))
-                MessageBox.Show("Texture exported successfully.", "Export", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void selectTextureBtn_Click(object sender, EventArgs e)
         {
             OnTextureSelected?.Invoke(_selectedTexture);
             Close();
+        }
+
+        private void DetachCubemapViewer()
+        {
+            try
+            {
+                if (cubemapViewerHost != null && !cubemapViewerHost.IsDisposed)
+                    cubemapViewerHost.Child = null;
+            }
+            catch
+            {
+                // ElementHost / WPF teardown can race during Close.
+            }
+            _cubemapViewer = null;
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)

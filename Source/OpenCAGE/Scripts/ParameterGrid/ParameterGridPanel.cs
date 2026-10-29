@@ -1,0 +1,1359 @@
+using CATHODE.Scripting;
+using CATHODE.Scripting.Internal;
+using CathodeLib;
+using Newtonsoft.Json;
+using OpenCAGE.DockPanels;
+using OpenCAGE.Undo;
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Windows.Forms;
+
+namespace OpenCAGE
+{
+    /// <summary>
+    /// Compact table-style editor for entity parameters, replacing the old stacked UserControl list.
+    /// Supports editing multiple entities at once: entities are grouped by type into tabs, and edits
+    /// within a tab apply to every selected entity of that type.
+    /// </summary>
+    public class ParameterGridPanel : UserControl
+    {
+        //Modeless popup editors need a way back to the active grid to refresh/rebuild after their callbacks fire
+        public static ParameterGridPanel Current;
+
+        private readonly TabControl _tabs;
+        private readonly PropertyGrid _grid;
+        private readonly ContextMenuStrip _menu;
+        private readonly ToolStripMenuItem _resetParam;
+        private readonly ToolStripMenuItem _showAliases;
+        private readonly ToolStripMenuItem _treatAsColour;
+        private readonly ToolStripSeparator _valueSeparator;
+        private readonly ToolStripMenuItem _copyValue;
+        private readonly ToolStripMenuItem _pasteValue;
+
+        private readonly List<TypeGroup> _groups = new List<TypeGroup>();
+        private bool _suppressTabChange = false;
+
+        public EntityInspector Inspector { get; private set; }
+        public LevelContent Content { get; private set; }
+        public Composite Composite { get; private set; }
+        public bool FilterPinParameters { get; private set; }
+
+        public bool IsMultiEditing => _groups.Sum(o => o.Proxies.Count) > 1;
+
+        private class TypeGroup
+        {
+            public string Key;
+            public string Label;
+            public List<EntityParameterProxy> Proxies = new List<EntityParameterProxy>();
+        }
+
+        public ParameterGridPanel()
+        {
+            _grid = new PropertyGrid()
+            {
+                Dock = DockStyle.Fill,
+                ToolbarVisible = false,
+                HelpVisible = false,
+                PropertySort = PropertySort.Alphabetical
+            };
+
+            _tabs = new TabControl()
+            {
+                Dock = DockStyle.Top,
+                Height = 24,
+                Visible = false
+            };
+            _tabs.SelectedIndexChanged += Tabs_SelectedIndexChanged;
+
+            //Dock order: fill control first so the top-docked tabs stack above it
+            Controls.Add(_grid);
+            Controls.Add(_tabs);
+
+            HookNumericScrolling();
+            HookColourDoubleClick();
+            //A font change puts the grid's own (shorter) row height back
+            if (_gridView != null)
+                _gridView.FontChanged += (s, e) => ApplyRowHeight();
+            GridTabNavigator.Attach(_grid);
+            _grid.PropertyValueChanged += (s, e) => RepairAfterCommit();
+            //An edit inside a transform row has just rebuilt its Position and Rotation rows: open them again once it settles
+            _grid.PropertyValueChanged += (s, e) =>
+            {
+                _holdTransformRows = true;
+                if (IsHandleCreated)
+                    BeginInvoke(new Action(() => { _holdTransformRows = false; RestoreTransformRows(); }));
+                else
+                    _holdTransformRows = false;
+            };
+
+            _resetParam = new ToolStripMenuItem("Reset to Default");
+            _resetParam.Click += ResetParam_Click;
+            _showAliases = new ToolStripMenuItem("Show Aliases");
+            _showAliases.Click += ShowAliases_Click;
+            _treatAsColour = new ToolStripMenuItem("Treat As Colour");
+            _treatAsColour.Click += TreatAsColour_Click;
+            _copyValue = new ToolStripMenuItem("Copy Value");
+            _copyValue.Click += CopyValue_Click;
+            _pasteValue = new ToolStripMenuItem("Paste Value");
+            _pasteValue.Click += PasteValue_Click;
+            _valueSeparator = new ToolStripSeparator();
+            _menu = new ContextMenuStrip();
+            _menu.Items.AddRange(new ToolStripItem[] { _resetParam, _showAliases, _treatAsColour, _valueSeparator, _copyValue, _pasteValue });
+            _menu.Opening += Menu_Opening;
+            _grid.ContextMenuStrip = _menu;
+        }
+
+        /* Show the given entities in the grid, grouped by type into tabs */
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetFocus();
+
+        /* Rebuilding the grid takes the keyboard: adding the type tabs for a multi-selection moves
+           focus into the tab control, and the grid claims it when its rows are replaced. That would
+           quietly take Delete and the arrow keys off whatever the user is actually working in - the
+           flowgraph they just rubber-banded a selection in, or the entity list - so whatever had the
+           keyboard before the rebuild gets it back. */
+        private IDisposable KeepFocusWhereItIs()
+        {
+            Control focused = Control.FromChildHandle(GetFocus());
+            if (focused == null || focused == this || this.Contains(focused))
+                return null;
+
+            return new FocusKeeper(focused);
+        }
+
+        private class FocusKeeper : IDisposable
+        {
+            private readonly Control _focused;
+
+            public FocusKeeper(Control focused)
+            {
+                _focused = focused;
+            }
+
+            public void Dispose()
+            {
+                if (_focused == null || _focused.IsDisposed || _focused.ContainsFocus || !_focused.CanFocus)
+                    return;
+
+                _focused.Focus();
+            }
+        }
+
+        public void ShowEntities(EntityInspector inspector, List<Entity> entities, Composite composite, LevelContent content, bool filterPinParameters)
+        {
+            using (KeepFocusWhereItIs())
+            {
+                ShowEntitiesCore(inspector, entities, composite, content, filterPinParameters);
+            }
+        }
+
+        private void ShowEntitiesCore(EntityInspector inspector, List<Entity> entities, Composite composite, LevelContent content, bool filterPinParameters)
+        {
+            Current = this;
+            Inspector = inspector;
+            Content = content;
+            Composite = composite;
+            FilterPinParameters = filterPinParameters;
+
+            _groups.Clear();
+            if (entities != null)
+            {
+                foreach (Entity entity in entities)
+                {
+                    if (entity == null) continue;
+                    string key = GetTypeKey(entity);
+                    TypeGroup group = _groups.FirstOrDefault(o => o.Key == key);
+                    if (group == null)
+                    {
+                        group = new TypeGroup() { Key = key, Label = GetTypeLabel(entity) };
+                        _groups.Add(group);
+                    }
+                    group.Proxies.Add(new EntityParameterProxy(this, entity, composite, content));
+                }
+            }
+
+            int entityCount = _groups.Sum(o => o.Proxies.Count);
+            bool multi = entityCount > 1;
+
+            _suppressTabChange = true;
+            ClearTabPages();
+            if (multi)
+            {
+                foreach (TypeGroup group in _groups)
+                {
+                    TabPage page = new TabPage(group.Label + " (" + group.Proxies.Count + ")") { Tag = group };
+                    _tabs.TabPages.Add(page);
+                }
+            }
+            _tabs.Visible = multi;
+            _suppressTabChange = false;
+
+            //Before the rows go in: the grid lays out its scrollbar for the row height it has when they arrive
+            ApplyRowHeight();
+            ApplyGroup(_groups.Count > 0 ? _groups[0] : null);
+        }
+
+        public void ClearEntities()
+        {
+            _groups.Clear();
+            _suppressTabChange = true;
+            ClearTabPages();
+            _suppressTabChange = false;
+            _tabs.Visible = false;
+            _grid.SelectedObjects = new object[0];
+        }
+
+        /* TabPages.Clear takes the pages off without disposing them, and the theming and drop-target hooks keep every
+           control they have seen in static sets until it is disposed - so each page ever shown stayed, and through its
+           Tag the group's proxies, this panel, its inspector and the level content it showed (one per level loaded). */
+        private void ClearTabPages()
+        {
+            TabPage[] pages = _tabs.TabPages.Cast<TabPage>().ToArray();
+            _tabs.TabPages.Clear();
+            foreach (TabPage page in pages)
+            {
+                page.Tag = null;
+                page.Dispose();
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                //Current is static: left on a closed inspector's panel, it kept that panel's entities and level content
+                if (Current == this)
+                    Current = null;
+                _groups.Clear();
+                Inspector = null;
+                Content = null;
+                Composite = null;
+            }
+            base.Dispose(disposing);
+        }
+
+        /* Re-read values from the entity data (e.g. after a viewer gizmo move or popup edit) */
+        public void RefreshValues()
+        {
+            RefreshKeepingTransformRows();
+        }
+
+        /* Recompute the linked-pin and CAGEAnimation highlights (called live as flowgraph connections
+           are made, and as animations gain or lose the parameters they drive) */
+        public void RefreshStatuses()
+        {
+            bool changed = false;
+            foreach (TypeGroup group in _groups)
+            {
+                foreach (EntityParameterProxy proxy in group.Proxies)
+                {
+                    changed |= proxy.RefreshLinkedPinStatuses();
+                    changed |= proxy.RefreshAnimatedStatuses();
+                }
+            }
+
+            //The grid caches whether each row paints a custom value, so a status appearing or
+            //disappearing needs the rows rebuilt - a plain refresh isn't enough
+            if (changed)
+                RebuildProperties();
+        }
+
+        /* Rebuild all parameter rows (e.g. after a parameter was added/removed externally) */
+        public void RebuildProperties()
+        {
+            foreach (TypeGroup group in _groups)
+                foreach (EntityParameterProxy proxy in group.Proxies)
+                    proxy.InvalidateProperties();
+
+            /* A refresh builds every row again from the proxies, as setting the objects again would, but the
+               grid then finds the row it had selected - by its name, under the same parents - and keeps the
+               rows that were open and where it was scrolled to. Setting the objects started it again at its
+               first row, so every undo, and every pause in a CAGEAnimation edit, lost the user's place. It
+               moves no focus and opens no edit box the grid didn't already have. */
+            RefreshKeepingTransformRows();
+        }
+
+        /* Transform rows (position + rotation). Opening one opens its Position and Rotation too, and an edit never leaves
+           one folded up: the row's value is a new object each time it is read, so once it changes - typed here, moved in
+           the viewport, undone - the grid builds its Position and Rotation rows again, and they come back closed. What is
+           open is noted after every paint, and put back after anything that rebuilds or refreshes the rows; a row the
+           user folds up stays folded. Keys are the parameter's row label, then "label/Position" and "label/Rotation". */
+        private readonly HashSet<string> _openTransformRows = new HashSet<string>();
+        private bool _holdTransformRows;
+
+        private void RefreshKeepingTransformRows()
+        {
+            _holdTransformRows = true;
+            try
+            {
+                _grid.Refresh();
+                RestoreTransformRows();
+            }
+            finally
+            {
+                _holdTransformRows = false;
+            }
+        }
+
+        /* After a paint: what the user has opened and closed. A transform row opened since the last look opens its children. */
+        private void TrackTransformRows()
+        {
+            if (_holdTransformRows)
+                return;
+            foreach (GridItem row in TransformRows())
+            {
+                string key = row.Label;
+                bool expanded = row.Expanded;
+                if (expanded && !_openTransformRows.Contains(key))
+                {
+                    _openTransformRows.Add(key);
+                    _openTransformRows.Add(key + "/Position");
+                    _openTransformRows.Add(key + "/Rotation");
+                    //Not from inside the paint: opening rows lays the grid out again
+                    if (IsHandleCreated)
+                        BeginInvoke(new Action(RestoreTransformRows));
+                    continue;
+                }
+                if (!expanded)
+                {
+                    _openTransformRows.Remove(key);
+                    _openTransformRows.Remove(key + "/Position");
+                    _openTransformRows.Remove(key + "/Rotation");
+                    continue;
+                }
+                foreach (GridItem child in ChildRows(row))
+                {
+                    if (child.Expanded)
+                        _openTransformRows.Add(key + "/" + child.Label);
+                    else
+                        _openTransformRows.Remove(key + "/" + child.Label);
+                }
+            }
+        }
+
+        /* Open again every transform row, and child row, that was open before the rows were rebuilt */
+        private void RestoreTransformRows()
+        {
+            if (IsDisposed || _grid.IsDisposed)
+                return;
+            bool held = _holdTransformRows;
+            _holdTransformRows = true;
+            try
+            {
+                foreach (GridItem row in TransformRows())
+                {
+                    string key = row.Label;
+                    if (!_openTransformRows.Contains(key))
+                        continue;
+                    if (!row.Expanded)
+                        row.Expanded = true;
+                    foreach (GridItem child in ChildRows(row))
+                    {
+                        if (child.Expandable && !child.Expanded && _openTransformRows.Contains(key + "/" + child.Label))
+                            child.Expanded = true;
+                    }
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+                //A row discarded by a rebuild still in progress: the next refresh puts them back
+            }
+            finally
+            {
+                _holdTransformRows = held;
+            }
+        }
+
+        /* The top-level rows (under the categories, if any) whose value is a transform */
+        private List<GridItem> TransformRows()
+        {
+            List<GridItem> rows = new List<GridItem>();
+            GridItem root = _grid.SelectedGridItem;
+            try
+            {
+                while (root?.Parent != null)
+                    root = root.Parent;
+                if (root == null)
+                    return rows;
+                foreach (GridItem item in root.GridItems)
+                {
+                    if (item.GridItemType == GridItemType.Category)
+                    {
+                        foreach (GridItem property in item.GridItems)
+                        {
+                            if (property.PropertyDescriptor?.PropertyType == typeof(GridTransform))
+                                rows.Add(property);
+                        }
+                    }
+                    else if (item.PropertyDescriptor?.PropertyType == typeof(GridTransform))
+                        rows.Add(item);
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            return rows;
+        }
+
+        private static IEnumerable<GridItem> ChildRows(GridItem row)
+        {
+            try
+            {
+                return row.GridItems.Cast<GridItem>().ToList();
+            }
+            catch (ObjectDisposedException)
+            {
+                return Enumerable.Empty<GridItem>();
+            }
+        }
+
+        /// <summary>
+        /// True if any entity sharing this proxy's tab has the parameter modified from its default.
+        /// Used for the bold "modified" label in multi-edit: the framework's merged descriptor only bolds
+        /// when every descriptor reports modified, so they all answer for the group as a whole.
+        /// </summary>
+        public bool IsParameterModifiedAcrossGroup(EntityParameterProxy proxy, ShortGuid parameter)
+        {
+            TypeGroup group = _groups.FirstOrDefault(o => o.Proxies.Contains(proxy));
+            if (group == null)
+                return false;
+
+            foreach (EntityParameterProxy member in group.Proxies)
+            {
+                if (ParameterGridDescriptor.IsModified(member.Composite, member.Entity, parameter))
+                    return true;
+            }
+            return false;
+        }
+
+        /* Mark a parameter as modified and raise the editor-wide modification events. The value as it
+           was before the write is what makes the edit undoable; without one it is applied unrecorded. */
+        public void NotifyParameterEdited(EntityParameterProxy proxy, Parameter parameter) => NotifyParameterEdited(proxy, parameter, null);
+        public void NotifyParameterEdited(EntityParameterProxy proxy, Parameter parameter, ParameterData before)
+        {
+            //While Animation Mode is on, editing an animatable parameter makes a keyframe rather than
+            //moving where the entity rests - the same rule as moving it in the viewport
+            if (TryRecordAsAnimationKeyframe(proxy, parameter, before))
+                return;
+
+            //A multi-edit commit lands here once per entity; the deferred fan-out below closes them as one step
+            if (IsMultiEditing && _multiEditUndoGroup == null)
+                _multiEditUndoGroup = UndoStack.Current.BeginGroup(UndoLabels.ChangeParameter(proxy.Composite, proxy.Entity, parameter) + " (" + _groups.Sum(o => o.Proxies.Count) + " entities)");
+
+            bool wasModified = ParameterModificationTracker.IsParameterModified(proxy.Composite.shortGUID, proxy.Entity.shortGUID, parameter.name);
+            using (UndoStack.Current.BeginGroup(null))
+            {
+                AttachAliasOverrideIfVirtual(proxy, parameter);
+                ParameterModificationTracker.SetParameterModified(proxy.Composite.shortGUID, proxy.Entity.shortGUID, parameter.name);
+                if (before != null)
+                    UndoStack.Current.Record(new ParameterValueEdit(proxy.Composite, proxy.Entity, parameter.name, before, ParameterValues.Clone(parameter.content), wasModified, true, UndoLabels.ChangeParameter(proxy.Composite, proxy.Entity, parameter)));
+            }
+            Singleton.OnEntityParameterModified?.Invoke(proxy.Entity, parameter, false);
+            Singleton.OnParameterModified?.Invoke();
+
+            //The 'name' parameter IS the entity name, so editing it renames the entity everywhere.
+            //Deferred so listeners don't rebuild this grid while it's still committing the edit.
+            if (parameter.name == ShortGuids.name)
+            {
+                Entity renamedEntity = proxy.Entity;
+                string newName = (parameter.content as cString)?.value ?? "";
+                if (IsHandleCreated)
+                    BeginInvoke(new Action(() => Singleton.OnEntityRenamed?.Invoke(renamedEntity, newName)));
+                else
+                    Singleton.OnEntityRenamed?.Invoke(renamedEntity, newName);
+            }
+
+            //In multi-edit mode, make sure the edit actually reached every entity in the active tab.
+            //The PropertyGrid's merged descriptors are supposed to fan edits out themselves, but when
+            //they don't (or only hit some entities), we finish the job after the commit completes.
+            if (IsMultiEditing)
+            {
+                _pendingMultiEdits.Add((proxy, parameter));
+                if (!_multiEditFlushQueued)
+                {
+                    _multiEditFlushQueued = true;
+                    if (IsHandleCreated)
+                        BeginInvoke(new Action(FlushPendingMultiEdits));
+                    else
+                        FlushPendingMultiEdits();
+                }
+            }
+        }
+
+        /* An edit made while Animation Mode is on goes into the animation as a keyframe at the playhead,
+           and the entity keeps the value it rests at - so leaving the mode puts everything back exactly
+           as it was. Returns true when the edit was taken this way and should not be applied normally.
+           An edit with nothing captured to put back has to stay an ordinary edit; there would be no way
+           to undo the value it just wrote. */
+        private bool TryRecordAsAnimationKeyframe(EntityParameterProxy proxy, Parameter parameter, ParameterData before)
+        {
+            AnimationModeSession session = AnimationModeSession.Current;
+            if (session == null || before == null || IsMultiEditing || proxy?.Entity == null)
+                return false;
+            if (Inspector == null)
+                return false;
+
+            /* The row's setter has already written the new value into the parameter. Put the old one
+               back FIRST: a parameter the animation has not driven before gets a track seeded at the
+               value the entity rests at, and if the new value were still sitting there it would be
+               seeded at that instead - the whole track would move, not just the keyframe. */
+            ParameterData edited = parameter.content;
+            parameter.content = before;
+
+            if (!session.TryRecordParameter(Inspector.InstancePathFor(proxy.Entity),
+                    new Parameter(parameter.name, edited, parameter.variant)))
+            {
+                //Not something this animation can address: leave it as an ordinary edit
+                parameter.content = edited;
+                return false;
+            }
+
+            if (IsHandleCreated)
+                BeginInvoke(new Action(RefreshValues));
+            else
+                RefreshValues();
+            return true;
+        }
+
+        /* A "virtual" alias row (showing the pointed-to entity's value) becomes a real override on first edit.
+           The rows are then rebuilt (deferred, so the in-progress commit isn't disturbed) to pick up the
+           orange highlight - the grid caches per-row paint state, so a repaint alone isn't enough. */
+        private void AttachAliasOverrideIfVirtual(EntityParameterProxy proxy, Parameter parameter)
+        {
+            if (proxy.Entity.variant != EntityVariant.ALIAS && !ProxyParameters.IsOverride(proxy.Entity, parameter.name))
+                return;
+            if (proxy.Entity.GetParameter(parameter.name) != null)
+                return;
+            proxy.Entity.parameters.Add(parameter);
+            UndoStack.Current.Record(new ParameterPresenceEdit(proxy.Composite, proxy.Entity, parameter, proxy.Entity.parameters.Count - 1, true, true,
+                "Override " + parameter.name + " on " + UndoLabels.Entity(proxy.Composite, proxy.Entity)));
+
+            if (IsHandleCreated)
+                BeginInvoke(new Action(RebuildProperties));
+            else
+                RebuildProperties();
+        }
+
+        private readonly List<(EntityParameterProxy proxy, Parameter parameter)> _pendingMultiEdits = new List<(EntityParameterProxy, Parameter)>();
+        private bool _multiEditFlushQueued = false;
+
+        private IDisposable _multiEditUndoGroup = null;
+
+        private void FlushPendingMultiEdits()
+        {
+            _multiEditFlushQueued = false;
+            List<(EntityParameterProxy proxy, Parameter parameter)> edits = _pendingMultiEdits.ToList();
+            _pendingMultiEdits.Clear();
+
+            try
+            {
+                PropagateMultiEdits(edits);
+            }
+            finally
+            {
+                _multiEditUndoGroup?.Dispose();
+                _multiEditUndoGroup = null;
+            }
+        }
+
+        private void PropagateMultiEdits(List<(EntityParameterProxy proxy, Parameter parameter)> edits)
+        {
+            TypeGroup group = ActiveGroup;
+            if (group == null || edits.Count == 0)
+                return;
+
+            bool propagatedAnything = false;
+            foreach (var editsForParam in edits.GroupBy(o => o.parameter.name))
+            {
+                List<EntityParameterProxy> editedProxies = editsForParam.Select(o => o.proxy).Distinct().ToList();
+                if (editedProxies.Count >= group.Proxies.Count)
+                    continue; //the grid fanned the edit out to everyone itself
+
+                (EntityParameterProxy sourceProxy, Parameter sourceParam) = editsForParam.First();
+                string paramName = sourceParam.name.ToString();
+                foreach (EntityParameterProxy proxy in group.Proxies)
+                {
+                    if (editedProxies.Contains(proxy))
+                        continue;
+
+                    ParameterGridDescriptor descriptor = proxy.GetParameterDescriptor(paramName);
+                    if (descriptor == null)
+                        continue;
+                    //Resources/splines are entity-specific and never propagate
+                    if (descriptor is ResourceParameterDescriptor || descriptor is SplineParameterDescriptor)
+                        continue;
+                    ParameterData before = ParameterValues.Clone(descriptor.Parameter.content);
+                    bool wasModified = ParameterModificationTracker.IsParameterModified(proxy.Composite.shortGUID, proxy.Entity.shortGUID, descriptor.Parameter.name);
+                    if (!CopyParameterValue(sourceParam.content, descriptor.Parameter.content, descriptor is MappingParameterDescriptor))
+                        continue;
+
+                    AttachAliasOverrideIfVirtual(proxy, descriptor.Parameter);
+                    ParameterModificationTracker.SetParameterModified(proxy.Composite.shortGUID, proxy.Entity.shortGUID, descriptor.Parameter.name);
+                    UndoStack.Current.Record(new ParameterValueEdit(proxy.Composite, proxy.Entity, descriptor.Parameter.name, before, ParameterValues.Clone(descriptor.Parameter.content), wasModified, true, UndoLabels.ChangeParameter(proxy.Composite, proxy.Entity, descriptor.Parameter)));
+                    Singleton.OnEntityParameterModified?.Invoke(proxy.Entity, descriptor.Parameter, false);
+                    if (descriptor.Parameter.content is cTransform movedTransform)
+                        Singleton.OnEntityMoved?.Invoke(movedTransform, proxy.Entity);
+                    propagatedAnything = true;
+                }
+            }
+
+            if (propagatedAnything)
+                Singleton.OnParameterModified?.Invoke();
+
+            //Grid entries cache whether they're "modified" (the bold label), so rebuild the rows rather
+            //than just repainting - otherwise a freshly edited row stays unbolded until reselection
+            RebuildProperties();
+        }
+
+        /* Copy a parameter value between entities (returns false if nothing changed or the type can't propagate) */
+        private static bool CopyParameterValue(ParameterData from, ParameterData to, bool isMapping)
+        {
+            if (from == null || to == null || ReferenceEquals(from, to))
+                return false;
+
+            if (isMapping && from is cResource fromMapping && to is cResource toMapping)
+            {
+                if (toMapping.shortGUID == fromMapping.shortGUID) return false;
+                toMapping.shortGUID = fromMapping.shortGUID;
+                return true;
+            }
+
+            switch (from)
+            {
+                case cEnumString fromEnumString when to is cEnumString toEnumString:
+                    if (toEnumString.value == fromEnumString.value && toEnumString.enumID == fromEnumString.enumID) return false;
+                    toEnumString.value = fromEnumString.value;
+                    toEnumString.enumID = fromEnumString.enumID;
+                    return true;
+                case cString fromString when to is cString toString:
+                    if (toString.value == fromString.value) return false;
+                    toString.value = fromString.value;
+                    return true;
+                case cBool fromBool when to is cBool toBool:
+                    if (toBool.value == fromBool.value) return false;
+                    toBool.value = fromBool.value;
+                    return true;
+                case cInteger fromInt when to is cInteger toInt:
+                    if (toInt.value == fromInt.value) return false;
+                    toInt.value = fromInt.value;
+                    return true;
+                case cFloat fromFloat when to is cFloat toFloat:
+                    if (toFloat.value == fromFloat.value) return false;
+                    toFloat.value = fromFloat.value;
+                    return true;
+                case cVector3 fromVec when to is cVector3 toVec:
+                    if (toVec.value == fromVec.value) return false;
+                    toVec.value = fromVec.value;
+                    return true;
+                case cTransform fromTransform when to is cTransform toTransform:
+                    if (toTransform.position == fromTransform.position && toTransform.rotation == fromTransform.rotation) return false;
+                    toTransform.position = fromTransform.position;
+                    toTransform.rotation = fromTransform.rotation;
+                    return true;
+                case cEnum fromEnum when to is cEnum toEnum:
+                    if (toEnum.enumID == fromEnum.enumID && toEnum.enumIndex == fromEnum.enumIndex) return false;
+                    toEnum.enumID = fromEnum.enumID;
+                    toEnum.enumIndex = fromEnum.enumIndex;
+                    return true;
+            }
+            return false;
+        }
+
+        private void Tabs_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_suppressTabChange)
+                return;
+            ApplyGroup(_tabs.SelectedTab?.Tag as TypeGroup);
+        }
+
+        private void ApplyGroup(TypeGroup group)
+        {
+            if (group == null || group.Proxies.Count == 0)
+            {
+                _grid.SelectedObjects = new object[0];
+                return;
+            }
+
+            /* Use the categorised view only when grouping data exists for this type. Either way the grid sorts the rows by
+               name, ignoring case - within each category in the categorised view - rather than trusting the order the proxy
+               hands them over in. The categories keep the inheritance order ParameterGroupProvider gives them (the entity's
+               own type first), so the list as a whole is not one A-Z run: name sits under ScriptInterface near the bottom. */
+            bool hasGroups = group.Proxies.Any(o => ParameterGroupProvider.HasGroups(o.Entity));
+            _grid.PropertySort = hasGroups ? PropertySort.CategorizedAlphabetical : PropertySort.Alphabetical;
+            _holdTransformRows = true;
+            try
+            {
+                _grid.SelectedObjects = group.Proxies.Cast<object>().ToArray();
+                //A transform row left open stays open from one entity to the next, until it is folded up
+                RestoreTransformRows();
+            }
+            finally
+            {
+                _holdTransformRows = false;
+            }
+        }
+
+        private TypeGroup ActiveGroup
+        {
+            get
+            {
+                if (_groups.Count == 0)
+                    return null;
+                if (_tabs.Visible && _tabs.SelectedTab?.Tag is TypeGroup group)
+                    return group;
+                return _groups[0];
+            }
+        }
+
+        private static string GetTypeKey(Entity entity)
+        {
+            if (entity is FunctionEntity function)
+                return "F:" + function.function.AsUInt32;
+            return entity.variant.ToString();
+        }
+
+        private string GetTypeLabel(Entity entity)
+        {
+            switch (entity.variant)
+            {
+                case EntityVariant.FUNCTION:
+                    FunctionEntity function = (FunctionEntity)entity;
+                    if (function.function.IsFunctionType)
+                        return function.function.AsFunctionType.ToString();
+                    Composite composite = Content?.Level?.Commands?.GetComposite(function.function);
+                    if (composite != null)
+                    {
+                        string name = composite.name.Replace('\\', '/');
+                        int idx = name.LastIndexOf('/');
+                        return idx >= 0 ? name.Substring(idx + 1) : name;
+                    }
+                    return "Composite Instance";
+                case EntityVariant.VARIABLE:
+                    return "Variable";
+                case EntityVariant.PROXY:
+                    return "Proxy";
+                case EntityVariant.ALIAS:
+                    return "Alias";
+                default:
+                    return "Entity";
+            }
+        }
+
+        #region Numeric scrolling
+        private TextBox _gridEditBox;
+        private System.Reflection.MethodInfo _gridCommitMethod;
+        private Control _gridView;
+
+        /* Restore the old NumericUpDown QoL: scrolling the mouse wheel over a focused numeric input steps the value.
+           The wheel only steps when the cursor is actually over the edit box, so scrolling to navigate the grid is safe. */
+        private void HookNumericScrolling()
+        {
+            try
+            {
+                _gridView = _grid.Controls.Cast<Control>().FirstOrDefault(o => o.GetType().Name == "PropertyGridView");
+                if (_gridView == null)
+                    return;
+
+                //The edit box is created on demand by this internal property getter
+                System.Reflection.PropertyInfo editProperty = _gridView.GetType().GetProperty("Edit",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                _gridEditBox = editProperty?.GetValue(_gridView, null) as TextBox;
+                if (_gridEditBox == null)
+                    return;
+
+                _gridCommitMethod = _gridView.GetType().GetMethod("Commit",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
+                _gridEditBox.MouseWheel += GridEditBox_MouseWheel;
+                _gridView.MouseDown += GridView_MouseDown;
+                //The grid view paints itself without raising Paint, so its paint message is watched instead
+                new TransformRowPaintHook(this, _gridView);
+            }
+            catch
+            {
+                //Reflection into PropertyGrid internals failed - scrolling support is a nicety, carry on without it
+                _gridEditBox = null;
+            }
+        }
+
+        /* A double-click on a colour row opens the full picker. The grid's own answer to a double-click
+           on a row with a value list is to step to the next entry - and the named-colour list means it
+           never offers the picker's button at all - so the click is taken before the grid sees it, on
+           both the row itself (the swatch) and the edit box that sits over the value once it's selected. */
+        private void HookColourDoubleClick()
+        {
+            if (_gridView == null)
+                return;
+            new ColourRowDoubleClickHook(this, _gridView);
+            if (_gridEditBox != null)
+                new ColourRowDoubleClickHook(this, _gridEditBox);
+        }
+
+        private bool TryOpenColourPickerForSelectedRow()
+        {
+            string name = _grid.SelectedGridItem?.PropertyDescriptor?.Name;
+            if (name == null)
+                return false;
+
+            //One descriptor per selected entity: the picked colour goes to all of them, as the editor button would
+            List<(EntityParameterProxy Proxy, ColourParameterDescriptor Descriptor)> targets = new List<(EntityParameterProxy, ColourParameterDescriptor)>();
+            foreach (object selected in _grid.SelectedObjects)
+            {
+                if (selected is EntityParameterProxy proxy && proxy.GetParameterDescriptor(name) is ColourParameterDescriptor descriptor)
+                    targets.Add((proxy, descriptor));
+            }
+            if (targets.Count == 0)
+                return false;
+
+            Color current = targets[0].Descriptor.GetValue(targets[0].Proxy) is Color colour ? colour : Color.Black;
+            if (ColourPickerEditor.TryPick(current, out Color chosen, targets.Select(o => (o.Proxy, o.Descriptor.Parameter))))
+            {
+                foreach ((EntityParameterProxy proxy, ColourParameterDescriptor descriptor) in targets)
+                    descriptor.SetValue(proxy, chosen);
+                _grid.Refresh();
+            }
+            return true;
+        }
+
+        /* After each paint of the grid view: note which transform rows are open (see TrackTransformRows) */
+        private sealed class TransformRowPaintHook : NativeWindow
+        {
+            private const int WM_PAINT = 0x000F;
+            private readonly ParameterGridPanel _panel;
+
+            public TransformRowPaintHook(ParameterGridPanel panel, Control control)
+            {
+                _panel = panel;
+                if (control.IsHandleCreated)
+                    AssignHandle(control.Handle);
+                control.HandleCreated += (sender, e) => AssignHandle(control.Handle);
+                control.HandleDestroyed += (sender, e) => ReleaseHandle();
+            }
+
+            protected override void WndProc(ref Message m)
+            {
+                base.WndProc(ref m);
+                if (m.Msg == WM_PAINT)
+                    _panel.TrackTransformRows();
+            }
+        }
+
+        private sealed class ColourRowDoubleClickHook : NativeWindow
+        {
+            private const int WM_LBUTTONDBLCLK = 0x0203;
+            private readonly ParameterGridPanel _panel;
+
+            public ColourRowDoubleClickHook(ParameterGridPanel panel, Control control)
+            {
+                _panel = panel;
+                if (control.IsHandleCreated)
+                    AssignHandle(control.Handle);
+                control.HandleCreated += (sender, e) => AssignHandle(control.Handle);
+                control.HandleDestroyed += (sender, e) => ReleaseHandle();
+            }
+
+            protected override void WndProc(ref Message m)
+            {
+                if (m.Msg == WM_LBUTTONDBLCLK && _panel.TryOpenColourPickerForSelectedRow())
+                    return;
+                base.WndProc(ref m);
+            }
+        }
+
+        /* Make the grid rows a little taller than the cramped default (font height + 2). The grid works out its scrollbar -
+           whether it shows, and how far it scrolls - from the row height it has when its rows are set, so the height goes in
+           before them, and rows already showing are laid out again for it. Set after, the first entity shown got a
+           scrollbar for the shorter rows: missing, or stopping short of the last rows. */
+        private void ApplyRowHeight()
+        {
+            try
+            {
+                if (_gridView == null)
+                    return;
+                System.Reflection.FieldInfo rowHeightField = _gridView.GetType().GetField("cachedRowHeight",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                int rowHeight = _gridView.Font.Height + 7;
+                if (rowHeightField == null || (int)rowHeightField.GetValue(_gridView) == rowHeight)
+                    return;
+                rowHeightField.SetValue(_gridView, rowHeight);
+                _gridView.GetType().GetMethod("SetConstants", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)?.Invoke(_gridView, null);
+                _gridView.Invalidate();
+            }
+            catch { }
+        }
+
+        /* Single-click toggling for the bool checkbox glyphs (drawn just right of the label column) */
+        private void GridView_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left)
+                return;
+
+            //Defer so the click has already moved the grid selection to the clicked row
+            BeginInvoke(new Action(() =>
+            {
+                GridItem item = _grid.SelectedGridItem;
+                if (item?.PropertyDescriptor == null || item.PropertyDescriptor.PropertyType != typeof(bool))
+                    return;
+
+                int labelWidth = GetGridLabelWidth();
+                if (labelWidth <= 0 || e.X <= labelWidth || e.X > labelWidth + 27)
+                    return;
+
+                bool newValue = !(item.Value is bool current && current);
+                TypeGroup group = ActiveGroup;
+                if (group == null)
+                    return;
+                foreach (EntityParameterProxy proxy in group.Proxies)
+                {
+                    ParameterGridDescriptor descriptor = proxy.GetParameterDescriptor(item.PropertyDescriptor.Name);
+                    descriptor?.SetValue(proxy, newValue);
+                }
+                RefreshValues();
+            }));
+        }
+
+        private int GetGridLabelWidth()
+        {
+            try
+            {
+                System.Reflection.PropertyInfo labelWidthProperty = _gridView.GetType().GetProperty("InternalLabelWidth",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                if (labelWidthProperty != null)
+                    return (int)labelWidthProperty.GetValue(_gridView, null);
+
+                System.Reflection.FieldInfo labelWidthField = _gridView.GetType().GetField("labelWidth",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                if (labelWidthField != null)
+                    return (int)labelWidthField.GetValue(_gridView);
+            }
+            catch { }
+            return -1;
+        }
+
+        private void GridEditBox_MouseWheel(object sender, MouseEventArgs e)
+        {
+            //Only step when the cursor is over the edit box itself - wheeling elsewhere keeps scrolling the grid
+            if (_gridEditBox == null || !_gridEditBox.Visible)
+                return;
+            if (!_gridEditBox.ClientRectangle.Contains(_gridEditBox.PointToClient(Cursor.Position)))
+                return;
+
+            GridItem item = _grid.SelectedGridItem;
+            Type type = item?.PropertyDescriptor?.PropertyType;
+            if (type != typeof(float) && type != typeof(int))
+                return;
+
+            //We're handling the wheel - don't let the grid scroll underneath the edit
+            if (e is HandledMouseEventArgs handled)
+                handled.Handled = true;
+
+            int direction = e.Delta > 0 ? 1 : -1;
+            string newText = null;
+            if (type == typeof(int))
+            {
+                if (!int.TryParse(_gridEditBox.Text, out int intValue))
+                    return;
+                newText = (intValue + direction).ToString();
+            }
+            else
+            {
+                if (!float.TryParse(_gridEditBox.Text, out float floatValue))
+                    return;
+                newText = (floatValue + direction * GetStepForItem(item)).ToString("0.######");
+            }
+
+            _gridEditBox.Text = newText;
+            _gridEditBox.Modified = true;
+            _gridEditBox.SelectAll();
+
+            //Commit immediately so e.g. transform edits sync to the viewer per scroll step
+            try { _gridCommitMethod?.Invoke(_gridView, null); } catch { }
+
+            /* Committing an axis rebuilds the value above it - X/Y/Z live inside a Position that the
+               grid replaces wholesale - which throws away the row we're sitting on and leaves the grid
+               selecting a discarded one. Everything that asks for the selection from then on (the next
+               scroll step, the context menu) would fail on it, so rebuild the rows and let the grid put
+               the selection back on the live equivalent. */
+            if (SelectedRowWasDiscarded())
+                RefreshValues();
+        }
+
+        /// <summary>
+        /// True once the grid has thrown away the row it still reports as selected. A discarded row keeps
+        /// answering for its PropertyDescriptor, so asking for its parent is the way to tell.
+        /// </summary>
+        private bool SelectedRowWasDiscarded()
+        {
+            return IsDiscarded(_grid.SelectedGridItem);
+        }
+
+        private static bool IsDiscarded(GridItem item)
+        {
+            if (item == null)
+                return false;
+            try
+            {
+                GridItem parent = item.Parent;
+                return false;
+            }
+            catch (ObjectDisposedException) { return true; }
+        }
+
+        /// <summary>
+        /// Whether the grid's own list of rows still holds rows it has thrown away. A commit inside an
+        /// expanded value replaces that value and rebuilds the rows beneath it; when the edit is two levels
+        /// down (an axis inside Position inside position) the grid splices the new rows in but leaves the
+        /// old siblings behind. Those rows are disposed: they paint as black bars, and a click on one
+        /// hands the in-place edit box a row that no longer exists (issue 647).
+        /// </summary>
+        private bool HasDiscardedRows()
+        {
+            if (_gridView == null)
+                return false;
+            try
+            {
+                object rows = _gridView.GetType().GetField("allGridEntries",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.GetValue(_gridView);
+                if (!(rows is System.Collections.IEnumerable entries))
+                    return false;
+                foreach (object entry in entries)
+                    if (entry is GridItem item && IsDiscarded(item))
+                        return true;
+            }
+            catch { }
+            return false;
+        }
+
+        /* Enter, Tab and the wheel put the rows right on their own paths (GridTabNavigator, above).
+           Every other way to commit - clicking another row, focus leaving the grid - is the grid's own
+           doing and nothing repairs it, so this runs after any committed value. Deferred, because a
+           click commits first and then selects the row it hit, and that row may be one of the dead
+           ones: the rebuild has to come after the grid has finished with the click. */
+        private void RepairAfterCommit()
+        {
+            if (!IsHandleCreated)
+                return;
+            BeginInvoke(new Action(() =>
+            {
+                if (IsDisposed || _grid.IsDisposed)
+                    return;
+                if (!SelectedRowWasDiscarded() && !HasDiscardedRows())
+                    return;
+
+                //A full refresh rebuilds the row list and puts the selection back on the live row in
+                //the same place, which is the one the click meant
+                bool editHadFocus = _gridEditBox != null && _gridEditBox.Focused;
+                _grid.Refresh();
+                if (editHadFocus && _gridEditBox.Visible)
+                {
+                    _gridEditBox.Focus();
+                    _gridEditBox.SelectAll();
+                }
+            }));
+        }
+
+        /* Walk one step up the row tree, treating a discarded row as having no parent rather than throwing */
+        private static GridItem ParentOf(GridItem item)
+        {
+            try { return item?.Parent; }
+            catch (ObjectDisposedException) { return null; }
+        }
+
+        private static float GetStepForItem(GridItem item)
+        {
+            //Rotation axes use the rotation step; everything else uses the position/generic step
+            if (ParentOf(item)?.PropertyDescriptor?.Name == "Rotation")
+                return NumericStepSettings.RotationStep;
+            return NumericStepSettings.PositionStep;
+        }
+        #endregion
+
+        #region Context menu
+        /* The top-level parameter row for the current grid selection (child rows resolve to their parent parameter) */
+        private ParameterGridDescriptor GetSelectedParameterDescriptor()
+        {
+            GridItem item = _grid.SelectedGridItem;
+            while (item != null && !(item.PropertyDescriptor is ParameterGridDescriptor))
+                item = ParentOf(item);
+            ParameterGridDescriptor direct = item?.PropertyDescriptor as ParameterGridDescriptor;
+            if (direct != null)
+                return direct;
+
+            //Merged multi-selection rows wrap our descriptors - resolve by name through the first proxy
+            item = _grid.SelectedGridItem;
+            while (item != null && item.GridItemType != GridItemType.Property)
+                item = ParentOf(item);
+            while (ParentOf(item) != null && ParentOf(item).GridItemType == GridItemType.Property)
+                item = ParentOf(item);
+            string name = item?.PropertyDescriptor?.Name;
+            if (name == null)
+                return null;
+            return ActiveGroup?.Proxies.FirstOrDefault()?.GetParameterDescriptor(name);
+        }
+
+        private void Menu_Opening(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            ParameterGridDescriptor descriptor = GetSelectedParameterDescriptor();
+            if (descriptor == null)
+            {
+                e.Cancel = true;
+                return;
+            }
+
+            //On an alias, and on a proxy's rows for the entity it stands for (issue 742), overrides reset by removal so the
+            //base value applies; virtual rows have nothing to reset
+            bool isOverride = IsOverrideRow(descriptor.Proxy, descriptor.Parameter);
+            _resetParam.Text = isOverride
+                ? "Reset '" + descriptor.Name + "' (remove override)"
+                : "Reset '" + descriptor.Name + "' to default";
+            _resetParam.Enabled = CanReset(descriptor);
+
+            //Jump to the aliases overriding this parameter
+            _showAliases.Visible = !isOverride && descriptor.Status == ParameterStatus.AliasOverride;
+
+            //A composite's vector parameter, on its instances or itself, can be shown as a colour - or as a vector again
+            _treatAsColour.Visible = ColourTargets(descriptor).Count != 0;
+            _treatAsColour.Enabled = ColourParameters.CanEdit;
+            _treatAsColour.Text = descriptor is ColourParameterDescriptor ? "Treat As Vector" : "Treat As Colour";
+
+            bool copyable = descriptor.Parameter.content is cTransform || descriptor.Parameter.content is cVector3;
+            _copyValue.Visible = copyable;
+            _pasteValue.Visible = copyable;
+            _valueSeparator.Visible = copyable; //don't leave a divider dangling at the end of the menu
+        }
+
+        /* The composite parameters a vector row stands for on each entity it is shown for (an instance's, an alias or proxy's
+           through what it points at, or a parameter entity's own value), that can be switched between colour and vector */
+        private List<(Composite composite, VariableEntity variable)> ColourTargets(ParameterGridDescriptor descriptor)
+        {
+            List<(Composite composite, VariableEntity variable)> targets = new List<(Composite composite, VariableEntity variable)>();
+            if (!(descriptor is VectorParameterDescriptor) && !(descriptor is ColourParameterDescriptor))
+                return targets;
+
+            TypeGroup group = ActiveGroup;
+            IEnumerable<EntityParameterProxy> proxies = group != null && group.Proxies.Contains(descriptor.Proxy)
+                ? group.Proxies
+                : new List<EntityParameterProxy>() { descriptor.Proxy };
+            foreach (EntityParameterProxy proxy in proxies)
+            {
+                CATHODE.Commands commands = proxy.Content?.Level?.Commands;
+                ParameterGridDescriptor row = proxy.GetParameterDescriptor(descriptor.Name);
+                if (commands == null || !(row?.Parameter.content is cVector3))
+                    continue;
+                (Composite composite, VariableEntity variable) = ColourParameters.Resolve(commands, proxy.Entity, proxy.Composite, row.Parameter.name);
+                if (ColourParameters.CanSwitch(commands, composite, variable) && !targets.Contains((composite, variable)))
+                    targets.Add((composite, variable));
+            }
+            return targets;
+        }
+
+        private void TreatAsColour_Click(object sender, EventArgs e)
+        {
+            ParameterGridDescriptor descriptor = GetSelectedParameterDescriptor();
+            CATHODE.Commands commands = descriptor?.Proxy.Content?.Level?.Commands;
+            if (descriptor == null || commands == null)
+                return;
+            //Undo goes back to the entity inspected - or, for several, leaves the selection as it is
+            Entity shown = IsMultiEditing ? null : descriptor.Proxy.Entity;
+            ColourParameters.Set(commands, ColourTargets(descriptor), !(descriptor is ColourParameterDescriptor), descriptor.Proxy.Composite, shown);
+        }
+
+        /* Whether Reset has something to reset to on any entity it is shown for, as ResetParam_Click goes about it: an
+           alias's override is removed (a row it only shows from its target has nothing to remove, nor has an empty
+           name row), anything else goes back to its definition default - which a name does not have, so the item
+           used to be offered on every name row and do nothing. */
+        private bool CanReset(ParameterGridDescriptor descriptor)
+        {
+            TypeGroup group = ActiveGroup;
+            IEnumerable<EntityParameterProxy> proxies = group != null && group.Proxies.Contains(descriptor.Proxy)
+                ? group.Proxies
+                : new List<EntityParameterProxy>() { descriptor.Proxy };
+            foreach (EntityParameterProxy proxy in proxies)
+            {
+                ParameterGridDescriptor target = proxy.GetParameterDescriptor(descriptor.Name);
+                if (target == null)
+                    continue;
+                if (IsOverrideRow(proxy, target.Parameter))
+                {
+                    if (ParameterGridDescriptor.IsModified(proxy.Composite, proxy.Entity, target.Parameter.name))
+                        return true;
+                }
+                else if (DefaultOfSameType(proxy, target.Parameter) != null)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /* An alias's rows, and a proxy's rows for the entity it stands for: what they carry is an override of that entity, so
+           Reset takes it off rather than writing a default over it (an enabled proxy would apply that default to the entity) */
+        private static bool IsOverrideRow(EntityParameterProxy proxy, Parameter parameter)
+        {
+            if (proxy?.Entity == null || parameter == null)
+                return false;
+            return proxy.Entity.variant == EntityVariant.ALIAS || ProxyParameters.IsOverride(proxy.Entity, parameter.name);
+        }
+
+        /* CathodeLib's default for the parameter, when it is of the type the parameter holds. Where it isn't, Reset would
+           change the parameter's type rather than its value, so there is nothing to reset to (issue 744): a ZONE_LINK pin
+           like 'zonelink' defaults to empty text where a float is stored, a 'mapping' resource to text, a proxy's
+           'reference' text to a number. A STRING the definition lists values for is shown as that list, so those two match. */
+        private ParameterData DefaultOfSameType(EntityParameterProxy proxy, Parameter parameter)
+        {
+            ParameterData defaultData = Content?.Level?.Commands?.Utils?.CreateDefaultParameterData(proxy.Entity, proxy.Composite, parameter.name);
+            if (defaultData == null || parameter?.content == null)
+                return null;
+            DataType held = parameter.content.dataType;
+            bool sameType = defaultData.dataType == held
+                || (defaultData.dataType == DataType.ENUM_STRING && held == DataType.STRING)
+                || (defaultData.dataType == DataType.STRING && held == DataType.ENUM_STRING);
+            return sameType ? defaultData : null;
+        }
+
+        ShowCrossRefs _crossRefsDialog = null;
+        private void ShowAliases_Click(object sender, EventArgs e)
+        {
+            ParameterGridDescriptor descriptor = GetSelectedParameterDescriptor();
+            if (descriptor == null || Inspector?.CompositeDisplay == null)
+                return;
+
+            if (_crossRefsDialog != null)
+                _crossRefsDialog.Close();
+
+            _crossRefsDialog = new ShowCrossRefs(descriptor.Proxy.Entity, openOnAliases: true);
+            _crossRefsDialog.Show();
+            _crossRefsDialog.OnEntitySelected += Inspector.CompositeDisplay.CompositeBrowser.LoadCompositeAndEntity;
+            _crossRefsDialog.OnFlowgraphSelected += Inspector.CompositeDisplay.SelectEntityOnFlowgraph;
+        }
+
+        private void ResetParam_Click(object sender, EventArgs e)
+        {
+            ParameterGridDescriptor descriptor = GetSelectedParameterDescriptor();
+            TypeGroup group = ActiveGroup;
+            if (descriptor == null || group == null)
+                return;
+
+            bool structuralChange = false;
+            IDisposable undoGroup = UndoStack.Current.BeginGroup("Reset " + descriptor.Name);
+            try
+            {
+                foreach (EntityParameterProxy proxy in group.Proxies)
+                {
+                    ParameterGridDescriptor target = proxy.GetParameterDescriptor(descriptor.Name);
+                    if (target == null)
+                        continue;
+
+                    Parameter param = target.Parameter;
+                    bool wasModified = ParameterModificationTracker.IsParameterModified(proxy.Composite.shortGUID, proxy.Entity.shortGUID, param.name);
+                    string label = "Reset " + descriptor.Name + " on " + UndoLabels.Entity(proxy.Composite, proxy.Entity);
+                    if (IsOverrideRow(proxy, param))
+                    {
+                        //Alias parameters (and a proxy's for the entity it stands for) are overrides: reset = remove so the
+                        //pointed-to entity's value applies
+                        int index = proxy.Entity.parameters.IndexOf(param);
+                        Singleton.OnEntityParameterModified?.Invoke(proxy.Entity, param, true);
+                        if (param?.content != null && param.name == ShortGuidUtils.Generate("position") && param.content.dataType == DataType.TRANSFORM)
+                            Singleton.OnEntityMoved?.Invoke(null, proxy.Entity);
+                        proxy.Entity.parameters.Remove(param);
+                        ParameterModificationTracker.ClearParameterModified(proxy.Composite.shortGUID, proxy.Entity.shortGUID, param.name);
+                        if (index >= 0)
+                            UndoStack.Current.Record(new ParameterPresenceEdit(proxy.Composite, proxy.Entity, param, index, false, wasModified, label));
+                        structuralChange = true;
+                    }
+                    else
+                    {
+                        ParameterData defaultData = DefaultOfSameType(proxy, param);
+                        if (defaultData == null)
+                            continue;
+
+                        ParameterData before = ParameterValues.Clone(param.content);
+                        param.content = defaultData;
+                        ParameterModificationTracker.ClearParameterModified(proxy.Composite.shortGUID, proxy.Entity.shortGUID, param.name);
+                        UndoStack.Current.Record(new ParameterValueEdit(proxy.Composite, proxy.Entity, param.name, before, ParameterValues.Clone(defaultData), wasModified, false, label));
+                        Singleton.OnEntityParameterModified?.Invoke(proxy.Entity, param, false);
+                        if (defaultData is cTransform defaultTransform)
+                            Singleton.OnEntityMoved?.Invoke(defaultTransform, proxy.Entity);
+                        if (defaultData is cResource)
+                            Singleton.OnResourceModified?.Invoke();
+                    }
+                }
+            }
+            finally
+            {
+                undoGroup.Dispose();
+            }
+            Singleton.OnParameterModified?.Invoke();
+
+            //Content instances were replaced (or rows removed), so rebuild - and let the inspector
+            //refresh links etc for single selections
+            if (!IsMultiEditing && Inspector != null && structuralChange)
+                Inspector.Reload();
+            else
+                RebuildProperties();
+        }
+
+        private void CopyValue_Click(object sender, EventArgs e)
+        {
+            ParameterGridDescriptor descriptor = GetSelectedParameterDescriptor();
+            if (descriptor == null)
+                return;
+            Clipboard.SetText(JsonConvert.SerializeObject(descriptor.Parameter.content));
+        }
+
+        private void PasteValue_Click(object sender, EventArgs e)
+        {
+            ParameterGridDescriptor descriptor = GetSelectedParameterDescriptor();
+            TypeGroup group = ActiveGroup;
+            if (descriptor == null || group == null)
+                return;
+
+            string clipboard = Clipboard.GetText();
+            cTransform transform = null;
+            cVector3 vector = null;
+            try
+            {
+                if (descriptor.Parameter.content is cTransform)
+                    transform = JsonConvert.DeserializeObject<cTransform>(clipboard);
+                else if (descriptor.Parameter.content is cVector3)
+                    vector = JsonConvert.DeserializeObject<cVector3>(clipboard);
+            }
+            catch { }
+            if (transform == null && vector == null)
+            {
+                MessageBox.Show("Failed to paste value.", "Invalid clipboard", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            using (UndoStack.Current.BeginGroup("Paste " + descriptor.Name))
+            {
+                foreach (EntityParameterProxy proxy in group.Proxies)
+                {
+                    ParameterGridDescriptor target = proxy.GetParameterDescriptor(descriptor.Name);
+                    if (target == null)
+                        continue;
+
+                    if (transform != null && target.Parameter.content is cTransform targetTransform)
+                    {
+                        target.CaptureBefore();
+                        targetTransform.position = transform.position;
+                        targetTransform.rotation = transform.rotation;
+                        target.NotifyEdited();
+                        Singleton.OnEntityMoved?.Invoke(targetTransform, proxy.Entity);
+                    }
+                    else if (vector != null && target.Parameter.content is cVector3 targetVector)
+                    {
+                        target.CaptureBefore();
+                        targetVector.value = vector.value;
+                        target.NotifyEdited();
+                    }
+                }
+            }
+            RefreshValues();
+        }
+        #endregion
+    }
+}

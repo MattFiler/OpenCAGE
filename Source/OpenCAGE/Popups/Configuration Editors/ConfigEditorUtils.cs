@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using System.Xml;
 
@@ -9,6 +11,142 @@ namespace OpenCAGE.ConfigEditors
 {
     static class ConfigEditorUtils
     {
+        // Original Save handler → wrapped handler (so Unsubscribe still works with the same method group). Kept per editor
+        // (the handler's target) and weakly: a plain dictionary of them held every config editor ever opened, and its file
+        static readonly ConditionalWeakTable<object, Dictionary<EventHandler, EventHandler>> _wrappedAutoSaveHandlers = new ConditionalWeakTable<object, Dictionary<EventHandler, EventHandler>>();
+        static readonly object _staticAutoSaveHandlers = new object();
+
+        static Dictionary<EventHandler, EventHandler> WrappedHandlersOf(EventHandler handler)
+        {
+            return _wrappedAutoSaveHandlers.GetValue(handler.Target ?? _staticAutoSaveHandlers, o => new Dictionary<EventHandler, EventHandler>());
+        }
+
+        /* Fail MessageBox for auto-saving config & PAK editors (#599) */
+        public static void NotifyAutoSave(bool success, string errorDetail = null)
+        {
+            if (success)
+                return;
+
+            string detail = string.IsNullOrWhiteSpace(errorDetail) ? "" : "\n\n" + errorDetail;
+            MessageBox.Show(
+                "Failed to save changes." + detail,
+                "Save failed",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
+
+        public static void ShowAutoSaveTipOnce()
+        {
+            if (SettingsManager.GetBool(Settings.DidConfigAutoSaveTip))
+                return;
+
+            SettingsManager.SetBool(Settings.DidConfigAutoSaveTip, true);
+            MessageBox.Show(
+                "Changes in Configuration and UI/Animation PAK editors are saved automatically as you edit — you don't need to click Save.",
+                "Automatic saving",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+        }
+
+        static EventHandler WrapAutoSaveHandler(EventHandler handler)
+        {
+            if (handler == null)
+                return null;
+
+            Dictionary<EventHandler, EventHandler> wrappedHandlers = WrappedHandlersOf(handler);
+            if (wrappedHandlers.TryGetValue(handler, out EventHandler existing))
+                return existing;
+
+            EventHandler wrapped = (sender, e) =>
+            {
+                try
+                {
+                    handler(sender, e);
+                    NotifyAutoSave(true);
+                }
+                catch (Exception ex)
+                {
+                    NotifyAutoSave(false, ex.Message);
+                }
+            };
+            wrappedHandlers[handler] = wrapped;
+            return wrapped;
+        }
+
+        static EventHandler ResolveAutoSaveHandler(EventHandler handler)
+        {
+            if (handler == null)
+                return null;
+            if (_wrappedAutoSaveHandlers.TryGetValue(handler.Target ?? _staticAutoSaveHandlers, out Dictionary<EventHandler, EventHandler> wrappedHandlers)
+                && wrappedHandlers.TryGetValue(handler, out EventHandler wrapped))
+                return wrapped;
+            return handler;
+        }
+
+        /* The XML configs are loaded with PreserveWhitespace so editing one value doesn't reflow the whole
+         * file - which means indentation is data, and a plain AppendChild lands a new element on the end of
+         * the previous line. These two copy the indentation the parent's existing children use. */
+        private static bool IsWhitespace(XmlNode node)
+        {
+            return node != null && (node.NodeType == XmlNodeType.Whitespace || node.NodeType == XmlNodeType.SignificantWhitespace);
+        }
+
+        /// <summary>The whitespace in front of the parent's first element child, i.e. one entry's indentation.</summary>
+        public static string ChildIndent(XmlNode parent, string fallback = null)
+        {
+            foreach (XmlNode node in parent.ChildNodes)
+            {
+                if (node.NodeType != XmlNodeType.Element)
+                    continue;
+                return IsWhitespace(node.PreviousSibling) ? node.PreviousSibling.Value : fallback;
+            }
+            return fallback;
+        }
+
+        /// <summary>Append a child, indented like the children already there, and before the closing tag's own indentation.</summary>
+        public static XmlNode AppendIndented(XmlNode parent, XmlNode child, string indentFallback = null)
+        {
+            XmlDocument document = parent.OwnerDocument;
+            string indent = ChildIndent(parent, indentFallback);
+            XmlNode trailing = IsWhitespace(parent.LastChild) ? parent.LastChild : null;
+
+            if (trailing != null)
+            {
+                if (indent != null)
+                    parent.InsertBefore(document.CreateWhitespace(indent), trailing);
+                parent.InsertBefore(child, trailing);
+            }
+            else
+            {
+                if (indent != null)
+                    parent.AppendChild(document.CreateWhitespace(indent));
+                parent.AppendChild(child);
+            }
+            return child;
+        }
+
+        /// <summary>
+        /// Replace every child of <paramref name="parent"/> with <paramref name="children"/>, keeping the
+        /// indentation the parent used. Removing elements one by one would leave their whitespace behind.
+        /// </summary>
+        public static void ReplaceChildrenIndented(XmlNode parent, IEnumerable<XmlNode> children, string indentFallback = null, string closeIndentFallback = null)
+        {
+            XmlDocument document = parent.OwnerDocument;
+            string indent = ChildIndent(parent, indentFallback);
+            string closeIndent = IsWhitespace(parent.LastChild) ? parent.LastChild.Value : closeIndentFallback;
+
+            parent.RemoveAll();
+            //RemoveAll drops attributes too, so anything the caller needs on the parent is set by the caller afterwards
+            foreach (XmlNode child in children)
+            {
+                if (indent != null)
+                    parent.AppendChild(document.CreateWhitespace(indent));
+                parent.AppendChild(child);
+            }
+            if (closeIndent != null)
+                parent.AppendChild(document.CreateWhitespace(closeIndent));
+        }
+
         public static XmlElement EnsureChildElements(XmlNode parent, params string[] localNames)
         {
             XmlNode current = parent;
@@ -153,6 +291,7 @@ namespace OpenCAGE.ConfigEditors
             try
             {
                 if (decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal value)
+                    || TryParseCommaDecimal(text, out value)
                     || decimal.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value))
                 {
                     SetNumericValue(updown, value);
@@ -164,6 +303,70 @@ namespace OpenCAGE.ConfigEditors
             }
         }
 
+        /* These editors used to save a number as its box showed it, in the PC's language: on a German or French Windows,
+           0.45 went into the file as "0,45", which the game doesn't read as 0.45. Such a value is read as the number it was
+           meant to be, wherever the file is opened, so the next save writes it as the game spells numbers (NumberText). */
+        private static bool TryParseCommaDecimal(string text, out decimal value)
+        {
+            value = 0;
+            string trimmed = text.Trim();
+            return Regex.IsMatch(trimmed, @"^[-+]?\d+,\d+$")
+                && decimal.TryParse(trimmed.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+        }
+
+        /// <summary>
+        /// A number box's value as the game's files spell numbers: a point before the decimals whatever the PC's language,
+        /// and no zeros the value doesn't need. Save this, not the box's Text: Text is in the PC's language ("0,45" on a German
+        /// Windows) and padded to the box's decimal places, so a 3 read from a file went back in as "3.000" - and a value
+        /// with more decimals than the box shows lost them.
+        /// </summary>
+        public static string NumberText(NumericUpDown updown)
+        {
+            return updown.Value.ToString("0.############################", CultureInfo.InvariantCulture);
+        }
+
+        /* Every read of a BML's Content converts the whole binary file into a new XmlDocument. Showing an entry reads the
+         * same few files (the entry and its templates) once for every field - several hundred times per character in the
+         * Senses editor, and again for every entry in the save-on-open loop - which made opening it take most of a minute.
+         * Inside a ReadOnce() block each file is converted once and that copy answers every later read in the block.
+         * Only for filling controls: the copies are never edited, and Save still takes a fresh Content to edit and write
+         * back, so a block must not span a Save of the same files. */
+        [ThreadStatic] static Dictionary<BML, XmlDocument> _readOnceContent;
+        [ThreadStatic] static int _readOnceDepth;
+
+        public static IDisposable ReadOnce()
+        {
+            if (_readOnceDepth++ == 0)
+                _readOnceContent = new Dictionary<BML, XmlDocument>();
+            return new ReadOnceBlock();
+        }
+
+        sealed class ReadOnceBlock : IDisposable
+        {
+            bool _ended;
+            public void Dispose()
+            {
+                if (_ended)
+                    return;
+                _ended = true;
+                if (--_readOnceDepth == 0)
+                    _readOnceContent = null;
+            }
+        }
+
+        /* A BML's Content, converted once per ReadOnce() block (or every time outside one) */
+        public static XmlDocument ContentOf(BML config)
+        {
+            if (_readOnceContent == null)
+                return config.Content;
+            if (!_readOnceContent.TryGetValue(config, out XmlDocument content))
+            {
+                content = config.Content;
+                _readOnceContent.Add(config, content);
+            }
+            return content;
+        }
+
         public static void SetCheckbox(List<BML> configs, CheckBox checkbox, params string[] elementPath)
         {
             if (elementPath == null || elementPath.Length == 0)
@@ -172,7 +375,7 @@ namespace OpenCAGE.ConfigEditors
             bool foundValue = false;
             for (int i = 0; i < configs.Count; i++)
             {
-                XmlElement leaf = TryGetDescendant(configs[i].Content, elementPath);
+                XmlElement leaf = TryGetDescendant(ContentOf(configs[i]), elementPath);
                 if (leaf?.InnerText == null)
                     continue;
                 checkbox.Checked = leaf.InnerText.ToUpper() == "TRUE";
@@ -198,7 +401,7 @@ namespace OpenCAGE.ConfigEditors
             bool foundValue = false;
             for (int i = 0; i < configs.Count; i++)
             {
-                XmlElement leaf = TryGetDescendant(configs[i].Content, elementPath);
+                XmlElement leaf = TryGetDescendant(ContentOf(configs[i]), elementPath);
                 if (leaf?.InnerText == null)
                     continue;
 
@@ -233,10 +436,13 @@ namespace OpenCAGE.ConfigEditors
             bool foundValue = false;
             for (int i = 0; i < configs.Count; i++)
             {
-                XmlElement leaf = TryGetDescendant(configs[i].Content, elementPath);
+                XmlElement leaf = TryGetDescendant(ContentOf(configs[i]), elementPath);
                 if (leaf?.InnerText == null)
                     continue;
-                combo.Text = leaf.InnerText;
+                if (combo.DropDownStyle == ComboBoxStyle.DropDownList)
+                    SelectListed(combo, leaf.InnerText);
+                else
+                    combo.Text = leaf.InnerText;
                 combo.Enabled = true;
                 foundValue = true;
 
@@ -251,6 +457,41 @@ namespace OpenCAGE.ConfigEditors
                 combo.Enabled = false;
         }
 
+        // The value each fixed list was given because it didn't have it, to take out again when the next one is shown
+        static readonly ConditionalWeakTable<ComboBox, string> _unlistedComboValues = new ConditionalWeakTable<ComboBox, string>();
+
+        /* A fixed list (DropDownList) can only show what it holds, and saving writes what it shows: a value it doesn't have
+         * (a mod's own, say) would show, and save, the previous entry's instead. So it's added as it's written, for as long
+         * as it's shown. Matched exactly, not by Text, which picks the first item that matches ignoring case - unless
+         * ignoreCase asks for that, for a list the game reads ignoring case, whose caller keeps the file's spelling. */
+        public static void SelectListed(ComboBox combo, string value, bool ignoreCase = false)
+        {
+            if (_unlistedComboValues.TryGetValue(combo, out string unlisted))
+            {
+                combo.Items.Remove(unlisted);
+                _unlistedComboValues.Remove(combo);
+            }
+            if (value == null)
+                return;
+
+            object item = null;
+            foreach (object listed in combo.Items)
+            {
+                if (string.Equals(listed.ToString(), value, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+                {
+                    item = listed;
+                    break;
+                }
+            }
+            if (item == null)
+            {
+                combo.Items.Add(value);
+                _unlistedComboValues.Add(combo, value);
+                item = value;
+            }
+            combo.SelectedItem = item;
+        }
+
         public static void SetText(List<BML> configs, TextBox textbox, params string[] elementPath)
         {
             if (elementPath == null || elementPath.Length == 0)
@@ -259,7 +500,7 @@ namespace OpenCAGE.ConfigEditors
             bool foundValue = false;
             for (int i = 0; i < configs.Count; i++)
             {
-                XmlElement leaf = TryGetDescendant(configs[i].Content, elementPath);
+                XmlElement leaf = TryGetDescendant(ContentOf(configs[i]), elementPath);
                 if (leaf?.InnerText == null)
                     continue;
                 textbox.Text = leaf.InnerText;
@@ -293,41 +534,70 @@ namespace OpenCAGE.ConfigEditors
 
         public static void Subscribe(Control.ControlCollection controls, EventHandler handler)
         {
+            ShowAutoSaveTipOnce();
+            EventHandler wrapped = WrapAutoSaveHandler(handler);
+
             foreach (Control c in controls)
             {
                 if (c is TextBox tb)
-                    tb.TextChanged += handler;
+                    tb.TextChanged += wrapped;
                 else if (c is ComboBox cb)
-                    cb.SelectedIndexChanged += handler;
+                    cb.SelectedIndexChanged += wrapped;
                 else if (c is CheckBox chk)
-                    chk.CheckedChanged += handler;
+                    chk.CheckedChanged += wrapped;
                 else if (c is NumericUpDown nud)
                 {
                     ExpandNumericRange(nud);
-                    nud.ValueChanged += handler;
+                    nud.ValueChanged += wrapped;
                 }
                 else if (c is TrackBar tbr)
-                    tbr.ValueChanged += handler;
+                    tbr.ValueChanged += wrapped;
 
                 if (c.HasChildren)
-                    Subscribe(c.Controls, handler);
+                    SubscribeChildren(c.Controls, wrapped);
+            }
+        }
+
+        // Recurse with already-wrapped handler so we don't re-tip / re-wrap per child collection
+        static void SubscribeChildren(Control.ControlCollection controls, EventHandler wrapped)
+        {
+            foreach (Control c in controls)
+            {
+                if (c is TextBox tb)
+                    tb.TextChanged += wrapped;
+                else if (c is ComboBox cb)
+                    cb.SelectedIndexChanged += wrapped;
+                else if (c is CheckBox chk)
+                    chk.CheckedChanged += wrapped;
+                else if (c is NumericUpDown nud)
+                {
+                    ExpandNumericRange(nud);
+                    nud.ValueChanged += wrapped;
+                }
+                else if (c is TrackBar tbr)
+                    tbr.ValueChanged += wrapped;
+
+                if (c.HasChildren)
+                    SubscribeChildren(c.Controls, wrapped);
             }
         }
 
         public static void Unsubscribe(Control.ControlCollection controls, EventHandler handler)
         {
+            EventHandler wrapped = ResolveAutoSaveHandler(handler);
+
             foreach (Control c in controls)
             {
                 if (c is TextBox tb)
-                    tb.TextChanged -= handler;
+                    tb.TextChanged -= wrapped;
                 else if (c is ComboBox cb)
-                    cb.SelectedIndexChanged -= handler;
+                    cb.SelectedIndexChanged -= wrapped;
                 else if (c is CheckBox chk)
-                    chk.CheckedChanged -= handler;
+                    chk.CheckedChanged -= wrapped;
                 else if (c is NumericUpDown nud)
-                    nud.ValueChanged -= handler;
+                    nud.ValueChanged -= wrapped;
                 else if (c is TrackBar tbr)
-                    tbr.ValueChanged -= handler;
+                    tbr.ValueChanged -= wrapped;
 
                 if (c.HasChildren)
                     Unsubscribe(c.Controls, handler);

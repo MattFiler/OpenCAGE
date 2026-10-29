@@ -47,187 +47,37 @@ namespace AlienPAK
             return ToDDSFromPart(texture, part);
         }
 
+        /* The header shape lives in DdsFile, which the conversion tools share - one place that knows
+         * how a CATHODE format is spelled in DXGI, in both directions. */
         private static byte[] ToDDSFromPart(Textures.TEX4 texture, Textures.TEX4.Texture part)
         {
-            if (texture == null || part?.Content == null) return null;
-            DDSHeader theDDSHeader = new DDSHeader();
-            DX10Header theDX10Header = new DX10Header();
-            MemoryStream ms = new MemoryStream();
-            switch (texture.Format)
-            {
-                case Textures.TextureFormat.A32R32G32B32F:
-                case Textures.TextureFormat.A16R16G16B16:
-                case Textures.TextureFormat.A8R8G8B8:
-                case Textures.TextureFormat.X8R8G8B8:
-                case Textures.TextureFormat.A8:
-                case Textures.TextureFormat.L8:
-                case Textures.TextureFormat.A4R4G4B4:
-                case Textures.TextureFormat.DXT1:
-                case Textures.TextureFormat.DXT3:
-                case Textures.TextureFormat.DXN:
-                case Textures.TextureFormat.DXT5:
-                case Textures.TextureFormat.BC6H:
-                case Textures.TextureFormat.BC7:
-                case Textures.TextureFormat.R16F:
-                case Textures.TextureFormat.ASTC4X4:
-                case Textures.TextureFormat.ASTC8X8:
-                case Textures.TextureFormat.ASTC12X12:
-                    theDDSHeader.mHeight = (uint)part.Height;
-                    theDDSHeader.mWidth = (uint)part.Width;
-                    theDDSHeader.mDepth = (uint)part.Depth;
-                    theDDSHeader.mMipMapCount = (uint)part.MipLevels;
-
-                    theDDSHeader.mCaps1 = DDSCaps.DDSCAPS_TEXTURE;
-                    if (theDDSHeader.mDepth > 1) { theDDSHeader.mFlags |= DDSFlags.DDSD_DEPTH; theDDSHeader.mCaps1 |= DDSCaps.DDSCAPS_COMPLEX; theDDSHeader.mCaps2 |= DDSCaps2.DDSCAPS2_VOLUME; }
-                    if (theDDSHeader.mMipMapCount > 0) { theDDSHeader.mFlags |= DDSFlags.DDSD_MIPMAPCOUNT; theDDSHeader.mCaps1 |= DDSCaps.DDSCAPS_COMPLEX; }
-                    if (texture.StateFlags.HasFlag(TextureStateFlag.CUBE)) { theDDSHeader.mCaps2 |= DDSCaps2.DDSCAPS2_FULLCUBEMAP; theDX10Header.mMiscFlags |= DDSMiscFlag.DDS_RESOURCE_MISC_TEXTURECUBE; }
-                    theDX10Header.mResourceDimension = part.Depth > 1 ? D3D10_RESOURCE_DIMENSION.D3D10_RESOURCE_DIMENSION_TEXTURE3D : D3D10_RESOURCE_DIMENSION.D3D10_RESOURCE_DIMENSION_TEXTURE2D;
-                    theDX10Header.mArraySize = 1;
-
-                    switch (texture.Format)
-                    {
-                        case Textures.TextureFormat.A32R32G32B32F: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_R32G32B32A32_FLOAT; break;
-                        case Textures.TextureFormat.A16R16G16B16: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_R16G16B16A16_UNORM; break;
-                        case Textures.TextureFormat.A8R8G8B8: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_B8G8R8A8_UNORM; break;
-                        case Textures.TextureFormat.X8R8G8B8: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_B8G8R8X8_UNORM; break;
-                        case Textures.TextureFormat.A8:
-                        case Textures.TextureFormat.L8: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_A8_UNORM; break;
-                        case Textures.TextureFormat.A4R4G4B4: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_B4G4R4A4_UNORM; break;
-                        case Textures.TextureFormat.DXT1: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_BC1_UNORM; break;
-                        case Textures.TextureFormat.DXT3: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_BC2_UNORM; break;
-                        case Textures.TextureFormat.DXN: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_BC5_UNORM; break;
-                        case Textures.TextureFormat.DXT5: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_BC3_UNORM; break;
-                        case Textures.TextureFormat.BC6H: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_BC6H_UF16; break;
-                        case Textures.TextureFormat.BC7: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_BC7_UNORM; break;
-                        case Textures.TextureFormat.R16F: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_R16_FLOAT; break;
-                        case Textures.TextureFormat.ASTC4X4: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_ASTC_4X4_UNORM; break;
-                        case Textures.TextureFormat.ASTC8X8: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_ASTC_8X8_UNORM; break;
-                        case Textures.TextureFormat.ASTC12X12: theDX10Header.mDXGIFormat = DXGI_FORMAT.DXGI_FORMAT_ASTC_12X12_UNORM; break;
-
-                        default:
-                            throw new Exception("Unsupported");
-                    }
-                    using (BinaryWriter bw = new BinaryWriter(ms))
-                    {
-                        bw.Write(new char[4] { 'D', 'D', 'S', ' ' });
-                        Utilities.Write(bw, theDDSHeader);
-                        Utilities.Write(bw, theDX10Header);
-                        bw.Write(part.Content);
-                    }
-                    break;
-
-                default:
-                    throw new Exception("Unsupported");
-            }
-            return ms.ToArray();
+            return OpenCAGE.TextureTools.DdsFile.Write(texture, part);
         }
 
-        /* Convert DDS to a TEX4 Part */
+        /* Convert DDS to a TEX4 Part. Only a DX10 header is read here; a legacy one goes through
+         * OpenCAGE.TextureTools.TextureConverter first, which is what the importer does. */
         public static Textures.TEX4.Texture ToTEX4Part(this byte[] content, out Textures.TextureFormat format, out Textures.TextureStateFlag state, out Textures.TextureUsageFlag usage)
         {
-            Textures.TEX4.Texture part = new TEX4.Texture();
-            format = TextureFormat.AUTO;
-            state = TextureStateFlag.ALLOW_SRGB;
-            usage = TextureUsageFlag.DEFAULT | TextureUsageFlag.IS_LEVEL_PACK;
-
-            using (MemoryStream stream = new MemoryStream(content))
-            using (BinaryReader reader = new BinaryReader(stream))
-            {
-                reader.BaseStream.Position += 4;
-                DDSHeader ddsHeader = Utilities.Consume<DDSHeader>(reader);
-                DX10Header dx10Header = null;
-                if (ddsHeader.mPixelFormat.mFlags == DDSPixelFormat.DDPF_FOURCC &&
-                    ddsHeader.mPixelFormat.mFourCC[0] == 'D' && ddsHeader.mPixelFormat.mFourCC[1] == 'X' && ddsHeader.mPixelFormat.mFourCC[2] == '1' && ddsHeader.mPixelFormat.mFourCC[3] == '0')
-                    dx10Header = Utilities.Consume<DX10Header>(reader);
-
-                if (dx10Header == null)
-                    return null;
-
-                if (ddsHeader.mCaps2.HasFlag(DDSCaps2.DDSCAPS2_CUBEMAP))
-                    state |= TextureStateFlag.CUBE;
-                if (ddsHeader.mCaps2.HasFlag(DDSCaps2.DDSCAPS2_VOLUME))
-                    state |= TextureStateFlag.VOLUME;
-                if (ddsHeader.mPixelFormat.mFlags.HasFlag(DDSPixelFormat.DDPF_ALPHAPIXELS))
-                    state |= TextureStateFlag.NON_SOLID;
-
-                part.Depth = (short)ddsHeader.mDepth;
-                part.MipLevels = (short)ddsHeader.mMipMapCount;
-                part.Width = (short)ddsHeader.mWidth;
-                part.Height = (short)ddsHeader.mHeight;
-                part.Content = reader.ReadBytes((int)(reader.BaseStream.Length - reader.BaseStream.Position));
-
-                switch (dx10Header.mDXGIFormat)
-                {
-                    case DXGI_FORMAT.DXGI_FORMAT_R32G32B32A32_FLOAT:
-                        format = Textures.TextureFormat.A32R32G32B32F;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_R16G16B16A16_UNORM:
-                        format = Textures.TextureFormat.A16R16G16B16;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_B8G8R8A8_UNORM:
-                        format = Textures.TextureFormat.A8R8G8B8;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_B8G8R8X8_UNORM:
-                        format = Textures.TextureFormat.X8R8G8B8;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_A8_UNORM:
-                        format = Textures.TextureFormat.A8; //A8 and L8 both map to A8_UNORM
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_B4G4R4A4_UNORM:
-                        format = Textures.TextureFormat.A4R4G4B4;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_BC1_UNORM:
-                        format = Textures.TextureFormat.DXT1;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_BC2_UNORM:
-                        format = Textures.TextureFormat.DXT3;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_BC5_UNORM:
-                        format = Textures.TextureFormat.DXN;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_BC3_UNORM:
-                        format = Textures.TextureFormat.DXT5;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_BC6H_UF16:
-                        format = Textures.TextureFormat.BC6H;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_BC7_UNORM:
-                        format = Textures.TextureFormat.BC7;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_R16_FLOAT:
-                        format = Textures.TextureFormat.R16F;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_4X4_UNORM:
-                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_4X4_UNORM_SRGB:
-                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_4X4_TYPELESS:
-                        format = Textures.TextureFormat.ASTC4X4;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_8X8_UNORM:
-                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_8X8_UNORM_SRGB:
-                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_8X8_TYPELESS:
-                        format = Textures.TextureFormat.ASTC8X8;
-                        break;
-                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_12X12_UNORM:
-                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_12X12_UNORM_SRGB:
-                    case DXGI_FORMAT.DXGI_FORMAT_ASTC_12X12_TYPELESS:
-                        format = Textures.TextureFormat.ASTC12X12;
-                        break;
-                    default:
-                        return null;
-                }
-            }
-            return part;
+            return OpenCAGE.TextureTools.DdsFile.Read(content, out format, out state, out usage);
         }
 
         /* Convert a TEX4 to Bitmap */
         public static Bitmap ToBitmap(this Textures.TEX4 texture)
         {
-            byte[] content = texture?.ToDDS();
-            return content?.ToBitmap();
+            if (texture == null) return null;
+            Textures.TEX4.Texture part = texture.TextureStreamed?.Content != null ? texture.TextureStreamed
+                : texture.TexturePersistent?.Content != null ? texture.TexturePersistent : null;
+            return texture.ToBitmap(part);
         }
         public static Bitmap ToBitmap(this Textures.TEX4 texture, Textures.TEX4.Texture part)
         {
             if (texture == null) return null;
+
+            /* The DDS decoder behind every other preview has no ASTC support, so a mobile port's
+             * textures would show as nothing at all. Those go back out through astcenc instead. */
+            if (OpenCAGE.TextureTools.TextureConverter.IsAstc(texture.Format))
+                return OpenCAGE.TextureTools.TextureConverter.DecodeAstc(texture, part);
+
             byte[] content = texture.ToDDS(part);
             return content?.ToBitmap();
         }
@@ -236,19 +86,84 @@ namespace AlienPAK
             if (content == null) return null;
             try
             {
-                TryParseDdsCubemap(content, out uint width, out uint height, out uint mipCount, out DXGI_FORMAT dxgiFormat, out int pixelDataOffset, out bool isCubemap);
-                if (isCubemap)
+                if (TryDecodeCubemapFaces(content, out Bitmap[] faces) && faces != null)
                 {
-                    return ToBitmapCubemapStrip(content, width, height, mipCount, dxgiFormat, pixelDataOffset);
+                    try
+                    {
+                        int width = faces[0].Width;
+                        int height = faces[0].Height;
+                        var strip = new Bitmap(width * 6, height, PixelFormat.Format32bppArgb);
+                        using (var g = Graphics.FromImage(strip))
+                        {
+                            for (int i = 0; i < 6; i++)
+                                g.DrawImage(faces[i], i * width, 0, width, height);
+                        }
+                        return strip;
+                    }
+                    finally
+                    {
+                        for (int i = 0; i < faces.Length; i++)
+                            faces[i]?.Dispose();
+                    }
                 }
-                else
-                {
-                    return DecodeDdsToBitmap(content);
-                }
+                return DecodeDdsToBitmap(content);
             }
             catch
             {
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// Decode a cubemap DDS into six face bitmaps (+X,-X,+Y,-Y,+Z,-Z). Caller owns and must dispose the bitmaps.
+        /// </summary>
+        public static bool TryDecodeCubemapFaces(this Textures.TEX4 texture, Textures.TEX4.Texture part, out Bitmap[] faces)
+        {
+            faces = null;
+            if (texture == null || part == null) return false;
+            return TryDecodeCubemapFaces(texture.ToDDS(part), out faces);
+        }
+
+        /// <summary>
+        /// Decode a cubemap DDS into six face bitmaps (+X,-X,+Y,-Y,+Z,-Z). Caller owns and must dispose the bitmaps.
+        /// </summary>
+        public static bool TryDecodeCubemapFaces(byte[] content, out Bitmap[] faces)
+        {
+            faces = null;
+            if (content == null) return false;
+            if (!TryParseDdsCubemap(content, out uint width, out uint height, out uint mipCount, out DXGI_FORMAT dxgiFormat, out int pixelDataOffset, out bool isCubemap))
+                return false;
+            if (!isCubemap)
+                return false;
+
+            int faceSize = GetDdsFaceSize(width, height, mipCount, dxgiFormat);
+            if (faceSize <= 0) return false;
+            if (pixelDataOffset + faceSize * 6 > content.Length) return false;
+
+            var faceBitmaps = new Bitmap[6];
+            try
+            {
+                for (int face = 0; face < 6; face++)
+                {
+                    byte[] faceData = new byte[faceSize];
+                    Buffer.BlockCopy(content, pixelDataOffset + face * faceSize, faceData, 0, faceSize);
+                    byte[] singleFaceDds = BuildSingleFaceDds((int)width, (int)height, (int)mipCount, dxgiFormat, faceData);
+                    if (singleFaceDds == null)
+                        throw new InvalidOperationException("Failed to build cubemap face DDS");
+                    Bitmap bmp = DecodeDdsToBitmap(singleFaceDds);
+                    if (bmp == null)
+                        throw new InvalidOperationException("Failed to decode cubemap face");
+                    faceBitmaps[face] = bmp;
+                }
+                faces = faceBitmaps;
+                return true;
+            }
+            catch
+            {
+                for (int i = 0; i < faceBitmaps.Length; i++)
+                    faceBitmaps[i]?.Dispose();
+                faces = null;
+                return false;
             }
         }
 
@@ -354,45 +269,6 @@ namespace AlienPAK
             }
         }
 
-        /* Decode all 6 cubemap faces and stitch into a horizontal strip bitmap */
-        private static Bitmap ToBitmapCubemapStrip(byte[] content, uint width, uint height, uint mipCount, DXGI_FORMAT dxgiFormat, int pixelDataOffset)
-        {
-            int faceSize = GetDdsFaceSize(width, height, mipCount, dxgiFormat);
-            if (faceSize <= 0) return null;
-            int totalFacesSize = faceSize * 6;
-            if (pixelDataOffset + totalFacesSize > content.Length) return null;
-
-            var faceBitmaps = new List<Bitmap>(6);
-            try
-            {
-                for (int face = 0; face < 6; face++)
-                {
-                    byte[] faceData = new byte[faceSize];
-                    Buffer.BlockCopy(content, pixelDataOffset + face * faceSize, faceData, 0, faceSize);
-                    byte[] singleFaceDds = BuildSingleFaceDds((int)width, (int)height, (int)mipCount, dxgiFormat, faceData);
-                    if (singleFaceDds == null) return null;
-                    Bitmap bmp = DecodeDdsToBitmap(singleFaceDds);
-                    if (bmp == null) return null;
-                    faceBitmaps.Add(bmp);
-                }
-                int stripWidth = (int)width * 6;
-                int stripHeight = (int)height;
-                var strip = new Bitmap(stripWidth, stripHeight, PixelFormat.Format32bppArgb);
-                using (var g = Graphics.FromImage(strip))
-                {
-                    for (int i = 0; i < 6; i++)
-                        g.DrawImage(faceBitmaps[i], i * (int)width, 0, (int)width, (int)height);
-                }
-                foreach (var b in faceBitmaps) b?.Dispose();
-                return strip;
-            }
-            catch
-            {
-                foreach (var b in faceBitmaps) b?.Dispose();
-                return null;
-            }
-        }
-
         /* Build a minimal DX10 DDS containing a single 2D face (no cubemap) */
         private static byte[] BuildSingleFaceDds(int width, int height, int mipCount, DXGI_FORMAT dxgiFormat, byte[] facePixelData)
         {
@@ -454,6 +330,16 @@ namespace AlienPAK
                 }
             }
             catch { return null; }
+        }
+
+        /// <summary>
+        /// Decode an image that Windows' own codecs - and so WPF and System.Drawing - can't read: TGA
+        /// above all, which model files point their materials at all the time, and DDS. Pfim tells them
+        /// apart by the DDS magic and reads anything else as a TGA. Null when it can't be read.
+        /// </summary>
+        public static Bitmap DecodeTgaOrDds(byte[] content)
+        {
+            return DecodeDdsToBitmap(content);
         }
 
         [DllImport("gdi32.dll", EntryPoint = "DeleteObject")]
@@ -526,6 +412,12 @@ namespace AlienPAK
 
         public static GeometryModel3D ToGeometryModel3D(this Assimp.Mesh mesh)
         {
+            return mesh.ToGeometryModel3D(System.Numerics.Matrix4x4.Identity);
+        }
+
+        /* <paramref name="transform"/> is the mesh's world transform, baked in the same way the importer bakes it */
+        public static GeometryModel3D ToGeometryModel3D(this Assimp.Mesh mesh, System.Numerics.Matrix4x4 transform)
+        {
             if (mesh == null || mesh.VertexCount == 0) return new GeometryModel3D();
             int[] indices = mesh.GetIndices();
             if (indices == null || indices.Length == 0) return new GeometryModel3D();
@@ -534,11 +426,14 @@ namespace AlienPAK
                 int a = indices[i], b = indices[i + 1], c = indices[i + 2];
                 indices[i] = a; indices[i + 1] = c; indices[i + 2] = b;
             }
+            bool hasTransform = !transform.IsIdentity;
             var vertices = new Point3DCollection();
             for (int i = 0; i < mesh.Vertices.Count; i++)
             {
                 var v = mesh.Vertices[i];
-                vertices.Add(new Point3D((double)v.X, (double)v.Y, -(double)v.Z));
+                System.Numerics.Vector3 position = new System.Numerics.Vector3(v.X, v.Y, v.Z);
+                if (hasTransform) position = System.Numerics.Vector3.Transform(position, transform);
+                vertices.Add(new Point3D(position.X, position.Y, -position.Z));
             }
             var uvs = new PointCollection();
             if (mesh.TextureCoordinateChannelCount > 0 && mesh.TextureCoordinateChannels[0].Count == mesh.VertexCount)
@@ -598,101 +493,51 @@ namespace AlienPAK
             mat.AddMaterialTexture(slot);
         }
 
-        public static Mesh ToMesh(this CS2.Component.LOD.Submesh submesh, int materialIndex = 0)
+        /// <summary>
+        /// Write a rig and some of its clips out on their own, with no mesh attached.
+        /// </summary>
+        public static void ExportAnimations(Skeleton skeleton, IEnumerable<CathodeLib.Animation.ClipReference> clips, string filename,
+                                            CathodeLib.Animation.RootMotion rootMotion = CathodeLib.Animation.RootMotion.Ignore,
+                                            CathodeLib.Animation.UntrackedChannels untracked = CathodeLib.Animation.UntrackedChannels.RestPose)
         {
-            cMesh cathodeMesh = ModelUtility.ToMesh(submesh);
-            Mesh assimpMesh = new Mesh();
-            assimpMesh.MaterialIndex = materialIndex;
+            if (skeleton == null) throw new ArgumentNullException(nameof(skeleton));
 
-            int[] indices = cathodeMesh.Indices.Select(x => (int)x).ToArray();
-            for (int i = 0; i + 2 < indices.Length; i += 3)
-            {
-                int a = indices[i], b = indices[i + 1], c = indices[i + 2];
-                indices[i] = a; indices[i + 1] = c; indices[i + 2] = b;
-            }
-            if (!assimpMesh.SetIndices(indices, 3))
-            {
-                return assimpMesh;
-            }
-
-            for (int i = 0; i < cathodeMesh.Vertices.Count; i++)
-            {
-                assimpMesh.Vertices.Add(new Assimp.Vector3D((float)cathodeMesh.Vertices[i].X, (float)cathodeMesh.Vertices[i].Y, -(float)cathodeMesh.Vertices[i].Z));
-            }
-            for (int i = 0; i < cathodeMesh.Normals.Count; i++)
-            {
-                //assimpMesh.Normals.Add(new Assimp.Vector3D((float)cathodeMesh.Normals[i].X, (float)cathodeMesh.Normals[i].Y, (float)cathodeMesh.Normals[i].Z));
-            }
-            //binormals?
-            for (int i = 0; i < cathodeMesh.Tangents.Count; i++)
-            {
-                assimpMesh.Tangents.Add(new Assimp.Vector3D((float)cathodeMesh.Tangents[i].X, (float)cathodeMesh.Tangents[i].Y, -(float)cathodeMesh.Tangents[i].Z));
-            }
-            int exportedUVs = 0;
-            for (int i = 0; i < cathodeMesh.UVs.Length; i++)
-            {
-                if (cathodeMesh.UVs[i] == null) continue;
-
-                for (int x = 0; x < cathodeMesh.UVs[i].Count; x++)
-                {
-                    assimpMesh.TextureCoordinateChannels[exportedUVs].Add(new Assimp.Vector3D((float)cathodeMesh.UVs[i][x].X, 1.0f - (float)cathodeMesh.UVs[i][x].Y, 0));
-                }
-                assimpMesh.HasTextureCoords(exportedUVs);
-                assimpMesh.UVComponentCount[exportedUVs] = 2;
-                exportedUVs++;
-            }
-
-            /*
-            bool hasBoneData = cathodeMesh.BoneWeights.Count == cathodeMesh.Vertices.Count && cathodeMesh.BoneIndexes.Count == cathodeMesh.Vertices.Count;
-            if (hasBoneData)
-            {
-                List<List<Tuple<float, int>>> vertexBoneWeights = new List<List<Tuple<float, int>>>(cathodeMesh.Vertices.Count);
-                for (int v = 0; v < cathodeMesh.Vertices.Count; v++)
-                    vertexBoneWeights.Add(new List<Tuple<float, int>>());
-                for (int vertexIndex = 0; vertexIndex < cathodeMesh.Vertices.Count; vertexIndex++)
-                {
-                    Vector4 weights = cathodeMesh.BoneWeights[vertexIndex];
-                    Vector4 indices = cathodeMesh.BoneIndexes[vertexIndex];
-
-                    if (indices.X != 0 && weights.X != 0)
-                        vertexBoneWeights[vertexIndex].Add(new Tuple<float, int>(weights.X, Convert.ToInt32(indices.X)));
-                    if (indices.Y != 0 && weights.Y != 0)
-                        vertexBoneWeights[vertexIndex].Add(new Tuple<float, int>(weights.Y, Convert.ToInt32(indices.Y)));
-                    if (indices.Z != 0 && weights.Z != 0)
-                        vertexBoneWeights[vertexIndex].Add(new Tuple<float, int>(weights.Z, Convert.ToInt32(indices.Z)));
-                    if (indices.W != 0 && weights.W != 0)
-                        vertexBoneWeights[vertexIndex].Add(new Tuple<float, int>(weights.W, Convert.ToInt32(indices.W)));
-                }
-
-                Dictionary<int, List<Assimp.VertexWeight>> boneVertexWeights = new Dictionary<int, List<Assimp.VertexWeight>>();
-                for (int vertexIndex = 0; vertexIndex < vertexBoneWeights.Count; vertexIndex++)
-                {
-                    foreach (var entry in vertexBoneWeights[vertexIndex])
-                    {
-                        List<Assimp.VertexWeight> list;
-                        if (!boneVertexWeights.TryGetValue(entry.Item2, out list))
-                        {
-                            list = new List<Assimp.VertexWeight>();
-                            boneVertexWeights[entry.Item2] = list;
-                        }
-                        list.Add(new Assimp.VertexWeight(vertexIndex, entry.Item1));
-                    }
-                }
-
-                foreach (var kvp in boneVertexWeights.OrderBy(x => x.Key))
-                {
-                    var bone = new Assimp.Bone();
-                    bone.Name = "Bone_" + kvp.Key;
-                    bone.VertexWeights.AddRange(kvp.Value);
-                    assimpMesh.Bones.Add(bone);
-                }
-            }
-            */
-
-            return assimpMesh;
+            Scene scene = ModelIO.BuildSkeletonScene(skeleton, ModelIO.FormatUnitScale(filename));
+            AddAnimations(scene, clips, skeleton, rootMotion, untracked);
+            ExportScene(scene, filename);
         }
 
-        public static void ExportMesh(this Models.CS2 cs2, string filename)
+        private static void ExportScene(Scene scene, string filename)
+        {
+            OpenCAGE.ModelExport.ModelExporter.Write(scene, filename);
+        }
+
+        private static void AddAnimations(Scene scene, IEnumerable<CathodeLib.Animation.ClipReference> clips, Skeleton skeleton,
+                                          CathodeLib.Animation.RootMotion rootMotion,
+                                          CathodeLib.Animation.UntrackedChannels untracked = CathodeLib.Animation.UntrackedChannels.RestPose)
+        {
+            if (clips == null || skeleton == null) return;
+
+            //names have to stay unique, or a viewer can only offer one of two clips called the same thing
+            HashSet<string> used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            CathodeLib.Animation animations = OpenCAGE.Singleton.AnimationsLoaded ? OpenCAGE.Singleton.Animations : null;
+
+            foreach (CathodeLib.Animation.ClipReference clip in clips)
+            {
+                string name = clip.Name.Length != 0 ? clip.Name : Path.GetFileName(clip.Path);
+                for (int i = 2; !used.Add(name); i++) name = (clip.Name.Length != 0 ? clip.Name : Path.GetFileName(clip.Path)) + "_" + i;
+
+                /* Export what the preview shows: a clip authored on a shared rig goes out already
+                 * moved onto the rig it is being written against. */
+                Retargeter retarget = Retargeter.Between(animations, clip.Animation?.SkeletonName, skeleton.Name);
+
+                Assimp.Animation animation = ModelIO.BuildAnimation(clip, skeleton, name, rootMotion, retarget, untracked);
+                if (animation != null) scene.Animations.Add(animation);
+            }
+        }
+
+        public static void ExportMesh(this Models.CS2 cs2, string filename, Skeleton skeleton = null, IEnumerable<CathodeLib.Animation.ClipReference> animations = null,
+                                      CathodeLib.Animation.RootMotion rootMotion = CathodeLib.Animation.RootMotion.Ignore, Level level = null)
         {
             string modelDir = Path.GetDirectoryName(filename);
             string modelBase = Path.GetFileNameWithoutExtension(filename);
@@ -729,7 +574,24 @@ namespace AlienPAK
                 ExportModelSampler(MaterialApplier.GetSecondarySpecularMapTexture(materials[i]), ref secondarySpecularMapFileNames, i);
             }
 
-            Scene scene = new Scene();
+            /* Whether the rig drives set dressing is the rig's own definition's to say, and it decides
+             * which space a mesh it moves by name goes out in - the same question the preview asks */
+            CathodeLib.Animation definitions = OpenCAGE.Singleton.AnimationsLoaded ? OpenCAGE.Singleton.Animations : null;
+            bool? environmentRig = null;
+            if (skeleton != null && definitions != null && definitions.SkeletonDefs.TryGetValue(skeleton.Name, out CathodeLib.Animation.SkeletonDef definition))
+                environmentRig = definition.IsEnvironment;
+
+            Scene scene = ModelIO.BuildScene(cs2,
+                submesh => (submesh.Material != null && materialIndexes.ContainsKey(submesh.Material)) ? materialIndexes[submesh.Material] : 0,
+                ModelIO.FormatFlipsUVs(filename),
+                out ModelIO.ModelMetadata metadata,
+                skeleton,
+                //a static mesh only moves if its parts are bound to the rig, and only worth it with a clip to move them
+                animations != null,
+                ModelIO.FormatUnitScale(filename),
+                animations == null || level == null ? null : EnvironmentRigs.AnimatedPropFor(level, skeleton?.Name, cs2),
+                environmentRig);
+
             for (int matIdx = 0; matIdx < materials.Count; matIdx++)
             {
                 scene.Materials.Add(materials[matIdx].ToAssimpMaterial(
@@ -743,185 +605,46 @@ namespace AlienPAK
             if (scene.Materials.Count == 0)
                 scene.Materials.Add(new Assimp.Material());
 
-            scene.RootNode = new Node(cs2.Name);
-            for (int i = 0; i < cs2.Components.Count; i++)
-            {
-                Node componentNode = new Node(i.ToString());
-                scene.RootNode.Children.Add(componentNode);
-                for (int x = 0; x < cs2.Components[i].LODs.Count; x++)
-                {
-                    Node lodNode = new Node(cs2.Components[i].LODs[x].Name);
-                    componentNode.Children.Add(lodNode);
-                    for (int y = 0; y < cs2.Components[i].LODs[x].Submeshes.Count; y++)
-                    {
-                        Node submeshNode = new Node(y.ToString());
-                        lodNode.Children.Add(submeshNode);
-                        Materials.Material submeshMat = cs2.Components[i].LODs[x].Submeshes[y].Material;
-                        int meshMatIndex = (submeshMat != null && materialIndexes.ContainsKey(submeshMat)) ? materialIndexes[submeshMat] : 0;
-                        Mesh mesh = cs2.Components[i].LODs[x].Submeshes[y].ToMesh(meshMatIndex);
-                        mesh.Name = cs2.Name + " [" + x + "] -> " + lodNode.Name + " [" + i + "]";
-                        scene.Meshes.Add(mesh);
-                        submeshNode.MeshIndices.Add(scene.Meshes.Count - 1);
-                    }
-                }
-            }
+            AddAnimations(scene, animations, skeleton, rootMotion);
+            ExportScene(scene, filename);
 
-            using (AssimpContext exp = new AssimpContext())
-            {
-                exp.ExportFile(scene, filename, Path.GetExtension(filename).TrimStart('.').ToLowerInvariant());
-            }
+            //Everything the model formats can't hold, so the model can be brought back in as it went out
+            ModelIO.SaveSidecar(metadata, filename);
 
+            /* DDS for the DCC formats, which all read it and keep the compression. glTF has no
+             * business with DDS - the spec allows PNG and JPEG only, and a viewer handed a .dds
+             * just shows the model untextured - so those get decoded to PNG on the way out. */
             void ExportModelSampler(Textures.TEX4 texture, ref string[] filenames, int index)
             {
                 if (texture == null) return;
 
-                byte[] dds = texture.ToDDS();
-                if (dds != null && dds.Length > 0)
+                string file = Path.GetFileName(texture.Name);
+                string dir = modelDir + "/" + modelBase + " Textures/" + texture.Name.Substring(0, texture.Name.Length - file.Length);
+
+                if (!OpenCAGE.ModelExport.ModelExporter.For(filename).PrefersPng)
                 {
-                    string file = Path.GetFileName(texture.Name);
-                    string dir = modelDir + "/" + modelBase + " Textures/" + texture.Name.Substring(0, texture.Name.Length - file.Length);
+                    byte[] dds = texture.ToDDS();
+                    if (dds == null || dds.Length == 0) return;
                     filenames[index] = dir + file + ".dds";
                     Directory.CreateDirectory(dir);
                     File.WriteAllBytes(filenames[index], dds);
+                    return;
                 }
-            }
-        }
 
-        public static CS2.Component.LOD.Submesh ToSubmesh(this Mesh mesh, ushort? customScaleFactor = null)
-        {
-            //We can't have more vertices than Int16.MaxValue as we won't be able to point to them
-            if (mesh.VertexCount > Int16.MaxValue) return null;
-
-            //All faces must be triangulated
-            foreach (Assimp.Face face in mesh.Faces) if (face.Indices.Count != 3) return null;
-
-            //Mesh must have some content
-            if (mesh.BoundingBox.Max == new Assimp.Vector3D(0, 0, 0)) return null;
-
-            CS2.Component.LOD.Submesh submesh = new CS2.Component.LOD.Submesh();
-            submesh.VertexCount = mesh.VertexCount;
-            int[] indices = mesh.GetIndices();
-            submesh.IndexCount = indices.Length;
-
-            submesh.RenderFlags = RenderingFlag.IS_FIRST_PERSON_LOD | RenderingFlag.HAS_FIRST_PERSON_LOD | RenderingFlag.IS_THIRD_PERSON_LOD | RenderingFlag.HAS_THIRD_PERSON_LOD | RenderingFlag.IS_SHADOW_CASTING | RenderingFlag.HAS_SHADOW_CASTING | RenderingFlag.IS_LEVEL_PACK;
-
-            //meshes must not exceed 1 unit in any direction -> TODO: we should validate customScaleFactor here...
-            submesh.VertexScale = customScaleFactor == null ? mesh.CalculateScaleFactor() : (ushort)customScaleFactor;
-
-            submesh.MaxBounds = new Vector3(mesh.BoundingBox.Max.X, mesh.BoundingBox.Max.Y, mesh.BoundingBox.Max.Z);
-            submesh.MinBounds = new Vector3(mesh.BoundingBox.Min.X, mesh.BoundingBox.Min.Y, mesh.BoundingBox.Min.Z);
-
-            submesh.MaxLODRange = 10000;
-            submesh.MinLODRange = 0;
-
-            submesh.VertexFormatFull = new VertexFormat();
-            submesh.VertexFormatFull.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.S16_4N, VertexFormat.Usage.Position) });
-            for (int i = 0; i < mesh.TextureCoordinateChannels.Length; i++)
-                if (mesh.TextureCoordinateChannels[i].Count > 0)
-                    submesh.VertexFormatFull.Attributes[0].Add(new VertexFormat.Attribute(VertexFormat.Type.S16_2N, VertexFormat.Usage.TexCoord, i));
-            if (mesh.Normals.Count > 0)
-                submesh.VertexFormatFull.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.FP32_3, VertexFormat.Usage.Normal) });
-            submesh.VertexFormatFull.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.Unused) });
-
-            //is this right?
-            submesh.VertexFormatPartial = new VertexFormat();
-            submesh.VertexFormatPartial.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.S16_4N, VertexFormat.Usage.Position) });
-            for (int i = 0; i < mesh.TextureCoordinateChannels.Length; i++)
-                if (mesh.TextureCoordinateChannels[i].Count > 0)
-                    submesh.VertexFormatPartial.Attributes[0].Add(new VertexFormat.Attribute(VertexFormat.Type.S16_2N, VertexFormat.Usage.TexCoord, i));
-            submesh.VertexFormatPartial.Attributes.Add(new List<VertexFormat.Attribute>() { new VertexFormat.Attribute(VertexFormat.Type.Unused) });
-
-            MemoryStream ms = new MemoryStream();
-            using (BinaryWriter reader = new BinaryWriter(ms))
-            {
-                for (int i = 0; i < submesh.VertexFormatFull.Attributes.Count; ++i)
+                using (Bitmap bitmap = texture.ToBitmap())
                 {
-                    if (i == submesh.VertexFormatFull.Attributes.Count - 1)
-                    {
-                        for (int x = 0; x < indices.Length; x++)
-                            reader.Write((UInt16)indices[x]);
-
-                        Utilities.Align(reader, 16);
-                        continue;
-                    }
-
-                    //TEMP!! This should be reworked to the new logic
-
-                    for (int x = 0; x < submesh.VertexCount; ++x)
-                    {
-                        for (int y = 0; y < submesh.VertexFormatFull.Attributes[i].Count; ++y)
-                        {
-                            VertexFormat.Attribute format = submesh.VertexFormatFull.Attributes[i][y];
-                            switch (format.Type)
-                            {
-                                case VertexFormat.Type.FP32_3:
-                                    {
-                                        switch (format.Usage)
-                                        {
-                                            case VertexFormat.Usage.Normal:
-                                                reader.Write((float)mesh.Normals[x].X);
-                                                reader.Write((float)mesh.Normals[x].Y);
-                                                reader.Write((float)mesh.Normals[x].Z);
-                                                break;
-                                        }
-                                        ;
-                                        break;
-                                    }
-                                case VertexFormat.Type.S16_2N:
-                                    {
-                                        switch (format.Usage)
-                                        {
-                                            case VertexFormat.Usage.TexCoord:
-                                                Vector2 v = new Vector2(mesh.TextureCoordinateChannels[format.Index][x].X, mesh.TextureCoordinateChannels[format.Index][x].Y);
-                                                v *= 2048.0f;
-                                                reader.Write((Int16)v.X);
-                                                reader.Write((Int16)v.Y);
-                                                break;
-                                        }
-                                        break;
-                                    }
-                                case VertexFormat.Type.S16_4N:
-                                    {
-                                        switch (format.Usage)
-                                        {
-                                            case VertexFormat.Usage.Position:
-                                                Vector4 v = new Vector4(mesh.Vertices[x].X, mesh.Vertices[x].Y, mesh.Vertices[x].Z, 0);
-                                                v /= submesh.VertexScale;
-                                                v *= (float)Int16.MaxValue;
-                                                reader.Write((Int16)v.X);
-                                                reader.Write((Int16)v.Y);
-                                                reader.Write((Int16)v.Z);
-                                                reader.Write((Int16)v.W); //-1,0,1
-                                                break;
-                                        }
-                                        break;
-                                    }
-                            }
-                        }
-                    }
-                    Utilities.Align(reader, 16);
+                    if (bitmap == null) return;
+                    filenames[index] = dir + file + ".png";
+                    Directory.CreateDirectory(dir);
+                    bitmap.Save(filenames[index], ImageFormat.Png);
                 }
             }
-            submesh.Data = ms.ToArray();
-
-            return submesh;
         }
 
-        public static ushort CalculateScaleFactor(this Mesh mesh)
+        /* Convert a single imported mesh into a submesh, optionally keeping the properties of the submesh it replaces */
+        public static CS2.Component.LOD.Submesh ToSubmesh(this Mesh mesh, CS2.Component.LOD.Submesh template = null)
         {
-            float x = Math.Max(Math.Abs(mesh.BoundingBox.Min.X), Math.Abs(mesh.BoundingBox.Max.X));
-            float y = Math.Max(Math.Abs(mesh.BoundingBox.Min.Y), Math.Abs(mesh.BoundingBox.Max.Y));
-            float z = Math.Max(Math.Abs(mesh.BoundingBox.Min.Z), Math.Abs(mesh.BoundingBox.Max.Z));
-            ushort scaleFactor = 1;
-            int i = 1;
-            while (true)
-            {
-                if (x / (float)scaleFactor < 0.99f && y / (float)scaleFactor < 0.99f && z / (float)scaleFactor < 0.99f) break;
-                if (i == 1) scaleFactor = 4;
-                else scaleFactor = (ushort)(4 * i);
-                i++;
-            }
-            return scaleFactor;
+            return ModelIO.ToSubmesh(mesh, System.Numerics.Matrix4x4.Identity, ModelIO.DescribeSubmesh(template), out List<string> warnings);
         }
 
         public static string ForceStringNumeric(this string str, bool allowDots = false)

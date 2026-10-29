@@ -18,6 +18,8 @@ namespace OpenCAGE.ConfigEditors
         public PermanentSoundbankEditor() : base()
         {
             InitializeComponent();
+            BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/perma-soundbanks/");
+            ConfigEditorUtils.ShowAutoSaveTipOnce();
 
             string[] soundbanks = File.ReadAllLines(Singleton.PathToAI + @"\DATA\LIST_OF_PERMANENT_SOUND_BANKS.TXT");
             permaSoundbanks.BeginUpdate();
@@ -27,7 +29,7 @@ namespace OpenCAGE.ConfigEditors
             }
             permaSoundbanks.EndUpdate();
 
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
         }
 
         private void addNew_Click(object sender, EventArgs e)
@@ -58,15 +60,18 @@ namespace OpenCAGE.ConfigEditors
             {
                 soundbanks.Add(permaSoundbanks.Items[i].ToString());
             }
-            File.WriteAllLines(Singleton.PathToAI + @"\DATA\LIST_OF_PERMANENT_SOUND_BANKS.TXT", soundbanks);
+            try
+            {
+                File.WriteAllLines(Singleton.PathToAI + @"\DATA\LIST_OF_PERMANENT_SOUND_BANKS.TXT", soundbanks);
+                ConfigEditorUtils.NotifyAutoSave(true);
+            }
+            catch (Exception ex)
+            {
+                ConfigEditorUtils.NotifyAutoSave(false, ex.Message);
+                return;
+            }
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
-        }
-
-        private void helpBtn_Click(object sender, EventArgs e)
-        {
-            Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
-            Process.Start("https://opencage.co.uk/docs/configs/perma-soundbanks");
         }
     }
 }

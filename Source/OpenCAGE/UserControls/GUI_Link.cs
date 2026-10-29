@@ -77,10 +77,16 @@ namespace OpenCAGE.UserControls
             if (MessageBox.Show("Are you sure you want to remove this link?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
 
-            if (_isLinkOut)
-                _entityDisplay.Entity.childLinks.RemoveAll(o => o.ID == _link.ID);
-            else
-                _linkedEntity.childLinks.RemoveAll(o => o.ID == _link.ID);
+            Entity owner = _isLinkOut ? _entityDisplay.Entity : _linkedEntity;
+            int index = owner.childLinks.FindIndex(o => o.ID == _link.ID);
+            if (index >= 0)
+            {
+                EntityConnector removed = owner.childLinks[index];
+                owner.childLinks.RemoveAt(index);
+                if (_entityDisplay.Composite != null)
+                    OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.LinkDataEdit(_entityDisplay.Composite, owner, removed, index, false,
+                        "Remove link from " + OpenCAGE.Undo.UndoLabels.Entity(_entityDisplay.Composite, owner)));
+            }
 
             OnLinkEdited?.Invoke(_entityDisplay.Entity, _linkedEntity);
         }

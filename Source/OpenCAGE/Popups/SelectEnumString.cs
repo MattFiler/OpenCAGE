@@ -2,6 +2,7 @@ using CATHODE;
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using CathodeLib;
+using OpenCAGE.Audio;
 using OpenCAGE.DockPanels;
 using OpenCAGE.Popups.Base;
 using OpenCAGE.UserControls;
@@ -27,20 +28,89 @@ namespace OpenCAGE
     {
         public Action<string> OnSelected;
 
-        private cEnumString _defaultVal;
+        private string _currentText; //the value to select when the list opens
 
         private ListViewColumnSorter _sorter = new ListViewColumnSorter();
         private ListViewItem[] _filteredItems;
+        private SoundPreviewPanel _soundPreview = null;
+        private EnumStringType _currentType;
+
+        //Browsing (the Sound Editor on the View menu) rather than picking a value for a parameter
+        private readonly bool _browse;
 
         public SelectEnumString(string paramName, cEnumString enumString, bool allowTypeSelect) : base(WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION | WindowClosesOn.COMMANDS_RELOAD)
         {
+            _browse = false;
+            Initialise("Select for '" + paramName + "'", enumString, allowTypeSelect);
+        }
+
+        /// <summary>
+        /// The window as an editor in its own right: every string of one type to look through, preview
+        /// and (for sounds) replace, with nothing to select. Stays open across entity and composite
+        /// selections, like the other editors on the View menu, and closes when the level does.
+        /// </summary>
+        public SelectEnumString(EnumStringType type, string title) : base(WindowClosesOn.COMMANDS_RELOAD)
+        {
+            _browse = true;
+            Initialise(title, new cEnumString(type), false);
+        }
+
+        /// <summary>
+        /// A picker over names the caller supplies rather than an enum string type's list - e.g. the inventory items an
+        /// InventoryItem entity names, read from the Item &amp; Inventory editor's file. Each item is (name, description).
+        /// </summary>
+        public SelectEnumString(string paramName, string currentValue, List<KeyValuePair<string, string>> items) : base(WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION | WindowClosesOn.COMMANDS_RELOAD)
+        {
+            _browse = false;
             InitializeComponent();
+            StayAboveEditor = true;
 
             Singleton.OnEnumStringUIShown?.Invoke(this);
             Singleton.OnEnumStringUIShown += OnAnotherEnumStringWindowShown;
 
-            _defaultVal = enumString;
+            _currentText = currentValue;
             this.Text = "Select for '" + paramName + "'";
+            enumStringTypeSelect.Visible = false;
+            _filteredItems = items.Select(o => new ListViewItem(new string[] { o.Key, o.Value })).ToArray();
+
+            clearSearchBtn.Visible = false;
+            strings.ListViewItemSorter = _sorter;
+            this.FormClosing += SelectEnumString_FormClosing;
+        }
+
+        private void Initialise(string title, cEnumString enumString, bool allowTypeSelect)
+        {
+            InitializeComponent();
+            StayAboveEditor = !_browse; //a picker for a parameter field - it shouldn't be able to fall behind the editor
+
+            this.HelpButtonClicked += (sender, e) =>
+            {
+                e.Cancel = true;
+                if (_currentType == EnumStringType.SOUND_EVENT)
+                {
+                    try
+                    {
+                        Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
+                        System.Diagnostics.Process.Start("https://opencage.co.uk/docs/sound-events/");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Failed to open documentation: " + ex.Message);
+                    }
+                }
+            };
+
+            Singleton.OnEnumStringUIShown?.Invoke(this);
+            Singleton.OnEnumStringUIShown += OnAnotherEnumStringWindowShown;
+
+            _currentText = enumString?.value;
+            this.Text = title;
+
+            if (_browse)
+            {
+                //Nothing to select
+                selectBtn.Visible = false;
+            }
 
             //Calling these to refresh anything that may have changed during runtime. It's likely it's already loaded.
             //NOTE: These are loaded elsewhere on a thread, we should check to see if that finished first.
@@ -64,7 +134,8 @@ namespace OpenCAGE
                 PopulateItems((EnumStringType)enumString.enumID.AsUInt32);
             }
 
-            Search();
+            //The list is filled in Load, once its window exists. Items added before that are inserted one at a time while
+            //the window is being created, which took most of a minute for a big level's sound events.
             clearSearchBtn.Visible = false;
             strings.ListViewItemSorter = _sorter;
 
@@ -74,6 +145,14 @@ namespace OpenCAGE
         private void SelectEnumString_FormClosing(object sender, FormClosingEventArgs e)
         {
             Singleton.OnEnumStringUIShown -= OnAnotherEnumStringWindowShown;
+
+            //Stop the audio device before the window goes, rather than waiting on a collection
+            if (_soundPreview != null)
+            {
+                strings.SelectedIndexChanged -= SoundSelectionChanged;
+                _soundPreview.Dispose();
+                _soundPreview = null;
+            }
         }
 
         private void OnAnotherEnumStringWindowShown(SelectEnumString window)
@@ -88,7 +167,22 @@ namespace OpenCAGE
 
         private void PopulateItems(EnumStringType type)
         {
+            // Materials use EditMaterial via the parameter grid's enum-string editor — not this list UI
+            if (type == EnumStringType.MATERIAL)
+                return;
+
+            _currentType = type;
+            bool isSound = type == EnumStringType.SOUND_EVENT;
+            this.HelpButton = isSound;
+            if (isSound)
+            {
+                this.MaximizeBox = false;
+                this.MinimizeBox = false;
+            }
+
             Tuple<ListViewItem[], bool> items = EnumStringListViewItems.GetItems(type);
+            if (items == null)
+                return;
 
             bool useDescColumn = items.Item2;
             if (type == EnumStringType.ANIMATION)
@@ -133,6 +227,11 @@ namespace OpenCAGE
                 }
                 _filteredItems = filteredItems.ToArray();
             }
+            else if (type == EnumStringType.SOUND_EVENT)
+            {
+                _filteredItems = WithSoundbanks(items.Item1);
+                useDescColumn = true;
+            }
             else
             {
                 _filteredItems = items.Item1;
@@ -145,16 +244,105 @@ namespace OpenCAGE
                 strings.Columns[0].Width = 600;
             }
 
-            ShowMetadata.Visible = type == EnumStringType.SOUND_EVENT;
+            if (type == EnumStringType.SOUND_EVENT)
+                ShowSoundPreview();
+        }
+
+        /// <summary>
+        /// The sound events with the soundbanks each is in (from the level's sound data) in the second column, in place of
+        /// the text it shows for other lists - so which bank to load for an event is there on every row, and searching for a
+        /// bank's name finds its events. The few events that have text of their own (a line's subtitle) keep it, in a
+        /// third column. New items: the cached ones are shared with every other list of this type.
+        /// </summary>
+        private ListViewItem[] WithSoundbanks(ListViewItem[] events)
+        {
+            strings.Columns[1].Text = "Soundbanks";
+
+            bool anyText = events.Any(o => o.SubItems.Count > 1);
+            if (anyText)
+            {
+                strings.Columns[0].Width = 250;
+                strings.Columns[1].Width = 290;
+                strings.Columns.Add("Text", 190);
+            }
+
+            ListViewItem[] withBanks = new ListViewItem[events.Length];
+            for (int i = 0; i < events.Length; i++)
+            {
+                List<string> banks = SoundEventMetadata.BanksFor(events[i].Text);
+                ListViewItem item = new ListViewItem(new[] { events[i].Text, string.Join(", ", banks.OrderBy(o => o, StringComparer.OrdinalIgnoreCase)) });
+                if (anyText)
+                    item.SubItems.Add(events[i].SubItems.Count > 1 ? events[i].SubItems[1].Text : "");
+                withBanks[i] = item;
+            }
+            return withBanks;
+        }
+
+        /// <summary>
+        /// Give the window a player along its bottom edge, and start indexing the game's soundbanks so
+        /// the first sound the user clicks is ready rather than waiting on a cold index.
+        /// </summary>
+        private void ShowSoundPreview()
+        {
+            if (_soundPreview != null)
+                return;
+
+            _soundPreview = new SoundPreviewPanel();
+
+            //Grow the window by the height of the player, then take that height back off the list, so
+            //the buttons below stay where they were and the list keeps the size it was designed at
+            int height = SoundPreviewPanel.PreferredHeight + 6;
+            this.ClientSize = new Size(ClientSize.Width, ClientSize.Height + height);
+            strings.Height -= height;
+
+            _soundPreview.Bounds = new System.Drawing.Rectangle(strings.Left, strings.Bottom + 6, strings.Width, SoundPreviewPanel.PreferredHeight);
+            _soundPreview.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            this.Controls.Add(_soundPreview);
+
+            //The open level's own sound package - what it replaces of the base game's sounds - opposite the other buttons
+            Button levelOverride = new Button();
+            levelOverride.Text = "Level Sound Override...";
+            levelOverride.Bounds = new System.Drawing.Rectangle(strings.Left + 10, selectBtn.Top, selectBtn.Width, selectBtn.Height);
+            levelOverride.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            levelOverride.UseVisualStyleBackColor = true;
+            levelOverride.Click += (s, e) => ShowLevelSoundOverride();
+            new ToolTip().SetToolTip(levelOverride, "The soundbanks and streams this level reads in place of the base game's (WORLD\\" + LevelSoundOverride.FileName + ").");
+            this.Controls.Add(levelOverride);
+
+            strings.SelectedIndexChanged += SoundSelectionChanged;
+            SoundPreviewLibrary.GetAsync();
+        }
+
+        private void ShowLevelSoundOverride()
+        {
+            string package = LevelSoundOverride.PathForOpenLevel();
+            if (package == null)
+            {
+                MessageBox.Show(this, "Open a level first: the sound override package belongs to a level.", "Level Sound Override", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (LevelSoundOverrideEditor editor = new LevelSoundOverrideEditor(package))
+                editor.ShowDialog(this);
+        }
+
+        private void SoundSelectionChanged(object sender, EventArgs e)
+        {
+            if (_soundPreview == null)
+                return;
+
+            _soundPreview.SetEvent(strings.SelectedItems.Count == 0 ? null : strings.SelectedItems[0].Text);
         }
 
         private void SelectSpecialString_Load(object sender, EventArgs e)
         {
+            Search();
+
             int selectedIndex = -1;
             for (int i = 0; i < strings.Items.Count; i++)
             {
                 strings.Items[i].Selected = false;
-                if (strings.Items[i].Text == _defaultVal.value)
+                if (strings.Items[i].Text == _currentText)
                 {
                     selectedIndex = i;
                     strings.Items[i].Selected = true;
@@ -205,16 +393,21 @@ namespace OpenCAGE
 
         private void Search()
         {
+            if (_filteredItems == null)
+                return; //Nothing listed for this type
+
+            //Matched on the value and on every column beside it (a sound event's soundbanks and its text, say)
+            string wanted = search_box.Text.ToUpper().Replace(" ", "");
             strings.BeginUpdate();
             strings.SuspendLayout();
             strings.Items.Clear();
-            strings.Items.AddRange(_filteredItems.Where(o => o.Text.ToUpper().Replace(" ", "").Contains(search_box.Text.ToUpper().Replace(" ", "")) || o.SubItems[o.SubItems.Count - 1].Text.ToUpper().Replace(" ", "").Contains(search_box.Text.ToUpper().Replace(" ", ""))).ToList().ToArray());
+            strings.Items.AddRange(_filteredItems.Where(o => o.SubItems.Cast<ListViewItem.ListViewSubItem>().Any(s => s.Text.ToUpper().Replace(" ", "").Contains(wanted))).ToArray());
             strings.EndUpdate();
         }
 
         private void selectBtn_Click(object sender, EventArgs e)
         {
-            if (strings.SelectedItems.Count == 0)
+            if (_browse || strings.SelectedItems.Count == 0)
                 return;
 
             //TODO: if Animation, maybe we also want to update AnimationSet?
@@ -225,11 +418,6 @@ namespace OpenCAGE
 
         public class AssetList
         {
-            ~AssetList()
-            {
-                items = null;
-            }
-
             public bool global = false;
             public string level = "";
 
@@ -237,34 +425,6 @@ namespace OpenCAGE
 
             public ListViewItem[] items = null;
             public bool use_desc_column = false;
-        }
-
-        private void ShowMetadata_Click(object sender, EventArgs e)
-        {
-            if (strings.SelectedItems.Count == 0)
-                return;
-
-            string selectedString = strings.SelectedItems[0].Text;
-
-            string msg = "This event is contained within the following soundbanks:\n";
-            foreach (SoundEventData.Soundbank entry in Content.Level.SoundEventData.Entries)
-            {
-                if (entry.events.FirstOrDefault(o => o.name == selectedString) == null)
-                    continue;
-
-                string soundbankName = entry.id.ToString();
-                for (int i = 0; i < Content.Level.SoundBankData.Entries.Count; i++)
-                {
-                    if (Utilities.SoundHashedString(Content.Level.SoundBankData.Entries[i].Name) != entry.id)
-                        continue;
-
-                    soundbankName = Content.Level.SoundBankData.Entries[i].Name;
-                    break;
-                }
-
-                msg += " - " + soundbankName + "\n";
-            }
-            MessageBox.Show(msg);
         }
 
         private void enumStringTypeSelect_SelectedIndexChanged(object sender, EventArgs e)

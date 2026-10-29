@@ -25,13 +25,18 @@ namespace OpenCAGE
             this.tableLayoutLeftHeader = new System.Windows.Forms.TableLayoutPanel();
             this.labelSearch = new System.Windows.Forms.Label();
             this.textureSearchBox = new System.Windows.Forms.TextBox();
-            this.textureSourceLabel = new System.Windows.Forms.Label();
-            this.textureSourceCombo = new System.Windows.Forms.ComboBox();
             this.FileTree = new System.Windows.Forms.TreeView();
             this.importTextureBtn = new System.Windows.Forms.Button();
             this.splitContainer2 = new System.Windows.Forms.SplitContainer();
             this.texturePreviewArea = new System.Windows.Forms.GroupBox();
             this.previewOuterTable = new System.Windows.Forms.TableLayoutPanel();
+            this.cubemapModePanel = new System.Windows.Forms.FlowLayoutPanel();
+            this.cubemapModeLabel = new System.Windows.Forms.Label();
+            this.cubemapMode3D = new System.Windows.Forms.RadioButton();
+            this.cubemapMode2D = new System.Windows.Forms.RadioButton();
+            this.cubemapSourceLabel = new System.Windows.Forms.Label();
+            this.cubemapSourceCombo = new System.Windows.Forms.ComboBox();
+            this.cubemapViewerHost = new System.Windows.Forms.Integration.ElementHost();
             this.previewTabControl = new System.Windows.Forms.TabControl();
             this.tabStreamed = new System.Windows.Forms.TabPage();
             this.streamedTabLayout = new System.Windows.Forms.TableLayoutPanel();
@@ -53,7 +58,6 @@ namespace OpenCAGE
             this.deleteTextureBtn = new System.Windows.Forms.Button();
             this.exportTextureBtn = new System.Windows.Forms.Button();
             this.selectTextureBtn = new System.Windows.Forms.Button();
-            this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -66,6 +70,7 @@ namespace OpenCAGE
             this.splitContainer2.SuspendLayout();
             this.texturePreviewArea.SuspendLayout();
             this.previewOuterTable.SuspendLayout();
+            this.cubemapModePanel.SuspendLayout();
             this.previewTabControl.SuspendLayout();
             this.tabStreamed.SuspendLayout();
             this.streamedTabLayout.SuspendLayout();
@@ -136,15 +141,13 @@ namespace OpenCAGE
             this.tableLayoutLeftHeader.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.tableLayoutLeftHeader.Controls.Add(this.labelSearch, 0, 0);
             this.tableLayoutLeftHeader.Controls.Add(this.textureSearchBox, 1, 0);
-            this.tableLayoutLeftHeader.Controls.Add(this.textureSourceLabel, 0, 1);
-            this.tableLayoutLeftHeader.Controls.Add(this.textureSourceCombo, 1, 1);
             this.tableLayoutLeftHeader.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tableLayoutLeftHeader.Location = new System.Drawing.Point(3, 3);
             this.tableLayoutLeftHeader.Name = "tableLayoutLeftHeader";
-            this.tableLayoutLeftHeader.RowCount = 2;
+            this.tableLayoutLeftHeader.RowCount = 1;
             this.tableLayoutLeftHeader.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 28F));
             this.tableLayoutLeftHeader.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 28F));
-            this.tableLayoutLeftHeader.Size = new System.Drawing.Size(346, 56);
+            this.tableLayoutLeftHeader.Size = new System.Drawing.Size(346, 28);
             this.tableLayoutLeftHeader.TabIndex = 0;
             // 
             // labelSearch
@@ -166,36 +169,15 @@ namespace OpenCAGE
             this.textureSearchBox.TabIndex = 1;
             this.textureSearchBox.TextChanged += new System.EventHandler(this.textureSearchBox_TextChanged);
             // 
-            // textureSourceLabel
-            // 
-            this.textureSourceLabel.Anchor = System.Windows.Forms.AnchorStyles.Left;
-            this.textureSourceLabel.AutoSize = true;
-            this.textureSourceLabel.Location = new System.Drawing.Point(3, 35);
-            this.textureSourceLabel.Name = "textureSourceLabel";
-            this.textureSourceLabel.Size = new System.Drawing.Size(44, 13);
-            this.textureSourceLabel.TabIndex = 2;
-            this.textureSourceLabel.Text = "Source:";
-            // 
-            // textureSourceCombo
-            // 
-            this.textureSourceCombo.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.textureSourceCombo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.textureSourceCombo.FormattingEnabled = true;
-            this.textureSourceCombo.Location = new System.Drawing.Point(55, 31);
-            this.textureSourceCombo.Name = "textureSourceCombo";
-            this.textureSourceCombo.Size = new System.Drawing.Size(288, 21);
-            this.textureSourceCombo.TabIndex = 3;
-            this.textureSourceCombo.SelectedIndexChanged += new System.EventHandler(this.textureSourceCombo_SelectedIndexChanged);
-            // 
             // FileTree
             // 
             this.FileTree.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.FileTree.Dock = System.Windows.Forms.DockStyle.Fill;
             this.FileTree.FullRowSelect = true;
             this.FileTree.HideSelection = false;
-            this.FileTree.Location = new System.Drawing.Point(3, 65);
+            this.FileTree.Location = new System.Drawing.Point(3, 37);
             this.FileTree.Name = "FileTree";
-            this.FileTree.Size = new System.Drawing.Size(346, 500);
+            this.FileTree.Size = new System.Drawing.Size(346, 528);
             this.FileTree.TabIndex = 1;
             this.FileTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.FileTree_AfterSelect);
             // 
@@ -226,7 +208,7 @@ namespace OpenCAGE
             // 
             this.splitContainer2.Panel2.Controls.Add(this.textureActionsTable);
             this.splitContainer2.Size = new System.Drawing.Size(701, 632);
-            this.splitContainer2.SplitterDistance = 484;
+            this.splitContainer2.SplitterDistance = 483;
             this.splitContainer2.SplitterWidth = 5;
             this.splitContainer2.TabIndex = 0;
             // 
@@ -236,7 +218,7 @@ namespace OpenCAGE
             this.texturePreviewArea.Dock = System.Windows.Forms.DockStyle.Fill;
             this.texturePreviewArea.Location = new System.Drawing.Point(0, 0);
             this.texturePreviewArea.Name = "texturePreviewArea";
-            this.texturePreviewArea.Size = new System.Drawing.Size(484, 632);
+            this.texturePreviewArea.Size = new System.Drawing.Size(483, 632);
             this.texturePreviewArea.TabIndex = 0;
             this.texturePreviewArea.TabStop = false;
             // 
@@ -244,6 +226,8 @@ namespace OpenCAGE
             // 
             this.previewOuterTable.ColumnCount = 1;
             this.previewOuterTable.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.previewOuterTable.Controls.Add(this.cubemapModePanel, 0, 0);
+            this.previewOuterTable.Controls.Add(this.cubemapViewerHost, 0, 1);
             this.previewOuterTable.Controls.Add(this.previewTabControl, 0, 1);
             this.previewOuterTable.Dock = System.Windows.Forms.DockStyle.Fill;
             this.previewOuterTable.Location = new System.Drawing.Point(3, 16);
@@ -252,18 +236,107 @@ namespace OpenCAGE
             this.previewOuterTable.RowStyles.Add(new System.Windows.Forms.RowStyle());
             this.previewOuterTable.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.previewOuterTable.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-            this.previewOuterTable.Size = new System.Drawing.Size(478, 613);
+            this.previewOuterTable.Size = new System.Drawing.Size(477, 613);
             this.previewOuterTable.TabIndex = 0;
+            // 
+            // cubemapModePanel
+            // 
+            this.cubemapModePanel.AutoSize = true;
+            this.cubemapModePanel.Controls.Add(this.cubemapModeLabel);
+            this.cubemapModePanel.Controls.Add(this.cubemapMode3D);
+            this.cubemapModePanel.Controls.Add(this.cubemapMode2D);
+            this.cubemapModePanel.Controls.Add(this.cubemapSourceLabel);
+            this.cubemapModePanel.Controls.Add(this.cubemapSourceCombo);
+            this.cubemapModePanel.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.cubemapModePanel.Location = new System.Drawing.Point(3, 3);
+            this.cubemapModePanel.Name = "cubemapModePanel";
+            this.cubemapModePanel.Padding = new System.Windows.Forms.Padding(0, 0, 0, 4);
+            this.cubemapModePanel.Size = new System.Drawing.Size(471, 31);
+            this.cubemapModePanel.TabIndex = 0;
+            this.cubemapModePanel.Visible = false;
+            this.cubemapModePanel.WrapContents = false;
+            // 
+            // cubemapModeLabel
+            // 
+            this.cubemapModeLabel.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.cubemapModeLabel.AutoSize = true;
+            this.cubemapModeLabel.Location = new System.Drawing.Point(3, 8);
+            this.cubemapModeLabel.Margin = new System.Windows.Forms.Padding(3, 6, 8, 3);
+            this.cubemapModeLabel.Name = "cubemapModeLabel";
+            this.cubemapModeLabel.Size = new System.Drawing.Size(80, 13);
+            this.cubemapModeLabel.TabIndex = 0;
+            this.cubemapModeLabel.Text = "Cubemap view:";
+            // 
+            // cubemapMode3D
+            // 
+            this.cubemapMode3D.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.cubemapMode3D.AutoSize = true;
+            this.cubemapMode3D.Checked = true;
+            this.cubemapMode3D.Location = new System.Drawing.Point(94, 5);
+            this.cubemapMode3D.Name = "cubemapMode3D";
+            this.cubemapMode3D.Size = new System.Drawing.Size(39, 17);
+            this.cubemapMode3D.TabIndex = 1;
+            this.cubemapMode3D.TabStop = true;
+            this.cubemapMode3D.Text = "3D";
+            this.cubemapMode3D.UseVisualStyleBackColor = true;
+            this.cubemapMode3D.CheckedChanged += new System.EventHandler(this.cubemapMode_CheckedChanged);
+            // 
+            // cubemapMode2D
+            // 
+            this.cubemapMode2D.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.cubemapMode2D.AutoSize = true;
+            this.cubemapMode2D.Location = new System.Drawing.Point(139, 5);
+            this.cubemapMode2D.Name = "cubemapMode2D";
+            this.cubemapMode2D.Size = new System.Drawing.Size(68, 17);
+            this.cubemapMode2D.TabIndex = 2;
+            this.cubemapMode2D.Text = "2D faces";
+            this.cubemapMode2D.UseVisualStyleBackColor = true;
+            this.cubemapMode2D.CheckedChanged += new System.EventHandler(this.cubemapMode_CheckedChanged);
+            // 
+            // cubemapSourceLabel
+            // 
+            this.cubemapSourceLabel.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.cubemapSourceLabel.AutoSize = true;
+            this.cubemapSourceLabel.Location = new System.Drawing.Point(222, 8);
+            this.cubemapSourceLabel.Margin = new System.Windows.Forms.Padding(12, 6, 3, 3);
+            this.cubemapSourceLabel.Name = "cubemapSourceLabel";
+            this.cubemapSourceLabel.Size = new System.Drawing.Size(44, 13);
+            this.cubemapSourceLabel.TabIndex = 3;
+            this.cubemapSourceLabel.Text = "Source:";
+            // 
+            // cubemapSourceCombo
+            // 
+            this.cubemapSourceCombo.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.cubemapSourceCombo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cubemapSourceCombo.FormattingEnabled = true;
+            this.cubemapSourceCombo.Items.AddRange(new object[] {
+            "Streamed",
+            "Persistent"});
+            this.cubemapSourceCombo.Location = new System.Drawing.Point(272, 3);
+            this.cubemapSourceCombo.Name = "cubemapSourceCombo";
+            this.cubemapSourceCombo.Size = new System.Drawing.Size(100, 21);
+            this.cubemapSourceCombo.TabIndex = 4;
+            this.cubemapSourceCombo.SelectedIndexChanged += new System.EventHandler(this.cubemapSourceCombo_SelectedIndexChanged);
+            // 
+            // cubemapViewerHost
+            // 
+            this.cubemapViewerHost.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.cubemapViewerHost.Location = new System.Drawing.Point(3, 596);
+            this.cubemapViewerHost.Name = "cubemapViewerHost";
+            this.cubemapViewerHost.Size = new System.Drawing.Size(471, 14);
+            this.cubemapViewerHost.TabIndex = 2;
+            this.cubemapViewerHost.Visible = false;
+            this.cubemapViewerHost.Child = null;
             // 
             // previewTabControl
             // 
             this.previewTabControl.Controls.Add(this.tabStreamed);
             this.previewTabControl.Controls.Add(this.tabPersistent);
             this.previewTabControl.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.previewTabControl.Location = new System.Drawing.Point(3, 3);
+            this.previewTabControl.Location = new System.Drawing.Point(3, 40);
             this.previewTabControl.Name = "previewTabControl";
             this.previewTabControl.SelectedIndex = 0;
-            this.previewTabControl.Size = new System.Drawing.Size(472, 607);
+            this.previewTabControl.Size = new System.Drawing.Size(471, 550);
             this.previewTabControl.TabIndex = 1;
             // 
             // tabStreamed
@@ -272,7 +345,7 @@ namespace OpenCAGE
             this.tabStreamed.Location = new System.Drawing.Point(4, 22);
             this.tabStreamed.Name = "tabStreamed";
             this.tabStreamed.Padding = new System.Windows.Forms.Padding(3);
-            this.tabStreamed.Size = new System.Drawing.Size(464, 581);
+            this.tabStreamed.Size = new System.Drawing.Size(463, 524);
             this.tabStreamed.TabIndex = 0;
             this.tabStreamed.Text = "Streamed";
             this.tabStreamed.UseVisualStyleBackColor = true;
@@ -289,7 +362,7 @@ namespace OpenCAGE
             this.streamedTabLayout.RowCount = 2;
             this.streamedTabLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.streamedTabLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 108F));
-            this.streamedTabLayout.Size = new System.Drawing.Size(458, 575);
+            this.streamedTabLayout.Size = new System.Drawing.Size(457, 518);
             this.streamedTabLayout.TabIndex = 0;
             // 
             // pictureStreamed
@@ -298,7 +371,7 @@ namespace OpenCAGE
             this.pictureStreamed.Dock = System.Windows.Forms.DockStyle.Fill;
             this.pictureStreamed.Location = new System.Drawing.Point(3, 3);
             this.pictureStreamed.Name = "pictureStreamed";
-            this.pictureStreamed.Size = new System.Drawing.Size(452, 461);
+            this.pictureStreamed.Size = new System.Drawing.Size(451, 404);
             this.pictureStreamed.TabIndex = 0;
             this.pictureStreamed.TabStop = false;
             // 
@@ -306,9 +379,9 @@ namespace OpenCAGE
             // 
             this.groupStreamedMeta.Controls.Add(this.streamedMetaText);
             this.groupStreamedMeta.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.groupStreamedMeta.Location = new System.Drawing.Point(3, 470);
+            this.groupStreamedMeta.Location = new System.Drawing.Point(3, 413);
             this.groupStreamedMeta.Name = "groupStreamedMeta";
-            this.groupStreamedMeta.Size = new System.Drawing.Size(452, 102);
+            this.groupStreamedMeta.Size = new System.Drawing.Size(451, 102);
             this.groupStreamedMeta.TabIndex = 1;
             this.groupStreamedMeta.TabStop = false;
             this.groupStreamedMeta.Text = "Metadata";
@@ -322,7 +395,7 @@ namespace OpenCAGE
             this.streamedMetaText.Name = "streamedMetaText";
             this.streamedMetaText.ReadOnly = true;
             this.streamedMetaText.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.streamedMetaText.Size = new System.Drawing.Size(446, 83);
+            this.streamedMetaText.Size = new System.Drawing.Size(445, 83);
             this.streamedMetaText.TabIndex = 0;
             this.streamedMetaText.TabStop = false;
             // 
@@ -332,7 +405,7 @@ namespace OpenCAGE
             this.tabPersistent.Location = new System.Drawing.Point(4, 22);
             this.tabPersistent.Name = "tabPersistent";
             this.tabPersistent.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPersistent.Size = new System.Drawing.Size(464, 581);
+            this.tabPersistent.Size = new System.Drawing.Size(463, 544);
             this.tabPersistent.TabIndex = 1;
             this.tabPersistent.Text = "Persistent";
             this.tabPersistent.UseVisualStyleBackColor = true;
@@ -349,7 +422,7 @@ namespace OpenCAGE
             this.persistentTabLayout.RowCount = 2;
             this.persistentTabLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.persistentTabLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 108F));
-            this.persistentTabLayout.Size = new System.Drawing.Size(458, 575);
+            this.persistentTabLayout.Size = new System.Drawing.Size(457, 538);
             this.persistentTabLayout.TabIndex = 0;
             // 
             // picturePersistent
@@ -358,7 +431,7 @@ namespace OpenCAGE
             this.picturePersistent.Dock = System.Windows.Forms.DockStyle.Fill;
             this.picturePersistent.Location = new System.Drawing.Point(3, 3);
             this.picturePersistent.Name = "picturePersistent";
-            this.picturePersistent.Size = new System.Drawing.Size(452, 461);
+            this.picturePersistent.Size = new System.Drawing.Size(451, 424);
             this.picturePersistent.TabIndex = 0;
             this.picturePersistent.TabStop = false;
             // 
@@ -366,9 +439,9 @@ namespace OpenCAGE
             // 
             this.groupPersistentMeta.Controls.Add(this.persistentMetaText);
             this.groupPersistentMeta.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.groupPersistentMeta.Location = new System.Drawing.Point(3, 470);
+            this.groupPersistentMeta.Location = new System.Drawing.Point(3, 433);
             this.groupPersistentMeta.Name = "groupPersistentMeta";
-            this.groupPersistentMeta.Size = new System.Drawing.Size(452, 102);
+            this.groupPersistentMeta.Size = new System.Drawing.Size(451, 102);
             this.groupPersistentMeta.TabIndex = 1;
             this.groupPersistentMeta.TabStop = false;
             this.groupPersistentMeta.Text = "Metadata";
@@ -382,7 +455,7 @@ namespace OpenCAGE
             this.persistentMetaText.Name = "persistentMetaText";
             this.persistentMetaText.ReadOnly = true;
             this.persistentMetaText.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.persistentMetaText.Size = new System.Drawing.Size(446, 83);
+            this.persistentMetaText.Size = new System.Drawing.Size(445, 83);
             this.persistentMetaText.TabIndex = 0;
             this.persistentMetaText.TabStop = false;
             // 
@@ -404,7 +477,7 @@ namespace OpenCAGE
             this.textureActionsTable.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 30F));
             this.textureActionsTable.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 30F));
             this.textureActionsTable.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.textureActionsTable.Size = new System.Drawing.Size(212, 632);
+            this.textureActionsTable.Size = new System.Drawing.Size(213, 632);
             this.textureActionsTable.TabIndex = 0;
             // 
             // replaceTextureBtn
@@ -413,7 +486,7 @@ namespace OpenCAGE
             this.replaceTextureBtn.Enabled = false;
             this.replaceTextureBtn.Location = new System.Drawing.Point(6, 9);
             this.replaceTextureBtn.Name = "replaceTextureBtn";
-            this.replaceTextureBtn.Size = new System.Drawing.Size(200, 24);
+            this.replaceTextureBtn.Size = new System.Drawing.Size(201, 24);
             this.replaceTextureBtn.TabIndex = 0;
             this.replaceTextureBtn.Text = "Replace Selected";
             this.replaceTextureBtn.UseVisualStyleBackColor = true;
@@ -437,7 +510,7 @@ namespace OpenCAGE
             this.metadataTable.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 168F));
             this.metadataTable.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
             this.metadataTable.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 58F));
-            this.metadataTable.Size = new System.Drawing.Size(200, 494);
+            this.metadataTable.Size = new System.Drawing.Size(201, 494);
             this.metadataTable.TabIndex = 0;
             // 
             // metaStateCaption
@@ -459,7 +532,7 @@ namespace OpenCAGE
             this.stateFlagsPanel.Margin = new System.Windows.Forms.Padding(0);
             this.stateFlagsPanel.Name = "stateFlagsPanel";
             this.stateFlagsPanel.Padding = new System.Windows.Forms.Padding(0, 2, 0, 2);
-            this.stateFlagsPanel.Size = new System.Drawing.Size(200, 168);
+            this.stateFlagsPanel.Size = new System.Drawing.Size(201, 168);
             this.stateFlagsPanel.TabIndex = 9;
             this.stateFlagsPanel.WrapContents = false;
             // 
@@ -482,7 +555,7 @@ namespace OpenCAGE
             this.usageFlagsPanel.Margin = new System.Windows.Forms.Padding(0);
             this.usageFlagsPanel.Name = "usageFlagsPanel";
             this.usageFlagsPanel.Padding = new System.Windows.Forms.Padding(0, 2, 0, 2);
-            this.usageFlagsPanel.Size = new System.Drawing.Size(200, 288);
+            this.usageFlagsPanel.Size = new System.Drawing.Size(201, 288);
             this.usageFlagsPanel.TabIndex = 10;
             this.usageFlagsPanel.WrapContents = false;
             // 
@@ -492,7 +565,7 @@ namespace OpenCAGE
             this.deleteTextureBtn.Enabled = false;
             this.deleteTextureBtn.Location = new System.Drawing.Point(6, 39);
             this.deleteTextureBtn.Name = "deleteTextureBtn";
-            this.deleteTextureBtn.Size = new System.Drawing.Size(200, 24);
+            this.deleteTextureBtn.Size = new System.Drawing.Size(201, 24);
             this.deleteTextureBtn.TabIndex = 1;
             this.deleteTextureBtn.Text = "Delete Selected";
             this.deleteTextureBtn.UseVisualStyleBackColor = true;
@@ -504,7 +577,7 @@ namespace OpenCAGE
             this.exportTextureBtn.Enabled = false;
             this.exportTextureBtn.Location = new System.Drawing.Point(6, 69);
             this.exportTextureBtn.Name = "exportTextureBtn";
-            this.exportTextureBtn.Size = new System.Drawing.Size(200, 24);
+            this.exportTextureBtn.Size = new System.Drawing.Size(201, 24);
             this.exportTextureBtn.TabIndex = 2;
             this.exportTextureBtn.Text = "Export Selected";
             this.exportTextureBtn.UseVisualStyleBackColor = true;
@@ -512,6 +585,7 @@ namespace OpenCAGE
             // 
             // selectTextureBtn
             // 
+            this.selectTextureBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.selectTextureBtn.Enabled = false;
             this.selectTextureBtn.Location = new System.Drawing.Point(854, 604);
             this.selectTextureBtn.Name = "selectTextureBtn";
@@ -520,14 +594,6 @@ namespace OpenCAGE
             this.selectTextureBtn.Text = "Select This Texture";
             this.selectTextureBtn.UseVisualStyleBackColor = true;
             this.selectTextureBtn.Click += new System.EventHandler(this.selectTextureBtn_Click);
-            // 
-            // imageList1
-            // 
-            this.imageList1.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList1.ImageStream")));
-            this.imageList1.TransparentColor = System.Drawing.Color.Transparent;
-            this.imageList1.Images.SetKeyName(0, "Folder Icon.png");
-            this.imageList1.Images.SetKeyName(1, "file_icon.png");
-            this.imageList1.Images.SetKeyName(2, "FolderOpened Icon.png");
             // 
             // EditTexture
             // 
@@ -555,6 +621,9 @@ namespace OpenCAGE
             this.splitContainer2.ResumeLayout(false);
             this.texturePreviewArea.ResumeLayout(false);
             this.previewOuterTable.ResumeLayout(false);
+            this.previewOuterTable.PerformLayout();
+            this.cubemapModePanel.ResumeLayout(false);
+            this.cubemapModePanel.PerformLayout();
             this.previewTabControl.ResumeLayout(false);
             this.tabStreamed.ResumeLayout(false);
             this.streamedTabLayout.ResumeLayout(false);
@@ -581,13 +650,18 @@ namespace OpenCAGE
         private System.Windows.Forms.TableLayoutPanel tableLayoutLeftHeader;
         private System.Windows.Forms.Label labelSearch;
         private System.Windows.Forms.TextBox textureSearchBox;
-        private System.Windows.Forms.Label textureSourceLabel;
-        private System.Windows.Forms.ComboBox textureSourceCombo;
         private System.Windows.Forms.TreeView FileTree;
         private System.Windows.Forms.Button importTextureBtn;
         private System.Windows.Forms.SplitContainer splitContainer2;
         private System.Windows.Forms.GroupBox texturePreviewArea;
         private System.Windows.Forms.TableLayoutPanel previewOuterTable;
+        private System.Windows.Forms.FlowLayoutPanel cubemapModePanel;
+        private System.Windows.Forms.Label cubemapModeLabel;
+        private System.Windows.Forms.RadioButton cubemapMode3D;
+        private System.Windows.Forms.RadioButton cubemapMode2D;
+        private System.Windows.Forms.Label cubemapSourceLabel;
+        private System.Windows.Forms.ComboBox cubemapSourceCombo;
+        private System.Windows.Forms.Integration.ElementHost cubemapViewerHost;
         private System.Windows.Forms.TableLayoutPanel metadataTable;
         private System.Windows.Forms.Label metaStateCaption;
         private System.Windows.Forms.TabControl previewTabControl;
@@ -606,7 +680,6 @@ namespace OpenCAGE
         private System.Windows.Forms.Button replaceTextureBtn;
         private System.Windows.Forms.Button deleteTextureBtn;
         private System.Windows.Forms.Button exportTextureBtn;
-        private System.Windows.Forms.ImageList imageList1;
         private System.Windows.Forms.FlowLayoutPanel stateFlagsPanel;
         private System.Windows.Forms.Label metaUsageCaption;
         private System.Windows.Forms.FlowLayoutPanel usageFlagsPanel;

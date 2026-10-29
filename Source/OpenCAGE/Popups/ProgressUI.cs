@@ -12,6 +12,7 @@ namespace OpenCAGE
     {
         private int _counter = 0;
         private Level _level;
+        private bool _instancingMarquee;
 
         public ProgressUI() : base()
         {
@@ -23,11 +24,40 @@ namespace OpenCAGE
             FormClosing += ProgressUI_FormClosing;
         }
 
+        /* Never the active window: it reports, it is not worked in. Closing an active window gives
+           focus back to the window that had it - the embedded viewer, after a click in the viewport -
+           and giving the viewer focus means waiting on its thread, which after an import or a reload
+           is busy for seconds. A window that never took focus has nothing to give back. */
+        protected override bool ShowWithoutActivation => true;
+        protected override bool ActivateOnShown => false;
+
+        /// <summary>Questions the user has open (MCP.McpDialogs.AskUser, UI thread): on top, this window would cover them.</summary>
+        public static int QuestionsOpen;
+
+        /// <summary>
+        /// Put the window back on top without making it the active window. BringToFront on a top-level
+        /// window activates it, which is what this window must never be (see above). While the user is
+        /// being asked something, it goes to the back instead, until the next call after the answer.
+        /// </summary>
+        public void KeepOnTop()
+        {
+            if (IsDisposed || Disposing || !IsHandleCreated)
+                return;
+            SetWindowPos(Handle, QuestionsOpen > 0 ? HWND_BOTTOM : HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        }
+
+        private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1), HWND_BOTTOM = new IntPtr(1);
+        private const uint SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_NOACTIVATE = 0x0010;
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint flags);
+
         private void ProgressUI_FormClosing(object sender, FormClosingEventArgs e)
         {
             SetEditorTaskbarProgress(TaskbarProgressBarState.NoProgress);
 
             FormClosing -= ProgressUI_FormClosing;
+
+            _instancingMarquee = false;
 
             if (_level != null)
             {
@@ -51,12 +81,13 @@ namespace OpenCAGE
         }
 
         public void ShowLevelLoading(Level level) => ShowLevel(level, true);
-        public void ShowLevelSaving(Level level) => ShowLevel(level, false);
+        public void ShowLevelSaving(Level level, bool withInstancing = false) => ShowLevel(level, false, withInstancing);
 
-        private void ShowLevel(Level level, bool loading)
+        private void ShowLevel(Level level, bool loading, bool withInstancing = false)
         {
             _level = level;
             _counter = 0;
+            _instancingMarquee = !loading && withInstancing;
 
             if (_level == null)
             {
@@ -64,12 +95,19 @@ namespace OpenCAGE
                 return;
             }
 
-            Text = (loading ? "Loading " : "Saving ") + level.Name + "...";
-
             SetEditorTaskbarProgress(TaskbarProgressBarState.Indeterminate);
 
-            progressBar1.Style = ProgressBarStyle.Continuous;
-            progressBar1.Value = 0;
+            if (_instancingMarquee)
+            {
+                Text = "Instancing " + level.Name + "...";
+                progressBar1.Style = ProgressBarStyle.Marquee;
+            }
+            else
+            {
+                Text = (loading ? "Loading " : "Saving ") + level.Name + "...";
+                progressBar1.Style = ProgressBarStyle.Continuous;
+                progressBar1.Value = 0;
+            }
             progressBar1.Refresh();
 
             if (loading)
@@ -112,12 +150,113 @@ namespace OpenCAGE
             PresentOnTop();
         }
 
-        private void PresentOnTop()
+        private string _countedTitle;
+        private int _countedTotal = 1;
+        private int _countedDone = -1;
+
+        /// <summary>
+        /// A bar for a job counted in items, like an Export All, which <see cref="SetCount"/> moves along
+        /// as they are done.
+        /// </summary>
+        public void ShowCounted(string titlebar, int total)
+        {
+            _countedTitle = titlebar;
+            _countedTotal = Math.Max(1, total);
+            _countedDone = -1;
+
+            progressBar1.Style = ProgressBarStyle.Continuous;
+            SetCount(0);
+
+            PresentOnTop();
+        }
+
+        /// <summary>How many of the items given to <see cref="ShowCounted"/> are done. UI thread only.</summary>
+        public void SetCount(int done)
         {
             if (IsDisposed || Disposing)
                 return;
 
-            Form editor = Singleton.Editor;
+            done = Math.Max(0, Math.Min(done, _countedTotal));
+            if (done == _countedDone)
+                return;
+            _countedDone = done;
+
+            Text = _countedTitle + ": " + done.ToString("N0") + " of " + _countedTotal.ToString("N0");
+            DrawValue((int)((long)done * progressBar1.Maximum / _countedTotal));
+            SetEditorTaskbarValue(done, _countedTotal);
+        }
+
+        private string _stagedTitle;
+        private int _stagedValue = -1;
+
+        /// <summary>
+        /// A bar for a job done on the UI thread (writing ANIMATION.PAK, say), which <see cref="SetProgress"/> moves along.
+        /// Shown over <paramref name="near"/>, the window doing the job (the editor when null), and painted straight away:
+        /// the UI thread is busy with the job until it's done, so nothing else paints it.
+        /// </summary>
+        public void ShowStaged(string titlebar, Form near = null)
+        {
+            _stagedTitle = titlebar;
+            _stagedValue = -1;
+            Text = titlebar;
+
+            progressBar1.Style = ProgressBarStyle.Continuous;
+            progressBar1.Value = 0;
+
+            PresentOnTop(near);
+            SetProgress(0);
+            Refresh();
+        }
+
+        /// <summary>How far through the job it is (0 to 1), and what it's doing now (null keeps what it said). UI thread only.</summary>
+        public void SetProgress(double fraction, string titlebar = null)
+        {
+            if (IsDisposed || Disposing)
+                return;
+
+            if (titlebar != null && titlebar != _stagedTitle)
+            {
+                _stagedTitle = titlebar;
+                Text = titlebar;
+            }
+            int value = (int)Math.Round(Math.Max(0.0, Math.Min(1.0, fraction)) * progressBar1.Maximum);
+            if (value == _stagedValue)
+                return;
+            _stagedValue = value;
+            DrawValue(value);
+            SetEditorTaskbarValue(value, progressBar1.Maximum);
+        }
+
+        /* Windows animates the bar up to a new value rather than drawing it there, and moved often it falls well behind
+           (and with the UI thread busy, it doesn't animate at all). A move back is drawn straight away, so it goes one past
+           and back. */
+        private void DrawValue(int value)
+        {
+            if (value < progressBar1.Maximum)
+                progressBar1.Value = value + 1;
+            progressBar1.Value = value;
+            progressBar1.Refresh();
+        }
+
+        private void SetEditorTaskbarValue(int done, int total)
+        {
+            try
+            {
+                Form editor = Singleton.Editor;
+                if (editor != null && !editor.IsDisposed && !editor.Disposing && editor.IsHandleCreated)
+                    TaskbarManager.Instance.SetProgressValue(done, total, editor.Handle);
+            }
+            catch (ObjectDisposedException) { }
+        }
+
+        private void PresentOnTop(Form near = null)
+        {
+            if (IsDisposed || Disposing)
+                return;
+
+            //Over the window holding the one doing the job (a docked window's bounds are in its holder's terms)
+            Form holder = near?.TopLevelControl as Form;
+            Form editor = holder != null && !holder.IsDisposed && holder.Visible ? holder : Singleton.Editor;
             if (editor != null && !editor.IsDisposed)
             {
                 StartPosition = FormStartPosition.Manual;
@@ -131,11 +270,17 @@ namespace OpenCAGE
                 StartPosition = FormStartPosition.CenterScreen;
             }
 
+            /* Not Form.TopMost: WinForms re-applies that inside CreateHandle with a SetWindowPos that
+               activates the window, so the first Show would make this the active window after all.
+               Shown without activation, then raised with SetWindowPos and SWP_NOACTIVATE. */
             ShowInTaskbar = false;
-            TopMost = true;
             Show();
-            BringToFront();
-            Activate();
+            KeepOnTop();
+
+            /* Paint it now. The caller usually goes straight on to blocking work on this thread, so the
+               queued WM_PAINTs would not be handled until it finished - and an unpainted progress bar is
+               its class's white background, which in dark mode sat there as a white bar the whole time. */
+            Update();
         }
 
         public void DoRefresh()
@@ -150,22 +295,29 @@ namespace OpenCAGE
             if (progressBar1.InvokeRequired)
             {
                 if (!IsDisposed && !Disposing)
-                {
-                    progressBar1.BeginInvoke(new Action(() =>
-                    {
-                        if (!IsDisposed && !Disposing && progressBar1 != null)
-                        {
-                            progressBar1.Value = progress;
-                            progressBar1.Refresh();
-                        }
-                    }));
-                }
+                    progressBar1.BeginInvoke(new Action(() => ApplySaveOrLoadProgress(progress)));
             }
-            else if (!IsDisposed && !Disposing && progressBar1 != null)
+            else
             {
-                progressBar1.Value = progress;
-                progressBar1.Refresh();
+                ApplySaveOrLoadProgress(progress);
             }
+        }
+
+        private void ApplySaveOrLoadProgress(int progress)
+        {
+            if (IsDisposed || Disposing || progressBar1 == null)
+                return;
+
+            if (_instancingMarquee)
+            {
+                _instancingMarquee = false;
+                Text = "Saving " + _level.Name + "...";
+                progressBar1.Style = ProgressBarStyle.Continuous;
+                progressBar1.Value = 0;
+            }
+
+            progressBar1.Value = progress;
+            progressBar1.Refresh();
         }
     }
 }

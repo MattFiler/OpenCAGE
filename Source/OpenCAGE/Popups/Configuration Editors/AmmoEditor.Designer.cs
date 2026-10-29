@@ -56,6 +56,8 @@
             this.min_distance = new System.Windows.Forms.NumericUpDown();
             this.label26 = new System.Windows.Forms.Label();
             this.damageRanges = new System.Windows.Forms.ComboBox();
+            this.range_distance = new System.Windows.Forms.NumericUpDown();
+            this.labelRangeDistance = new System.Windows.Forms.Label();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
             this.impulse_radius = new System.Windows.Forms.NumericUpDown();
             this.impulse_at_centre_of_blast = new System.Windows.Forms.NumericUpDown();
@@ -108,7 +110,6 @@
             this.groupBox6 = new System.Windows.Forms.GroupBox();
             this.groupBox7 = new System.Windows.Forms.GroupBox();
             this.groupBox8 = new System.Windows.Forms.GroupBox();
-            this.helpBtn = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.npc_accuracy_multiplier)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.fixed_accuracy)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.max_accuracy_radius_at_10_metres)).BeginInit();
@@ -125,6 +126,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.impulse_fall_off_power)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.character_wavefront_speed)).BeginInit();
             this.groupBox4.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.range_distance)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.BlindDuration)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.EMPDuration)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.StunDuration)).BeginInit();
@@ -423,9 +425,31 @@
             this.damageRanges.FormattingEnabled = true;
             this.damageRanges.Location = new System.Drawing.Point(13, 36);
             this.damageRanges.Name = "damageRanges";
-            this.damageRanges.Size = new System.Drawing.Size(660, 21);
+            this.damageRanges.Size = new System.Drawing.Size(520, 21);
             this.damageRanges.TabIndex = 429;
             this.damageRanges.SelectedIndexChanged += new System.EventHandler(this.damageRanges_SelectedIndexChanged);
+            // 
+            // labelRangeDistance
+            // 
+            this.labelRangeDistance.AutoSize = true;
+            this.labelRangeDistance.Location = new System.Drawing.Point(539, 20);
+            this.labelRangeDistance.Name = "labelRangeDistance";
+            this.labelRangeDistance.Size = new System.Drawing.Size(119, 13);
+            this.labelRangeDistance.TabIndex = 484;
+            this.labelRangeDistance.Text = "Range Distance (metres)";
+            // 
+            // range_distance
+            // 
+            this.range_distance.DecimalPlaces = 3;
+            this.range_distance.Location = new System.Drawing.Point(542, 36);
+            this.range_distance.Maximum = new decimal(new int[] {
+            1000,
+            0,
+            0,
+            0});
+            this.range_distance.Name = "range_distance";
+            this.range_distance.Size = new System.Drawing.Size(131, 20);
+            this.range_distance.TabIndex = 485;
             // 
             // groupBox3
             // 
@@ -558,6 +582,8 @@
             this.groupBox4.Controls.Add(this.label24);
             this.groupBox4.Controls.Add(this.vsAndroid);
             this.groupBox4.Controls.Add(this.damageRanges);
+            this.groupBox4.Controls.Add(this.range_distance);
+            this.groupBox4.Controls.Add(this.labelRangeDistance);
             this.groupBox4.Controls.Add(this.vsPlayer);
             this.groupBox4.Controls.Add(this.label49);
             this.groupBox4.Controls.Add(this.vs_NPC);
@@ -1034,26 +1060,12 @@
             this.groupBox8.Size = new System.Drawing.Size(215, 89);
             this.groupBox8.TabIndex = 474;
             this.groupBox8.TabStop = false;
-            this.groupBox8.Text = "Projectiles";
-            // 
-            // helpBtn
-            // 
-            this.helpBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.helpBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.helpBtn.Image = ((System.Drawing.Image)(resources.GetObject("helpBtn.Image")));
-            this.helpBtn.Location = new System.Drawing.Point(681, 0);
-            this.helpBtn.Name = "helpBtn";
-            this.helpBtn.Size = new System.Drawing.Size(20, 20);
-            this.helpBtn.TabIndex = 475;
-            this.helpBtn.UseVisualStyleBackColor = true;
-            this.helpBtn.Click += new System.EventHandler(this.helpBtn_Click);
-            // 
+            this.groupBox8.Text = "Projectiles";            // 
             // AmmoEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(701, 572);
-            this.Controls.Add(this.helpBtn);
             this.Controls.Add(this.groupBox8);
             this.Controls.Add(this.groupBox7);
             this.Controls.Add(this.groupBox6);
@@ -1089,6 +1101,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.character_wavefront_speed)).EndInit();
             this.groupBox4.ResumeLayout(false);
             this.groupBox4.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.range_distance)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.BlindDuration)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.EMPDuration)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.StunDuration)).EndInit();
@@ -1130,6 +1143,8 @@
         private System.Windows.Forms.Label label8;
         private System.Windows.Forms.Label label26;
         private System.Windows.Forms.ComboBox damageRanges;
+        private System.Windows.Forms.NumericUpDown range_distance;
+        private System.Windows.Forms.Label labelRangeDistance;
         private System.Windows.Forms.Label label34;
         private System.Windows.Forms.Label label35;
         private System.Windows.Forms.Label label32;
@@ -1195,6 +1210,5 @@
         private System.Windows.Forms.GroupBox groupBox6;
         private System.Windows.Forms.GroupBox groupBox7;
         private System.Windows.Forms.GroupBox groupBox8;
-        private System.Windows.Forms.Button helpBtn;
     }
 }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -32,6 +32,8 @@ namespace OpenCAGE
         {
             _entityDisplay = entityDisplay;
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/scripting-intro/");
+            StayAboveEditor = true; //small dialog - keep it above the editor window
 
             RefreshEntityLists(entityDisplay.Composite);
             RefreshChildParamList();
@@ -50,6 +52,8 @@ namespace OpenCAGE
         {
             _entityDisplay = entityDisplay;
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/scripting-intro/");
+            StayAboveEditor = true; //small dialog - keep it above the editor window
 
             RefreshEntityLists(entityDisplay.Composite);
             RefreshChildParamList();
@@ -101,9 +105,29 @@ namespace OpenCAGE
                 return;
             }
 
-            if (_initialParentEntity != null) _initialParentEntity.childLinks.RemoveAll(o => o.ID == _initialLinkID);
-            _entityList[parentEntityList.SelectedIndex].AddParameterLink(parentParameterList.Text, _entityList[childEntityList.SelectedIndex], childParameterList.Text);
+            Composite composite = _entityDisplay?.Composite;
+            using (OpenCAGE.Undo.UndoStack.Current.BeginGroup(_initialParentEntity != null ? "Edit link" : "Add link"))
+            {
+                if (_initialParentEntity != null)
+                {
+                    int index = _initialParentEntity.childLinks.FindIndex(o => o.ID == _initialLinkID);
+                    if (index >= 0)
+                    {
+                        EntityConnector removed = _initialParentEntity.childLinks[index];
+                        _initialParentEntity.childLinks.RemoveAt(index);
+                        if (composite != null)
+                            OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.LinkDataEdit(composite, _initialParentEntity, removed, index, false, "Remove link"));
+                    }
+                }
 
+                Entity parent = _entityList[parentEntityList.SelectedIndex];
+                parent.AddParameterLink(parentParameterList.Text, _entityList[childEntityList.SelectedIndex], childParameterList.Text);
+                if (composite != null && parent.childLinks.Count > 0)
+                    OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.LinkDataEdit(composite, parent, parent.childLinks[parent.childLinks.Count - 1], parent.childLinks.Count - 1, true,
+                        "Add link from " + OpenCAGE.Undo.UndoLabels.Entity(composite, parent)));
+            }
+
+            DirtyTracker.MarkLevelDataModified();
             OnSaved?.Invoke();
             this.Close();
         }

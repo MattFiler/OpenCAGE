@@ -1,5 +1,6 @@
 using CATHODE;
 using OpenCAGE.Popups.Base;
+using OpenCAGE.RuntimeUtilsConnection;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -29,7 +30,8 @@ namespace OpenCAGE.ConfigEditors
             classSelection.EndUpdate();
 
             this.FormClosing += AlienConfigEditor_FormClosing;
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
+            EnableDocumentation("https://opencage.co.uk/docs/configs/alien-configs/");
         }
 
         private void AlienConfigEditor_Load(object sender, EventArgs e)
@@ -40,6 +42,9 @@ namespace OpenCAGE.ConfigEditors
                 Save(null, EventArgs.Empty);
             }
             classSelection.SelectedIndex = 0;
+
+            //The game reads these when it starts; with Live Link connected each edit has it read them again
+            LiveSettings.AttachReload(this, liveStatus, LiveSettings.ReloadableConfig.AlienConfigs);
         }
 
         private void AlienConfigEditor_FormClosing(object sender, FormClosingEventArgs e)
@@ -96,44 +101,42 @@ namespace OpenCAGE.ConfigEditors
         {
             var doc = _selectedConfig[0].Content;
 
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "decrease_sweep_duration").InnerText = decrease_sweep_duration.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "increase_sweep_duration").InnerText = increase_sweep_duration.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "near_target_exclusion_radius_first_stalk_min").InnerText = near_target_exclusion_radius_first_stalk_min.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "near_target_exclusion_radius_first_stalk_max").InnerText = near_target_exclusion_radius_first_stalk_max.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "near_target_exclusion_radius_subsequent_stalk_min").InnerText = near_target_exclusion_radius_subsequent_stalk_min.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "near_target_exclusion_radius_subsequent_stalk_max").InnerText = near_target_exclusion_radius_subsequent_stalk_max.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "near_objective_exclusion_radius_first_stalk_min").InnerText = near_objective_exclusion_radius_first_stalk_min.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "near_objective_exclusion_radius_first_stalk_max").InnerText = near_objective_exclusion_radius_first_stalk_max.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "near_objective_exclusion_radius_subsequent_stalk_min").InnerText = near_objective_exclusion_radius_subsequent_stalk_min.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "near_objective_exclusion_radius_subsequent_stalk_max").InnerText = near_objective_exclusion_radius_subsequent_stalk_max.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "menace_gauge_decrease_time").InnerText = menace_gauge_decrease_time.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "meance_deemed_time").InnerText = meance_deemed_time.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "max_menaces").InnerText = max_menaces.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "menace_gauge_seconds_to_fill").InnerText = menace_gauge_seconds_to_fill.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "sweep_box_half_width").InnerText = sweep_box_half_width.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "sweep_box_min_half_length").InnerText = sweep_box_min_half_length.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "Vent_Attract_Time_Min").InnerText = Vent_Attract_Time_Min.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "Vent_Attract_Time_Max").InnerText = Vent_Attract_Time_Max.Text;
+            if (decrease_sweep_duration.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "decrease_sweep_duration").InnerText = ConfigEditorUtils.NumberText(decrease_sweep_duration);
+            if (increase_sweep_duration.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "increase_sweep_duration").InnerText = ConfigEditorUtils.NumberText(increase_sweep_duration);
+            if (near_target_exclusion_radius_first_stalk_min.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "near_target_exclusion_radius_first_stalk_min").InnerText = ConfigEditorUtils.NumberText(near_target_exclusion_radius_first_stalk_min);
+            if (near_target_exclusion_radius_first_stalk_max.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "near_target_exclusion_radius_first_stalk_max").InnerText = ConfigEditorUtils.NumberText(near_target_exclusion_radius_first_stalk_max);
+            if (near_target_exclusion_radius_subsequent_stalk_min.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "near_target_exclusion_radius_subsequent_stalk_min").InnerText = ConfigEditorUtils.NumberText(near_target_exclusion_radius_subsequent_stalk_min);
+            if (near_target_exclusion_radius_subsequent_stalk_max.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "near_target_exclusion_radius_subsequent_stalk_max").InnerText = ConfigEditorUtils.NumberText(near_target_exclusion_radius_subsequent_stalk_max);
+            if (near_objective_exclusion_radius_first_stalk_min.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "near_objective_exclusion_radius_first_stalk_min").InnerText = ConfigEditorUtils.NumberText(near_objective_exclusion_radius_first_stalk_min);
+            if (near_objective_exclusion_radius_first_stalk_max.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "near_objective_exclusion_radius_first_stalk_max").InnerText = ConfigEditorUtils.NumberText(near_objective_exclusion_radius_first_stalk_max);
+            if (near_objective_exclusion_radius_subsequent_stalk_min.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "near_objective_exclusion_radius_subsequent_stalk_min").InnerText = ConfigEditorUtils.NumberText(near_objective_exclusion_radius_subsequent_stalk_min);
+            if (near_objective_exclusion_radius_subsequent_stalk_max.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "near_objective_exclusion_radius_subsequent_stalk_max").InnerText = ConfigEditorUtils.NumberText(near_objective_exclusion_radius_subsequent_stalk_max);
+            if (menace_gauge_decrease_time.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "menace_gauge_decrease_time").InnerText = ConfigEditorUtils.NumberText(menace_gauge_decrease_time);
+            if (meance_deemed_time.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "meance_deemed_time").InnerText = ConfigEditorUtils.NumberText(meance_deemed_time);
+            if (max_menaces.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "max_menaces").InnerText = ConfigEditorUtils.NumberText(max_menaces);
+            if (menace_gauge_seconds_to_fill.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "menace_gauge_seconds_to_fill").InnerText = ConfigEditorUtils.NumberText(menace_gauge_seconds_to_fill);
+            if (sweep_box_half_width.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "sweep_box_half_width").InnerText = ConfigEditorUtils.NumberText(sweep_box_half_width);
+            if (sweep_box_min_half_length.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "sweep_box_min_half_length").InnerText = ConfigEditorUtils.NumberText(sweep_box_min_half_length);
+            if (Vent_Attract_Time_Min.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "Vent_Attract_Time_Min").InnerText = ConfigEditorUtils.NumberText(Vent_Attract_Time_Min);
+            if (Vent_Attract_Time_Max.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "AreaSweep", "Vent_Attract_Time_Max").InnerText = ConfigEditorUtils.NumberText(Vent_Attract_Time_Max);
 
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "BackstageAreaSweep", "role_timeout_min").InnerText = role_timeout_min.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "BackstageAreaSweep", "role_timeout_max").InnerText = role_timeout_max.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "BackstageAreaSweep", "min_distance").InnerText = min_distance.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "BackstageAreaSweep", "max_distance").InnerText = max_distance.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "BackstageAreaSweep", "min_idle_time").InnerText = min_idle_time.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "BackstageAreaSweep", "max_idle_time").InnerText = max_idle_time.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "BackstageAreaSweep", "killtrap_time").InnerText = killtrap_time.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "BackstageAreaSweep", "ambush_timeout").InnerText = ambush_timeout.Text;
+            if (role_timeout_min.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "BackstageAreaSweep", "role_timeout_min").InnerText = ConfigEditorUtils.NumberText(role_timeout_min);
+            if (role_timeout_max.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "BackstageAreaSweep", "role_timeout_max").InnerText = ConfigEditorUtils.NumberText(role_timeout_max);
+            if (min_distance.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "BackstageAreaSweep", "min_distance").InnerText = ConfigEditorUtils.NumberText(min_distance);
+            if (max_distance.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "BackstageAreaSweep", "max_distance").InnerText = ConfigEditorUtils.NumberText(max_distance);
+            if (min_idle_time.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "BackstageAreaSweep", "min_idle_time").InnerText = ConfigEditorUtils.NumberText(min_idle_time);
+            if (max_idle_time.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "BackstageAreaSweep", "max_idle_time").InnerText = ConfigEditorUtils.NumberText(max_idle_time);
+            if (killtrap_time.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "BackstageAreaSweep", "killtrap_time").InnerText = ConfigEditorUtils.NumberText(killtrap_time);
+            if (ambush_timeout.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "AlienConfig", "BackstageAreaSweep", "ambush_timeout").InnerText = ConfigEditorUtils.NumberText(ambush_timeout);
 
             _selectedConfig[0].Content = doc;
             _selectedConfig[0].Save();
 
-            Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
-        }
+            //Only an edit goes to the game: the saves made as the editor opens, and as another setup is picked, change nothing it reads
+            if (sender != null && sender != classSelection)
+                LiveSettings.ReloadAfterEdit(LiveSettings.ReloadableConfig.AlienConfigs);
 
-        private void helpBtn_Click(object sender, EventArgs e)
-        {
-            Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
-            Process.Start("https://opencage.co.uk/docs/configs/alien-configs");
+            Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
         }
     }
 }

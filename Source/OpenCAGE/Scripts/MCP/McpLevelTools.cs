@@ -1,0 +1,2395 @@
+using CATHODE;
+using CathodeLib;
+using Newtonsoft.Json.Linq;
+using CATHODE.Scripting;
+using CATHODE.Scripting.Internal;
+using OpenCAGE.RuntimeUtilsConnection;
+using OpenCAGE.Popups;
+using OpenCAGE.Popups.UserControls;
+using OpenCAGE.Undo;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Numerics;
+using System.Windows.Forms;
+
+namespace OpenCAGE.MCP
+{
+    /// <summary>
+    /// The game and the editor around the level: closing the game, how it is launched (Launch Game window),
+    /// which installs OpenCAGE knows (Manage Game Directories), the editor's Options menu, the runtime utils
+    /// link to a running game, and (where built in) the mod manager.
+    /// </summary>
+    internal static class McpLevelTools
+    {
+        public static IEnumerable<McpTool> Tools()
+        {
+            yield return new McpTool()
+            {
+                Name = "close_game",
+                Title = "Close the game",
+                Description = "Close Alien: Isolation if it is running, as OpenCAGE does before a save or launch: this install's AI.exe (the game of another install is left running, and listed), and any Cinematic Tools injector an older OpenCAGE left waiting. Unsaved game progress is lost; Live Link disconnects. Changes nothing on disk.",
+                Destructive = true,
+                Idempotent = true,
+                Run = call =>
+                {
+                    List<string> closed = CloseGame();
+                    JObject result = new JObject() { ["closed"] = new JArray(closed), ["was_running"] = closed.Count != 0 };
+                    List<string> others = EditorUtils.GameProcesses(false);
+                    if (others.Count != 0)
+                    {
+                        result["left_running"] = new JArray(others);
+                        call.Note("An AI.exe that is not this install's game (" + Singleton.PathToAI + ") was left running.");
+                    }
+                    return result;
+                },
+            };
+
+            yield return new McpTool()
+            {
+                Name = "launch_options",
+                Title = "Game launch options",
+                Description = "Read or set the Launch Game window's options. Its Debug tools (debug_menu and dont_write_saves, debug_entities, hot_reload, live_link) and unlock_mouse, cap_fps and possess_characters are editor settings launch_game applies (the runtime utils ASI and its config). Cinematic Tools are gone: the Debug Menu's Cinematic group has their free camera, camera tracks and visuals (cinematic_tools: true is taken as debug_menu: true). AI.exe patches (no_ui, patch_current_gen_optimisations, render_constant_ambient) are written to the game at once and again at every launch_game; the title screen is skipped whenever a level is launched, never at the menu (skip_frontend is implied, not an option). UI mods (debug_checkpoints, level_selection, debug_loadscreen, quit_to_menu_on_death) put OpenCAGE's version of a movie in DATA/UI.PAK, written when the setting changes or UI.PAK holds the other movie (as after verifying the game files) - a movie edited with edit_ui_pak is kept unless reapply. Options Launch Game no longer has (ui_memory_overlay, memory_logging; and the four old debug entity names, taken as debug_entities) are still accepted: a note says where each went, and launches put what they left in the game files back off. For every level; not undoable. No option given: report them, with which movie UI.PAK holds (ui_pak_movies). dry_run checks without writing.",
+                InputSchema = McpSchema.Object(LaunchOptionProps().ToArray()),
+                Idempotent = true,
+                Run = LaunchOptions,
+            };
+
+            yield return new McpTool()
+            {
+                Name = "game_directories",
+                Title = "Game installs",
+                Description = "The Alien: Isolation installs OpenCAGE knows (Options > Manage Game Directories): list them, register another (an absolute folder or AI.exe path), set the default OpenCAGE opens at its next start, or open one in a second OpenCAGE window for the user (as the window's Open In Editor). Saved in OpenCAGE's settings at once; the install open here does not change, and these tools keep working on this editor, not the second one.",
+                InputSchema = McpSchema.Object(
+                    McpSchema.String("action", "list (default), register, set_default, or open.", options: new[] { "list", "register", "set_default", "open" }),
+                    McpSchema.String("path", "register / set_default / open: the install folder (or its AI.exe), as an absolute path.")),
+                Run = GameDirectories,
+            };
+
+            yield return new McpTool()
+            {
+                Name = "editor_options",
+                Title = "Editor options",
+                Description = "Read or change the editor's preferences from the Options menu (Composite Display, Entity Display, Save/Build, Misc, Dark Mode, numeric step) through the menu's own setters, or reset the UI layout. Saved in OpenCAGE's settings at once; not undoable; nothing in the game or level changes. No argument: report them.",
+                InputSchema = McpSchema.Object(EditorOptionProps().ToArray()),
+                Idempotent = true,
+                Run = EditorOptions,
+            };
+
+            yield return new McpTool()
+            {
+                Name = "runtime_utils",
+                Title = "Live Link to the game",
+                Description = "Live Link to a running game (the toolbar's Live Link button, ws://127.0.0.1:8765, served by the runtime utils ASI when the game is launched with launch_options live_link on - which also connects by itself): status, connect, disconnect; game_status (is a level running, which, where the game camera is and faces - world space, for placing new entities in view - and camera_sync, whether it is following the viewport's camera: set_viewport_view live_link_camera 'viewport_to_game'); push a composite's scripting into the running level (entities added/removed/re-parameterised in every running instance, no reload); call_method on an entity (e.g. start); animate a CAGEAnimation in the running game as Animation Mode's In game does (the game holds it at 'time', or plays it, evaluating every track itself - no level data changes; it keeps it until release, Animation Mode takes the drive over, or OpenCAGE disconnects; get reports it, and game_status too); describe a composite's running instances; screenshot the game; load_level; activity - the composite display's Show Activity, which lights up the open composite's flowgraph links as the running game uses them (a logic link when its entity fires the output, a data link when its value is read or sent out through it) and counts how often each output fired and each method was called (shown beside the pins); in the instance navigated to from the root, or every instance when opened from the browser: mode on/off switches it (a saved setting; off stops the game tracing), clear forgets what has lit up and the counts (as Clear Activity), get (default) reports what is watched, every link used since the last clear - from and to (entity name and id, pin; the way the value went for a data link: from the entity it was read from or sent by, to the entity that read it or it was sent to), kind logic/data, direction read/write (data links: the last use), count, seconds_since_last and glowing (used within the last 1.5 s) - and pins: every output fired (side fired) and method called (side called), with entity, id, pin, count and seconds_since_last; settings - read or change, in the running game, the numbers of its radiosity, skin and hair shading, selection overlay glow and global constants settings files (any level, until it next loads one), or have it read its AI config folders again (alien_configs, difficulty_settings, viewcones: read otherwise only when the game starts; needs the game's Debug Menu on). The game must be running the level open here, as saved - push sends edits made since. The 3D viewport draws no lighting: to see a light edit, push it, call_method its 'refresh' (lights take new values on refresh), then screenshot. Where the player is: game_status' camera position, which check_zones near turns into the zones there. Saving the level closes the game. debugger: script breakpoints in the running game - set one on an entity and the level's scripts (and the game) stop when one of its methods is about to be called; state says where and why, continue and step go on; pick finds the entity under the game's crosshair; states reads the live state flags of a composite instance's entities.",
+                InputSchema = McpSchema.Object(
+                    McpSchema.String("action", "status (default), connect, disconnect, game_status, push, call_method, animate, describe, screenshot, load_level, activity, settings, debug_menu, or debugger.", options: new[] { "status", "connect", "disconnect", "game_status", "push", "call_method", "animate", "describe", "screenshot", "load_level", "activity", "settings", "debug_menu", "debugger" }),
+                    McpSchema.String("menu", "debug_menu: what to do with the game's Debug Menu (the game launched with launch_options debug_menu on) - report (default: open or not, the tab in front, the selected character, the tabs and every switch), open, close, tab (bring the tab named by 'name' to the front), select (select the character whose name contains 'name'), set (set the switch 'name' to 'value'), value (set the value 'name' to 'number'), or run (run the command 'name' with 'argument' and return what it answers; the command help lists them all). Screenshot to see it: the window and its overlays are in the game's frame.", options: new[] { "report", "open", "close", "tab", "select", "set", "value", "run" }),
+                    McpSchema.String("name", "debug_menu: the tab (or group), the character, the switch, the value or the command (as the report lists it)."),
+                    McpSchema.Boolean("value", "debug_menu set: the switch's new state."),
+                    McpSchema.Number("number", "debug_menu value: the value's new number (kept within its range)."),
+                    McpSchema.String("argument", "debug_menu run: the text the command takes (see help)."),
+                    McpSchema.String("file", "settings: which of the game's settings files - radiosity (DATA\\RADIOSITY_SETTINGS.TXT), skin_shading, hair_shading, selection_overlay (DATA\\UI\\SELECTIONOVERLAYPARAMS.BIN, the glow round usable things) or global_constants (DATA\\GLOBALCONSTANTS.BML's stealth light meter, interaction distance, squad shot and suspicious item numbers); or one of the AI config folders the game reads only when it starts - alien_configs (DATA\\ALIENCONFIGS), difficulty_settings (DATA\\DIFFICULTYSETTINGS), viewcones (DATA\\VIEW_CONE_SETS) or ai_configs (all three) - which the running game then reads again from the files as saved, and has its characters take up (no values; needs the game's Debug Menu on: the Alien Configs, Difficulty Settings and Viewcones editors do this after each edit).", options: SettingsFiles.Keys.Concat(ReloadableConfigFolders.Keys)),
+                    McpSchema.Map("values", "settings: numbers to set in the running game, keyed as the file spells them (e.g. {\"gRadiosityEmissiveSurfaceScale\": 16}); they show from the game's next frame and last until it next loads a level, when it reads the file again - the file itself is not changed (its config editor writes it, and sends each change to the game while Live Link is connected). Without values: what the game holds for every key of the file now."),
+                    McpSchema.String("level", "load_level: the level, as list_levels names it ('menu' for the frontend)."),
+                    McpSchema.String("composite", "push, call_method, animate, describe: the composite (default: the one open in the editor); activity: must be the one open (activity is shown on the open composite)."),
+                    McpSchema.String("mode", "activity: on, off, clear, or get (default).", options: new[] { "on", "off", "clear", "get" }),
+                    McpSchema.Integer("limit", "activity get: at most this many links, and this many pins, most recently used first (default 200)."),
+                    McpSchema.String("entity", "call_method: the entity to call; animate: the CAGEAnimation - in that composite (name or id)."),
+                    McpSchema.String("method", "call_method: the method pin to call, e.g. start, stop, trigger."),
+                    McpSchema.Any("instance_path", "call_method, animate: the composite instance entities (ids or names; an array, a string split on '/', or a path a result gives) from the level's root down to the placement of the composite to call in (animate: the placement to drive); checked against the script first. Default: the path the open composite was reached through from the root, else every running instance of the composite."),
+                    McpSchema.Number("time", "animate: seconds into the animation to hold it at, or play it from (the game keeps it just short of its end)."),
+                    McpSchema.Boolean("play", "animate: play it from 'time' on the game's own clock instead of holding it."),
+                    McpSchema.Boolean("loop", "animate with play: go round again from the start rather than ending."),
+                    McpSchema.Boolean("events", "animate with play: run the event tracks the play passes over, which reach the level's scripts (a hold never runs them)."),
+                    McpSchema.Boolean("release", "animate: give the game its animation back."),
+                    McpSchema.Boolean("get", "animate: only report the drive and what the game does with it."),
+                    McpSchema.String("path", "screenshot: an absolute path for the .bmp."),
+                    McpSchema.String("debugger", "debugger (the game launched with launch_options live_link and debug_menu on): state (default: whether the level's scripts are held, the last breakpoint hit - entity, method, instance path, the calls that led to it - and the breakpoints), set (a breakpoint on 'entity' of 'composite': the scripts, and the game, stop when one of its method pins - or just 'method' - is about to be called; in the instance at 'instance_path', default the path the open composite was reached through, else every instance; every_instance for every one), remove (the same, 'method' for just that one), list, clear, continue, step (the held call and the rest of the calls due with it: one round), step_frame (one whole frame), pause (hold the scripts now), pick (the entity the game's crosshair is on - the Debug Menu's World > Inspect crosshair on - found in the level here and selected unless select is false) or states (the state flags of the entities of 'composite' in its running instance at 'instance_path': started, enabled, locked...).", options: McpDebugger.Ops),
+                    McpSchema.Boolean("every_instance", "debugger set/remove: the breakpoint is on the entity in every running instance of its composite."),
+                    McpSchema.Boolean("select", "debugger pick: select what the crosshair is on in the editor (default true).")),
+                Run = RuntimeUtils,
+            };
+
+            yield return new McpTool()
+            {
+                Name = "capture_environment_maps",
+                Title = "Capture environment map cubemaps in the game",
+                Description = "Capture EnvironmentMap entities' cubemaps in the running game over Live Link (the EnvironmentMap's Function button, Capture, does one; File > Recapture All Cubemaps does them all): for each, the game renders the six faces from where the entity is placed (90 degree views along +X, -X, +Y, -Y, +Z, -Z, after streaming in the zones around it, with the HUD and the lens effects - film grain, vignette, chromatic aberration, lens distortion, depth of field - off), and they are built into a cube texture shaped as the game's own (128 x 128 faces, DXT1, seven levels blurred as the game's are; or the size and format of the cubemap it replaces), imported into the level's textures as ayz\\env\\cubemaps\\level\\composite\\composite_entity.dds, and the entity's Texture set to it. The cubemap it used before is deleted when nothing else uses it (no other script names it, no material binds it, not one of GLOBAL's); movers still carrying it are given the new one. One undo step per entity. Each takes a few seconds; the game must be running the level open here, as saved, and not paused - it is moved to each point in turn and given its camera back after. The game reads cubemaps when it loads a level: save, then reload it in the game to see them there.",
+                InputSchema = McpSchema.Object(
+                    McpSchema.String("composite", "The composite holding the EnvironmentMap(s) (default: the one open in the editor)."),
+                    McpSchema.Strings("entities", "The EnvironmentMap entities in it (names or ids). Default: every EnvironmentMap in the composite."),
+                    McpSchema.Boolean("all_in_level", "Every EnvironmentMap in the level, each at the one place it is placed, as File > Recapture All Cubemaps does (any placed more than once, or not at all, is skipped and listed under skipped: capture those one at a time with instance_path)."),
+                    McpSchema.Any("instance_path", "The composite instance entities (ids or names; an array, a string split on '/') from the level's root down to the placement of the composite to capture from. Default: the path the open composite was reached through from the root, else the one place the composite is placed."),
+                    McpSchema.Integer("size", "Face size in pixels, a power of two from 16 to 1024, or 0 for the size of the cubemap it replaces, else 128 (default: Misc > Cubemap Capture Size, editor_options cubemap_capture_size, which is 0 unless changed). Bigger faces need the game's window at least as tall."),
+                    McpSchema.String("format", "The texture format (default: the format of the cubemap it replaces, else DXT1), as list_textures names formats."),
+                    McpSchema.Integer("settle_frames", "Frames the game holds each face before taking it (default 8, 4 to 120)."),
+                    McpSchema.Integer("stream_timeout_seconds", "The longest the game waits for the zones around each point to stream in (default 30)."),
+                    McpSchema.Boolean("keep_hud", "Leave the game's HUD showing."),
+                    McpSchema.Boolean("keep_post_effects", "Leave film grain, vignette, chromatic aberration, lens distortion and depth of field on."),
+                    McpSchema.Boolean("keep_old", "Keep the cubemaps the entities used before even when nothing else uses them."),
+                    McpSchema.String("faces_folder", "An absolute folder to keep the six faces the game took in, as PNGs (posx.png, negx.png, posy.png, negy.png, posz.png, negz.png; in a subfolder per entity when there are several).")),
+                Run = CaptureEnvironmentMaps,
+            };
+
+            yield return new McpTool()
+            {
+                Name = "get_player_setup",
+                Title = "Get player start",
+                Description = "How the open level starts the player: its spawn points (instances of Archetypes\\Script\\Mission\\SpawnPositionSelect, with world position and rotation and spawn_on_reset - the one with it true is where a fresh start puts the player), checkpoints, the player Character and the display model it wears, and the entities that set up the player's loadout and state (WEAPON_GiveToPlayer, AddToInventory, RemoveWeaponsFromPlayer, CHR_SetHealth, SetPlayerHasKeycard, SetPlayerHasGatingTool...) with their values and what triggers them. Also the config records that shape the player and are shared by every level (get_config_record). set_player_start moves the start.",
+                InputSchema = McpSchema.Object(McpSchema.Limit(50, "entities of each kind")),
+                ReadOnly = true,
+                Idempotent = true,
+                Run = call => McpEditor.UI(() => PlayerSetup(call)),
+            };
+
+            yield return new McpTool()
+            {
+                Name = "set_player_start",
+                Title = "Set player start",
+                Description = "Choose where a fresh start of the open level puts the player, as one undo step: spawn names a placed SpawnPositionSelect (its instance path from the root, as get_player_setup lists it), or position + rotation places a new one there (in 'into', default the root: world space). Its spawn_on_reset is set true and every other SpawnPositionSelect instance's false. The level needs SpawnPositionSelect (port_composites it, with the player's display models, from a campaign level). Then save_level; launch_game starts there.",
+                InputSchema = McpSchema.Object(
+                    McpSchema.Any("spawn", "An existing spawn: the instance entities (names or ids) from the root down to the SpawnPositionSelect instance - an array, a string split on '/', or the path get_player_setup gives it."),
+                    McpSchema.Position("position", "A new spawn's position, in 'into's space."),
+                    McpSchema.Rotation("rotation", "A new spawn's rotation (the player faces its +Z: yaw is the heading)."),
+                    McpSchema.String("into", "Where a new spawn goes. " + McpSchema.CompositeDefaultRoot),
+                    McpSchema.String("name", "A new spawn's name (default numbered).")),
+                Run = SetPlayerStart,
+            };
+
+#if ENABLE_MOD_PACKAGES
+            yield return new McpTool()
+            {
+                Name = "mods",
+                Title = "Mod manager",
+                Description = "The mod manager: list the library, import an .omp package, remove one, apply (the enabled mods, in priority order, restoring everything else to how it is without mods - mods changing the same file are combined: configs and behaviour trees value by value, text string by string, PAKs entry by entry, a level entity by entity and then rebuilt; where two change the same thing the later wins and it's reported. The user's own changes to files no mod had changed are the starting point mods are combined onto, and come back when the mods are removed. A replacement mod (export installs: replace) is never combined: it goes in exactly as made, setting the user's own changes to what it changes aside until it's off, and apply refuses to have it on with any other mod changing the same level or file), repair, recover an interrupted apply, or export changed files as an .omp (a release for the mod manager; export_composite_package's .ocp is composites to import into a level instead). Game files are rewritten at once; not undoable. dry_run reports the clashes first, and files changed since the mods were installed (which apply refuses to replace until told keep or discard). Afterwards OpenCAGE loads again whatever it has open that changed - the open level, the animations, the global textures and text (listed as reloaded); apply, repair and recover refuse while the open level or the animations have changes not saved in files they may change, unless discard_unsaved.",
+                InputSchema = McpSchema.Object(
+                    McpSchema.String("action", "list (default), import, remove, apply, repair, recover, or export.", options: new[] { "list", "import", "remove", "apply", "repair", "recover", "export" }),
+                    McpSchema.String("path", "import: the .omp package; export: where to write it. An absolute path."),
+                    McpSchema.String("id", "remove: the mod's id (from list)."),
+                    McpSchema.Strings("enabled", "apply: the ids of the mods to have enabled, lowest priority first (default: those enabled now, in the list's order - which can have been changed since they were applied: list's order_not_applied)."),
+                    McpSchema.Boolean("adopt_current_files", "apply: take files that are neither vanilla nor stored as their restore point instead of refusing."),
+                    McpSchema.String("edited_files", "apply: files installed mods had changed that were changed again since - keep (as a new mod at the end of the list) or discard. Without it apply refuses while there are any.", options: new[] { "keep", "discard" }),
+                    McpSchema.Boolean("discard_unsaved", "apply/repair/recover: go ahead even though the open level or the animations have changes not saved yet in files this may change - they're lost when OpenCAGE loads the files again afterwards (save them first instead: save_level, and the animation tools' writes)."),
+                    McpSchema.String("name", "export: the mod's name."),
+                    McpSchema.String("author", "export: its author."),
+                    McpSchema.String("version", "export: its version (default 1.0)."),
+                    McpSchema.String("description", "export: its description."),
+                    McpSchema.String("installs", "export: how it installs - combine (default: combined with other mods and the player's own changes to the same levels and files) or replace (a replacement mod: installed exactly as made - whole levels, whole config files, nothing rebuilt - and apply refuses to have it on with any other mod changing the same level or file).", options: new[] { "combine", "replace" }),
+                    McpSchema.Strings("levels", "export: only changed files of these levels (as list_levels names them; custom levels and a Nostromo level's _PATCH folder included)."),
+                    McpSchema.Strings("files", "export: only these changed files, as game-relative paths (e.g. DATA/ENV/PRODUCTION/X/WORLD/COMMANDS.PAK). A copy of one of the game's own files where the game doesn't use it (a folder renamed and put back, a backup) is no change and only goes in when named here."),
+                    McpSchema.Strings("include_shared", "export with levels/files: also changed files every level shares - text (DATA/TEXT), configs, ui (UI.PAK), animation (ANIMATION.PAK, which holds its tree layouts too), all, or game-relative paths."),
+                    McpSchema.Boolean("include_configs", "export: include changed config values (default true) - the .BML configs, and settings .XML files outside the levels such as ENGINE_SETTINGS.XML (each setting's quality level on its own) and INPUT.XML."),
+                    McpSchema.Integer("limit", "list/export: at most this many entries in the report (default 100)."),
+                    McpSchema.Boolean("dry_run", "Report what would happen, changing nothing.")),
+                Destructive = true,
+                Run = Mods,
+            };
+#endif
+        }
+
+        #region Game
+        /// <summary>Close this install's game (and any old Cinematic Tools injector) as the Launch Game window does; what was running ("AI.exe (path)", names).</summary>
+        internal static List<string> CloseGame()
+        {
+            return global::OpenCAGE.LaunchGame.CloseGameAndOldInjector();
+        }
+
+        /// <summary>Whether a process runs: for "AI", this install's game only (an AI.exe of another install does not hold these files).</summary>
+        internal static bool ProcessRunning(string name)
+        {
+            if (string.Equals(name, "AI", StringComparison.OrdinalIgnoreCase))
+                return EditorUtils.ThisInstallsGameRunning();
+            Process[] found = Process.GetProcessesByName(name);
+            foreach (Process process in found) process.Dispose();
+            return found.Length != 0;
+        }
+
+        /// <summary>The name ApplyPatchSettings gives the title screen skip when it could not be written (launch_options' old option).</summary>
+        internal const string SkipFrontendArg = "skip_frontend";
+
+        /// <summary>
+        /// The launch_options AI.exe patches as they are set, written at every launch_game: a verified or replaced AI.exe has
+        /// lost them, and the setting is what launch_options reports. The patches of options Launch Game no longer has (the UI
+        /// memory overlay, memory logging) are written off, so one an older OpenCAGE left on goes (best effort: not listed when
+        /// that fails). skipFrontend is the title screen skip, which goes with the level a launch starts in - true into a level,
+        /// false at the menu - and null leaves it as the last launch wrote it. Also the file integrity check and popup patches
+        /// every launch needs. Returns what could not be written.
+        /// </summary>
+        internal static List<string> ApplyPatchSettings(PatchManager.Platform platform, bool? skipFrontend)
+        {
+            List<string> failed = new List<string>();
+            if (!PatchManager.PatchFileIntegrityCheck(platform, Singleton.PathToAI)) failed.Add("file integrity check");
+            if (!PatchManager.PatchPopupMessage(platform, Singleton.PathToAI)) failed.Add("popup message");
+            foreach (LaunchOption option in LaunchOptionList.Where(o => o.Kind == KindPatch))
+                if (!option.Patch(platform, Singleton.PathToAI, SettingsManager.GetBool(option.Key, option.Default)))
+                    failed.Add(option.Arg);
+            foreach (RemovedOption removed in RemovedOptionList.Where(o => o.PatchOff != null))
+                removed.PatchOff(platform, Singleton.PathToAI, false);
+            if (skipFrontend != null && !PatchManager.PatchSkipFrontendFlag(platform, Singleton.PathToAI, skipFrontend.Value))
+                failed.Add(SkipFrontendArg);
+            return failed;
+        }
+
+        /// <summary>The AI.exe patches launch_game would write, by launch_options name (skip_frontend: the title screen skip
+        /// that goes with the level; the removed options' patches: written off).</summary>
+        internal static JObject PatchSettings(bool skipFrontend)
+        {
+            JObject patches = new JObject();
+            foreach (LaunchOption option in LaunchOptionList.Where(o => o.Kind == KindPatch))
+                patches[option.Arg] = SettingsManager.GetBool(option.Key, option.Default);
+            patches[SkipFrontendArg] = skipFrontend;
+            foreach (RemovedOption removed in RemovedOptionList.Where(o => o.PatchOff != null))
+                patches[removed.Arg] = false;
+            return patches;
+        }
+        #endregion
+
+        #region Launch options
+        private sealed class LaunchOption
+        {
+            //Label: the Launch Game window's own name for it
+            public string Arg, Key, Kind, Label, Description;
+            //AI.exe patches: writes the patch (true) or the original bytes (false)
+            public Func<PatchManager.Platform, string, bool, bool> Patch;
+            //What it is when never set: the current-gen patch is one every launch made (the recommended patches)
+            public bool Default;
+        }
+
+        private const string KindHelper = "helper", KindPatch = "patch", KindUiMod = "ui_mod";
+
+        //The scripting helpers that have a choice beside them (a key, a frame rate), and the option for it (listed beside them)
+        private sealed class KeyOption
+        {
+            public string Arg, Helper, Key, What;
+            public Func<string> Current;
+            //What it takes: the helper keys unless given
+            public string[] Options = global::OpenCAGE.LaunchGame.HelperKeys;
+        }
+
+        private static readonly KeyOption[] KeyOptionList =
+        {
+            new KeyOption() { Arg = "hot_reload_key", Helper = "hot_reload", Key = Settings.ScriptingHelpersHotReloadKey, What = "hot reload key", Current = global::OpenCAGE.LaunchGame.HotReloadKey },
+            new KeyOption() { Arg = "unlock_mouse_key", Helper = "unlock_mouse", Key = Settings.ScriptingHelpersUnlockMouseKey, What = "unlock mouse key", Current = global::OpenCAGE.LaunchGame.UnlockMouseKey },
+            new KeyOption() { Arg = "cap_fps_rate", Helper = "cap_fps", Key = Settings.ScriptingHelpersCapFpsRate, What = "Cap FPS frame rate (frames a second)", Current = global::OpenCAGE.LaunchGame.CapFpsRate, Options = global::OpenCAGE.LaunchGame.CapFpsRates },
+            new KeyOption() { Arg = "possess_key", Helper = "possess_characters", Key = Settings.PossessCharactersKey, What = "key that opens the Possess Characters menu", Current = global::OpenCAGE.LaunchGame.PossessKey },
+            new KeyOption() { Arg = "debug_menu_key", Helper = "debug_menu", Key = Settings.DebugMenuKey, What = "key that opens the Debug Menu", Current = global::OpenCAGE.LaunchGame.DebugMenuKey },
+        };
+
+        private static readonly LaunchOption[] LaunchOptionList =
+        {
+            //Debug tools
+            new LaunchOption() { Arg = "debug_menu", Key = Settings.DebugMenu, Kind = KindHelper, Default = true, Label = "Debug Menu", Description = "Debug tools > Debug Menu: in game, debug_menu_key opens a window of debug views - the characters (state, suspicion, senses, view cones, paths, targets), their behaviour trees (running nodes, debug texts, the trees' debug switches), the player's light level, the alien's menace, rendering and radiosity switches, the UI memory overlay (Performance > Memory), debug checkpoints (Game > Tools), loading any level (Game > Game flow) and more; its overlays keep drawing over the game once it is closed. Its Cinematic group replaces Cinematic Tools (the free camera, camera tracks and visuals for filming). runtime_utils action debug_menu drives it." },
+            new LaunchOption() { Arg = "dont_write_saves", Key = Settings.DontWriteSaves, Kind = KindHelper, Label = "Don't write saves", Description = "Debug tools > Don't write saves (under Debug Menu): the game writes nothing to the player's saved games while it runs (its saves, progress and settings), so testing never changes them; the Debug Menu can switch it in game (switch game.dont_write_saves). A Debug Menu feature: it only takes effect with debug_menu on (launch_game writes DontWriteSaves=1 to the runtime utils config only then)." },
+            new LaunchOption() { Arg = "debug_entities", Key = Settings.DebugEntities, Kind = KindHelper, Default = true, Label = "Debug entities", Description = "Debug tools > Debug entities: debug script entities work in game, with or without the Debug Menu - DebugText and DebugTextStacking draw their text on screen, DebugEnvironmentMarker its text at a place in the world, DebugPositionMarker axes there, DebugGraph plots its inputs, DebugObjectMarker names its marked object, DebugCaptureScreenShot saves a screenshot when triggered, and DebugMenuToggle sets Debug Menu switches (with debug_menu on). One switch for all eight (debug_text, debug_text_stacking, debug_environment_marker and debug_position_marker are old names for it)." },
+            new LaunchOption() { Arg = "hot_reload", Key = Settings.ScriptingHelpersHotReload, Kind = KindHelper, Label = "Hot reload", Description = "Debug tools > Hot reload: reload the current level in game with a key press (hot_reload_key)." },
+            new LaunchOption() { Arg = "live_link", Key = Settings.ScriptingHelpersLiveLink, Kind = KindHelper, Default = true, Label = "Live Link", Description = "Debug tools > Live Link: the game serves Live Link, and OpenCAGE connects to it by itself once the game is up (runtime_utils) - script edits reach the running level without a reload, entity methods can be called, and the viewport's camera and the game's can follow each other (set_viewport_view live_link_camera)." },
+            new LaunchOption() { Arg = "error_log", Key = Settings.ErrorLog, Kind = KindHelper, Label = "Error log", Description = "Debug tools > Error log (under Live Link): the game notes its script errors and failed checks of script entities, and OpenCAGE's Error Log window opens as it is launched and lists them as they happen (double-click one to go to its entity; flowgraph nodes of entities with errors show a warning sign while it is open). Only with live_link on (launch_game writes ScriptErrors=1 to the runtime utils config only then); the Debug Menu's Scripts > Errors tab shows the same errors in game." },
+            //Game options
+            new LaunchOption() { Arg = "render_constant_ambient", Key = Settings.RenderConstantAmbient, Kind = KindPatch, Patch = PatchManager.PatchRenderConstantAmbientFlag, Label = "Constant ambient lighting", Description = "Game options > Constant ambient lighting, an AI.exe patch: the game renders in constant ambient mode, every surface evenly lit (essentially full-bright)." },
+            new LaunchOption() { Arg = "no_ui", Key = Settings.HudDisabled, Kind = KindPatch, Patch = PatchManager.PatchNoUIFlag, Label = "No HUD", Description = "Game options > No HUD, an AI.exe patch: no HUD or UI popups (clean screenshots; some actions that need a popup become impossible)." },
+            new LaunchOption() { Arg = "patch_current_gen_optimisations", Key = Settings.PatchCurrentGen, Kind = KindPatch, Patch = PatchManager.DisableCurrentGenOptimisations, Default = true, Label = "Current-gen script fixes", Description = "Game options > Current-gen script fixes, an AI.exe patch: disable the current-gen script optimisations, so script functionality the PC build left off (such as additional dynamic lighting) runs (on unless switched off: edited levels need it)." },
+            new LaunchOption() { Arg = "cap_fps", Key = Settings.ScriptingHelpersCapFps, Kind = KindHelper, Default = true, Label = "Cap FPS", Description = "Game options > Cap FPS: the game runs at most cap_fps_rate frames a second. Its clock never moves on less than 1/360 s a frame, so above 360 fps (a near-empty level with V-Sync off) the whole game runs too fast; this keeps it at its proper speed." },
+            new LaunchOption() { Arg = "unlock_mouse", Key = Settings.ScriptingHelpersUnlockMouse, Kind = KindHelper, Default = true, Label = "Unlock mouse", Description = "Game options > Unlock mouse: the game leaves the mouse cursor free, so OpenCAGE can be used beside it (e.g. with Live Link's camera sync). Clicking the game window and pressing unlock_mouse_key gives the game the mouse to look around with; pressing it again frees the cursor." },
+            new LaunchOption() { Arg = "possess_characters", Key = Settings.PossessCharacters, Kind = KindHelper, Label = "Possess characters", Description = "Game options > Possess characters: in game, possess_key opens a menu of the characters the game runs (the one in view first, then the nearest); picking one takes control of it - W/A/S/D move it relative to the camera, Shift faster, Ctrl slower, C crouches, the mouse turns the camera behind it and its wheel moves the camera closer or further (1.5 to 10 m)." },
+            //UI tweaks
+            new LaunchOption() { Arg = "debug_checkpoints", Key = Settings.UiModPauseMenu, Kind = KindUiMod, Label = "Debug Checkpoints (in Pause Menu)", Description = "UI tweaks > Debug Checkpoints (in Pause Menu), a UI mod (UI.PAK): the level's debug checkpoints listed in the pause menu, to jump to (the Debug Menu's Game > Tools has them too)." },
+            new LaunchOption() { Arg = "level_selection", Key = Settings.UiModNewFrontendMenu, Kind = KindUiMod, Label = "Level Select (in Main Menu)", Description = "UI tweaks > Level Select (in Main Menu), a UI mod (UI.PAK): a level selection in the main menu, custom levels included (the Debug Menu's Game > Game flow loads levels too)." },
+            new LaunchOption() { Arg = "debug_loadscreen", Key = Settings.UiModLoadingScreen, Kind = KindUiMod, Label = "Quicker Loadscreen", Description = "UI tweaks > Quicker Loadscreen, a UI mod (UI.PAK): OpenCAGE's quicker loading screen, which shows the name of the level being loaded." },
+            new LaunchOption() { Arg = "quit_to_menu_on_death", Key = Settings.UiModGameOverMenu, Kind = KindUiMod, Label = "Quit Option On Deathscreen", Description = "UI tweaks > Quit Option On Deathscreen, a UI mod (UI.PAK): a Quit To Menu option on the game-over screen." },
+        };
+
+        //launch_options' old Cinematic Tools switch, still taken: Cinematic Tools are the Debug Menu's Cinematic group now, so true asks for debug_menu
+        private const string DeprecatedCinematicTools = "cinematic_tools";
+
+        //launch_options' names for the four debug entity switches Launch Game had until 22 Oct 2026, still taken as debug_entities
+        private static readonly string[] DebugEntityAliases = { "debug_text", "debug_text_stacking", "debug_environment_marker", "debug_position_marker" };
+
+        //The options Launch Game dropped on 22 Oct 2026: still taken, changing nothing, with where each went. Their AI.exe patches
+        //are written off at every launch (ApplyPatchSettings). (debug_checkpoints and level_selection were dropped too, then
+        //brought back on 25 Oct as UI tweaks again.)
+        private sealed class RemovedOption
+        {
+            public string Arg, Went;
+            public Func<PatchManager.Platform, string, bool, bool> PatchOff;
+        }
+
+        private static readonly RemovedOption[] RemovedOptionList =
+        {
+            new RemovedOption() { Arg = "ui_memory_overlay", PatchOff = PatchManager.PatchUIPerfFlag,
+                Went = "the UI memory overlay is part of the Debug Menu now (Performance > Memory, with debug_menu on); launches write the old AI.exe patch off." },
+            new RemovedOption() { Arg = "memory_logging", PatchOff = PatchManager.PatchMemReplayLogFlag,
+                Went = "memory replay logging is gone; launches write the old AI.exe patch off." },
+        };
+
+        /// <summary>The launch_options name of a launch option's setting (a scripting helper's, say), or the setting's own name.</summary>
+        internal static string LaunchOptionArg(string settingKey) => LaunchOptionList.FirstOrDefault(o => o.Key == settingKey)?.Arg ?? settingKey;
+
+        private static IEnumerable<McpSchema.Prop> LaunchOptionProps()
+        {
+            foreach (LaunchOption option in LaunchOptionList)
+            {
+                yield return McpSchema.Boolean(option.Arg, option.Description);
+                foreach (KeyOption key in KeyOptionList.Where(o => o.Helper == option.Arg))
+                    yield return McpSchema.String(key.Arg, option.Label + ": the " + key.What + ".", options: key.Options);
+            }
+            yield return McpSchema.Boolean(DeprecatedCinematicTools, "Deprecated: Cinematic Tools are part of the Debug Menu now (its Cinematic group). true is taken as debug_menu: true (unless debug_menu is given too); false changes nothing.");
+            foreach (string alias in DebugEntityAliases)
+                yield return McpSchema.Boolean(alias, "Deprecated: an old name for debug_entities (the four debug entity switches are one now). Any of them true turns debug_entities on, all of those given false turn it off; debug_entities decides when given too.");
+            yield return McpSchema.Boolean(SkipFrontendArg, "Deprecated, ignored: skipping the title screen is implied by the level - a launch into a level always skips it, one at the main menu never does.");
+            foreach (RemovedOption removed in RemovedOptionList)
+                yield return McpSchema.Boolean(removed.Arg, "Removed from Launch Game, changes nothing: " + removed.Went);
+            yield return McpSchema.Boolean("reapply", "UI mods given: apply them even when they look applied, and put OpenCAGE's own movie back over one edited with edit_ui_pak. A UI mod adds OpenCAGE's movie to UI.PAK beside the game's own (DATA/UI/GAMEOVERM_OC.GFX and the like) and points AI.exe at it; the game's movies are never changed. Without reapply it is applied when its setting changes or the game files don't match it (as after verifying them), and an edited OpenCAGE movie is left alone.");
+            yield return McpSchema.Boolean("close_game", "If the game is running, close it first so AI.exe / UI.PAK can be written (default false: refuse while it runs).");
+            yield return McpSchema.Boolean("dry_run", "Check and report what would change, writing nothing.");
+        }
+
+        /// <summary>
+        /// Where a UI mod stands on disk (see UiMovieOverrides): "on" (OpenCAGE's movie is in UI.PAK beside the game's and AI.exe
+        /// points at it), "off", "partly" (one without the other - a verify of the game files resets both), or "edited" (OpenCAGE's
+        /// entry holds something else); null when UI.PAK has no such movie at all.
+        /// </summary>
+        internal static string UiMovieState(PAK2 pak, string file)
+        {
+            UiMovieOverrides.Movie movie = UiMovieOverrides.Find(file);
+            if (movie == null || !pak.Entries.Any(o => string.Equals(o.Filename, movie.OriginalEntry, StringComparison.OrdinalIgnoreCase))) return null;
+            return UiMovieOverrides.State(pak, Singleton.PathToAI, movie);
+        }
+
+        /// <summary>The UI mod a UI.PAK path belongs to (its launch_options name), or null.</summary>
+        internal static string UiModOf(string pakPath)
+        {
+            string path = (pakPath ?? "").Replace('\\', '/').TrimStart('/');
+            LaunchOption option = LaunchOptionList.FirstOrDefault(o => o.Kind == KindUiMod && string.Equals(path, UiMovieOverrides.Find(o.Key)?.OriginalEntry, StringComparison.OrdinalIgnoreCase));
+            return option?.Arg;
+        }
+
+        private static JObject LaunchOptionState()
+        {
+            JObject state = new JObject();
+            foreach (LaunchOption option in LaunchOptionList)
+            {
+                state[option.Arg] = SettingsManager.GetBool(option.Key, option.Default);
+                foreach (KeyOption key in KeyOptionList.Where(o => o.Helper == option.Arg))
+                    state[key.Arg] = key.Current();
+            }
+            return state;
+        }
+
+        private static object LaunchOptions(McpCall call)
+        {
+            bool dryRun = call.Bool("dry_run");
+            PatchManager.Platform platform = Singleton.Platform;
+            JObject before = LaunchOptionState();
+
+            //What was asked for, checked before anything is written
+            List<KeyValuePair<LaunchOption, bool>> asked = new List<KeyValuePair<LaunchOption, bool>>();
+            foreach (LaunchOption option in LaunchOptionList)
+                if (call.Has(option.Arg))
+                    asked.Add(new KeyValuePair<LaunchOption, bool>(option, call.Bool(option.Arg)));
+            //cinematic_tools (deprecated): Cinematic Tools are the Debug Menu's Cinematic group now, so true asks for the Debug Menu
+            if (call.Has(DeprecatedCinematicTools))
+            {
+                bool wanted = call.Bool(DeprecatedCinematicTools);
+                bool debugMenuGiven = call.Has("debug_menu");
+                if (wanted && !debugMenuGiven)
+                    asked.Add(new KeyValuePair<LaunchOption, bool>(LaunchOptionList.First(o => o.Arg == "debug_menu"), true));
+                call.Note("cinematic_tools is deprecated: Cinematic Tools are part of the Debug Menu now, whose Cinematic group has their free camera, camera tracks and visuals. " +
+                    (!wanted ? "cinematic_tools: false changes nothing (debug_menu: false switches the Debug Menu off)." : debugMenuGiven ? "debug_menu was given too, so it decides." : "It was taken as debug_menu: true."));
+            }
+            //The four debug entity switches are one now: any of their old names true turns debug_entities on, all of those given
+            //false off - unless debug_entities is given too, which decides
+            List<string> aliases = DebugEntityAliases.Where(o => call.Has(o)).ToList();
+            if (aliases.Count != 0)
+            {
+                bool wanted = aliases.Any(o => call.Bool(o));
+                string named = string.Join(", ", aliases) + (aliases.Count == 1 ? " is an old name" : " are old names") + " for debug_entities: DebugText, DebugTextStacking, DebugEnvironmentMarker and DebugPositionMarker entities are one switch now (Launch Game's Debug entities). ";
+                if (call.Has("debug_entities"))
+                    call.Note(named + "debug_entities was given too, so it decides.");
+                else
+                {
+                    asked.Add(new KeyValuePair<LaunchOption, bool>(LaunchOptionList.First(o => o.Arg == "debug_entities"), wanted));
+                    call.Note(named + "Taken as debug_entities: " + (wanted ? "true" : "false") + ".");
+                }
+            }
+            if (call.Has(SkipFrontendArg))
+                call.Note("skip_frontend is no longer an option and was ignored: it is implied by the level - a launch into a level skips the title screen (Launch Game's Load straight into, or launch_game with a level), one at the main menu does not.");
+            foreach (RemovedOption removed in RemovedOptionList.Where(o => call.Has(o.Arg)))
+                call.Note(removed.Arg + " was removed from Launch Game and changes nothing: " + removed.Went);
+            List<KeyValuePair<KeyOption, string>> keys = new List<KeyValuePair<KeyOption, string>>();
+            foreach (KeyOption key in KeyOptionList.Where(o => call.Has(o.Arg)))
+            {
+                string wanted = call.Str(key.Arg).Trim();
+                string named = key.Options.FirstOrDefault(o => string.Equals(o, wanted, StringComparison.OrdinalIgnoreCase))
+                    ?? throw new McpError("'" + wanted + "' is not a " + key.What + " Launch Game offers. It takes: " + string.Join(", ", key.Options) + ".");
+                keys.Add(new KeyValuePair<KeyOption, string>(key, named));
+            }
+
+            JObject result = new JObject();
+            string uiPak = Path.Combine(Singleton.PathToAI, "DATA", "UI.PAK");
+            //What UI.PAK holds for each UI mod (a verify of the game files puts the stock movies back whatever the settings say)
+            Dictionary<string, string> movies = new Dictionary<string, string>();
+            //The movies of the UI mods Launch Game no longer has that are still in the game (an older OpenCAGE put them in)
+            List<string> removedMoviesIn = new List<string>();
+            if (File.Exists(uiPak) && (asked.Any(o => o.Key.Kind == KindUiMod) || (asked.Count == 0 && keys.Count == 0)))
+            {
+                try
+                {
+                    PAK2 pak = new PAK2(uiPak);
+                    foreach (LaunchOption option in LaunchOptionList.Where(o => o.Kind == KindUiMod))
+                        movies[option.Arg] = UiMovieState(pak, option.Key);
+                    foreach (UiMovieOverrides.Movie movie in UiMovieOverrides.All.Where(o => o.Removed))
+                    {
+                        string state = UiMovieState(pak, movie.Key);
+                        if (state != null && state != "off")
+                            removedMoviesIn.Add(movie.OwnPath);
+                    }
+                }
+                catch (Exception) { }
+            }
+            if (asked.Count == 0 && keys.Count == 0)
+            {
+                result["options"] = before;
+                if (movies.Count != 0)
+                    result["ui_pak_movies"] = new JObject(movies.Select(o => new JProperty(o.Key, o.Value)));
+                List<string> differ = LaunchOptionList.Where(o => o.Kind == KindUiMod && movies.TryGetValue(o.Arg, out string state) && state != null && state != (SettingsManager.GetBool(o.Key) ? "on" : "off")).Select(o => o.Arg).ToList();
+                if (differ.Count != 0)
+                    call.Note("The game files are not as these UI mod settings say: " + string.Join(", ", differ) + " (ui_pak_movies). launch_game puts them right; passing the option again does now (reapply: true also over an edited OpenCAGE movie).");
+                if (removedMoviesIn.Count != 0)
+                    call.Note("UI.PAK still has OpenCAGE's movies for UI options Launch Game no longer has (" + string.Join(", ", removedMoviesIn) + ", from the old debug checkpoints / level selection options): the next launch takes them out.");
+                result["platform"] = platform.ToString();
+                result["scripting_helpers_available"] = global::OpenCAGE.LaunchGame.ScriptingHelpersAvailable();
+                NoteDontWriteSavesNeedsDebugMenu(call);
+                if (call.Has("close_game"))
+                    call.Note("close_game only matters when an AI.exe patch or UI mod is being changed.");
+                return result;
+            }
+
+            //AI.exe patches are re-written whenever given (cheap, and it repairs an exe that verifying the game reset);
+            //the UI mods rewrite all of UI.PAK: when their setting changes, or UI.PAK holds the other stock movie, but never
+            //over an edited movie unless reapply. Settings only when they change.
+            bool reapply = call.Bool("reapply");
+            List<KeyValuePair<LaunchOption, bool>> patches = asked.Where(o => o.Key.Kind == KindPatch).ToList();
+            List<KeyValuePair<LaunchOption, bool>> uiMods = new List<KeyValuePair<LaunchOption, bool>>();
+            foreach (KeyValuePair<LaunchOption, bool> mod in asked.Where(o => o.Key.Kind == KindUiMod))
+            {
+                movies.TryGetValue(mod.Key.Arg, out string onDisk);
+                bool settingChanges = SettingsManager.GetBool(mod.Key.Key) != mod.Value;
+                bool diskDiffers = onDisk != null && onDisk != (mod.Value ? "on" : "off");
+                UiMovieOverrides.Movie movie = UiMovieOverrides.Find(mod.Key.Key);
+                if (onDisk == "edited" && mod.Value && !reapply)
+                {
+                    call.Note("UI.PAK's " + movie.Entry + " (OpenCAGE's own " + movie.Resource + " movie) holds something else: " + mod.Key.Arg + " leaves it alone" + (settingChanges ? " and only records the setting" : "") + ". reapply: true puts OpenCAGE's movie back.");
+                    if (settingChanges && !dryRun) SettingsManager.SetBool(mod.Key.Key, mod.Value);
+                    continue;
+                }
+                if (settingChanges || diskDiffers || reapply)
+                {
+                    uiMods.Add(mod);
+                    if (onDisk == "edited")
+                        call.Note(mod.Key.Arg + " replaces what UI.PAK's " + movie.Entry + " held with OpenCAGE's movie" + (mod.Value ? "" : " - and takes it out") + ".");
+                    else if (!settingChanges && diskDiffers)
+                        call.Note(mod.Key.Arg + " was " + onDisk + " although the setting said otherwise (a verify of the game files resets AI.exe and UI.PAK): it is applied again.");
+                }
+            }
+            List<KeyValuePair<LaunchOption, bool>> helpers = asked.Where(o => o.Key.Kind == KindHelper && SettingsManager.GetBool(o.Key.Key) != o.Value).ToList();
+            List<KeyValuePair<KeyOption, string>> keyChanges = keys.Where(o => o.Value != (string)before[o.Key.Arg]).ToList();
+
+            if (patches.Count != 0 && platform != PatchManager.Platform.STEAM && platform != PatchManager.Platform.EPIC_GAMES_STORE && platform != PatchManager.Platform.GOG)
+                throw new McpError("AI.exe patches exist only for the Steam, Epic and GOG builds (this install is " + platform + "). Nothing was changed.");
+            if (uiMods.Count != 0 && !File.Exists(uiPak))
+                throw new McpError("DATA/UI.PAK is missing from this install, so the UI mods cannot be applied. Nothing was changed.");
+            if ((helpers.Any(o => o.Value) || keyChanges.Count != 0) && !global::OpenCAGE.LaunchGame.ScriptingHelpersAvailable())
+                call.Note("The Debug tools, Cap FPS, Unlock mouse and Possess characters (the runtime utils) only work with the Steam, GOG and Epic Games Store builds (and OpenCAGE's runtimeutils folder): the settings are kept, but launch_game will not install them here.");
+
+            JArray changes = new JArray();
+            foreach (var change in helpers) changes.Add(new JObject() { ["option"] = change.Key.Arg, ["to"] = change.Value, ["writes"] = "OpenCAGE settings (applied at launch_game)" });
+            foreach (var change in keyChanges) changes.Add(new JObject() { ["option"] = change.Key.Arg, ["to"] = change.Value, ["writes"] = "OpenCAGE settings (applied at launch_game)" });
+            foreach (var change in patches) changes.Add(new JObject() { ["option"] = change.Key.Arg, ["to"] = change.Value, ["writes"] = "AI.exe" });
+            foreach (var change in uiMods) changes.Add(new JObject() { ["option"] = change.Key.Arg, ["to"] = change.Value, ["writes"] = "DATA/UI.PAK" });
+
+            bool writesGame = patches.Count != 0 || uiMods.Count != 0;
+            bool running = ProcessRunning("AI");
+            if (dryRun)
+            {
+                result["dry_run"] = true;
+                result["would_change"] = changes;
+                result["options"] = before;
+                if (writesGame && running)
+                    call.Note("The game is running: a real call needs close_game: true (or the game closed) to write AI.exe / UI.PAK.");
+                return result;
+            }
+
+            if (writesGame)
+            {
+                if (running && !call.Bool("close_game"))
+                    throw new McpError("Alien: Isolation is running, and AI.exe / UI.PAK cannot be written while it is. Pass close_game: true to close it first, or close it yourself. Nothing was changed.");
+                //A save's release-build tail re-applies these same patches to AI.exe: never write alongside it
+                McpEditor.UI(() =>
+                {
+                    if (UndoStack.Current.Blocked)
+                        throw new McpError("OpenCAGE is saving or writing a level, which also patches AI.exe. Try again when it has finished. Nothing was changed.");
+                });
+                if (running)
+                {
+                    List<string> closed = CloseGame();
+                    if (closed.Count != 0) call.Note("Closed the running game (" + string.Join(", ", closed) + ") to write the game files.");
+                }
+            }
+
+            //The Launch Game window only follows settings edited outside OpenCAGE: if it is open, it keeps showing the old ones
+            bool launchWindowOpen = false;
+            try { launchWindowOpen = McpEditor.UI(() => Application.OpenForms.OfType<global::OpenCAGE.LaunchGame>().Any()); }
+            catch (McpError) { }
+
+            List<string> failures = new List<string>();
+            foreach (var change in helpers)
+                SettingsManager.SetBool(change.Key.Key, change.Value);
+            foreach (var change in keyChanges)
+                SettingsManager.SetString(change.Key.Key, change.Value);
+            foreach (var change in patches)
+            {
+                //As the Launch Game window: the setting is kept even if the write fails (a later launch or save re-applies it)
+                SettingsManager.SetBool(change.Key.Key, change.Value);
+                if (!change.Key.Patch(platform, Singleton.PathToAI, change.Value))
+                    failures.Add(change.Key.Arg + ": AI.exe could not be written (is the game still open, or the file read-only?)");
+            }
+            if (uiMods.Count != 0)
+            {
+                using (McpEditorTools.Heartbeat(call, "Writing DATA/UI.PAK"))
+                {
+                    try
+                    {
+                        //Menus an older OpenCAGE wrote over the game's put back first, in the file and what the Mod Manager keeps of it
+                        UiMovieOverrides.PutBackOldMenus(Singleton.PathToAI);
+                        PAK2 pak = new PAK2(uiPak);
+                        foreach (var change in uiMods)
+                        {
+                            UiMovieOverrides.Movie movie = UiMovieOverrides.Find(change.Key.Key);
+                            if (!pak.Entries.Any(o => string.Equals(o.Filename, movie.OriginalEntry, StringComparison.OrdinalIgnoreCase)))
+                            {
+                                failures.Add(change.Key.Arg + ": UI.PAK has no " + movie.OriginalEntry + " (verify the game files)");
+                                continue;
+                            }
+                            string problem = global::OpenCAGE.LaunchGame.ApplyUIMod(pak, change.Key.Key, change.Value);
+                            if (problem != null)
+                                failures.Add(change.Key.Arg + ": " + problem);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        failures.Add("UI.PAK could not be written: " + e.Message);
+                    }
+                }
+            }
+
+            if (launchWindowOpen)
+                call.Note("The Launch Game window is open and still shows the old options: close and reopen it before using it.");
+            result["changed"] = changes;
+            result["options"] = LaunchOptionState();
+            if (failures.Count != 0)
+                result["failed"] = new JArray(failures);
+            if (helpers.Count != 0 || keyChanges.Count != 0)
+            {
+                call.Note("Debug tools, Cap FPS, Unlock mouse and Possess characters settings take effect at the next launch_game.");
+                NoteDontWriteSavesNeedsDebugMenu(call);
+            }
+            return result;
+        }
+
+        /// <summary>With dont_write_saves on but debug_menu off, the game writes its saves after all: said, as launch_game will do it.</summary>
+        private static void NoteDontWriteSavesNeedsDebugMenu(McpCall call)
+        {
+            if (SettingsManager.GetBool(Settings.DontWriteSaves) && !SettingsManager.GetBool(Settings.DebugMenu))
+                call.Note("dont_write_saves is on but debug_menu is off: Don't Write Saves is a Debug Menu feature, so the game will write its saves as usual. Turn debug_menu on to use it.");
+        }
+        #endregion
+
+        #region Game directories
+        private static object GameDirectories(McpCall call)
+        {
+            string action = (call.Str("action") ?? "list").Trim().ToLowerInvariant();
+            if (action != "list" && action != "register" && action != "set_default" && action != "open")
+                throw McpError.Invalid("'action' must be list, register, set_default or open.");
+            if (action == "list")
+            {
+                if (call.Has("path"))
+                    throw McpError.Invalid("'path' is for register, set_default and open.");
+                return ListDirectories(null);
+            }
+
+            string path = InstallFolder(call.Str("path", required: true));
+            List<string> directories = GameDirectoryManager.RegisteredDirectories();
+            string existing = directories.FirstOrDefault(o => SamePath(o, path));
+            JObject result;
+            if (action == "open")
+            {
+                if (SamePath(path, Singleton.PathToAI))
+                    throw new McpError(McpErrorCodes.Refused, "That is the install open in this editor already.");
+                string key = existing ?? path;
+                Process running = McpEditor.UI(() => ChildInstanceManager.GetProcess(key));
+                if (running != null && !running.HasExited)
+                {
+                    result = ListDirectories(key);
+                    result["opened"] = key;
+                    result["pid"] = running.Id;
+                    call.Note("An OpenCAGE window on that install was already open.");
+                    return result;
+                }
+                Process started = McpEditor.UI(() => ChildInstanceManager.Start(key));
+                result = ListDirectories(key);
+                result["opened"] = key;
+                result["pid"] = started?.Id;
+                call.Note("A second OpenCAGE window opens on that install for the user. These tools stay with this editor (" + Singleton.PathToAI + "): they cannot drive the new window.");
+                return result;
+            }
+            if (action == "register")
+            {
+                if (existing != null)
+                {
+                    //The install open now is listed even when it was never saved (started with -pathToAI): registering saves it
+                    bool saved = SettingsManager.GetStringArray(Settings.GameDirectories).Any(o => SamePath(o, existing));
+                    if (!saved)
+                        SettingsManager.SetStringArray(Settings.GameDirectories, directories.ToArray());
+                    result = ListDirectories(existing);
+                    result["registered"] = existing;
+                    if (saved)
+                        call.Note("That install was already registered.");
+                    return result;
+                }
+                directories.Add(path);
+                SettingsManager.SetStringArray(Settings.GameDirectories, directories.ToArray());
+                result = ListDirectories(path);
+                result["registered"] = path;
+                return result;
+            }
+
+            //set_default: first in the list is the one OpenCAGE opens (registering it if need be)
+            string chosen = existing ?? path;
+            directories.RemoveAll(o => SamePath(o, chosen));
+            directories.Insert(0, chosen);
+            SettingsManager.SetStringArray(Settings.GameDirectories, directories.ToArray());
+            result = ListDirectories(chosen);
+            result["default"] = chosen;
+            if (!SamePath(chosen, Singleton.PathToAI))
+                call.Note("OpenCAGE opens this install the next time it starts (unless started with -pathToAI); the one open now is unchanged.");
+            return result;
+        }
+
+        private static JObject ListDirectories(string highlight)
+        {
+            List<string> directories = GameDirectoryManager.RegisteredDirectories();
+            JArray installs = new JArray();
+            for (int i = 0; i < directories.Count; i++)
+            {
+                string path = directories[i];
+                installs.Add(new JObject()
+                {
+                    ["path"] = path,
+                    ["platform"] = PatchManager.GetPlatform(path).ToString(),
+                    ["default"] = i == 0,
+                    ["open_now"] = SamePath(path, Singleton.PathToAI),
+                    ["editor_instance_open"] = ChildInstanceManager.GetProcess(path) != null,
+                });
+            }
+            return new JObject() { ["installs"] = installs };
+        }
+
+        /// <summary>An install folder from an absolute folder or AI.exe path, checked as the Register New picker checks it.</summary>
+        private static string InstallFolder(string given)
+        {
+            string path = given.Trim().Trim('"');
+            if (!IsAbsolute(path))
+                throw new McpError("'path' must be an absolute path (e.g. 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Alien Isolation'), not '" + given + "'.");
+            string full;
+            try { full = Path.GetFullPath(path); }
+            catch (Exception e) { throw new McpError("'" + given + "' is not a usable path (" + e.Message + ")."); }
+            if (File.Exists(full) && string.Equals(Path.GetExtension(full), ".exe", StringComparison.OrdinalIgnoreCase))
+                full = Path.GetDirectoryName(full);
+            full = full.TrimEnd('\\', '/');
+            if (!Directory.Exists(full))
+                throw new McpError("There is no folder '" + full + "'.");
+            if (!Utilities.IsGameDirectoryValid(full))
+                throw new McpError("'" + full + "' is not an Alien: Isolation install (it needs DATA/ENV, DATA/TASKS.TXT, DATA/GBL_ITEM.BML and DATA/PACKAGES/MAIN.PKG). Give the folder AI.exe is in.");
+            return full;
+        }
+
+        /// <summary>A full path: a drive and a root ("C:\..."), or a network share - not relative, and not "C:folder" or "\folder".</summary>
+        private static bool IsAbsolute(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return false;
+            if (path.StartsWith("\\\\") || path.StartsWith("//")) return true;
+            return path.Length >= 3 && char.IsLetter(path[0]) && path[1] == ':' && (path[2] == '\\' || path[2] == '/');
+        }
+
+        private static bool SamePath(string a, string b)
+        {
+            if (a == null || b == null) return false;
+            try { return string.Equals(Path.GetFullPath(a).TrimEnd('\\', '/'), Path.GetFullPath(b).TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase); }
+            catch { return false; }
+        }
+        #endregion
+
+        #region Editor options
+        private sealed class BoolOption
+        {
+            public string Arg, Key, Description;
+        }
+
+        private static readonly BoolOption[] BoolOptions =
+        {
+            new BoolOption() { Arg = "search_only_composite_names", Key = Settings.CompNameOnlyOpt, Description = "Composite Display > Search Only Composite Names: browser searches match names, not whole paths." },
+            new BoolOption() { Arg = "composite_previews_in_trees", Key = Settings.CompositePreviewsInTrees, Description = "Composite Display > Show Composite Previews In Tree Views." },
+            new BoolOption() { Arg = "show_short_guids", Key = Settings.ShowShortGuids, Description = "Entity Display > Show ShortGuids: ids beside entity names in the editor's lists." },
+            new BoolOption() { Arg = "populate_all_pins_on_create", Key = Settings.PopulateAllPinsOnCreateNode, Description = "Entity Display > Populate All Node Pins When Created." },
+            new BoolOption() { Arg = "focus_canvas_on_new_node", Key = Settings.FocusCanvasOnNewNode, Description = "Entity Display > Focus Canvas On Newly Created Node." },
+            new BoolOption() { Arg = "node_icons_when_zoomed_out", Key = Settings.NodeIconsWhenZoomedOut, Description = "Entity Display > Show Node Icons When Zoomed Out: zoomed far out, flowgraph and animation tree nodes are drawn as their icons. false: nodes are drawn in full at every zoom, their text just getting smaller." },
+            new BoolOption() { Arg = "confirm_node_delete", Key = Settings.AskBeforeDeletingNode, Description = "Entity Display > Show Confirmation When Deleting Node." },
+            new BoolOption() { Arg = "confirm_on_save", Key = Settings.ShowSavedMsgOpt, Description = "Save/Build > Show Confirmation When Saving (save_level never shows it)." },
+            new BoolOption() { Arg = "prompt_save_on_close", Key = Settings.PromptSaveOnClose, Description = "Save/Build > Prompt to Save on Close." },
+            new BoolOption() { Arg = "textured_model_view", Key = Settings.ShowTexOpt, Description = "Misc > Use Textured Model View." },
+            new BoolOption() { Arg = "keep_uses_window_open", Key = Settings.KeepUsesWindowOpen, Description = "Misc > Keep Global Search Window Open." },
+            new BoolOption() { Arg = "open_game_on_save", Key = Settings.LaunchGameWhenSaved, Description = "Save/Build > Open Game On Save (release builds; save_level never launches the game)." },
+            new BoolOption() { Arg = "show_game_platform", Key = Settings.ShowGamePlatform, Description = "Misc > Show Game Platform in the title bar." },
+            new BoolOption() { Arg = "reset_render_filters_on_load", Key = Settings.ResetRenderFilters, Description = "Misc > Reset Render Filters On Load: viewport filters go back to default at each level load." },
+            new BoolOption() { Arg = "always_fully_rebuild_radiosity", Key = Settings.AlwaysFullyRebuildRadiosity, Description = "Save/Build > Always Fully Rebuild Radiosity: every save rebuilds the level's radiosity from scratch instead of keeping the existing lighting and baking only what changed. No effect while skip_radiosity_rebuild is on." },
+            new BoolOption() { Arg = "skip_radiosity_rebuild", Key = Settings.SkipRadiosityRebuild, Description = "Save/Build > Don't Rebuild Radiosity: a build bakes no radiosity - the level keeps the lighting it has, re-bound to the rebuilt models so the game reads it as before (much faster on big levels). Added models have no baked lighting and moved ones keep the lighting of where they were, until a build with it off (which then bakes them). A level with no radiosity yet stays without. Wins over always_fully_rebuild_radiosity. The Mod Manager's builds always bake." },
+            new BoolOption() { Arg = "hide_live_link_label", Key = Settings.HideLiveLinkLabel, Description = "Misc > Hide Live Link Label In-Game: the game doesn't show \"OpenCAGE Live Link\" in its top-right corner while connected (a connected game is told at once; the activity notes under it still show)." },
+        };
+
+        private static readonly Dictionary<string, CompositeBrowserMode> BrowserModes = new Dictionary<string, CompositeBrowserMode>()
+        {
+            ["tree_only"] = CompositeBrowserMode.TreeOnly,
+            ["tree_and_browser"] = CompositeBrowserMode.TreeAndBrowser,
+            ["tree_and_preview"] = CompositeBrowserMode.TreeAndPreview,
+        };
+
+        private static readonly int[] PreviewScales = { 50, 75, 100, 150, 200 };
+
+        private static IEnumerable<McpSchema.Prop> EditorOptionProps()
+        {
+            yield return McpSchema.String("composite_browser_mode", "Composite Display > Composite Browser Mode.", options: BrowserModes.Keys);
+            yield return McpSchema.Integer("composite_preview_scale", "Composite Display > Composite Preview Scale, in percent: 50, 75, 100, 150 or 200.");
+            foreach (BoolOption option in BoolOptions)
+                yield return McpSchema.Boolean(option.Arg, option.Description);
+            yield return McpSchema.Integer("cubemap_capture_size", "Misc > Cubemap Capture Size: the face size, in pixels, of cubemaps captured in the game (capture_environment_maps, the inspector's Capture, Recapture All Cubemaps): 0 for the size of the cubemap each replaces (the game's own are 128), or 64, 128, 256 or 512. Bigger faces need the game's window at least as tall.");
+            yield return McpSchema.Boolean("dark_mode", "Options > Dark Mode. The docked panels are rebuilt in place; the level stays open.");
+            yield return McpSchema.Number("numeric_step", "Set Numeric Step: the inspector's spinner step for positions (more than 0, at most 100).");
+            yield return McpSchema.Number("numeric_step_rotation", "Set Numeric Step: the inspector's spinner step for rotations, in degrees (more than 0, at most 100).");
+            yield return McpSchema.Boolean("reset_ui_layouts", "true: Misc > Reset UI Layouts - window size and docked panel sizes and places back to default.");
+        }
+
+        private static JObject EditorOptionState()
+        {
+            JObject state = new JObject()
+            {
+                ["composite_browser_mode"] = BrowserModes.First(o => o.Value == CompositeBrowserModes.Current).Key,
+                ["composite_preview_scale"] = SettingsManager.GetInteger(Settings.CompositePreviewScale, 100),
+            };
+            foreach (BoolOption option in BoolOptions)
+                state[option.Arg] = SettingsManager.GetBool(option.Key);
+            state["cubemap_capture_size"] = EnvironmentMapCapture.ConfiguredFaceSize;
+            state["dark_mode"] = Theming.ThemeManager.IsDark;
+            state["numeric_step"] = Math.Round(SettingsManager.GetFloat(Settings.NumericStep, 0.1f), 6);
+            state["numeric_step_rotation"] = Math.Round(SettingsManager.GetFloat(Settings.NumericStepRot, 1.0f), 6);
+            return state;
+        }
+
+        private static object EditorOptions(McpCall call)
+        {
+            //Checked before anything changes
+            CompositeBrowserMode? mode = null;
+            if (call.Has("composite_browser_mode"))
+            {
+                string wanted = call.Str("composite_browser_mode").Trim().ToLowerInvariant();
+                if (!BrowserModes.TryGetValue(wanted, out CompositeBrowserMode parsed))
+                    throw new McpError("'composite_browser_mode' must be one of: " + string.Join(", ", BrowserModes.Keys) + ".");
+                mode = parsed;
+            }
+            int? scale = null;
+            if (call.Has("composite_preview_scale"))
+            {
+                int wanted = call.Int("composite_preview_scale");
+                if (!PreviewScales.Contains(wanted))
+                    throw new McpError("'composite_preview_scale' must be one of " + string.Join(", ", PreviewScales) + " (percent).");
+                scale = wanted;
+            }
+            int? captureSize = null;
+            if (call.Has("cubemap_capture_size"))
+            {
+                int wanted = call.Int("cubemap_capture_size");
+                if (!EnvironmentMapCapture.FaceSizeChoices.Contains(wanted))
+                    throw new McpError("'cubemap_capture_size' must be one of " + string.Join(", ", EnvironmentMapCapture.FaceSizeChoices) + " (0: the size of the cubemap each capture replaces).");
+                captureSize = wanted;
+            }
+            float? step = ReadStep(call, "numeric_step"), rotationStep = ReadStep(call, "numeric_step_rotation");
+            bool resetLayouts = call.Bool("reset_ui_layouts");
+            bool anything = mode != null || scale != null || captureSize != null || step != null || rotationStep != null || resetLayouts || call.Has("dark_mode")
+                || BoolOptions.Any(o => call.Has(o.Arg));
+
+            return McpEditor.UI(() =>
+            {
+                CommandsEditor editor = McpEditor.Editor;
+                if (!anything)
+                    return new JObject() { ["options"] = EditorOptionState() };
+                //Several of these rebuild panels or reopen the composite on screen: never under a save or a level load
+                if (UndoStack.Current.Blocked)
+                    throw new McpError("OpenCAGE is saving the level. Change options when it has finished.");
+                if (editor.IsLevelLoadInProgress)
+                    throw new McpError("A level is loading. Change options when it is open.");
+
+                List<string> changed = new List<string>();
+                List<string> keys = new List<string>();
+                foreach (BoolOption option in BoolOptions)
+                {
+                    if (!call.Has(option.Arg)) continue;
+                    bool value = call.Bool(option.Arg);
+                    if (SettingsManager.GetBool(option.Key) == value) continue;
+                    SettingsManager.SetBool(option.Key, value);
+                    keys.Add(option.Key);
+                    changed.Add(option.Arg);
+                }
+                if (mode != null && CompositeBrowserModes.Current != mode.Value)
+                {
+                    CompositeBrowserModes.Set(mode.Value);
+                    keys.Add(Settings.CompositeBrowserMode);
+                    changed.Add("composite_browser_mode");
+                }
+                if (scale != null && SettingsManager.GetInteger(Settings.CompositePreviewScale, 100) != scale.Value)
+                {
+                    SettingsManager.SetInteger(Settings.CompositePreviewScale, scale.Value);
+                    keys.Add(Settings.CompositePreviewScale);
+                    changed.Add("composite_preview_scale");
+                }
+                if (captureSize != null && EnvironmentMapCapture.ConfiguredFaceSize != captureSize.Value)
+                {
+                    SettingsManager.SetInteger(Settings.CubemapCaptureSize, captureSize.Value);
+                    keys.Add(Settings.CubemapCaptureSize);
+                    changed.Add("cubemap_capture_size");
+                }
+                if (step != null && Math.Abs(SettingsManager.GetFloat(Settings.NumericStep, 0.1f) - step.Value) > 1e-7)
+                {
+                    SettingsManager.SetFloat(Settings.NumericStep, step.Value);
+                    keys.Add(Settings.NumericStep);
+                    changed.Add("numeric_step");
+                }
+                if (rotationStep != null && Math.Abs(SettingsManager.GetFloat(Settings.NumericStepRot, 1.0f) - rotationStep.Value) > 1e-7)
+                {
+                    SettingsManager.SetFloat(Settings.NumericStepRot, rotationStep.Value);
+                    keys.Add(Settings.NumericStepRot);
+                    changed.Add("numeric_step_rotation");
+                }
+                //What the menu does after it writes a setting (ToggleBoolSetting -> ApplySettingEffects): menu ticks,
+                //list refreshes, the browser's layout, the title bar, the inspector's spinners
+                if (keys.Count != 0)
+                    editor.ApplySnapIncrementChange(keys.ToArray());
+
+                //Dark mode and the layout reset rebuild the docked panels: through the menu items themselves
+                if (call.Has("dark_mode") && Theming.ThemeManager.IsDark != call.Bool("dark_mode"))
+                {
+                    MenuItem(editor, "darkModeToolStripMenuItem").PerformClick();
+                    changed.Add("dark_mode");
+                }
+                if (resetLayouts)
+                {
+                    MenuItem(editor, "resetUILayoutsToolStripMenuItem").PerformClick();
+                    changed.Add("reset_ui_layouts");
+                }
+                return new JObject() { ["changed"] = new JArray(changed), ["options"] = EditorOptionState() };
+            });
+        }
+
+        private static float? ReadStep(McpCall call, string name)
+        {
+            if (!call.Has(name)) return null;
+            double value = call.Num(name);
+            if (!(value > 0) || value > 100)
+                throw new McpError("'" + name + "' must be more than 0 and at most 100 (got " + value + ").");
+            return (float)value;
+        }
+
+        /// <summary>One of the main window's menu items, by its designer name.</summary>
+        private static ToolStripItem MenuItem(CommandsEditor editor, string name)
+        {
+            foreach (ToolStrip strip in editor.Controls.OfType<ToolStrip>())
+            {
+                ToolStripItem found = FindItem(strip.Items, name);
+                if (found != null) return found;
+            }
+            throw new McpError("OpenCAGE's '" + name + "' menu item was not found (this build's menu differs).");
+        }
+
+        private static ToolStripItem FindItem(ToolStripItemCollection items, string name)
+        {
+            foreach (ToolStripItem item in items)
+            {
+                if (item.Name == name) return item;
+                if (item is ToolStripDropDownItem dropDown && dropDown.HasDropDownItems)
+                {
+                    ToolStripItem found = FindItem(dropDown.DropDownItems, name);
+                    if (found != null) return found;
+                }
+            }
+            return null;
+        }
+        #endregion
+
+        #region Runtime utils
+        private static readonly Dictionary<string, LiveLink.SettingsFile> SettingsFiles = new Dictionary<string, LiveLink.SettingsFile>()
+        {
+            ["radiosity"] = LiveLink.SettingsFile.Radiosity,
+            ["skin_shading"] = LiveLink.SettingsFile.SkinShading,
+            ["hair_shading"] = LiveLink.SettingsFile.HairShading,
+            ["selection_overlay"] = LiveLink.SettingsFile.SelectionOverlay,
+            ["global_constants"] = LiveLink.SettingsFile.GlobalConstants,
+        };
+
+        /// <summary>The AI config folders the game reads only when it starts, which settings has it read again (by what the game's Debug Menu command calls each).</summary>
+        private static readonly Dictionary<string, string> ReloadableConfigFolders = new Dictionary<string, string>()
+        {
+            ["alien_configs"] = LiveSettings.ReloadArgument(LiveSettings.ReloadableConfig.AlienConfigs),
+            ["difficulty_settings"] = LiveSettings.ReloadArgument(LiveSettings.ReloadableConfig.DifficultySettings),
+            ["viewcones"] = LiveSettings.ReloadArgument(LiveSettings.ReloadableConfig.Viewcones),
+            ["ai_configs"] = "all",
+        };
+
+        /// <summary>The game's "key=value" lines as an object of numbers.</summary>
+        private static JObject SettingsLines(string message)
+        {
+            JObject held = new JObject();
+            foreach (string line in (message ?? "").Split('\n'))
+            {
+                int eq = line.IndexOf('=');
+                if (eq > 0 && float.TryParse(line.Substring(eq + 1).Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float value))
+                    held[line.Substring(0, eq).Trim()] = value;
+            }
+            return held;
+        }
+
+        private static object RuntimeUtils(McpCall call)
+        {
+            string action = (call.Str("action") ?? "status").Trim().ToLowerInvariant();
+            if (action != "load_level" && call.Has("level"))
+                throw McpError.Invalid("'level' is for action load_level.");
+            switch (action)
+            {
+                case "status":
+                    return RuntimeUtilsState();
+                case "connect":
+                case "disconnect":
+                    {
+                        bool connect = action == "connect";
+                        if (connect && !global::OpenCAGE.LaunchGame.RuntimeUtilsSupports(Singleton.Platform))
+                            throw new McpError("Live Link needs the Steam, GOG or Epic Games Store version of the game (the runtime utils that serve it support no other); this install is " + Singleton.Platform + ".");
+                        McpEditor.UI(() =>
+                        {
+                            SettingsManager.SetBool(Settings.RuntimeUtilsOpt, connect);
+                            //As the menu item: the setting's effect starts or stops the link (in the background)
+                            McpEditor.Editor.ApplySnapIncrementChange(new[] { Settings.RuntimeUtilsOpt });
+                        });
+                        //Here, off the UI thread, for a definite answer (each waits for a connect already under way)
+                        if (!connect)
+                            global::OpenCAGE.RuntimeUtilsConnection.Send.Stop();
+                        if (connect && !global::OpenCAGE.RuntimeUtilsConnection.Send.Start())
+                            throw new McpError("Could not connect Live Link (ws://127.0.0.1:8765) yet. The game serves it only when launched from OpenCAGE with launch_options live_link on: launch_game now (Connect to Game stays on, and OpenCAGE connects once the game is up), or restart a game that was launched without it.");
+                        return McpEditor.UI(() => RuntimeUtilsState());
+                    }
+                case "game_status":
+                    {
+                        RequireLiveLink();
+                        LiveLink.GameStatus status = LiveLink.Status().Result;
+                        if (!status.Reply.Ok)
+                            throw new McpError(status.Reply.Message);
+                        Composite root = McpEditor.UI(() => Singleton.Editor?.CompositeDisplay?.Content?.Level?.Commands?.EntryPoints?[0]);
+                        JObject result = RuntimeUtilsState();
+                        result["level_running"] = status.LevelRunning;
+                        result["root_composite"] = status.RootCompositeName;
+                        result["running_level_open_here"] = status.LevelRunning && root != null && root.shortGUID == status.RootComposite;
+                        //Edits and calls are held (then turned away after 20 s) while the level's scripts are paused: a level starting, the pause menu
+                        result["playing"] = status.Playing;
+                        if (!string.IsNullOrEmpty(status.LoadingReason))
+                            result["loading"] = status.LoadingReason;
+                        //World space, for putting new entities where the player can see them
+                        if (status.CameraPosition.HasValue && status.CameraForward.HasValue)
+                        {
+                            JObject camera = new JObject()
+                            {
+                                ["position"] = new JArray(status.CameraPosition.Value.X, status.CameraPosition.Value.Y, status.CameraPosition.Value.Z),
+                                ["forward"] = new JArray(status.CameraForward.Value.X, status.CameraForward.Value.Y, status.CameraForward.Value.Z),
+                            };
+                            if (status.CameraUp.HasValue)
+                                camera["up"] = new JArray(status.CameraUp.Value.X, status.CameraUp.Value.Y, status.CameraUp.Value.Z);
+                            result["camera"] = camera;
+                        }
+                        //Whether the game is rendering from the viewport's camera (set_viewport_view live_link_camera 'viewport_to_game')
+                        result["camera_sync"] = status.CameraSync;
+                        //Whether the game has a CAGEAnimation taken for OpenCAGE (held, played, or still to be given back), and the drive
+                        result["animation_taken"] = status.Animation;
+                        result["animation_drive"] = AnimationDriveState();
+                        //Whether the game is gathering script activity for OpenCAGE (the composite display's Show Activity: runtime_utils activity)
+                        result["activity_tracing"] = status.Trace;
+                        //Which store's AI.exe the game is
+                        if (status.Build != null)
+                            result["game_build"] = status.Build;
+                        return result;
+                    }
+                case "animate":
+                    return Animate(call);
+                case "activity":
+                    return Activity(call);
+                case "push":
+                    {
+                        RequireLiveLink();
+                        Commands commands = null;
+                        Composite composite = null;
+                        McpEditor.UI(() =>
+                        {
+                            commands = McpEditor.RequireCommands(false);
+                            composite = LiveLinkComposite(call, commands);
+                        });
+                        RequireRunningLevel(commands);
+                        //After any auto push in flight, and recorded as sent, so the auto push knows what the game now has
+                        //(started on the UI thread, where the composite is written; awaited here)
+                        LiveLink.Reply reply = McpEditor.UI(() => LiveLink.PushNow(commands, composite)).Result;
+                        if (!reply.Ok)
+                            throw new McpError(reply.Message);
+                        return new JObject()
+                        {
+                            ["composite"] = composite.name,
+                            ["bytes"] = reply.Bytes,
+                            ["result"] = reply.Message,
+                        };
+                    }
+                case "call_method":
+                    {
+                        RequireLiveLink();
+                        Commands commands = null;
+                        Composite composite = null;
+                        Entity entity = null;
+                        List<ShortGuid> path = null;
+                        string method = call.Str("method", required: true).Trim();
+                        bool isMethod = McpEditor.UI(() =>
+                        {
+                            commands = McpEditor.RequireCommands(false);
+                            composite = LiveLinkComposite(call, commands);
+                            entity = McpScript.FindEntity(commands, composite, call.Str("entity", required: true));
+                            if (call.Has("instance_path"))
+                                path = ReadInstancePath(call, commands, composite);
+                            else if (Singleton.Editor?.CompositeDisplay?.Composite == composite)
+                                path = LiveLink.InstancePath(Singleton.Editor.CompositeDisplay, commands);
+                            return LiveLink.Methods(commands, entity, composite).Contains(ShortGuidUtils.Generate(method));
+                        });
+                        RequireRunningLevel(commands);
+                        if (!isMethod)
+                            call.Note("'" + method + "' is not one of this entity's method pins; it is sent anyway (a composite's own pins, for instance, are called like this).");
+                        //After the edits made before it (the auto push's queue and any push in flight), so it cannot overtake them
+                        LiveLink.Reply reply = McpEditor.UI(() => LiveLink.CallAfterEdits(commands, composite, entity, ShortGuidUtils.Generate(method), path)).Result;
+                        if (!reply.Ok)
+                            throw new McpError(reply.Message);
+                        return new JObject()
+                        {
+                            ["called"] = method,
+                            ["entity"] = McpUI(() => McpScript.EntityName(commands, composite, entity)),
+                            ["instances"] = path == null ? "every running instance of " + composite.name : (path.Count == 0 ? "the root" : string.Join(" > ", path.Select(o => McpScript.Id(o)))),
+                            ["result"] = reply.Message,
+                        };
+                    }
+                case "describe":
+                    {
+                        RequireLiveLink();
+                        Composite composite = McpEditor.UI(() => LiveLinkComposite(call, McpEditor.RequireCommands(false)));
+                        LiveLink.Reply reply = LiveLink.Describe(composite).Result;
+                        if (!reply.Ok)
+                            throw new McpError(reply.Message);
+                        return new JObject() { ["composite"] = composite.name, ["running"] = new JArray(reply.Message.Split('\n').Select(o => o.TrimEnd())) };
+                    }
+                case "debug_menu":
+                    {
+                        RequireLiveLink();
+                        string menu = (call.Str("menu") ?? "report").Trim().ToLowerInvariant();
+                        Dictionary<string, LiveLink.DebugMenuOp> ops = new Dictionary<string, LiveLink.DebugMenuOp>()
+                        {
+                            ["report"] = LiveLink.DebugMenuOp.Report, ["open"] = LiveLink.DebugMenuOp.Open, ["close"] = LiveLink.DebugMenuOp.Close,
+                            ["tab"] = LiveLink.DebugMenuOp.ShowTab, ["select"] = LiveLink.DebugMenuOp.Select, ["set"] = LiveLink.DebugMenuOp.SetSwitch,
+                            ["run"] = LiveLink.DebugMenuOp.RunCommand, ["value"] = LiveLink.DebugMenuOp.SetValue,
+                        };
+                        if (!ops.TryGetValue(menu, out LiveLink.DebugMenuOp op))
+                            throw new McpError("'menu' must be one of: " + string.Join(", ", ops.Keys) + ".");
+                        string name = call.Str("name");
+                        if ((op == LiveLink.DebugMenuOp.ShowTab || op == LiveLink.DebugMenuOp.SetSwitch || op == LiveLink.DebugMenuOp.RunCommand || op == LiveLink.DebugMenuOp.SetValue) && string.IsNullOrWhiteSpace(name))
+                            throw new McpError("'name' is needed for menu " + menu + ".");
+                        if (op == LiveLink.DebugMenuOp.SetSwitch && !call.Has("value"))
+                            throw new McpError("'value' is needed for menu set.");
+                        if (op == LiveLink.DebugMenuOp.SetValue && !call.Has("number"))
+                            throw new McpError("'number' is needed for menu value.");
+                        float number = op == LiveLink.DebugMenuOp.SetValue ? (float)call.Num("number") : 0.0f;
+                        if (float.IsNaN(number) || float.IsInfinity(number))
+                            throw new McpError("'number' must be a finite number.");
+                        LiveLink.Reply reply = LiveLink.DebugMenu(op, name, call.Bool("value"), call.Str("argument"), number).Result;
+                        if (LiveLink.IsUnknownRequest(reply))
+                            throw new McpError("The game's runtime utils are too old for the Debug Menu: launch the game again from this OpenCAGE.");
+                        if (!reply.Ok)
+                            throw new McpError(reply.Message);
+                        if (op == LiveLink.DebugMenuOp.RunCommand)
+                            return new JObject() { ["command"] = name, ["answer"] = new JArray((reply.Message ?? "").Split('\n').Select(o => o.TrimEnd()).Where(o => o.Length != 0)) };
+                        JObject state = new JObject();
+                        JObject switches = new JObject();
+                        foreach (string line in (reply.Message ?? "").Split('\n'))
+                        {
+                            int eq = line.IndexOf('=');
+                            if (eq <= 0) continue;
+                            string key = line.Substring(0, eq).Trim(), value = line.Substring(eq + 1).Trim();
+                            if (key == "open") state["open"] = value == "1";
+                            else if (key == "group" || key == "tab" || key == "selected") state[key] = value;
+                            else if (key == "tabs" || key == "groups" || key == "commands") state[key] = new JArray(value.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries));
+                            else if (key == "values")
+                            {
+                                JObject values = new JObject();
+                                foreach (string pair in value.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+                                {
+                                    int colon = pair.LastIndexOf(':');
+                                    if (colon > 0 && double.TryParse(pair.Substring(colon + 1), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double parsed))
+                                        values[pair.Substring(0, colon)] = parsed;
+                                }
+                                state["values"] = values;
+                            }
+                            else switches[key] = value == "1";
+                        }
+                        state["switches"] = switches;
+                        if (op == LiveLink.DebugMenuOp.Select || op == LiveLink.DebugMenuOp.ShowTab)
+                            call.Note("The window takes this up at its next frame: report again to see it.");
+                        return state;
+                    }
+                case "settings":
+                    {
+                        RequireLiveLink();
+                        string fileName = (call.Str("file", required: true) ?? "").Trim().ToLowerInvariant();
+                        if (ReloadableConfigFolders.TryGetValue(fileName, out string folders))
+                        {
+                            //Read again whole by the game's own loaders, rather than number by number
+                            if (call.Has("values"))
+                                throw new McpError("'values' can't be given for " + fileName + ": the game reads those files again whole, as saved (edit them with their config editors, or the files themselves, first).");
+                            LiveLink.Reply reloaded = LiveLink.DebugMenu(LiveLink.DebugMenuOp.RunCommand, LiveSettings.ReloadCommand, argument: folders).Result;
+                            string answer = reloaded.Message ?? "";
+                            if (LiveLink.IsUnknownRequest(reloaded) || answer.StartsWith("No debug menu command named"))
+                                throw new McpError("The game's runtime utils are too old to read the AI config files again: launch the game again from this OpenCAGE.");
+                            if (answer.StartsWith("The debug menu is off"))
+                                throw new McpError(answer + ": launch the game with launch_options debug_menu on.");
+                            if (!reloaded.Answered)
+                                throw new McpError(answer);
+                            JObject reload = new JObject() { ["file"] = fileName, ["ok"] = reloaded.Ok, ["results"] = new JArray(answer.Split('\n').Select(o => o.Trim()).Where(o => o.Length != 0)) };
+                            if (answer.StartsWith("Timed out waiting for the game"))
+                                call.Note("The game reads them again once its AI next runs (it is paused, or no level is running).");
+                            else
+                                call.Note("The running game holds what the files say now, until it is closed (it reads them again when it next starts). runtime_utils debug_menu run ai.configs shows what it holds.");
+                            return reload;
+                        }
+                        if (!SettingsFiles.TryGetValue(fileName, out LiveLink.SettingsFile file))
+                            throw new McpError("'file' must be one of: " + string.Join(", ", SettingsFiles.Keys.Concat(ReloadableConfigFolders.Keys)) + ".");
+                        if (!call.Has("values"))
+                        {
+                            LiveLink.Reply held = LiveLink.GetSettings(file).Result;
+                            if (LiveLink.IsUnknownRequest(held))
+                                throw new McpError("The game's runtime utils are too old for settings: launch the game again from this OpenCAGE.");
+                            if (!held.Ok)
+                                throw new McpError(held.Message);
+                            return new JObject() { ["file"] = fileName, ["held"] = SettingsLines(held.Message) };
+                        }
+                        JObject wanted = call.Token("values") as JObject;
+                        if (wanted == null || wanted.Count == 0 || wanted.Count > 64)
+                            throw new McpError("'values' must be an object of 1 to 64 keys, each a number.");
+                        List<KeyValuePair<string, float>> values = new List<KeyValuePair<string, float>>();
+                        foreach (JProperty property in wanted.Properties())
+                        {
+                            if (property.Value.Type != JTokenType.Float && property.Value.Type != JTokenType.Integer)
+                                throw new McpError("'values' " + property.Name + " must be a number.");
+                            values.Add(new KeyValuePair<string, float>(property.Name, property.Value.Value<float>()));
+                        }
+                        LiveLink.Reply reply = LiveLink.SetSettings(file, values).Result;
+                        if (LiveLink.IsUnknownRequest(reply))
+                            throw new McpError("The game's runtime utils are too old for settings: launch the game again from this OpenCAGE.");
+                        //A line per key when the game got as far as the keys; anything else is why it didn't
+                        string[] lines = (reply.Message ?? "").Split('\n').Select(o => o.Trim()).Where(o => o.Length != 0).ToArray();
+                        if (!reply.Ok && lines.Length != values.Count)
+                            throw new McpError(reply.Message);
+                        JObject result = new JObject() { ["file"] = fileName, ["ok"] = reply.Ok, ["results"] = new JArray(lines) };
+                        if (!reply.Ok)
+                            call.Note("Keys answered unknown are not in that file as the game reads it (spell them as the file does); unavailable means this build of the game has no place for them.");
+                        call.Note("Set in the running game only, until it next loads a level: the file on disk is unchanged.");
+                        return result;
+                    }
+                case "screenshot":
+                    {
+                        RequireLiveLink();
+                        string path = call.Str("path", required: true);
+                        if (!Path.IsPathRooted(path) || !path.EndsWith(".bmp", StringComparison.OrdinalIgnoreCase))
+                            throw new McpError("'path' must be an absolute path ending .bmp.");
+                        LiveLink.Reply reply = LiveLink.Screenshot(path).Result;
+                        if (!reply.Ok)
+                            throw new McpError(reply.Message);
+                        return new JObject() { ["written"] = path };
+                    }
+                case "debugger":
+                    return McpDebugger.Run(call);
+                case "load_level":
+                    {
+                        string level = call.Str("level", required: true).Replace('\\', '/').Trim().Trim('/');
+                        if (string.Equals(level, "menu", StringComparison.OrdinalIgnoreCase) || EditorUtils.IsFrontend(level) || EditorUtils.IsFrontend("PRODUCTION/" + level))
+                            level = EditorUtils.FrontendLevel;
+                        else
+                            level = McpLevels.Resolve(level, call: call);
+                        RequireLiveLink();
+                        //Live Link's own request, which the game answers (the old text message had no reply, so a level
+                        //the game could not load looked the same as one it did)
+                        LiveLink.Reply reply = LiveLink.LoadLevel(level).Result;
+                        if (!reply.Ok)
+                            throw new McpError(reply.Message);
+                        JObject result = RuntimeUtilsState();
+                        result["sent"] = new JObject() { ["load_level"] = level };
+                        result["game"] = reply.Message;
+                        call.Note("The game loads what is on disk, without unsaved edits: push sends script edits to the running level instead. Saving closes the game, so after save_level start it again with launch_game.");
+                        return result;
+                    }
+            }
+            throw new McpError("'action' must be status, connect, disconnect, game_status, push, call_method, animate, describe, debug_menu, settings, screenshot, load_level, activity or debugger.");
+        }
+
+        /// <summary>
+        /// runtime_utils activity: the composite display's Show Activity (LiveLinkTrace) - the open composite's flowgraph links
+        /// light up as the running game uses them. Switch it on or off, clear what the open composite has lit, or report it.
+        /// </summary>
+        private static object Activity(McpCall call)
+        {
+            string mode = (call.Str("mode") ?? "get").Trim().ToLowerInvariant();
+            switch (mode)
+            {
+                case "on":
+                case "off":
+                    {
+                        bool on = mode == "on";
+                        //As the toolbar's Show Activity button: remembered, and in every display
+                        McpEditor.UI(() => LiveLinkTrace.SetShowActivity(on));
+                        if (on && !global::OpenCAGE.RuntimeUtilsConnection.Send.Connected)
+                            call.Note("Not connected to the game: links light up once Live Link connects (runtime_utils {action: 'connect'}, with the game running).");
+                        return McpEditor.UI(() => DescribeActivity(call, false));
+                    }
+                case "clear":
+                    return McpEditor.UI(() =>
+                    {
+                        //As the toolbar's Clear Activity button
+                        ActivityDisplay(call).LiveLinkActivity.Clear();
+                        return DescribeActivity(call, false);
+                    });
+                case "get":
+                    return McpEditor.UI(() => DescribeActivity(call, true));
+            }
+            throw new McpError("'mode' must be on, off, clear or get.");
+        }
+
+        /// <summary>The open composite display, which 'composite' (if given) must name. UI thread.</summary>
+        private static global::OpenCAGE.DockPanels.CompositeDisplay ActivityDisplay(McpCall call)
+        {
+            global::OpenCAGE.DockPanels.CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
+            if (display == null || display.IsDisposed || !display.Populated || display.LiveLinkActivity == null)
+                throw new McpError("No composite is open (open_composite first): activity is shown on the open composite's flowgraph.");
+            if (call.Has("composite"))
+            {
+                Composite wanted = McpScript.FindComposite(McpEditor.RequireCommands(false), call.Str("composite"));
+                if (wanted != display.Composite)
+                    throw new McpError(wanted.name + " is not the composite open (" + display.Composite.name + "): activity is shown on the open composite - open_composite it first.");
+            }
+            return display;
+        }
+
+        /// <summary>Activity as it stands: on or not, what the game is asked to watch, and (with links) every link used since the last clear. UI thread.</summary>
+        private static JObject DescribeActivity(McpCall call, bool links)
+        {
+            JObject result = new JObject()
+            {
+                ["show_activity"] = LiveLinkTrace.ShowActivity,
+                ["connected"] = global::OpenCAGE.RuntimeUtilsConnection.Send.Connected,
+                //The game has taken what the open composite needs watched (and is gathering it)
+                ["tracing"] = LiveLinkTrace.Tracing,
+                ["watches"] = LiveLinkTrace.WatchCount,
+                ["batches"] = LiveLinkTrace.Batches,
+            };
+            if (LiveLinkTrace.WatchesLeftOut > 0)
+                result["watches_left_out"] = LiveLinkTrace.WatchesLeftOut;
+            //A game whose runtime utils take fewer at once (until a newer one connects)
+            if (LiveLinkTrace.WatchLimit < LiveLink.MaxTraceWatches)
+                result["watch_limit"] = LiveLinkTrace.WatchLimit;
+            double lastBatch = LiveLinkTrace.LastBatchMs;
+            if (!double.IsNaN(lastBatch))
+                result["last_batch_seconds_ago"] = Math.Round((LiveLinkTrace.NowMs - lastBatch) / 1000.0, 2);
+            if (LiveLinkTrace.Dropped > 0)
+                result["dropped"] = LiveLinkTrace.Dropped;
+            if (LiveLinkTrace.Unsupported)
+                result["unsupported"] = "The game's OpenCAGE.RuntimeUtils.asi is from before activity tracing: relaunch the game from OpenCAGE (launch_game) to update it.";
+            if (!string.IsNullOrEmpty(LiveLinkTrace.LastStatus))
+                result["status"] = LiveLinkTrace.LastStatus;
+
+            global::OpenCAGE.DockPanels.CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
+            if (call.Has("composite") || links)
+                display = ActivityDisplay(call);
+            if (display == null || !display.Populated || display.LiveLinkActivity == null)
+                return result;
+            //What the display shows now (a navigation a moment ago included)
+            LiveLinkTrace.Refresh();
+            LiveLinkActivity activity = display.LiveLinkActivity;
+            Composite composite = activity.Composite ?? display.Composite;
+            Commands commands = activity.Commands ?? display.Content?.Level?.Commands;
+            result["watching"] = new JObject()
+            {
+                ["composite"] = composite.name,
+                ["composite_id"] = McpScript.Id(composite.shortGUID),
+                ["instance_path"] = activity.Path == null ? (JToken)"every instance" : new JArray(activity.Path.Select(o => McpScript.Id(o))),
+            };
+            result["lit_links"] = activity.Count;
+            result["counted_pins"] = activity.PinCount;
+            if (!links)
+                return result;
+
+            int limit = Math.Max(1, Math.Min(5000, call.Int("limit", 200)));
+            double now = LiveLinkTrace.NowMs;
+            JArray list = new JArray();
+            foreach (KeyValuePair<LinkKey, LinkActivity> pair in activity.Links.OrderByDescending(o => o.Value.LastMs).Take(limit))
+            {
+                LinkKey key = pair.Key;
+                LinkActivity link = pair.Value;
+                JObject owner = ActivityEnd(commands, composite, key.Owner, key.OwnerPin);
+                JObject linked = ActivityEnd(commands, composite, key.Linked, key.LinkedPin);
+                //A data link is kept on the entity at its top: its value comes in from the other end when that entity reads
+                //it, and goes out to the other end when it sends it - from and to follow the value
+                bool inward = link.Data && !link.Write;
+                JObject entry = new JObject()
+                {
+                    ["kind"] = link.Data ? "data" : "logic",
+                    ["from"] = inward ? linked : owner,
+                    ["to"] = inward ? owner : linked,
+                };
+                if (link.Data)
+                    entry["direction"] = link.Write ? "write" : "read";
+                entry["count"] = link.Count;
+                entry["seconds_since_last"] = Math.Round((now - link.LastMs) / 1000.0, 2);
+                entry["glowing"] = now - link.LastMs < LiveLinkTrace.GlowMilliseconds;
+                list.Add(entry);
+            }
+            result["links"] = list;
+            if (activity.Count > limit)
+                call.Note(activity.Count + " links have been used; the " + limit + " used most recently are listed ('limit' for more).");
+
+            //The counts the pages show beside the pins: "name [n]" for an output fired, "[n] name" for a method called
+            JArray pins = new JArray();
+            foreach (KeyValuePair<PinKey, PinActivity> pair in activity.Pins.OrderByDescending(o => o.Value.LastMs).Take(limit))
+            {
+                JObject entry = ActivityEnd(commands, composite, pair.Key.Entity, pair.Key.Pin);
+                entry["side"] = pair.Key.Use == PinUse.Fired ? "fired" : "called";
+                entry["count"] = pair.Value.Count;
+                entry["seconds_since_last"] = Math.Round((now - pair.Value.LastMs) / 1000.0, 2);
+                pins.Add(entry);
+            }
+            result["pins"] = pins;
+            if (activity.PinCount > limit)
+                call.Note(activity.PinCount + " pins have been used; the " + limit + " used most recently are listed ('limit' for more).");
+            return result;
+        }
+
+        private static JObject ActivityEnd(Commands commands, Composite composite, uint id, uint pin)
+        {
+            ShortGuid entityId = new ShortGuid(id);
+            Entity entity = composite.GetEntityByID(entityId);
+            return new JObject()
+            {
+                ["entity"] = entity == null || commands == null ? McpScript.Id(entityId) : McpScript.EntityName(commands, composite, entity),
+                ["id"] = McpScript.Id(entityId),
+                ["pin"] = McpScript.ParamName(new ShortGuid(pin)),
+            };
+        }
+
+        internal static void RequireLiveLink()
+        {
+            if (!global::OpenCAGE.RuntimeUtilsConnection.Send.Connected)
+                throw new McpError("Not connected to the game: runtime_utils {action: 'connect'} first, with the game running.");
+        }
+
+        //Sent to another level, a composite's edits would land in whatever has the same id there
+        internal static void RequireRunningLevel(Commands commands)
+        {
+            LiveLink.GameStatus status = LiveLink.Status().Result;
+            if (!status.Reply.Ok)
+                throw new McpError(status.Reply.Message);
+            if (!status.LevelRunning)
+                throw new McpError("The game is not running a level yet (still loading, or at a loading screen).");
+            if (!status.IsRunning(commands))
+                throw new McpError("The game is running a different level (root composite " + status.RootCompositeName + ").");
+        }
+
+        /// <summary>capture_environment_maps: each EnvironmentMap's cubemap captured in the running game and used (see EnvironmentMapCapture).</summary>
+        private static object CaptureEnvironmentMaps(McpCall call)
+        {
+            RequireLiveLink();
+            EnvironmentMapCapture.Options options = new EnvironmentMapCapture.Options()
+            {
+                FaceSize = call.Has("size") ? call.Int("size") : EnvironmentMapCapture.ConfiguredFaceSize,
+                Format = call.Has("format") ? McpAssets.ParseTextureFormat(call.Str("format")) : (Textures.TextureFormat?)null,
+                SettleFrames = Math.Max(EnvironmentMapCapture.MinimumSettleFrames, Math.Min(120, call.Int("settle_frames", 8))),
+                StreamTimeoutMs = (int)(Math.Max(0, Math.Min(120, call.Num("stream_timeout_seconds", 30))) * 1000),
+                KeepHud = call.Bool("keep_hud"),
+                KeepPostEffects = call.Bool("keep_post_effects"),
+                DeleteOld = !call.Bool("keep_old"),
+            };
+            if (options.FaceSize != 0 && !EnvironmentMapCapture.IsFaceSize(options.FaceSize))
+                throw McpError.Invalid("'size' must be 0 (the size of the cubemap it replaces) or a power of two from 16 to 1024.");
+
+            //What to capture, and from where: (composite, entity, instance path or null)
+            Level level = null;
+            Commands commands = null;
+            List<(Composite composite, Entity entity, List<ShortGuid> path)> targets = new List<(Composite, Entity, List<ShortGuid>)>();
+            JArray skipped = new JArray();
+            McpEditor.UI(() =>
+            {
+                commands = McpEditor.RequireCommands(false);
+                level = Singleton.Editor?.CompositeBrowser?.Content?.Level;
+                if (call.Bool("all_in_level"))
+                {
+                    //Each placed exactly once (a cubemap is taken from one point); the rest are reported, not captured
+                    List<EnvironmentMapCapture.Target> levelTargets = EnvironmentMapCapture.LevelTargets(commands, out List<EnvironmentMapCapture.Skipped> skippedMaps);
+                    foreach (EnvironmentMapCapture.Target target in levelTargets)
+                        targets.Add((target.Composite, target.Entity, target.Path));
+                    foreach (EnvironmentMapCapture.Skipped skip in skippedMaps)
+                        skipped.Add(new JObject() { ["entity"] = McpScript.EntityName(commands, skip.Composite, skip.Entity), ["composite"] = skip.Composite.name, ["reason"] = skip.Reason });
+                    return;
+                }
+                Composite owner = LiveLinkComposite(call, commands);
+                List<ShortGuid> path = null;
+                if (call.Has("instance_path"))
+                    path = ReadInstancePath(call, commands, owner);
+                else if (Singleton.Editor?.CompositeDisplay?.Composite == owner)
+                    path = LiveLink.InstancePath(Singleton.Editor.CompositeDisplay, commands);
+                if (call.Has("entities"))
+                {
+                    foreach (string reference in call.StrList("entities"))
+                    {
+                        Entity entity = McpScript.FindEntity(commands, owner, reference);
+                        if (!EnvironmentMapCapture.IsEnvironmentMap(entity))
+                            throw McpError.Invalid(McpScript.EntityName(commands, owner, entity) + " is not an EnvironmentMap.");
+                        targets.Add((owner, entity, path));
+                    }
+                }
+                else
+                {
+                    foreach (FunctionEntity function in owner.functions)
+                        if (EnvironmentMapCapture.IsEnvironmentMap(function))
+                            targets.Add((owner, function, path));
+                    if (targets.Count == 0)
+                        throw McpError.Invalid(owner.name + " has no EnvironmentMap entities: pass 'composite', or all_in_level.");
+                }
+            });
+            if (level == null)
+                throw new McpError("No level is open.");
+            RequireRunningLevel(commands);
+
+            JArray captured = new JArray(), failed = new JArray();
+            string faces = call.Str("faces_folder");
+            if (!string.IsNullOrEmpty(faces) && !Path.IsPathRooted(faces))
+                throw McpError.Invalid("'faces_folder' must be an absolute path.");
+            foreach ((Composite composite, Entity entity, List<ShortGuid> path) in targets)
+            {
+                string name = McpUI(() => McpScript.EntityName(commands, composite, entity));
+                options.FacesFolder = string.IsNullOrEmpty(faces) ? null : targets.Count == 1 ? faces
+                    : Path.Combine(faces, string.Join("_", (composite.name.Substring(composite.name.LastIndexOfAny(new[] { '\\', '/' }) + 1) + "_" + name).Split(Path.GetInvalidFileNameChars())));
+                //The capture and the build (awaited on the UI thread), then the change to the level as a step of its own, so it
+                //is recorded as this call's (an AI step); anything thrown is this target's failure, not the call's
+                EnvironmentMapCapture.Outcome outcome;
+                try
+                {
+                    using (McpEditor.UI(() => EnvironmentMapCapture.HoldBusy()))
+                    {
+                        EnvironmentMapCapture.Prepared prepared = McpEditor.UI(() => EnvironmentMapCapture.PrepareAsync(level, composite, entity, path, options)).Result;
+                        outcome = prepared.Failed ?? McpEditor.UI(() => EnvironmentMapCapture.Apply(prepared, options, "AI: "));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Exception inner = ex is AggregateException aggregate ? aggregate.GetBaseException() : ex is McpUiException ui && ui.InnerException != null ? ui.InnerException : ex;
+                    outcome = new EnvironmentMapCapture.Outcome() { Ok = false, Message = inner.Message };
+                }
+                if (outcome.Ok)
+                {
+                    captured.Add(new JObject()
+                    {
+                        ["entity"] = name,
+                        ["composite"] = composite.name,
+                        ["position"] = new JArray(outcome.Position.X, outcome.Position.Y, outcome.Position.Z),
+                        ["texture"] = outcome.Texture.Name,
+                        ["format"] = outcome.Texture.Format.ToString(),
+                        ["size"] = outcome.Capture.Size,
+                        ["previous"] = outcome.Previous?.Name,
+                        ["previous_deleted"] = outcome.PreviousDeleted,
+                        ["movers_given_it"] = outcome.MoversRepointed,
+                        ["needs_build"] = outcome.NeedsBuild,
+                        ["zones_still_streaming"] = outcome.Capture.ZonesStillStreaming,
+                        ["streaming_seconds"] = Math.Round(outcome.Capture.StreamingMilliseconds / 1000.0, 1),
+                    });
+                }
+                else
+                {
+                    failed.Add(new JObject() { ["entity"] = name, ["composite"] = composite.name, ["reason"] = outcome.Message });
+                    //The game is gone, or too old: the rest would only fail the same way
+                    if (!LiveLink.Connected || outcome.Message.Contains("too old"))
+                        break;
+                }
+            }
+            JObject result = new JObject() { ["captured"] = captured };
+            if (failed.Count != 0)
+                result["failed"] = failed;
+            if (skipped.Count != 0)
+                result["skipped"] = skipped;
+            if (captured.Count != 0)
+                call.Note("The game reads cubemaps when it loads a level: " + (captured.Any(o => (bool)o["needs_build"]) ? "save_level with build=true (needs_build: models only take some of the new cubemaps from a build)" : "save_level") + ", then reload it in the game to see them there. The 3D viewport shows them on surfaces once the level is opened again.");
+            return result;
+        }
+
+        internal static Composite LiveLinkComposite(McpCall call, Commands commands)
+        {
+            if (call.Has("composite"))
+                return McpScript.FindComposite(commands, call.Str("composite"));
+            Composite open = Singleton.Editor?.CompositeDisplay?.Composite;
+            if (open == null)
+                throw new McpError("No composite is open: pass 'composite'.");
+            return open;
+        }
+
+        /// <summary>
+        /// 'instance_path' as call_method and animate take it - the instance entities from the level's root down to one placement of
+        /// <paramref name="composite"/>, as ids or names or a path a result gives - checked against the script before it goes to the
+        /// game: every step an instance, the last placing that composite. Empty for the root composite itself. UI thread.
+        /// </summary>
+        internal static List<ShortGuid> ReadInstancePath(McpCall call, Commands commands, Composite composite)
+        {
+            Composite root = commands.EntryPoints[0];
+            JToken token = call.Token("instance_path");
+            if (token is JObject given && given["from"]?.Type == JTokenType.String && McpScript.FindComposite(commands, (string)given["from"]) != root)
+                throw McpError.Invalid("'instance_path' runs from the level's root composite; that path starts in " + (string)given["from"] + ".");
+            if (token is JArray empty && empty.Count == 0)
+            {
+                if (composite != root)
+                    throw McpError.Invalid("An empty 'instance_path' is the root composite, but the entity is in " + composite.name + ": give the instances from the root down to a placement of it (get_placements lists them).");
+                return new List<ShortGuid>();
+            }
+            List<Entity> chain = McpScript.ChainFrom(commands, root, McpScript.PathSteps(token, "instance_path"));
+            Composite reached = McpScript.InstancedComposite(commands, chain[chain.Count - 1]);
+            if (reached != composite)
+                throw McpError.Invalid("'instance_path' leads to " + (reached == null ? McpScript.WithArticle(McpScript.TypeName(commands, chain.Count > 1 ? McpScript.InstancedComposite(commands, chain[chain.Count - 2]) : root, chain[chain.Count - 1])) + ", not an instance" : "an instance of " + reached.name) +
+                    ", not to a placement of " + composite.name + " (where the entity is). get_placements lists its placements with their ids.");
+            return chain.Select(o => o.shortGUID).ToList();
+        }
+
+        private static T McpUI<T>(Func<T> work) => McpEditor.UI(work);
+
+        private static JObject RuntimeUtilsState()
+        {
+            //This install's game: the live link only connects to that (a game from another install is left alone)
+            bool running = CommandsEditor.GameRunning();
+            return new JObject()
+            {
+                ["connected"] = global::OpenCAGE.RuntimeUtilsConnection.Send.Connected,
+                ["connect_at_start"] = SettingsManager.GetBool(Settings.RuntimeUtilsOpt),
+                ["game_running"] = running,
+                //launch_options live_link: whether launch_game has the game serve it
+                ["served_at_launch"] = SettingsManager.GetBool(Settings.ScriptingHelpersLiveLink),
+            };
+        }
+
+        /// <summary>
+        /// runtime_utils animate: the running game drives a CAGEAnimation as Animation Mode's "In game" does - held at a time,
+        /// or played - through the same drive (LiveLinkAnimationDrive), which keeps it until it is released, Animation Mode
+        /// takes it over, or OpenCAGE disconnects. An animate that fails gives it back.
+        /// </summary>
+        private static object Animate(McpCall call)
+        {
+            RequireLiveLink();
+            if (call.Bool("get"))
+            {
+                JObject state = new JObject() { ["animation_drive"] = AnimationDriveState() };
+                //Asked afresh: while the drive is off, nothing else asks the game
+                LiveLinkAnimationDrive.Target current = LiveLinkAnimationDrive.Current;
+                uint root = current?.Root ?? McpEditor.UI(() => LiveLink.RootOf(Singleton.Editor?.CompositeBrowser?.Content?.Level?.Commands));
+                LiveLink.GameAnimation now = LiveLink.GetAnimation(root).Result;
+                state["game_now"] = now.Valid ? (JToken)DescribeGameAnimation(now) : now.Reply.Message;
+                return state;
+            }
+
+            if (call.Bool("release"))
+            {
+                bool was = false;
+                McpEditor.UI(() =>
+                {
+                    if (AnimationModeSession.Current != null && AnimationModeSession.Current.DrivesGame)
+                        throw new McpError("Animation Mode in a CAGEAnimation editor window drives the game's animation: leave Animation Mode there (or untick In game) to give it back.");
+                    //Given back in the step that checked, so a window entering Animation Mode meanwhile keeps its drive
+                    was = LiveLinkAnimationDrive.Active;
+                    LiveLinkAnimationDrive.Release();
+                });
+                if (!McpEditor.WaitFor(call, () => !LiveLinkAnimationDrive.Releasing, TimeSpan.FromSeconds(5), "Giving the game its animation back"))
+                    throw new McpError("The game has not answered the give-back yet (it is sent again until it does) - " + LiveLinkAnimationDrive.Status);
+                return new JObject() { ["released"] = was, ["animation_drive"] = AnimationDriveState() };
+            }
+
+            if (!call.Has("time"))
+                throw new McpError("animate needs 'time' (seconds into the animation) - or release, or get.");
+            float time = (float)call.Num("time");
+            if (float.IsNaN(time) || float.IsInfinity(time) || time < 0f)
+                throw new McpError("'time' must be a number of seconds, 0 or more.");
+            bool play = call.Bool("play");
+            if (!play && (call.Bool("loop") || call.Bool("events")))
+                call.Note("'loop' and 'events' only apply with play: a hold runs no events.");
+
+            Commands commands = null;
+            LiveLinkAnimationDrive.Target target = null;
+            McpEditor.UI(() =>
+            {
+                //Animation Mode owns the drive while it is on (the game drives one animation at a time)
+                if (AnimationModeSession.Active)
+                    throw new McpError("Animation Mode is on in a CAGEAnimation editor window, and owns the game's animation drive: leave it there first.");
+                commands = McpEditor.RequireCommands(false);
+                Composite composite = LiveLinkComposite(call, commands);
+                Entity entity = McpScript.FindEntity(commands, composite, call.Str("entity", required: true));
+                string name = McpScript.EntityName(commands, composite, entity);
+                if (!(entity is CAGEAnimation))
+                    throw new McpError(name + " is a " + McpScript.TypeName(commands, composite, entity) + ", not a CAGEAnimation (find_cage_animations lists them).");
+                //The placement as call_method takes it
+                List<ShortGuid> path = null;
+                if (call.Has("instance_path"))
+                    path = ReadInstancePath(call, commands, composite);
+                else if (Singleton.Editor?.CompositeDisplay?.Composite == composite)
+                    path = LiveLink.InstancePath(Singleton.Editor.CompositeDisplay, commands);
+                target = new LiveLinkAnimationDrive.Target()
+                {
+                    Root = LiveLink.RootOf(commands),
+                    Composite = composite.shortGUID,
+                    Entity = entity.shortGUID,
+                    Path = path ?? new List<ShortGuid>(),
+                    Label = name,
+                };
+            });
+            RequireRunningLevel(commands);
+
+            LiveLink.GameAnimation game;
+            try
+            {
+                uint sequence = 0;
+                McpEditor.UI(() =>
+                {
+                    //Checked again in the step that takes the drive: a window may have entered Animation Mode while the game was asked
+                    if (AnimationModeSession.Active)
+                        throw new McpError("Animation Mode was turned on in a CAGEAnimation editor window meanwhile, and owns the game's animation drive: leave it there first.");
+                    sequence = LiveLinkAnimationDrive.Begin(target, time);
+                    if (play)
+                        sequence = LiveLinkAnimationDrive.Play(time, 1f, call.Bool("loop"), call.Bool("events"));
+                });
+                game = AwaitGameAnimation(call, sequence, TimeSpan.FromSeconds(15));
+            }
+            catch (Exception ex)
+            {
+                //Left on, the drive would go on asking the game, and could take the animation after this has said it failed
+                if (LiveLinkAnimationDrive.Release(target) && ex is McpError)
+                    throw new McpError(ex.Message + " (The drive is off again: the game is given its animation back.)");
+                throw;
+            }
+            call.Note("The game keeps driving it until runtime_utils {action: 'animate', release: true}, Animation Mode takes the drive over, or OpenCAGE disconnects.");
+            return new JObject()
+            {
+                ["animation"] = target.Label,
+                ["placements"] = target.Path.Count == 0 ? "every running instance of the composite" : string.Join(" > ", target.Path.Select(o => McpScript.Id(o))),
+                [play ? "playing_from" : "held_at"] = time,
+                ["game"] = DescribeGameAnimation(game),
+            };
+        }
+
+        //The game cannot drive the animation at all in these states (it waits through the others, or shows it)
+        private static readonly string[] CannotDrive = { "not_found", "not_animation", "disabled", "no_data", "cinematic" };
+
+        /// <summary>
+        /// Wait until a game frame has applied this change of the animation drive, and return what the game showed. When the
+        /// game turned it away, or cannot drive that animation (not in the running level, disabled, a cinematic), says why.
+        /// </summary>
+        internal static LiveLink.GameAnimation AwaitGameAnimation(McpCall call, uint sequence, TimeSpan timeout)
+        {
+            Stopwatch waited = Stopwatch.StartNew();
+            int reported = -1;
+            while (true)
+            {
+                call.ThrowIfCancelled();
+                if (LiveLinkAnimationDrive.Unsupported)
+                    throw new McpError("The game's runtime utils are from before the animation drive: relaunch the game from OpenCAGE (launch_game) to update them.");
+                string refusal = LiveLinkAnimationDrive.RefusalOf(sequence);
+                if (refusal != null)
+                    throw new McpError("The game turned it away: " + refusal);
+                LiveLink.GameAnimation game = LiveLinkAnimationDrive.AnswerTo(sequence);
+                if (game != null && game.Shows(sequence))
+                    return game;
+                if (game != null && CannotDrive.Contains(game.State))
+                    throw new McpError("The game cannot drive it (" + game.State + "): " + game.Reason);
+                if (!LiveLink.Connected)
+                    throw new McpError("The game disconnected (it gives the animation back by itself).");
+                if (waited.Elapsed > timeout)
+                    throw new McpError("No game frame applied it within " + (int)timeout.TotalSeconds + " s - " + LiveLinkAnimationDrive.Status + ".");
+                int seconds = (int)waited.Elapsed.TotalSeconds;
+                if (seconds != reported)
+                {
+                    reported = seconds;
+                    call.Progress("Waiting for the game to apply it (" + seconds + " s)", seconds, timeout.TotalSeconds);
+                }
+                System.Threading.Thread.Sleep(30);
+            }
+        }
+
+        internal static JObject DescribeGameAnimation(LiveLink.GameAnimation game)
+        {
+            if (game == null || !game.Valid)
+                return null;
+            JObject described = new JObject()
+            {
+                ["state"] = game.State,
+                ["time"] = double.IsNaN(game.Time) ? JValue.CreateNull() : (JToken)Math.Round(game.Time, 4),
+                ["length"] = double.IsNaN(game.Length) ? JValue.CreateNull() : (JToken)Math.Round(game.Length, 4),
+                ["sequence"] = game.Sequence,
+                ["frame"] = game.Frame,
+                ["instances_applied"] = game.Applied,
+                ["instances_found"] = game.Found,
+                ["was_playing"] = game.WasPlaying,
+            };
+            if (game.Reason.Length != 0)
+                described["reason"] = game.Reason;
+            return described;
+        }
+
+        /// <summary>The animation drive: what the game is to do, for whom, and what it last said it does.</summary>
+        private static JObject AnimationDriveState()
+        {
+            LiveLinkAnimationDrive.Target target = LiveLinkAnimationDrive.Current;
+            JObject drive = new JObject() { ["on"] = target != null };
+            if (target != null)
+            {
+                bool byMode = McpEditor.UI(() => AnimationModeSession.Current != null && AnimationModeSession.Current.DrivesGame);
+                drive["by"] = byMode ? "Animation Mode (a CAGEAnimation editor window, or preview_cage_animation)" : "runtime_utils animate";
+                drive["animation"] = target.Label;
+                drive["composite"] = McpScript.Id(target.Composite);
+                drive["entity"] = McpScript.Id(target.Entity);
+                drive["instance_path"] = target.Path.Count == 0 ? (JToken)"every placement" : new JArray(target.Path.Select(o => McpScript.Id(o)));
+                drive["mode"] = LiveLinkAnimationDrive.Playing ? "play" : "hold";
+                drive["time"] = Math.Round(LiveLinkAnimationDrive.WantedTime, 4);
+                drive["sequence"] = LiveLinkAnimationDrive.Sequence;
+            }
+            else if (LiveLinkAnimationDrive.Releasing)
+                drive["giving_back"] = true;
+            string status = LiveLinkAnimationDrive.Status;
+            if (status.Length != 0)
+                drive["status"] = status;
+            JObject game = DescribeGameAnimation(LiveLinkAnimationDrive.LastGame);
+            if (game != null)
+                drive["game"] = game;
+            return drive;
+        }
+        #endregion
+
+        #region Player start
+        private static readonly ShortGuid SpawnOnReset = ShortGuidUtils.Generate("spawn_on_reset");
+
+        //The entity types that give the player things or set their state at the start
+        private static readonly string[] LoadoutTypes =
+        {
+            "WEAPON_GiveToPlayer", "AddToInventory", "RemoveWeaponsFromPlayer", "CHR_SetHealth", "CHR_SetInvincibility", "SetPlayerHasKeycard",
+            "SetPlayerHasGatingTool", "PlayerTorch", "PlayerWeaponMonitor",
+        };
+
+        /// <summary>The composites that are spawn points (SpawnPositionSelect, wherever its folder).</summary>
+        private static HashSet<ShortGuid> SpawnComposites(Commands commands) =>
+            new HashSet<ShortGuid>(commands.Entries.Where(o => o != null && McpScript.NormalisePath(o.name).EndsWith("SpawnPositionSelect", StringComparison.OrdinalIgnoreCase)).Select(o => o.shortGUID));
+
+        private static JObject DescribeStep(Commands commands, Composite root, McpPlacements.Step step)
+        {
+            JObject described = new JObject()
+            {
+                ["path"] = new JArray(step.Chain.Select((o, i) => McpScript.EntityName(commands, i == 0 ? root : McpScript.InstancedComposite(commands, step.Chain[i - 1]) ?? root, o))),
+                ["ids"] = new JArray(step.Chain.Select(o => McpScript.Id(o.shortGUID))),
+                ["composite"] = step.Composite.name,
+            };
+            if (step.World != null)
+            {
+                described["position"] = McpValues.Vector(step.World.position);
+                described["rotation"] = McpValues.Vector(step.World.rotation);
+                described["space"] = "world";
+            }
+            if (!step.Real) described["not_placed_by_game"] = step.Deleted ? "deleted" : step.Template ? "template" : "shared repeat";
+            return described;
+        }
+
+        /// <summary>get_player_setup: one walk of everything the root places. UI thread.</summary>
+        private static JObject PlayerSetup(McpCall call)
+        {
+            Commands commands = McpEditor.RequireCommands(forEditing: false);
+            Composite root = commands.EntryPoints[0];
+            int limit = McpPaging.Limit(call, 50);
+            HashSet<ShortGuid> spawnComposites = SpawnComposites(commands);
+            HashSet<ShortGuid> loadout = new HashSet<ShortGuid>(LoadoutTypes.Select(o => Enum.TryParse(o, out FunctionType type) ? new ShortGuid((uint)type) : ShortGuid.Invalid).Where(o => o != ShortGuid.Invalid));
+            ShortGuid checkpoint = new ShortGuid((uint)FunctionType.Checkpoint), character = new ShortGuid((uint)FunctionType.Character);
+
+            JArray spawns = new JArray(), checkpoints = new JArray(), players = new JArray(), setup = new JArray();
+            int spawnCount = 0, checkpointCount = 0, setupCount = 0;
+            McpPlacements walker = new McpPlacements(commands) { PlaceUnpositioned = true };
+            walker.Walk(root, step =>
+            {
+                if (!(step.Entity is FunctionEntity function)) return true;
+                if (!function.function.IsFunctionType && spawnComposites.Contains(function.function))
+                {
+                    spawnCount++;
+                    if (spawns.Count >= limit) return true;
+                    JObject spawn = DescribeStep(commands, root, step);
+                    bool? own = (function.GetParameter(SpawnOnReset)?.content as cBool)?.value;
+                    bool? effective = step.Flag(SpawnOnReset);
+                    if (effective == null)
+                    {
+                        //Not set on the instance: the composite's own variable's default
+                        VariableEntity variable = commands.GetComposite(function.function)?.variables.FirstOrDefault(o => o.name == SpawnOnReset);
+                        bool? fallback = (variable?.GetParameter(SpawnOnReset)?.content as cBool)?.value;
+                        spawn["spawn_on_reset"] = fallback ?? false;
+                        spawn["spawn_on_reset_from"] = fallback != null ? "the composite's default" : "not set (false)";
+                    }
+                    else
+                    {
+                        spawn["spawn_on_reset"] = effective.Value;
+                        if (effective != own) spawn["spawn_on_reset_from"] = "an alias override above it";
+                    }
+                    spawns.Add(spawn);
+                }
+                else if (function.function == checkpoint)
+                {
+                    if (++checkpointCount <= limit)
+                    {
+                        JObject point = DescribeStep(commands, root, step);
+                        point["name"] = McpScript.EntityName(commands, step.Composite, function);
+                        checkpoints.Add(point);
+                    }
+                }
+                else if (function.function == character && (function.GetParameter("is_player")?.content as cBool)?.value == true)
+                {
+                    if (players.Count < limit)
+                    {
+                        JObject player = DescribeStep(commands, root, step);
+                        string model = (function.GetParameter("display_model")?.content as cString)?.value;
+                        player["display_model"] = model;
+                        if (string.Equals(model, "PLAYER_FP", StringComparison.OrdinalIgnoreCase))
+                            player["display_model_note"] = "PLAYER_FP is whichever of GLOBAL's suits is worn";
+                        players.Add(player);
+                    }
+                }
+                else if (loadout.Contains(function.function))
+                {
+                    if (++setupCount <= limit)
+                    {
+                        JObject entry = DescribeStep(commands, root, step);
+                        entry["type"] = function.function.AsFunctionType.ToString();
+                        entry["name"] = McpScript.EntityName(commands, step.Composite, function);
+                        JObject values = new JObject();
+                        foreach (Parameter parameter in function.parameters.Where(o => o?.content != null && o.content.dataType != DataType.TRANSFORM && o.name != ShortGuids.name))
+                        {
+                            try { values[McpScript.ParamName(parameter.name)] = McpValues.ToJson(parameter.content, commands); } catch { }
+                            if (values.Count >= 12) break;
+                        }
+                        entry["values"] = values;
+                        //What sets it off: links into its method pins from its own composite
+                        JArray triggers = new JArray();
+                        foreach (Entity other in step.Composite.GetEntities())
+                            foreach (EntityConnector link in other.childLinks)
+                                if (link.linkedEntityID == function.shortGUID && triggers.Count < 6)
+                                    triggers.Add(McpScript.EntityName(commands, step.Composite, other) + "." + McpScript.ParamName(link.thisParamID) + " -> " + McpScript.ParamName(link.linkedParamID));
+                        entry["triggered_by"] = triggers;
+                        setup.Add(entry);
+                    }
+                }
+                return true;
+            }, null, call.Cancel);
+
+            JObject result = new JObject()
+            {
+                ["spawns"] = spawns,
+                ["spawn_count"] = spawnCount,
+                ["player_characters"] = players,
+                ["checkpoints"] = checkpoints,
+                ["checkpoint_count"] = checkpointCount,
+                ["loadout_and_state"] = setup,
+                ["loadout_count"] = setupCount,
+                ["shared_by_every_level"] = new JArray(
+                    new JObject() { ["what"] = "the player's attributes, senses and locomotion", ["read"] = "get_config_record {kind: 'attributes', name: 'THE_PLAYER'}" },
+                    new JObject() { ["what"] = "difficulty settings", ["read"] = "get_config_record {kind: 'difficulty'}" },
+                    new JObject() { ["what"] = "inventory items and ammo", ["read"] = "get_config_record {kind: 'inventory_item'} / {kind: 'ammo'}" }),
+            };
+            if (spawnComposites.Count == 0)
+                call.Note("This level has no SpawnPositionSelect composite: port_composites 'Archetypes\\Script\\Mission\\SpawnPositionSelect' from a campaign level (it brings the player's display models), then set_player_start.");
+            else if (spawnCount == 0)
+                call.Note("SpawnPositionSelect is in the level but not placed: set_player_start with position places one.");
+            else if (!spawns.Any(o => (bool)o["spawn_on_reset"]))
+                call.Note("No spawn point has spawn_on_reset true: the level's mission script spawns the player (links into a spawn's SpawnPlayer), or nothing does - set_player_start makes one spawn the player on a fresh start.");
+            if (walker.Truncated)
+                call.Note("The level is too big to walk in full: some placements may be missing.");
+            return result;
+        }
+
+        private static object SetPlayerStart(McpCall call)
+        {
+            bool byPath = call.Has("spawn");
+            bool byPosition = call.Has("position") || call.Has("rotation");
+            if (byPath == byPosition)
+                throw McpError.Invalid(byPath ? "Give spawn (an existing spawn) or position/rotation (a new one), not both." : "Give spawn (an existing spawn point's instance path, from get_player_setup) or position (+ rotation) for a new one.");
+            if (byPath && (call.Has("into") || call.Has("name")))
+                throw McpError.Invalid("'into' and 'name' are for a new spawn (position).");
+
+            Commands commands = null;
+            Composite focus = null, spawnComposite = null;
+            Entity chosen = null;
+            List<Tuple<Composite, FunctionEntity>> others = new List<Tuple<Composite, FunctionEntity>>();
+            List<string> aliased = new List<string>();
+            JObject result = new JObject();
+            McpEditor.UI(() =>
+            {
+                commands = McpEditor.RequireCommands();
+                HashSet<ShortGuid> spawnComposites = SpawnComposites(commands);
+                if (spawnComposites.Count == 0)
+                    throw new McpError(McpErrorCodes.NotFound, "This level has no SpawnPositionSelect composite. port_composites {level: 'PRODUCTION/SCI_ANDROIDLAB', composites: ['Archetypes\\\\Script\\\\Mission\\\\SpawnPositionSelect']} brings it (with the player's display models); then call this again.");
+                if (byPath)
+                {
+                    List<Entity> chain = new List<Entity>();
+                    Composite root = commands.EntryPoints[0];
+                    Composite end = McpEditorTools.ResolveInstancePath(commands, root, McpScript.PathSteps(call.Token("spawn"), "spawn"), chain);
+                    if (!spawnComposites.Contains(end.shortGUID))
+                        throw McpError.Invalid("'spawn' leads to an instance of " + end.name + ", not a SpawnPositionSelect (get_player_setup lists the spawn points).");
+                    chosen = chain[chain.Count - 1];
+                    focus = chain.Count == 1 ? root : McpScript.InstancedComposite(commands, chain[chain.Count - 2]);
+                }
+                else
+                {
+                    focus = McpScript.FindComposite(commands, call.Str("into") ?? "root");
+                    spawnComposite = commands.GetComposite(spawnComposites.First());
+                }
+                foreach (Composite composite in commands.Entries.Where(o => o != null))
+                    foreach (FunctionEntity function in composite.functions)
+                        if (!function.function.IsFunctionType && spawnComposites.Contains(function.function) && function != chosen)
+                            others.Add(Tuple.Create(composite, function));
+                //An alias override of spawn_on_reset outranks the instance's own value
+                foreach (Composite composite in commands.Entries.Where(o => o != null))
+                    foreach (AliasEntity alias in composite.aliases)
+                        if (alias.GetParameter(SpawnOnReset) != null)
+                            aliased.Add(composite.name + ": alias " + McpScript.EntityName(commands, composite, alias));
+            });
+
+            FunctionEntity made = null;
+            McpScriptEdit.Outcome outcome = McpScriptEdit.Run(byPath ? "Set the player start" : "Add a player start", focus, edit =>
+            {
+                if (byPosition)
+                {
+                    made = edit.AddInstance(focus, spawnComposite, call.Str("name"));
+                    Vector3 position = call.Has("position") ? McpValues.ReadVector(call.Token("position"), "position", null) : Vector3.Zero;
+                    Vector3 rotation = call.Has("rotation") ? McpValues.ReadVector(call.Token("rotation"), "rotation", null) : Vector3.Zero;
+                    edit.SetParameter(focus, made, "position", new JObject() { ["position"] = McpValues.Vector(position), ["rotation"] = McpValues.Vector(rotation) });
+                    chosen = made;
+                }
+                edit.SetParameter(focus, chosen, "spawn_on_reset", true, allowCustom: true);
+                foreach (Tuple<Composite, FunctionEntity> other in others)
+                {
+                    bool? on = (other.Item2.GetParameter(SpawnOnReset)?.content as cBool)?.value;
+                    if (on == false) continue;
+                    edit.SetParameter(other.Item1, other.Item2, "spawn_on_reset", false, allowCustom: true);
+                }
+            });
+
+            result["start"] = McpEditor.UI(() => new JObject() { ["id"] = McpScript.Id(chosen.shortGUID), ["name"] = McpScript.EntityName(commands, focus, chosen), ["composite"] = focus.name });
+            result["other_spawns_off"] = others.Count;
+            result["undo_step"] = "AI: " + outcome.Label;
+            if (made != null)
+                result["space"] = McpEditor.UI(() => focus == commands.EntryPoints[0]) ? "world" : "composite";
+            if (aliased.Count != 0)
+                call.Note("Alias overrides of spawn_on_reset outrank the instances' own values and were left as they are: " + string.Join("; ", aliased.Take(6)) + ". get_player_setup shows the effective value per spawn.");
+            //A spawn inside a composite placed more than once is the same entity in every placement
+            List<string> repeated = McpEditor.UI(() =>
+            {
+                Dictionary<ShortGuid, int> placements = commands.Entries.Where(o => o != null).SelectMany(o => o.functions).Where(o => !o.function.IsFunctionType)
+                    .GroupBy(o => o.function).ToDictionary(o => o.Key, o => o.Count());
+                return new[] { focus }.Concat(others.Select(o => o.Item1)).Distinct()
+                    .Where(o => o != commands.EntryPoints[0] && placements.TryGetValue(o.shortGUID, out int count) && count > 1).Select(o => o.name).ToList();
+            });
+            if (repeated.Count != 0)
+                call.Note("These composites holding spawns are placed more than once, so the change applies in every placement: " + string.Join(", ", repeated.Take(5)) + ".");
+            call.Note("save_level (get_editor_state level.build says whether this needs a build), then launch_game starts there.");
+            return result;
+        }
+        #endregion
+
+#if ENABLE_MOD_PACKAGES
+        #region Mods
+        private static object Mods(McpCall call)
+        {
+            string action = (call.Str("action") ?? "list").Trim().ToLowerInvariant();
+            Modding.ModInstaller installer = Modding.ModServices.Installer;
+            Modding.ModState state = Modding.ModServices.State;
+            if (installer == null || state == null)
+                throw new McpError("The mod manager is not available: no game install is set.");
+            //No hashes of this build's files: nothing to combine mods with, put back, or tell a mod's changes by
+            string unsupported = Modding.ModServices.Manifest.Unsupported;
+            if (unsupported != null && action != "list")
+                throw new McpError("The mod manager is not available: " + unsupported);
+            bool dryRun = call.Bool("dry_run");
+            int limit = Math.Max(1, call.Int("limit", 100));
+            switch (action)
+            {
+                case "list":
+                    return ModList(installer, state, limit);
+
+                case "import":
+                    {
+                        string path = AbsoluteFile(call.Str("path", required: true), "path");
+                        if (!File.Exists(path))
+                            throw new McpError("There is no file '" + path + "'.");
+                        if (dryRun)
+                        {
+                            Modding.ModPackage package = Modding.ModPackage.Read(path);
+                            return new JObject() { ["dry_run"] = true, ["id"] = package.Info.Id, ["name"] = package.Info.Name, ["version"] = package.Info.Version, ["installs"] = package.Info.Installs, ["entries"] = package.Info.Entries.Count, ["levels"] = new JArray(package.Info.Levels) };
+                        }
+                        Modding.ModState.InstalledMod mod;
+                        try { mod = installer.ImportPackage(path); }
+                        catch (Exception e) { throw new McpError("Could not import the package: " + e.Message); }
+                        call.Note("'" + mod.Name + "' is in the library, disabled. apply with its id in 'enabled' to install it.");
+                        return new JObject() { ["imported"] = mod.Id, ["name"] = mod.Name, ["library"] = ModList(installer, state, limit) };
+                    }
+
+                case "remove":
+                    {
+                        string id = call.Str("id", required: true);
+                        Modding.ModState.InstalledMod mod = state.FindMod(id) ?? throw new McpError("There is no mod '" + id + "' in the library (action list shows them).");
+                        if (mod.Applied.Count != 0 || mod.Enabled)
+                            throw new McpError("'" + mod.Name + "' is enabled. apply without it first, then remove it.");
+                        if (dryRun)
+                            return new JObject() { ["dry_run"] = true, ["would_remove"] = mod.Id, ["name"] = mod.Name };
+                        try { installer.RemoveFromLibrary(mod.Id); }
+                        catch (Exception e) { throw new McpError(e.Message); }
+                        return new JObject() { ["removed"] = mod.Id, ["name"] = mod.Name, ["library"] = ModList(installer, state, limit) };
+                    }
+
+                case "apply":
+                case "repair":
+                    {
+                        List<string> desired = action == "apply" && call.Has("enabled")
+                            ? call.StrList("enabled")
+                            : state.ModsInPriorityOrder().Where(o => o.Enabled).Select(o => o.Id).ToList();
+                        List<string> unknown = desired.Where(o => state.FindMod(o) == null).ToList();
+                        if (unknown.Count != 0)
+                            throw new McpError("No mod " + string.Join(", ", unknown) + " in the library (action list shows them).");
+                        List<Modding.ModState.InstalledMod> mods = desired.Select(o => state.FindMod(o)).ToList();
+                        //The list's order is kept as soon as it's changed (the Mod Manager's Move Up/Down): this puts it in
+                        bool reordered = !(action == "apply" && call.Has("enabled")) && state.OrderNotApplied();
+                        Modding.ModAnalysis analysis = installer.Analyze(desired);
+                        JArray conflicts = new JArray(analysis.Conflicts.Take(limit).Select(o => new JObject() { ["kept"] = o.Kept, ["lost"] = o.Lost, ["target"] = o.Target, ["where"] = o.Where, ["text"] = o.Describe() }));
+                        if (dryRun)
+                        {
+                            JObject plan = new JObject() { ["dry_run"] = true, ["enabled_in_order"] = new JArray(mods.Select(o => o.Name)), ["conflicts"] = conflicts };
+                            if (reordered) plan["order_not_applied"] = true;
+                            if (analysis.CombinedLevels.Count != 0) plan["combined_levels"] = new JArray(analysis.CombinedLevels);
+                            if (analysis.Problems.Count != 0) plan["problems"] = new JArray(analysis.Problems);
+                            if (analysis.EditedFiles.Count != 0) plan["edited_since_installed"] = new JArray(analysis.EditedFiles.Take(limit));
+                            if (analysis.OwnChanges.Count != 0) plan["own_changes_combined"] = new JArray(analysis.OwnChanges.Take(limit));
+                            return plan;
+                        }
+                        string editedChoice = (call.Str("edited_files") ?? "").Trim().ToLowerInvariant();
+                        Modding.EditedFilesChoice edited = editedChoice == "keep" ? Modding.EditedFilesChoice.KeepAsMod : editedChoice == "discard" ? Modding.EditedFilesChoice.Discard : Modding.EditedFilesChoice.Ask;
+                        if (ProcessRunning("AI"))
+                            throw new McpError("Alien: Isolation is running: close it (close_game) before applying mods.");
+                        //What OpenCAGE has open of the files this may change: refused while it has changes not saved (unless let go), loaded again after
+                        LoadedGameFiles.Change change = null;
+                        McpEditor.UI(() =>
+                        {
+                            change = LoadedGameFiles.BeforeChange(null, analysis.MayChange, out string refused, call.Bool("discard_unsaved"));
+                            if (change == null)
+                                throw new McpError(McpErrorCodes.Refused, refused + " Nothing was changed.");
+                        });
+                        Modding.TransactionResult result = null;
+                        HashSet<string> installedBefore = new HashSet<string>(state.Mods.Where(o => o.Enabled).Select(o => o.Id));
+                        try
+                        {
+                            using (McpEditorTools.Heartbeat(call, "Applying mod changes"))
+                            {
+                                try { result = installer.ApplyConfiguration(desired, call.Bool("adopt_current_files"), null, edited); }
+                                catch (Exception e) { throw new McpError("Applying failed: " + e.Message); }
+                            }
+                        }
+                        finally
+                        {
+                            bool filesChanged = (result != null && result.Success) || installer.HasCrashJournal();
+                            McpEditor.UI(() => LoadedGameFiles.AfterChange(change, filesChanged));
+                        }
+                        if (!result.Success && result.EditedFiles.Count != 0)
+                            throw new McpError("Nothing was applied: " + result.Error + " Pass edited_files: keep or discard. Changed: " + string.Join(", ", result.EditedFiles.Take(20)));
+                        if (!result.Success)
+                            throw new McpError("Apply failed, and no changes were made: " + result.Error + (result.Error != null && result.Error.Contains("no copy of the originals") ? " Pass adopt_current_files: true to keep those files' current bytes as their restore point." : ""));
+                        if (mods.Count != 0)
+                            McpEditor.UI(() => Steam.UnlockAchievement(Steam.Achievements.MOD_INSTALLED));
+                        //Only the mods this put in count (as the Mod Manager counts them)
+                        int newlyInstalled = state.Mods.Count(o => o.Enabled && !installedBefore.Contains(o.Id) && o.Name != result.KeptAsMod);
+                        McpEditor.UI(() => Steam.CountTowards(Steam.Achievements.TEN_MODS_INSTALLED, newlyInstalled));
+                        JObject done = new JObject() { ["applied"] = new JArray(mods.Select(o => o.Name)), ["library"] = ModList(installer, state, limit) };
+                        if (result.Conflicts.Count != 0) done["conflicts"] = new JArray(result.Conflicts.Take(limit).Select(o => new JObject() { ["kept"] = o.Kept, ["lost"] = o.Lost, ["target"] = o.Target, ["where"] = o.Where, ["text"] = o.Describe() }));
+                        if (result.CombinedLevels.Count != 0) done["combined_levels"] = new JArray(result.CombinedLevels);
+                        if (result.Warnings.Count != 0) done["warnings"] = new JArray(result.Warnings.Take(limit));
+                        if (result.KeptAsMod != null) done["kept_as_mod"] = result.KeptAsMod;
+                        if (change.Reloaded.Count != 0) done["reloaded"] = new JArray(change.Reloaded);
+                        foreach (string problem in change.Problems)
+                            call.Note(problem);
+                        if (reordered)
+                            call.Note("The list's order had been changed since the mods were last applied: they're installed in that new order now.");
+                        if (change.Reloaded.Any(o => o.StartsWith("the level ")))
+                            call.Note("The open level is loading again from its files (wait for get_editor_state to show it loaded before editing it).");
+                        return done;
+                    }
+
+                case "recover":
+                    {
+                        if (!installer.HasCrashJournal())
+                            return new JObject() { ["recovered"] = false, ["reason"] = "No interrupted mod operation to recover." };
+                        if (dryRun)
+                            return new JObject() { ["dry_run"] = true, ["would_recover"] = true };
+                        //The files go back as they were: what OpenCAGE has open of them is loaded again after (saving it first would be undone)
+                        LoadedGameFiles.Change change = null;
+                        McpEditor.UI(() =>
+                        {
+                            change = LoadedGameFiles.BeforeChange(null, installer.CrashJournalFiles(), out string refused, call.Bool("discard_unsaved"), false);
+                            if (change == null)
+                                throw new McpError(McpErrorCodes.Refused, refused + " Nothing was changed.");
+                        });
+                        try { installer.RecoverCrashJournal(); }
+                        catch (Exception e) { throw new McpError("Recovery failed: " + e.Message); }
+                        finally { McpEditor.UI(() => LoadedGameFiles.AfterChange(change, true)); }
+                        foreach (string problem in change.Problems)
+                            call.Note(problem);
+                        JObject recovered = new JObject() { ["recovered"] = true };
+                        if (change.Reloaded.Count != 0) recovered["reloaded"] = new JArray(change.Reloaded);
+                        return recovered;
+                    }
+
+                case "export":
+                    return ExportMod(call, installer, state, limit, dryRun);
+            }
+            throw new McpError("'action' must be list, import, remove, apply, repair, recover or export.");
+        }
+
+        private static JObject ModList(Modding.ModInstaller installer, Modding.ModState state, int limit)
+        {
+            List<string> stale = new List<string>();
+            try { stale = installer.PathsNeedingRepair(); } catch { }
+            List<Modding.ModState.InstalledMod> mods = state.ModsInPriorityOrder();
+            JArray list = new JArray();
+            foreach (Modding.ModState.InstalledMod mod in mods.Take(limit))
+            {
+                string status;
+                if (!mod.Enabled) status = mod.Applied.Count != 0 ? "disabling pending" : "disabled";
+                else if (mod.Applied.Count == 0) status = "enabled, not applied";
+                else if (mod.Applied.Keys.Any(o => stale.Contains(o))) status = "needs repair";
+                else status = "active";
+                list.Add(new JObject() { ["id"] = mod.Id, ["name"] = mod.Name, ["version"] = mod.Version, ["author"] = mod.Author, ["installs"] = mod.Replaces ? Modding.ModPackageInfo.InstallsReplace : Modding.ModPackageInfo.InstallsCombine, ["enabled"] = mod.Enabled, ["priority"] = mod.Priority, ["status"] = status, ["files_applied"] = mod.Applied.Count });
+            }
+            return new JObject()
+            {
+                ["total"] = mods.Count,
+                ["mods"] = list,
+                ["needs_repair"] = stale.Count,
+                //The enabled mods are in another order in the list than they're installed in: apply puts the list's in
+                ["order_not_applied"] = state.OrderNotApplied(),
+                ["interrupted_operation"] = installer.HasCrashJournal(),
+                ["vanilla_manifest"] = Modding.ModServices.ManifestAvailable,
+            };
+        }
+
+        /// <summary>Export Mod: package what differs from vanilla (files, and config values) as an .omp, as the exporter window does.</summary>
+        private static object ExportMod(McpCall call, Modding.ModInstaller installer, Modding.ModState state, int limit, bool dryRun)
+        {
+            string name = call.Str("name");
+            string output = call.Has("path") ? AbsoluteFile(call.Str("path"), "path") : null;
+            if (!dryRun)
+            {
+                if (string.IsNullOrWhiteSpace(name)) throw new McpError("'name' is required: the mod's name.");
+                if (output == null) throw new McpError("'path' is required: where to write the package (an absolute path ending " + ModdingExtension + ").");
+            }
+            if (output != null && !output.EndsWith(ModdingExtension, StringComparison.OrdinalIgnoreCase))
+                throw new McpError("'path' must end with " + ModdingExtension + ".");
+            string installs = (call.Str("installs") ?? Modding.ModPackageInfo.InstallsCombine).Trim().ToLowerInvariant();
+            if (installs != Modding.ModPackageInfo.InstallsCombine && installs != Modding.ModPackageInfo.InstallsReplace)
+                throw McpError.Invalid("'installs' is combine or replace (got '" + installs + "').");
+
+            Modding.ScanResult scan;
+            using (McpEditorTools.Heartbeat(call, "Scanning the install against the vanilla manifest"))
+            {
+                Modding.InstallScanner scanner = Modding.ModServices.NewScanner() ?? throw new McpError("The install cannot be scanned (no vanilla manifest for this build).");
+                scan = scanner.Scan(null, (done, total) => call.Progress("Scanning the install", done, total));
+            }
+            List<string> changed = scan.WithStatus(Modding.FileStatus.Modified).Concat(scan.WithStatus(Modding.FileStatus.Foreign)).ToList();
+            HashSet<string> changedSet = new HashSet<string>(changed);
+            //A sidecar (.META) ships with its file (ModExportBuilder.AddFile): only list it alone when its file is unchanged
+            changed = changed.Where(o => !Modding.ModExportBuilder.ShipsWithParent(o, changedSet)).OrderBy(o => o).ToList();
+
+            List<string> levels = call.StrList("levels").Select(o => McpLevels.Resolve(o, call: call, argument: "levels")).ToList();
+            List<string> files = call.StrList("files").Select(o => Modding.ModToolkit.Normalise(o)).ToList();
+            //A copy of one of the game's own files where the game doesn't use it (a folder renamed and put back, a backup) is no
+            //change: it only goes in when named
+            foreach (string copy in scan.WithStatus(Modding.FileStatus.Copy).Where(files.Contains).ToList())
+            {
+                changed.Add(copy);
+                changedSet.Add(copy);
+            }
+            bool configs = call.Bool("include_configs", true);
+            //A level's files by where they are: DATA/ENV/<level>/ (custom levels too), and a Nostromo level's _PATCH companion
+            List<string> levelPrefixes = levels.SelectMany(o => new[] { "DATA/ENV/" + o + "/", "DATA/ENV/" + o + "_PATCH/" }).ToList();
+            bool InLevels(string path) => levelPrefixes.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+            bool UnderEnv(string path) => path.StartsWith("DATA/ENV/", StringComparison.OrdinalIgnoreCase);
+            //Files every level shares that a filtered export would otherwise leave out
+            List<string> shared = call.StrList("include_shared").Select(o => o.Trim().ToLowerInvariant()).ToList();
+            foreach (string kind in shared)
+                if (kind != "text" && kind != "configs" && kind != "ui" && kind != "animation" && kind != "all" && !kind.Contains("/") && !kind.Contains("."))
+                    throw McpError.Invalid("include_shared takes text, configs, ui, animation, all, or game-relative paths (got '" + kind + "').");
+            bool SharedWanted(string path)
+            {
+                if (shared.Count == 0 || UnderEnv(path)) return false;
+                if (shared.Contains("all")) return true;
+                if (shared.Contains("text") && path.StartsWith("DATA/TEXT/", StringComparison.OrdinalIgnoreCase)) return true;
+                if (shared.Contains("ui") && (path.StartsWith("DATA/UI", StringComparison.OrdinalIgnoreCase))) return true;
+                if (shared.Contains("animation") && path.IndexOf("ANIMATION", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+                if (shared.Contains("configs") && (path.EndsWith(".XML", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".BML", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".TXT", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".BIN", StringComparison.OrdinalIgnoreCase))) return true;
+                return shared.Any(o => string.Equals(Modding.ModToolkit.Normalise(o), path, StringComparison.OrdinalIgnoreCase));
+            }
+            List<string> leftOut = new List<string>();
+            List<string> chosenFiles = new List<string>();
+            List<KeyValuePair<string, KeyValuePair<List<Modding.BmlPatchOp>, byte[]>>> chosenConfigs = new List<KeyValuePair<string, KeyValuePair<List<Modding.BmlPatchOp>, byte[]>>>();
+            foreach (string path in changed)
+            {
+                string level = UnderEnv(path) ? "" : null;
+                //Each exported level's block of LEVEL_TEXT_DATABASES.XML goes with it (ModExportBuilder): only blocks no exported
+                //level brings are left out, unless the whole file is asked for
+                if (path == Modding.LevelTextBlocks.Path && (levels.Count != 0 || files.Count != 0) && !files.Contains(path) && !SharedWanted(path))
+                {
+                    List<string> changedBlocks = Modding.LevelTextBlocks.Changed(Modding.VanillaConfigs.GetBest(path), Modding.ModExportBuilder.UsersVersion(Modding.ModServices.GameRoot, installer, path));
+                    HashSet<string> exported = new HashSet<string>(levels.Select(Modding.LevelTextBlocks.BlockOf), StringComparer.OrdinalIgnoreCase);
+                    List<string> loose = changedBlocks?.Where(o => !exported.Contains(o)).ToList();
+                    if (loose == null || loose.Count != 0)
+                        leftOut.Add(path + (loose == null ? "" : " (the text databases loaded by " + Modding.LevelTextBlocks.Describe(loose) + ")"));
+                    continue;
+                }
+                if (levels.Count != 0 || files.Count != 0)
+                {
+                    bool wanted = InLevels(path) || files.Contains(path) || SharedWanted(path);
+                    if (!wanted && !(configs && level == null && Modding.ConfigDiff.ByValue(path)))
+                    {
+                        if (level == null) leftOut.Add(path);
+                        continue;
+                    }
+                }
+                if (level == null && Modding.ConfigDiff.ByValue(path))
+                {
+                    if (!configs) continue;
+                    byte[] vanilla = Modding.VanillaConfigs.GetBest(path);
+                    //Under installed mods, the user's own version (as the exporter window does), not the mods' values baked in
+                    List<Modding.BmlPatchOp> ops = vanilla == null ? null : Modding.ConfigDiff.Diff(Modding.ModServices.GameRoot, path, vanilla, installer);
+                    if (ops != null && ops.Count != 0)
+                    {
+                        chosenConfigs.Add(new KeyValuePair<string, KeyValuePair<List<Modding.BmlPatchOp>, byte[]>>(path, new KeyValuePair<List<Modding.BmlPatchOp>, byte[]>(ops, vanilla)));
+                        continue;
+                    }
+                    //Every value as the game shipped it (a config editor only saved it again): not a change, unless named in 'files'
+                    if (ops != null && !files.Contains(path)) continue;
+                    if (levels.Count != 0 || files.Count != 0) { if (!files.Contains(path)) continue; }
+                }
+                chosenFiles.Add(path);
+            }
+            List<string> missing = files.Where(o => !changedSet.Contains(o)).ToList();
+            if (missing.Count != 0)
+                call.Note("Not changed from vanilla, so not included: " + string.Join(", ", missing.Take(10)) + (missing.Count > 10 ? ", ..." : "") + ".");
+            if (leftOut.Count != 0)
+                call.Note(leftOut.Count + " changed file(s) every level shares were left out by the filter (" + string.Join(", ", leftOut.Take(8)) + (leftOut.Count > 8 ? ", ..." : "") + "): a level relying on them (its subtitles in DATA/TEXT, a config, UI.PAK, ANIMATION.PAK with its tree layouts) needs them too - include_shared: ['text', 'configs', 'ui', 'animation'] or their paths.");
+            //What the editor holds but the disk does not: an export packs the files as they are
+            McpEditor.UI(() =>
+            {
+                string open = Singleton.Editor?.CompositeBrowser?.Content?.IsLevelDataLoaded == true ? Singleton.Editor.CompositeBrowser.Content.Level.Name : null;
+                if (open == null || (levels.Count != 0 && !levels.Contains(open, StringComparer.OrdinalIgnoreCase)) || (levels.Count == 0 && files.Count != 0)) return;
+                if (DirtyTracker.IsDirty)
+                    call.Note(open + " has unsaved changes in the editor, which are not in the package: save_level first.");
+                if (BuildTracker.NeedsBuild)
+                    call.Note(open + " needs a Save & Build (get_editor_state level.build): the package would carry data older than its script.");
+            });
+            if (chosenFiles.Count == 0 && chosenConfigs.Count == 0)
+                throw new McpError(McpErrorCodes.NotFound, changed.Count == 0 ? "Nothing in the install differs from vanilla: there is nothing to export." : "Nothing matched 'levels' / 'files' among the " + changed.Count + " changed files.");
+
+            JObject result = new JObject()
+            {
+                ["files"] = chosenFiles.Count,
+                ["file_list"] = new JArray(chosenFiles.Take(limit)),
+                ["config_files"] = new JArray(chosenConfigs.Select(o => o.Key + " (" + o.Value.Key.Count + " change" + (o.Value.Key.Count == 1 ? "" : "s") + ")").Take(limit)),
+            };
+            //The sidecars that go with the files count too; the user's own version of a file is what ships, not the mods'
+            List<string> overlaps = new List<string>();
+            List<string> shipped = chosenFiles.SelectMany(o => new[] { o }.Concat(Modding.ModExportBuilder.SidecarsFor(o))).Distinct().ToList();
+            foreach (Modding.ModState.InstalledMod mod in state.Mods.Where(o => o.Enabled))
+                foreach (string path in shipped)
+                    if (mod.Applied.ContainsKey(path) && !installer.TryGetOwnVersion(path, out _))
+                        overlaps.Add(path + " (from '" + mod.Name + "')");
+            if (overlaps.Count != 0)
+                call.Note("Some files are supplied by other enabled mods, whose content would be baked into this package: " + string.Join(", ", overlaps.Take(8)) + (overlaps.Count > 8 ? ", ..." : "") + ".");
+            if (dryRun)
+            {
+                result["dry_run"] = true;
+                return result;
+            }
+
+            Modding.ExportResult written;
+            using (McpEditorTools.Heartbeat(call, "Building the package"))
+            {
+                try
+                {
+                    Modding.ModExportBuilder builder = new Modding.ModExportBuilder(Modding.ModServices.GameRoot, Modding.ModServices.Manifest, Modding.ModServices.Cache, installer);
+                    builder.Info.Name = name.Trim();
+                    builder.Info.Author = (call.Str("author") ?? "").Trim();
+                    builder.Info.Version = (call.Str("version") ?? "1.0").Trim();
+                    builder.Info.Description = call.Str("description") ?? "";
+                    //A replacement mod carries config files whole rather than their values (ModExportBuilder.Write)
+                    builder.Info.Installs = installs;
+                    builder.Info.OpenCageVersion = Singleton.Version;
+                    builder.AddFiles(chosenFiles);
+                    foreach (var config in chosenConfigs)
+                        builder.AddConfigPatch(config.Key, config.Value.Key, config.Value.Value);
+                    //Each level's list of text databases goes with it
+                    builder.LevelTextOriginal = Modding.VanillaConfigs.GetBest(Modding.LevelTextBlocks.Path);
+                    Directory.CreateDirectory(Path.GetDirectoryName(output));
+                    written = builder.Write(output);
+                }
+                catch (Exception e) { throw new McpError("Export failed: " + e.Message); }
+            }
+            McpEditor.UI(() => Steam.CountTowards(Steam.Achievements.TEN_MODS_CREATED));
+            result["written"] = output;
+            result["entries"] = written.Entries.Count;
+            result["as_patches"] = written.Entries.Count(o => o.Kind == Modding.ModPackageEntry.KindDelta);
+            result["package_size"] = Modding.ModExportBuilder.PrettySize(written.PackageSize);
+            if (written.Warnings.Count != 0) result["warnings"] = new JArray(written.Warnings.Take(limit));
+            return result;
+        }
+
+        private static string ModdingExtension => Modding.ModToolkit.PackageExtension;
+
+        private static string AbsoluteFile(string given, string name)
+        {
+            string path = (given ?? "").Trim().Trim('"');
+            if (!IsAbsolute(path))
+                throw new McpError("'" + name + "' must be an absolute path, not '" + given + "'.");
+            try { return Path.GetFullPath(path); }
+            catch (Exception e) { throw new McpError("'" + given + "' is not a usable path (" + e.Message + ")."); }
+        }
+        #endregion
+#endif
+    }
+}

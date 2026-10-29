@@ -88,6 +88,127 @@ namespace OpenCAGE
             _entities.Clear();
         }
 
+        /// <summary>A drill path lifted out of the display, to put back after its panel is rebuilt.</summary>
+        public class Snapshot
+        {
+            internal List<Composite> Composites;
+            internal List<Entity> Entities;
+
+            public int Depth => Composites == null ? 0 : Composites.Count;
+
+            /// <summary>The composite the path starts from, or null when it is empty.</summary>
+            public Composite EntryComposite => Depth == 0 ? null : Composites[0];
+        }
+
+        /// <summary>
+        /// Take a copy of the path as it stands. A copy, because the display clears its own path on the
+        /// way down and a snapshot sharing the list would be emptied with it.
+        /// </summary>
+        public Snapshot Capture()
+        {
+            return new Snapshot
+            {
+                Composites = new List<Composite>(_composites),
+                Entities = new List<Entity>(_entities),
+            };
+        }
+
+        /// <summary>
+        /// Put a captured path back.
+        /// </summary>
+        public bool Restore(Snapshot snapshot)
+        {
+            if (snapshot?.Composites == null || snapshot.Entities == null)
+                return false;
+            if (snapshot.Composites.Count != snapshot.Entities.Count)
+                return false;
+            for (int i = 0; i < snapshot.Composites.Count; i++)
+                if (snapshot.Composites[i] == null || snapshot.Entities[i] == null)
+                    return false;
+
+            _composites.Clear();
+            _composites.AddRange(snapshot.Composites);
+            _entities.Clear();
+            _entities.AddRange(snapshot.Entities);
+            return true;
+        }
+
+        /// <summary>
+        /// A place in the hierarchy by id rather than by object: the composite the user was in, the composites and
+        /// instances they stepped down through to reach it, and what they had selected there.
+        /// </summary>
+        public class Place
+        {
+            internal List<ShortGuid> Composites = new List<ShortGuid>();
+            internal List<ShortGuid> Entities = new List<ShortGuid>();
+            internal ShortGuid Composite;
+            internal List<ShortGuid> Selected = new List<ShortGuid>();
+
+            /// <summary>How many instances the user had stepped down through.</summary>
+            public int Depth => Entities.Count;
+
+            /// <summary>What was selected that <paramref name="composite"/> still holds, when it is the composite the user was in.</summary>
+            public List<Entity> SelectionIn(Composite composite)
+            {
+                if (composite == null || composite.shortGUID != Composite)
+                    return new List<Entity>();
+                return Selected.Select(o => composite.GetEntityByID(o)).Where(o => o != null).ToList();
+            }
+        }
+
+        /// <summary>Take the path down to <paramref name="current"/>, and the selection there, as ids.</summary>
+        public Place CapturePlace(Composite current, IEnumerable<Entity> selected)
+        {
+            if (current == null)
+                return null;
+
+            Place place = new Place() { Composite = current.shortGUID };
+            //A hop with nothing recorded can't be walked again: the place is then the composite alone
+            if (_composites.Count == _entities.Count && !_composites.Contains(null) && !_entities.Contains(null))
+            {
+                place.Composites.AddRange(_composites.Select(o => o.shortGUID));
+                place.Entities.AddRange(_entities.Select(o => o.shortGUID));
+            }
+            if (selected != null)
+                place.Selected.AddRange(selected.Where(o => o != null).Select(o => o.shortGUID));
+            return place;
+        }
+
+        /// <summary>
+        /// Walk a place back down through the composites the level holds now, as far as it still leads.
+        /// </summary>
+        /// <param name="landed">The composite the walk ended in; null when nothing of the place is left.</param>
+        /// <returns>The path down to <paramref name="landed"/>, empty when it stands on its own.</returns>
+        public static Snapshot Resolve(CATHODE.Commands commands, Place place, out Composite landed)
+        {
+            landed = null;
+            Snapshot path = new Snapshot() { Composites = new List<Composite>(), Entities = new List<Entity>() };
+            if (commands == null || place == null)
+                return path;
+
+            Composite current = place.Composites.Count == 0 ? null : commands.GetComposite(place.Composites[0]);
+            if (current == null)
+            {
+                landed = commands.GetComposite(place.Composite);
+                return path;
+            }
+
+            for (int i = 0; i < place.Entities.Count; i++)
+            {
+                ShortGuid expected = i + 1 < place.Composites.Count ? place.Composites[i + 1] : place.Composite;
+                Entity entity = current.GetEntityByID(place.Entities[i]);
+                Composite child = entity is FunctionEntity function && !function.function.IsFunctionType ? commands.GetComposite(function.function) : null;
+                if (child == null || child.shortGUID != expected)
+                    break;
+
+                path.Composites.Add(current);
+                path.Entities.Add(entity);
+                current = child;
+            }
+            landed = current;
+            return path;
+        }
+
         public Composite PreviousComposite
         {
             get
@@ -120,18 +241,6 @@ namespace OpenCAGE
             {
                 return _entities;
             }
-        }
-
-        // returns the path as a pretty string for UI
-        public string GetPath(Composite currentComp)
-        {
-            string path = "";
-            for (int i = 0; i < _composites.Count; i++)
-            {
-                path += (SettingsManager.GetBool(Settings.ShowShortGuids) ? "[" + _composites[i].shortGUID.ToByteString() + "] " : "") + EditorUtils.GetCompositeName(_composites[i]) + " > ";
-            }
-            path += (SettingsManager.GetBool(Settings.ShowShortGuids) ? "[" + currentComp.shortGUID.ToByteString() + "] " : "") + EditorUtils.GetCompositeName(currentComp);
-            return path;
         }
 
         // returns the path as the entity IDs for use in scripting

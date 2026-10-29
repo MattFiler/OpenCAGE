@@ -1,4 +1,4 @@
-using CATHODE.Scripting;
+﻿using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
 using OpenCAGE.DockPanels;
 using OpenCAGE.Popups.Base;
@@ -26,10 +26,14 @@ namespace OpenCAGE
         public AddEntity_Function(Composite composite, bool flowgraphMode) : base (WindowClosesOn.NEW_COMPOSITE_SELECTION | WindowClosesOn.COMMANDS_RELOAD)
         {
             InitializeComponent();
+            BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/cathode-entities/#entities");
+            StayAboveEditor = true; //small dialog - keep it above the editor window
             _composite = composite;
 
             functionTypeList1.Setup();
             functionTypeList1.SelectedItemChanged += functionTypeList_SelectedIndexChanged;
+            //The type it opens on (the last one used) has its name suggested straight away, as an instance's does
+            functionTypeList_SelectedIndexChanged();
 
             addDefaultParams.Checked = SettingsManager.GetBool(Settings.PreviouslySearchedParamPopulation, false);
 
@@ -66,6 +70,12 @@ namespace OpenCAGE
                 MessageBox.Show("Please enter an entity name!", "No name.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+            string nameProblem = EditorUtils.UnstorableTextProblem(entityName.Text, "This name");
+            if (nameProblem != null)
+            {
+                MessageBox.Show(nameProblem, "Can't use this name", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
             if (functionTypeList1.SelectedItem == null)
             {
                 MessageBox.Show("Please select a function type!", "No type.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -73,6 +83,10 @@ namespace OpenCAGE
             }
 
             FunctionType function = (FunctionType)Enum.Parse(typeof(FunctionType), functionTypeList1.SelectedItem.Text);
+
+            //The suggested name left as it was is numbered again now, in case another was added while this was open
+            if (entityName.Text == _suggestedName)
+                entityName.Text = _suggestedName = DockPanels.CompositeDisplay.NewFunctionName(Content.Level.Commands, _composite, function);
 
             //A composite can only have one PhysicsSystem
             if (function == FunctionType.PhysicsSystem && _composite.functions.FirstOrDefault(o => o.function == FunctionType.PhysicsSystem) != null)
@@ -88,21 +102,28 @@ namespace OpenCAGE
                 return;
             }
 
-            Singleton.OnEntityAddPending?.Invoke();
-            Entity newEntity = _composite.AddFunction(function);
-
-            if (addDefaultParams.Checked)
+            //One undo step for the entity and the node a flowgraph may add for it on OnEntityAdded
+            using (OpenCAGE.Undo.UndoStack.Current.BeginGroup("Add " + entityName.Text))
             {
-                Content.Level.Commands.Utils.AddAllDefaultParameters(newEntity, _composite);
-                newEntity.RemoveParameter("delete_me");
+                Singleton.OnEntityAddPending?.Invoke();
+                Entity newEntity = _composite.AddFunction(function);
+
+                if (addDefaultParams.Checked)
+                {
+                    Content.Level.Commands.Utils.AddAllDefaultParameters(newEntity, _composite);
+                    newEntity.RemoveParameter("delete_me");
+                }
+                //As one made from the palette starts: the definitions' zero is an empty volume, drawn a speck
+                DockPanels.CompositeDisplay.GiveNewBoxItsShownSize(_composite, newEntity, function);
+
+                Content.Level.Commands.Utils.SetEntityName(_composite, newEntity, entityName.Text);
+                SettingsManager.SetString(Settings.PreviouslySelectedFunctionType, function.ToString());
+                SettingsManager.SetBool(Settings.PreviouslySearchedParamPopulation, addDefaultParams.Checked);
+                EntityPaletteRecent.RecordFunction(function);
+
+                OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.EntityAddEdit(_composite, newEntity, "Add " + entityName.Text));
+                Singleton.OnEntityAdded?.Invoke(newEntity);
             }
-
-            Content.Level.Commands.Utils.SetEntityName(_composite, newEntity, entityName.Text);
-            SettingsManager.SetString(Settings.PreviouslySelectedFunctionType, function.ToString());
-            SettingsManager.SetBool(Settings.PreviouslySearchedParamPopulation, addDefaultParams.Checked);
-            EntityPaletteRecent.RecordFunction(function);
-
-            Singleton.OnEntityAdded?.Invoke(newEntity);
             this.Close();
         }
 
@@ -112,19 +133,22 @@ namespace OpenCAGE
                 createEntity.PerformClick();
         }
 
-        private void helpBtn_Click(object sender, EventArgs e)
-        {
-            Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
-            Process.Start("https://opencage.co.uk/docs/cathode-entities/#entities");
-        }
+        //The name last suggested, so a name typed over it is left alone
+        private string _suggestedName = "";
 
         private void functionTypeList_SelectedIndexChanged()
         {
             if (functionTypeList1.SelectedItem == null)
                 return;
-            
-            if (entityName.Text == "" || Enum.TryParse<FunctionType>(entityName.Text, out FunctionType type))
-                entityName.Text = functionTypeList1.SelectedItem.Text;
+
+            //Numbered as one added from the palette is: "TriggerSimple_1", then "_2"
+            if (entityName.Text == "" || entityName.Text == _suggestedName)
+            {
+                entityName.Text = Enum.TryParse(functionTypeList1.SelectedItem.Text, out FunctionType type)
+                    ? DockPanels.CompositeDisplay.NewFunctionName(Content.Level.Commands, _composite, type)
+                    : functionTypeList1.SelectedItem.Text;
+                _suggestedName = entityName.Text;
+            }
         }
     }
 }

@@ -32,7 +32,6 @@
             this.materialList = new System.Windows.Forms.ListBox();
             this.addNew = new System.Windows.Forms.Button();
             this.removeSelected = new System.Windows.Forms.Button();
-            this.helpBtn = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // materialList
@@ -61,26 +60,12 @@
             this.removeSelected.TabIndex = 3;
             this.removeSelected.Text = "Remove Selected";
             this.removeSelected.UseVisualStyleBackColor = true;
-            this.removeSelected.Click += new System.EventHandler(this.removeSelected_Click);
-            // 
-            // helpBtn
-            // 
-            this.helpBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.helpBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.helpBtn.Image = ((System.Drawing.Image)(resources.GetObject("helpBtn.Image")));
-            this.helpBtn.Location = new System.Drawing.Point(704, 0);
-            this.helpBtn.Name = "helpBtn";
-            this.helpBtn.Size = new System.Drawing.Size(20, 20);
-            this.helpBtn.TabIndex = 477;
-            this.helpBtn.UseVisualStyleBackColor = true;
-            this.helpBtn.Click += new System.EventHandler(this.helpBtn_Click);
-            // 
+            this.removeSelected.Click += new System.EventHandler(this.removeSelected_Click);            // 
             // PhysicalMaterialEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(724, 558);
-            this.Controls.Add(this.helpBtn);
             this.Controls.Add(this.removeSelected);
             this.Controls.Add(this.addNew);
             this.Controls.Add(this.materialList);
@@ -98,6 +83,5 @@
         private System.Windows.Forms.ListBox materialList;
         private System.Windows.Forms.Button addNew;
         private System.Windows.Forms.Button removeSelected;
-        private System.Windows.Forms.Button helpBtn;
     }
 }

@@ -35,6 +35,9 @@
             // 
             // functionTypeList1
             // 
+            this.functionTypeList1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.functionTypeList1.Location = new System.Drawing.Point(10, 8);
             this.functionTypeList1.Name = "functionTypeList1";
             this.functionTypeList1.Size = new System.Drawing.Size(630, 280);
@@ -42,6 +45,7 @@
             // 
             // button1
             // 
+            this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.button1.Location = new System.Drawing.Point(492, 294);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(148, 23);
@@ -58,6 +62,7 @@
             this.Controls.Add(this.button1);
             this.Controls.Add(this.functionTypeList1);
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
+            this.MinimumSize = new System.Drawing.Size(416, 289);
             this.Name = "SelectFunctionType";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Select Function Type";

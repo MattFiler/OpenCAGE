@@ -33,13 +33,25 @@ namespace OpenCAGE
             this.managePinsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.deleteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.duplicateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.copyNodesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
+            this.pasteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.pasteReferenceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.arrangeSeparator = new System.Windows.Forms.ToolStripSeparator();
+            this.arrangePageToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.arrangeSelectedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator5 = new System.Windows.Forms.ToolStripSeparator();
             this.findReferencesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.goToNextNodeInFlowgraphToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.showConnectedLinksToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.triggerSequenceSeparator = new System.Windows.Forms.ToolStripSeparator();
+            this.addSelectedToTriggerSequenceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.removeSelectedFromTriggerSequenceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.autoAddToTriggerSequenceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
             this.deleteEntityToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.duplicateEntityToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.changeProxyTargetToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.treatAsColourToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createParameterToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createFunctionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -49,12 +61,18 @@ namespace OpenCAGE
             this.addNodeForSelectedEntityToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.addNodeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.deleteLinkToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.addReroutePointToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.removeReroutePointToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.removeAllReroutePointsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.setDelayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.clearDelayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.stNodeEditor1 = new ST.Library.UI.NodeEditor.STNodeEditor();
+            this.triggerInGameSeparator = new System.Windows.Forms.ToolStripSeparator();
+            this.triggerInGameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.stNodeEditor1 = new OpenCAGE.DebuggerNodeEditor();
             this.TabStripContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.deleteFGToolstripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.renameFGToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.arrangeFGToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.createNewFlowgraphToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.nodeContextMenu.SuspendLayout();
@@ -69,19 +87,36 @@ namespace OpenCAGE
             this.managePinsToolStripMenuItem,
             this.toolStripSeparator1,
             this.deleteToolStripMenuItem,
-            this.duplicateToolStripMenuItem,
+            this.copyNodesToolStripMenuItem,
             this.toolStripSeparator5,
             this.findReferencesToolStripMenuItem,
             this.goToNextNodeInFlowgraphToolStripMenuItem,
+            this.showConnectedLinksToolStripMenuItem,
+            this.triggerSequenceSeparator,
+            this.addSelectedToTriggerSequenceToolStripMenuItem,
+            this.removeSelectedFromTriggerSequenceToolStripMenuItem,
+            this.autoAddToTriggerSequenceToolStripMenuItem,
             this.toolStripSeparator4,
             this.deleteEntityToolStripMenuItem,
-            this.duplicateEntityToolStripMenuItem,
+            this.changeProxyTargetToolStripMenuItem,
+            this.treatAsColourToolStripMenuItem,
             this.createToolStripMenuItem,
             this.addNodeForSelectedEntityToolStripMenuItem,
             this.addNodeToolStripMenuItem,
+            this.toolStripSeparator6,
+            this.pasteToolStripMenuItem,
+            this.pasteReferenceToolStripMenuItem,
+            this.arrangeSeparator,
+            this.arrangePageToolStripMenuItem,
+            this.arrangeSelectedToolStripMenuItem,
             this.deleteLinkToolStripMenuItem,
+            this.addReroutePointToolStripMenuItem,
+            this.removeReroutePointToolStripMenuItem,
+            this.removeAllReroutePointsToolStripMenuItem,
             this.setDelayToolStripMenuItem,
-            this.clearDelayToolStripMenuItem});
+            this.clearDelayToolStripMenuItem,
+            this.triggerInGameSeparator,
+            this.triggerInGameToolStripMenuItem});
             this.nodeContextMenu.Name = "EntityListContextMenu";
             this.nodeContextMenu.Size = new System.Drawing.Size(229, 374);
             this.nodeContextMenu.Opening += new System.ComponentModel.CancelEventHandler(this.ContextMenu_Opening);
@@ -130,17 +165,60 @@ namespace OpenCAGE
             this.deleteToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
             this.deleteToolStripMenuItem.Text = "Delete Node";
             this.deleteToolStripMenuItem.Click += new System.EventHandler(this.deleteToolStripMenuItem_Click);
-            // 
-            // duplicateToolStripMenuItem
-            // 
-            this.duplicateToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("duplicateToolStripMenuItem.Image")));
-            this.duplicateToolStripMenuItem.Name = "duplicateToolStripMenuItem";
-            this.duplicateToolStripMenuItem.ShortcutKeyDisplayString = "F1";
-            this.duplicateToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.F1;
-            this.duplicateToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
-            this.duplicateToolStripMenuItem.Text = "Duplicate Node";
-            this.duplicateToolStripMenuItem.Click += new System.EventHandler(this.duplicateToolStripMenuItem_Click);
-            // 
+            //
+            // copyNodesToolStripMenuItem
+            //
+            this.copyNodesToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("duplicateToolStripMenuItem.Image")));
+            this.copyNodesToolStripMenuItem.Name = "copyNodesToolStripMenuItem";
+            this.copyNodesToolStripMenuItem.ShortcutKeyDisplayString = "Ctrl+C";
+            this.copyNodesToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.copyNodesToolStripMenuItem.Text = "Copy";
+            this.copyNodesToolStripMenuItem.Click += new System.EventHandler(this.copyNodesToolStripMenuItem_Click);
+            //
+            // toolStripSeparator6
+            //
+            this.toolStripSeparator6.Name = "toolStripSeparator6";
+            this.toolStripSeparator6.Size = new System.Drawing.Size(225, 6);
+            //
+            // pasteToolStripMenuItem
+            //
+            this.pasteToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("duplicateEntityToolStripMenuItem.Image")));
+            this.pasteToolStripMenuItem.Name = "pasteToolStripMenuItem";
+            this.pasteToolStripMenuItem.ShortcutKeyDisplayString = "Ctrl+V";
+            this.pasteToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.pasteToolStripMenuItem.Text = "Paste";
+            this.pasteToolStripMenuItem.Click += new System.EventHandler(this.pasteToolStripMenuItem_Click);
+            //
+            // pasteReferenceToolStripMenuItem
+            //
+            this.pasteReferenceToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("duplicateEntityToolStripMenuItem.Image")));
+            this.pasteReferenceToolStripMenuItem.Name = "pasteReferenceToolStripMenuItem";
+            this.pasteReferenceToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.pasteReferenceToolStripMenuItem.Text = "Paste Reference";
+            this.pasteReferenceToolStripMenuItem.ToolTipText = "Pastes new nodes for the copied entities themselves, rather than creating new entities. In a composite higher up the drill path, this creates aliases to the copied entities.";
+            this.pasteReferenceToolStripMenuItem.Click += new System.EventHandler(this.pasteReferenceToolStripMenuItem_Click);
+            //
+            // arrangeSeparator
+            //
+            this.arrangeSeparator.Name = "arrangeSeparator";
+            this.arrangeSeparator.Size = new System.Drawing.Size(225, 6);
+            //
+            // arrangePageToolStripMenuItem
+            //
+            this.arrangePageToolStripMenuItem.Name = "arrangePageToolStripMenuItem";
+            this.arrangePageToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.arrangePageToolStripMenuItem.Text = "Arrange Page";
+            this.arrangePageToolStripMenuItem.ToolTipText = "Lays out every node on this page so its links read left to right, with as few crossings as it can. Only node positions change, and Undo puts them back.";
+            this.arrangePageToolStripMenuItem.Click += new System.EventHandler(this.arrangePageToolStripMenuItem_Click);
+            //
+            // arrangeSelectedToolStripMenuItem
+            //
+            this.arrangeSelectedToolStripMenuItem.Name = "arrangeSelectedToolStripMenuItem";
+            this.arrangeSelectedToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.arrangeSelectedToolStripMenuItem.Text = "Arrange Selected Nodes";
+            this.arrangeSelectedToolStripMenuItem.ToolTipText = "Lays out just the selected nodes, by the links between them, starting where they start. Only node positions change, and Undo puts them back.";
+            this.arrangeSelectedToolStripMenuItem.Click += new System.EventHandler(this.arrangeSelectedToolStripMenuItem_Click);
+            //
             // toolStripSeparator5
             // 
             this.toolStripSeparator5.Name = "toolStripSeparator5";
@@ -167,6 +245,43 @@ namespace OpenCAGE
             this.goToNextNodeInFlowgraphToolStripMenuItem.ToolTipText = "Select this to jump to the next node for this entity within the current flowgraph" +
     ".";
             this.goToNextNodeInFlowgraphToolStripMenuItem.Click += new System.EventHandler(this.goToNextNodeInFlowgraphToolStripMenuItem_Click);
+            //
+            // showConnectedLinksToolStripMenuItem
+            //
+            this.showConnectedLinksToolStripMenuItem.Name = "showConnectedLinksToolStripMenuItem";
+            this.showConnectedLinksToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.showConnectedLinksToolStripMenuItem.Text = "Show Connected Links";
+            this.showConnectedLinksToolStripMenuItem.ToolTipText = "Lists every link in and out of this node, and jumps to the node at the other end of one.";
+            this.showConnectedLinksToolStripMenuItem.Click += new System.EventHandler(this.showConnectedLinksToolStripMenuItem_Click);
+            //
+            // triggerSequenceSeparator
+            // 
+            this.triggerSequenceSeparator.Name = "triggerSequenceSeparator";
+            this.triggerSequenceSeparator.Size = new System.Drawing.Size(225, 6);
+            // 
+            // addSelectedToTriggerSequenceToolStripMenuItem
+            // 
+            this.addSelectedToTriggerSequenceToolStripMenuItem.Name = "addSelectedToTriggerSequenceToolStripMenuItem";
+            this.addSelectedToTriggerSequenceToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.addSelectedToTriggerSequenceToolStripMenuItem.Text = "Add Selected To TriggerSequence";
+            this.addSelectedToTriggerSequenceToolStripMenuItem.Click += new System.EventHandler(this.addSelectedToTriggerSequenceToolStripMenuItem_Click);
+            // 
+            // removeSelectedFromTriggerSequenceToolStripMenuItem
+            // 
+            this.removeSelectedFromTriggerSequenceToolStripMenuItem.Name = "removeSelectedFromTriggerSequenceToolStripMenuItem";
+            this.removeSelectedFromTriggerSequenceToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.removeSelectedFromTriggerSequenceToolStripMenuItem.Text = "Remove Selected From TriggerSequence";
+            this.removeSelectedFromTriggerSequenceToolStripMenuItem.Click += new System.EventHandler(this.removeSelectedFromTriggerSequenceToolStripMenuItem_Click);
+            // 
+            // autoAddToTriggerSequenceToolStripMenuItem
+            // 
+            this.autoAddToTriggerSequenceToolStripMenuItem.Name = "autoAddToTriggerSequenceToolStripMenuItem";
+            this.autoAddToTriggerSequenceToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.autoAddToTriggerSequenceToolStripMenuItem.Text = "Auto-add New Entities To TriggerSequence";
+            this.autoAddToTriggerSequenceToolStripMenuItem.ToolTipText = "Add every composite instance, model, light and other placeable entity created from" +
+    " now on - here, or in a composite stepped into from here - to this TriggerSequence." +
+    " Click again to stop.";
+            this.autoAddToTriggerSequenceToolStripMenuItem.Click += new System.EventHandler(this.autoAddToTriggerSequenceToolStripMenuItem_Click);
             // 
             // toolStripSeparator4
             // 
@@ -181,14 +296,20 @@ namespace OpenCAGE
             this.deleteEntityToolStripMenuItem.Text = "Delete Entity";
             this.deleteEntityToolStripMenuItem.Click += new System.EventHandler(this.deleteEntityToolStripMenuItem_Click);
             // 
-            // duplicateEntityToolStripMenuItem
+            // changeProxyTargetToolStripMenuItem
             // 
-            this.duplicateEntityToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("duplicateEntityToolStripMenuItem.Image")));
-            this.duplicateEntityToolStripMenuItem.Name = "duplicateEntityToolStripMenuItem";
-            this.duplicateEntityToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
-            this.duplicateEntityToolStripMenuItem.Text = "Duplicate Entity";
-            this.duplicateEntityToolStripMenuItem.Click += new System.EventHandler(this.duplicateEntityToolStripMenuItem_Click);
-            // 
+            this.changeProxyTargetToolStripMenuItem.Name = "changeProxyTargetToolStripMenuItem";
+            this.changeProxyTargetToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.changeProxyTargetToolStripMenuItem.Text = "Change Proxy Target...";
+            this.changeProxyTargetToolStripMenuItem.Click += new System.EventHandler(this.changeProxyTargetToolStripMenuItem_Click);
+            //
+            // treatAsColourToolStripMenuItem
+            //
+            this.treatAsColourToolStripMenuItem.Name = "treatAsColourToolStripMenuItem";
+            this.treatAsColourToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.treatAsColourToolStripMenuItem.Text = "Treat As Colour";
+            this.treatAsColourToolStripMenuItem.Click += new System.EventHandler(this.treatAsColourToolStripMenuItem_Click);
+            //
             // createToolStripMenuItem
             // 
             this.createToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -203,7 +324,6 @@ namespace OpenCAGE
             // 
             // createParameterToolStripMenuItem
             // 
-            this.createParameterToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createParameterToolStripMenuItem.Image")));
             this.createParameterToolStripMenuItem.Name = "createParameterToolStripMenuItem";
             this.createParameterToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
             this.createParameterToolStripMenuItem.Text = "New Parameter";
@@ -211,7 +331,6 @@ namespace OpenCAGE
             // 
             // createFunctionToolStripMenuItem
             // 
-            this.createFunctionToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createFunctionToolStripMenuItem.Image")));
             this.createFunctionToolStripMenuItem.Name = "createFunctionToolStripMenuItem";
             this.createFunctionToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
             this.createFunctionToolStripMenuItem.Text = "New Function";
@@ -219,7 +338,6 @@ namespace OpenCAGE
             // 
             // createInstanceOfCompositeToolStripMenuItem
             // 
-            this.createInstanceOfCompositeToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createInstanceOfCompositeToolStripMenuItem.Image")));
             this.createInstanceOfCompositeToolStripMenuItem.Name = "createInstanceOfCompositeToolStripMenuItem";
             this.createInstanceOfCompositeToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
             this.createInstanceOfCompositeToolStripMenuItem.Text = "New Instance of Composite";
@@ -227,7 +345,6 @@ namespace OpenCAGE
             // 
             // createProxyToolStripMenuItem
             // 
-            this.createProxyToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createProxyToolStripMenuItem.Image")));
             this.createProxyToolStripMenuItem.Name = "createProxyToolStripMenuItem";
             this.createProxyToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
             this.createProxyToolStripMenuItem.Text = "New Proxy";
@@ -235,7 +352,6 @@ namespace OpenCAGE
             // 
             // createAliasToolStripMenuItem1
             // 
-            this.createAliasToolStripMenuItem1.Image = ((System.Drawing.Image)(resources.GetObject("createAliasToolStripMenuItem1.Image")));
             this.createAliasToolStripMenuItem1.Name = "createAliasToolStripMenuItem1";
             this.createAliasToolStripMenuItem1.Size = new System.Drawing.Size(220, 22);
             this.createAliasToolStripMenuItem1.Text = "New Alias";
@@ -266,6 +382,31 @@ namespace OpenCAGE
             this.deleteLinkToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
             this.deleteLinkToolStripMenuItem.Text = "Delete Link";
             this.deleteLinkToolStripMenuItem.Click += new System.EventHandler(this.deleteLinkToolStripMenuItem_Click);
+            //
+            // addReroutePointToolStripMenuItem
+            //
+            this.addReroutePointToolStripMenuItem.Name = "addReroutePointToolStripMenuItem";
+            this.addReroutePointToolStripMenuItem.ShortcutKeyDisplayString = "Double-click";
+            this.addReroutePointToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.addReroutePointToolStripMenuItem.Text = "Add Reroute Point";
+            this.addReroutePointToolStripMenuItem.ToolTipText = "Put a point on the link\'s line here, to drag the line round other nodes. The link itself doesn\'t change.";
+            this.addReroutePointToolStripMenuItem.Click += new System.EventHandler(this.addReroutePointToolStripMenuItem_Click);
+            //
+            // removeReroutePointToolStripMenuItem
+            //
+            this.removeReroutePointToolStripMenuItem.Name = "removeReroutePointToolStripMenuItem";
+            this.removeReroutePointToolStripMenuItem.ShortcutKeyDisplayString = "Del";
+            this.removeReroutePointToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.removeReroutePointToolStripMenuItem.Text = "Remove Reroute Point";
+            this.removeReroutePointToolStripMenuItem.Click += new System.EventHandler(this.removeReroutePointToolStripMenuItem_Click);
+            //
+            // removeAllReroutePointsToolStripMenuItem
+            //
+            this.removeAllReroutePointsToolStripMenuItem.Name = "removeAllReroutePointsToolStripMenuItem";
+            this.removeAllReroutePointsToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.removeAllReroutePointsToolStripMenuItem.Text = "Remove All Reroute Points";
+            this.removeAllReroutePointsToolStripMenuItem.ToolTipText = "Draw the link\'s line straight from pin to pin again.";
+            this.removeAllReroutePointsToolStripMenuItem.Click += new System.EventHandler(this.removeAllReroutePointsToolStripMenuItem_Click);
             // 
             // setDelayToolStripMenuItem
             // 
@@ -286,6 +427,18 @@ namespace OpenCAGE
             this.clearDelayToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
             this.clearDelayToolStripMenuItem.Text = "Clear Delay";
             this.clearDelayToolStripMenuItem.Click += new System.EventHandler(this.clearDelayToolStripMenuItem_Click);
+            // 
+            // triggerInGameSeparator
+            // 
+            this.triggerInGameSeparator.Name = "triggerInGameSeparator";
+            this.triggerInGameSeparator.Size = new System.Drawing.Size(225, 6);
+            // 
+            // triggerInGameToolStripMenuItem
+            // 
+            this.triggerInGameToolStripMenuItem.Name = "triggerInGameToolStripMenuItem";
+            this.triggerInGameToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.triggerInGameToolStripMenuItem.Text = "Trigger in Game";
+            this.triggerInGameToolStripMenuItem.Click += new System.EventHandler(this.triggerInGameToolStripMenuItem_Click);
             // 
             // stNodeEditor1
             // 
@@ -313,10 +466,11 @@ namespace OpenCAGE
             this.TabStripContextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.deleteFGToolstripMenuItem,
             this.renameFGToolStripMenuItem,
+            this.arrangeFGToolStripMenuItem,
             this.toolStripSeparator3,
             this.createNewFlowgraphToolStripMenuItem});
             this.TabStripContextMenu.Name = "TabStripContextMenu";
-            this.TabStripContextMenu.Size = new System.Drawing.Size(195, 76);
+            this.TabStripContextMenu.Size = new System.Drawing.Size(195, 98);
             this.TabStripContextMenu.Opening += new System.ComponentModel.CancelEventHandler(this.TabStripContextMenu_Opening);
             // 
             // deleteFGToolstripMenuItem
@@ -334,7 +488,15 @@ namespace OpenCAGE
             this.renameFGToolStripMenuItem.Size = new System.Drawing.Size(194, 22);
             this.renameFGToolStripMenuItem.Text = "Rename ";
             this.renameFGToolStripMenuItem.Click += new System.EventHandler(this.renameFGToolStripMenuItem_Click);
-            // 
+            //
+            // arrangeFGToolStripMenuItem
+            //
+            this.arrangeFGToolStripMenuItem.Name = "arrangeFGToolStripMenuItem";
+            this.arrangeFGToolStripMenuItem.Size = new System.Drawing.Size(194, 22);
+            this.arrangeFGToolStripMenuItem.Text = "Arrange";
+            this.arrangeFGToolStripMenuItem.ToolTipText = "Lays out every node on this page so its links read left to right, with as few crossings as it can. Only node positions change, and Undo puts them back.";
+            this.arrangeFGToolStripMenuItem.Click += new System.EventHandler(this.arrangeFGToolStripMenuItem_Click);
+            //
             // toolStripSeparator3
             // 
             this.toolStripSeparator3.Name = "toolStripSeparator3";
@@ -375,7 +537,10 @@ namespace OpenCAGE
         private System.Windows.Forms.ContextMenuStrip nodeContextMenu;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
         private System.Windows.Forms.ToolStripMenuItem deleteToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem duplicateToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem copyNodesToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator6;
+        private System.Windows.Forms.ToolStripMenuItem pasteToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem pasteReferenceToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem addNodeToolStripMenuItem;
         private System.Windows.Forms.ContextMenuStrip TabStripContextMenu;
         private System.Windows.Forms.ToolStripMenuItem deleteFGToolstripMenuItem;
@@ -392,15 +557,30 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem createProxyToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem createAliasToolStripMenuItem1;
         private System.Windows.Forms.ToolStripMenuItem deleteEntityToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem changeProxyTargetToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem treatAsColourToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
         private System.Windows.Forms.ToolStripMenuItem addNodeForSelectedEntityToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem deleteLinkToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem duplicateEntityToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem addReroutePointToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem removeReroutePointToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem removeAllReroutePointsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem goToNextNodeInFlowgraphToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem showConnectedLinksToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator triggerSequenceSeparator;
+        private System.Windows.Forms.ToolStripMenuItem addSelectedToTriggerSequenceToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem removeSelectedFromTriggerSequenceToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem autoAddToTriggerSequenceToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem findReferencesToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator5;
         private System.Windows.Forms.ToolStripMenuItem setDelayToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem clearDelayToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator triggerInGameSeparator;
+        private System.Windows.Forms.ToolStripMenuItem triggerInGameToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator arrangeSeparator;
+        private System.Windows.Forms.ToolStripMenuItem arrangePageToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem arrangeSelectedToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem arrangeFGToolStripMenuItem;
     }
 }
 

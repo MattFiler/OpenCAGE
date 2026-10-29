@@ -16,6 +16,7 @@ namespace OpenCAGE.Popups
         public About() : base()
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/");
 
             aboutHost.Child = new AboutWPF();
         }

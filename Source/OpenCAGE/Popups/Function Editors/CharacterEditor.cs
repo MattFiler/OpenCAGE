@@ -1,4 +1,4 @@
-using CATHODE;
+﻿using CATHODE;
 using CATHODE.Enums;
 using CATHODE.Scripting;
 using CathodeLib;
@@ -19,11 +19,22 @@ namespace OpenCAGE
         private CharacterAccessorySets.CharacterAttributes _accessories;
 
         private EntityInspector _entityDisplay;
+        private readonly string _openSnapshot;
 
         public CharacterEditor(EntityInspector editor) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
             _entityDisplay = editor;
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/character-editor/");
+
+            //Accessory sets are edited in place from a lot of handlers, so instead of marking the level as
+            //modified in each one, compare against this snapshot when the window closes
+            _openSnapshot = DirtyTracker.Snapshot(Content?.Level?.AccessorySets?.Entries);
+            this.FormClosing += (s, e) =>
+            {
+                if (DirtyTracker.MarkIfChanged(_openSnapshot, Content?.Level?.AccessorySets?.Entries))
+                    EditHistory.AssetChanged(Content?.Level, AssetModificationInfoTable.AssetKind.CHARACTER_ACCESSORIES, LevelMerger.StandaloneData[4]);
+            };
 
             foreach (KeyValuePair<string, HashSet<string>> skeletons in Singleton.GenderedSkeletons)
                 gender.Items.Add(skeletons.Key);
@@ -147,6 +158,12 @@ namespace OpenCAGE
             }
 
             InstanceSelection instanceSelector = new InstanceSelection(_entityDisplay, existingCharacters);
+            if (!instanceSelector.HasInstances)
+            {
+                //Closed itself before ever showing, which disposes it - Show() would throw
+                instanceSelector.Dispose();
+                return;
+            }
             instanceSelector.Show();
             instanceSelector.OnInstanceSelected += OnCharacterInstanceSelected;
         }
@@ -244,7 +261,7 @@ namespace OpenCAGE
 
         private void genderAttr_SelectedIndexChanged(object sender, EventArgs e)
         {
-            _accessories.gender = (CUSTOM_CHARACTER_GENDER)gender.SelectedIndex;
+            _accessories.gender = (CUSTOM_CHARACTER_GENDER)genderAttr.SelectedIndex;
         }
 
         private void ethnicityAttr_SelectedIndexChanged(object sender, EventArgs e)
@@ -269,7 +286,7 @@ namespace OpenCAGE
 
         private void foleyFootwear_SelectedIndexChanged(object sender, EventArgs e)
         {
-            _accessories.foley.Footwear = (CHARACTER_FOLEY_SOUND)foleyLeg.SelectedIndex;
+            _accessories.foley.Footwear = (CHARACTER_FOLEY_SOUND)foleyFootwear.SelectedIndex;
         }
 
         CharacterAssetEditor _assetEditor = null;

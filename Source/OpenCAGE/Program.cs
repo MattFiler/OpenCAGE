@@ -13,6 +13,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,8 +32,29 @@ namespace OpenCAGE
         [STAThread]
         static void Main(string[] args)
         {
+            /* Every relative path OpenCAGE uses - LOGS, the native DLLs, the viewer - is meant relative
+             * to the executable. Steam launches it that way; a shell launch (a double-clicked package
+             * file) does not, so it is made so here before anything is read. (SettingsManager resolves
+             * its own file against the exe folder regardless.) */
+            try { Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory; } catch { }
+
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+
+            /* A package file to open (a double-click in Explorer - see FileAssociations). If an OpenCAGE
+             * is already running it takes the file, and this process goes away before it has touched
+             * anything - not even the settings file. */
+            string openFile = FindOpenFileArgument();
+            if (openFile != null)
+            {
+                bool handedOver = false;
+                try { handedOver = PackageHandover.TryHandOver(openFile); }
+                catch { } //no exception handler is installed yet: a failure here means start normally
+                if (handedOver)
+                    return;
+            }
+
+            OpenCAGE.Theming.ThemeManager.Initialize();
 
             _args = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             {
@@ -49,14 +71,15 @@ namespace OpenCAGE
                         _args[vName] = _args[vName].Substring(0, _args[vName].Length - 1);
                 }
 
-                //Optionally disable the viewport
+                //Optionally disable the viewport: by argument (the Steam launch option, child instances), or
+                //by the Options > Viewport > Enable Viewport switch, which is the same thing remembered
                 if (arguments.Any(o => string.Equals(o, "-disable_viewport", StringComparison.OrdinalIgnoreCase)))
                     Singleton.ViewportEnabled = false;
                 else
-                    Singleton.ViewportEnabled = File.Exists(Singleton.ViewportExecutablePath);
+                    Singleton.ViewportEnabled = File.Exists(Singleton.ViewportExecutablePath) && SettingsManager.GetBool(Settings.ViewportEnabled, true);
 
                 //Optionally allow selecting a game folder without requiring AI.exe
-                if (arguments.Any(o => string.Equals(o, "-dontRequireAIexe", StringComparison.OrdinalIgnoreCase)))
+                if (arguments.Any(o => string.Equals(o, "-dont_require_exe", StringComparison.OrdinalIgnoreCase)))
                     Singleton.DontRequireAIexe = true;
             }
 
@@ -95,10 +118,14 @@ namespace OpenCAGE
 #endif
 
 #if SHIP_BUILD
+            //Steam relaunches this process through itself without our arguments: park the file for the relaunch
+            if (openFile != null)
+                PackageHandover.Stash(openFile);
+
             //Initialise Steamworks
             try
             {
-                Steamworks.SteamAPI.Init();
+                Steam.Initialised = Steamworks.SteamAPI.Init();
                 if (Steamworks.SteamAPI.RestartAppIfNecessary((Steamworks.AppId_t)3367530))
                 {
                     Application.Exit();
@@ -109,6 +136,22 @@ namespace OpenCAGE
             catch (Exception e)
             {
                 Console.WriteLine("Steamworks Exception: " + e.ToString());
+                //A double-clicked package with Steam closed would otherwise vanish without a word
+                if (openFile != null)
+                    MessageBox.Show("OpenCAGE runs through Steam. Start Steam, then open the package again.", "OpenCAGE", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Application.Exit();
+                Environment.Exit(0);
+                return;
+            }
+
+            if (!Steam.Initialised)
+            {
+                bool steamRunning = false;
+                try { steamRunning = Steamworks.SteamAPI.IsSteamRunning(); } catch { }
+                MessageBox.Show(steamRunning
+                    ? "OpenCAGE couldn't connect to Steam, although Steam is running.\n\nThis can happen when OpenCAGE and Steam are run with different permissions, for example OpenCAGE set to \"Run as administrator\" and Steam not. Run them both the same way, then launch OpenCAGE again from your Steam library."
+                    : "OpenCAGE needs Steam to be running.\n\nStart Steam and sign in, then launch OpenCAGE again from your Steam library.",
+                    "OpenCAGE", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 Application.Exit();
                 Environment.Exit(0);
                 return;
@@ -118,7 +161,16 @@ namespace OpenCAGE
             //Work out path to Alien: Isolation
             if (GetArgument("pathToAI") != null)
             {
-                Singleton.PathToAI = Path.GetFullPath(GetArgument("pathToAI"));
+                /* A path that can't be made absolute is handed on as it is: the validation below turns it
+                 * down and asks for a real install, where it used to surface as a crash before any window. */
+                try
+                {
+                    Singleton.PathToAI = Path.GetFullPath(GetArgument("pathToAI"));
+                }
+                catch (Exception)
+                {
+                    Singleton.PathToAI = GetArgument("pathToAI");
+                }
 #if SHIP_BUILD
                 Singleton.IsPrimaryInstance = false;
 #endif
@@ -189,8 +241,6 @@ namespace OpenCAGE
             //If the user has a custom CathodeLib file, use it!
             if (File.Exists(Singleton.PathToAI + "/" + Paths.CustomInfoDat))
                 Paths.CustomInfoDat = Singleton.PathToAI + "/" + Paths.CustomInfoDat;
-            if (File.Exists(Singleton.PathToAI + "/" + Paths.CustomSoundBin))
-                Paths.CustomSoundBin = Singleton.PathToAI + "/" + Paths.CustomSoundBin;
 
             //Work out and verify version/platform
             Singleton.Version = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).ProductVersion;
@@ -198,7 +248,8 @@ namespace OpenCAGE
 #if SHIP_BUILD
             try
             {
-                SteamApps.GetCurrentBetaName(out Singleton.BetaName, 100);
+                if (Steam.Initialised)
+                    SteamApps.GetCurrentBetaName(out Singleton.BetaName, 100);
                 if (Singleton.BetaName == null)
                     Singleton.BetaName = "";
             }
@@ -210,6 +261,10 @@ namespace OpenCAGE
 #else
             Singleton.BetaName = "LOCAL";
 #endif
+
+            //The primary holds the lock for as long as it runs; a child polls for it (see CommandsEditor)
+            if (Singleton.IsPrimaryInstance)
+                PrimaryInstanceLock.TryAcquire();
 
             if (Singleton.IsPrimaryInstance)
                 AnalyticsManager.LogAppStartup();
@@ -235,6 +290,16 @@ namespace OpenCAGE
                 catch { }
             }
 
+            /* Double-clickable package files: keep the .ocp (and .omp) associations pointing at this exe.
+             * Only the primary registers, and only a shipped build does so by default - a debug run would
+             * point the association at itself (see FileAssociations.ShouldRegister). The file this process
+             * was launched with, if any, is opened once the window is up. */
+            if (PrimaryInstanceLock.IsHeld && FileAssociations.ShouldRegister())
+                FileAssociations.Register();
+            PackageFiles.PendingOpen = openFile;
+
+            Modding.ShaderDatabaseCatalogue.Register();
+
             //Run app
             Application.Run(new CommandsEditor(GetArgument("level")));
         }
@@ -244,6 +309,57 @@ namespace OpenCAGE
             if (_args.TryGetValue(name, out string arg))
                 return arg;
             return null;
+        }
+
+        /* The -openfile= argument alone, read before the general parse so a handover can happen before
+           anything else starts. Same shape as the parser above, including the stray closing quote a
+           shell command line can leave on the end. */
+        static string FindOpenFileArgument()
+        {
+            string prefix = "-" + FileAssociations.OpenFileArgument + "=";
+            foreach (string argument in Environment.GetCommandLineArgs())
+            {
+                if (argument == null || !argument.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                string value = argument.Substring(prefix.Length).Trim();
+                if (value.EndsWith("\""))
+                    value = value.Substring(0, value.Length - 1);
+                return value.Length == 0 ? null : value;
+            }
+            return null;
+        }
+
+        /* A value quoted for a child process's command line, so it parses back exactly as given. Windows
+           only treats a backslash specially when it sits in front of a quote, so a path with a trailing
+           separator wrapped in plain quotes - "C:\Alien Isolation\" - ends in \" which reads as a literal
+           quote: the closing quote never comes, and everything after it (a -disable_viewport, say) lands
+           inside the path (issue 649). The rule is to double any run of backslashes that precedes a quote,
+           including the closing one, and escape quotes themselves. */
+        public static string QuoteArgument(string value)
+        {
+            StringBuilder builder = new StringBuilder("\"");
+            int backslashes = 0;
+            foreach (char c in value ?? "")
+            {
+                if (c == '\\')
+                {
+                    backslashes++;
+                    continue;
+                }
+                if (c == '"')
+                {
+                    builder.Append('\\', backslashes * 2 + 1);
+                    builder.Append('"');
+                    backslashes = 0;
+                    continue;
+                }
+                builder.Append('\\', backslashes);
+                builder.Append(c);
+                backslashes = 0;
+            }
+            builder.Append('\\', backslashes * 2);
+            builder.Append('"');
+            return builder.ToString();
         }
 
         static bool TryPromptForValidGameDirectory(out string path)
@@ -274,6 +390,20 @@ namespace OpenCAGE
             HandleError("CurrentDomain_UnhandledException\n" + ((Exception)e.ExceptionObject).ToString());
         }
         private static bool _handlingError = false;
+
+        /// <summary>
+        /// True once a critical error is taking the application down. The main window's save prompt stands
+        /// aside for it: the level's state is not to be trusted with a save, and a question nobody answers
+        /// would keep a half-torn-down process alive.
+        /// </summary>
+        public static bool ExitingAfterCriticalError { get; private set; }
+
+        /// <summary>
+        /// Where crash logs are written: LOGS beside OpenCAGE.exe. Absolute, as a file dialog can leave the
+        /// current directory somewhere else by the time something crashes. Help > Open Logs Folder opens it.
+        /// </summary>
+        public static string LogsFolder => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LOGS");
+
         static void HandleError(string error)
         {
             if (_handlingError)
@@ -282,8 +412,8 @@ namespace OpenCAGE
 
             try
             {
-                string logPath = "LOGS/CECrash_" + DateTime.Now.ToString("ddMMyy-HHmmss") + ".log";
-                Directory.CreateDirectory("LOGS");
+                string logPath = Path.Combine(LogsFolder, "CECrash_" + DateTime.Now.ToString("ddMMyy-HHmmss") + ".log");
+                Directory.CreateDirectory(LogsFolder);
 
                 MessageBox.Show("A critical error occurred.\nPlease wait while a log is generated.", "OpenCAGE Error Handler", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
@@ -303,15 +433,122 @@ namespace OpenCAGE
             }
             catch { }
 
+            ExitAfterCriticalError();
+        }
+
+        /* Application.Exit asks every open form and gives up at the first refusal, which the void overload
+           does not report. With a level loaded, a dock panel that hid instead of closing always refused,
+           so a Ship build carried on after its "critical error" dialogs, half torn down - the main window's
+           own closing had already run - and never killed the viewer: that is how one report went from a
+           null reference to a viewer crash 45 seconds later. The panels now let an application exit
+           through (CloseReasons), the save prompt is skipped by the flag, and whatever still refuses is
+           not argued with: the viewer is stopped by hand and the process ends. */
+        private static void ExitAfterCriticalError()
+        {
+            ExitingAfterCriticalError = true;
+
+            bool refused = true;
             try
             {
-                Application.Exit();
+                System.ComponentModel.CancelEventArgs exit = new System.ComponentModel.CancelEventArgs();
+                Application.Exit(exit);
+                refused = exit.Cancel;
             }
             catch
             {
-                Environment.Exit(1);
+            }
+
+            if (refused)
+            {
+                try
+                {
+                    Singleton.Editor?.LevelViewerPanel?.Stop();
+                }
+                catch
+                {
+                }
+            }
+
+            Environment.Exit(1);
+        }
+
+        /// <summary>
+        /// The embedded level viewer died (non-zero exit code). Logged and submitted the same way an OpenCAGE
+        /// crash is, but as its own entry - the first line is "LevelViewerProcessExited" - so the crash stats can
+        /// count it separately. No dialogs and no shutdown: OpenCAGE itself is fine, the viewport just went.
+        /// The tail of the viewer's own output is the useful part; for the crash class found in issue #628 it
+        /// carries the engine's "ERROR: Element limit reached" lines and the C# stack.
+        ///
+        /// The second line names <see cref="ViewportCrashException"/> and the exit code because the dashboard
+        /// reads a report's type and message off the first "Type.SomethingException: message" line. Without
+        /// one these arrive as "Unknown" and group by their last log line, which is whichever packet happened
+        /// to be in flight - so the same fault shows up as several unrelated-looking entries.
+        /// </summary>
+        public static void ReportViewportCrash(int exitCode, string viewerOutputTail, DateTime? diedAt = null)
+        {
+            try
+            {
+                ViewportCrashException crash = new ViewportCrashException(exitCode);
+                string fault = FaultingModuleFromEventLog("CathodeEditorGodot.exe", diedAt ?? DateTime.Now);
+                string error = "LevelViewerProcessExited\n"
+                    + crash.GetType().FullName + ": " + crash.Message + "\n"
+                    + "Exit code: " + ViewportCrashException.Format(exitCode) + " (" + exitCode + ")\n"
+                    + (fault ?? "(no Application Error event was recorded for the viewer)") + "\n"
+                    + (string.IsNullOrWhiteSpace(viewerOutputTail)
+                        ? "(no viewer output captured)"
+                        : "Viewer output, last lines:\n" + viewerOutputTail);
+                string logPath = Path.Combine(LogsFolder, "ViewportCrash_" + DateTime.Now.ToString("ddMMyy-HHmmss") + ".log");
+                Directory.CreateDirectory(LogsFolder);
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        await UploadCrashLog(error, logPath);
+                    }
+                    catch
+                    {
+                    }
+                });
+            }
+            catch
+            {
             }
         }
+
+        /* Windows writes an "Application Error" event for a process that dies on a fault, naming the
+           module and offset it died in - the one line an access violation report otherwise lacks, and
+           what tells the engine, the runtime and a graphics driver apart. The entry is looked for close
+           to when the viewer went; none is found for an exit code the viewer chose itself. */
+        private static string FaultingModuleFromEventLog(string exeName, DateTime diedAt)
+        {
+            try
+            {
+                using (EventLog log = new EventLog("Application"))
+                {
+                    int count = log.Entries.Count;
+                    for (int i = count - 1; i >= 0 && i >= count - 300; i--)
+                    {
+                        EventLogEntry entry = log.Entries[i];
+                        if (entry.TimeGenerated < diedAt.AddSeconds(-30))
+                            break;
+                        if (entry.Source != "Application Error")
+                            continue;
+                        string[] fields = entry.ReplacementStrings;
+                        if (fields == null || fields.Length < 8 || fields[0].IndexOf(exeName, StringComparison.OrdinalIgnoreCase) < 0)
+                            continue;
+                        //app name, app version, app stamp, module name, module version, module stamp, exception code, fault offset...
+                        return "Faulting module: " + fields[3] + " (version " + fields[4] + ", stamp " + fields[5] + "), exception " + fields[6] + " at offset " + fields[7]
+                            + "; viewer " + fields[1] + " stamp " + fields[2] + "; recorded " + entry.TimeGenerated.ToString("HH:mm:ss");
+                    }
+                }
+            }
+            catch
+            {
+                //The event log is a nicety: no access to it, or no record yet, and the report goes as before
+            }
+            return null;
+        }
+
         static async Task UploadCrashLog(string error, string logPath)
         {
             try
@@ -344,7 +581,7 @@ namespace OpenCAGE
                 CATHODE.Scripting.Composite composite = Singleton.Editor?.CompositeDisplay?.Composite;
                 CATHODE.Scripting.Internal.Entity entity = Singleton.Editor?.CompositeDisplay?.EntityDisplay?.Entity;
                 content.Add(new StringContent(level == null ? "Unknown/None" : level), "current_level");
-                error += "\n Current Level: " + level == null ? "Unknown/None" : level;
+                error += "\n Current Level: " + (level == null ? "Unknown/None" : level);
                 content.Add(new StringContent(composite == null ? "Unknown/None" : composite.name), "current_composite");
                 error += "\n Current Composite: " + (composite == null ? " Unknown/None" : composite.name);
                 content.Add(new StringContent(entity == null ? "Unknown/None" : entity.shortGUID.ToByteString()), "current_entity");
@@ -362,7 +599,7 @@ namespace OpenCAGE
                 content.Add(new StringContent(ram), "ram_total");
                 error += "\n RAM: " + ram;
 
-                var response = await client.PostAsync("http://opencage.mattfiler.co.uk/crashes/crash_handler.php", content);
+                var response = await client.PostAsync("https://opencage.mattfiler.co.uk/crashes/crash_handler.php", content);
                 if (!response.IsSuccessStatusCode)
                 {
                     Console.WriteLine("Failed to upload crash log [" + response.StatusCode + "]: " + response.RequestMessage);

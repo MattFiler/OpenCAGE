@@ -45,6 +45,8 @@
             this.button2 = new System.Windows.Forms.Button();
             this.moveDown = new System.Windows.Forms.Button();
             this.entity_list = new System.Windows.Forms.ListView();
+            this.entitySearchBox = new System.Windows.Forms.TextBox();
+            this.clearEntitySearchBtn = new System.Windows.Forms.Button();
             this.funcHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.inheritHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.addNewTrigger = new System.Windows.Forms.Button();
@@ -95,6 +97,8 @@
             this.groupBox1.Controls.Add(this.button2);
             this.groupBox1.Controls.Add(this.moveDown);
             this.groupBox1.Controls.Add(this.entity_list);
+            this.groupBox1.Controls.Add(this.entitySearchBox);
+            this.groupBox1.Controls.Add(this.clearEntitySearchBtn);
             this.groupBox1.Controls.Add(this.addNewTrigger);
             this.groupBox1.Controls.Add(this.moveUp);
             this.groupBox1.Controls.Add(this.selectedEntityDetails);
@@ -126,7 +130,7 @@
             this.moveDown.Name = "moveDown";
             this.moveDown.Size = new System.Drawing.Size(27, 27);
             this.moveDown.TabIndex = 5;
-            this.toolTip1.SetToolTip(this.moveDown, "Move selected down in the list");
+            this.toolTip1.SetToolTip(this.moveDown, "Move selected down in the list (or drag rows to reorder)");
             this.moveDown.UseVisualStyleBackColor = true;
             this.moveDown.Click += new System.EventHandler(this.moveDown_Click);
             // 
@@ -172,14 +176,37 @@
             listViewGroup9,
             listViewGroup10});
             this.entity_list.HideSelection = false;
-            this.entity_list.Location = new System.Drawing.Point(6, 19);
-            this.entity_list.MultiSelect = false;
+            this.entity_list.ShowGroups = false;
+            this.entity_list.Location = new System.Drawing.Point(6, 45);
+            this.entity_list.MultiSelect = true;
             this.entity_list.Name = "entity_list";
-            this.entity_list.Size = new System.Drawing.Size(695, 293);
+            this.entity_list.Size = new System.Drawing.Size(695, 267);
             this.entity_list.TabIndex = 181;
             this.entity_list.UseCompatibleStateImageBehavior = false;
             this.entity_list.View = System.Windows.Forms.View.Details;
             this.entity_list.SelectedIndexChanged += new System.EventHandler(this.entity_list_SelectedIndexChanged);
+            // 
+            // entitySearchBox
+            // 
+            this.entitySearchBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.entitySearchBox.Location = new System.Drawing.Point(6, 19);
+            this.entitySearchBox.Name = "entitySearchBox";
+            this.entitySearchBox.Size = new System.Drawing.Size(669, 20);
+            this.entitySearchBox.TabIndex = 182;
+            this.entitySearchBox.TextChanged += new System.EventHandler(this.entitySearchBox_TextChanged);
+            // 
+            // clearEntitySearchBtn
+            // 
+            this.clearEntitySearchBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.clearEntitySearchBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.clearEntitySearchBtn.Location = new System.Drawing.Point(681, 18);
+            this.clearEntitySearchBtn.Name = "clearEntitySearchBtn";
+            this.clearEntitySearchBtn.Size = new System.Drawing.Size(20, 20);
+            this.clearEntitySearchBtn.TabIndex = 183;
+            this.clearEntitySearchBtn.Text = "X";
+            this.clearEntitySearchBtn.UseVisualStyleBackColor = true;
+            this.clearEntitySearchBtn.Click += new System.EventHandler(this.clearEntitySearchBtn_Click);
             // 
             // funcHeader
             // 
@@ -198,7 +225,8 @@
             this.addNewTrigger.Name = "addNewTrigger";
             this.addNewTrigger.Size = new System.Drawing.Size(211, 26);
             this.addNewTrigger.TabIndex = 2;
-            this.addNewTrigger.Text = "Add New Entity Reference";
+            this.addNewTrigger.Text = "Add Entities…";
+            this.toolTip1.SetToolTip(this.addNewTrigger, "Add one or more function entities. Check multiple rows in the picker, or select a single entity.");
             this.addNewTrigger.UseVisualStyleBackColor = true;
             this.addNewTrigger.Click += new System.EventHandler(this.addNewEntity_Click);
             // 
@@ -211,7 +239,7 @@
             this.moveUp.Name = "moveUp";
             this.moveUp.Size = new System.Drawing.Size(27, 27);
             this.moveUp.TabIndex = 4;
-            this.toolTip1.SetToolTip(this.moveUp, "Move selected up in the list");
+            this.toolTip1.SetToolTip(this.moveUp, "Move selected up in the list (or drag rows to reorder)");
             this.moveUp.UseVisualStyleBackColor = true;
             this.moveUp.Click += new System.EventHandler(this.moveUp_Click);
             // 
@@ -458,6 +486,8 @@
         private System.Windows.Forms.Button moveDown;
         private System.Windows.Forms.Button moveUp;
         private System.Windows.Forms.ListView entity_list;
+        private System.Windows.Forms.TextBox entitySearchBox;
+        private System.Windows.Forms.Button clearEntitySearchBtn;
         private System.Windows.Forms.ColumnHeader funcHeader;
         private System.Windows.Forms.ColumnHeader inheritHeader;
         private System.Windows.Forms.Button button2;

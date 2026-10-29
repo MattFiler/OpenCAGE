@@ -75,6 +75,7 @@
             this.label20 = new System.Windows.Forms.Label();
             this.base_absorption = new System.Windows.Forms.NumericUpDown();
             this.label21 = new System.Windows.Forms.Label();
+            this.liveStatus = new System.Windows.Forms.Label();
             this.groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.scattering_radius)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.scattering_saturation)).BeginInit();
@@ -112,7 +113,7 @@
             this.groupBox1.Size = new System.Drawing.Size(797, 73);
             this.groupBox1.TabIndex = 0;
             this.groupBox1.TabStop = false;
-            this.groupBox1.Text = "Hair";
+            this.groupBox1.Text = "Skin";
             // 
             // scattering_radius
             // 
@@ -215,7 +216,7 @@
             this.groupBox2.Size = new System.Drawing.Size(797, 234);
             this.groupBox2.TabIndex = 443;
             this.groupBox2.TabStop = false;
-            this.groupBox2.Text = "Skin";
+            this.groupBox2.Text = "Hair";
             // 
             // softening_length
             // 
@@ -756,12 +757,20 @@
             this.label21.Size = new System.Drawing.Size(84, 13);
             this.label21.TabIndex = 459;
             this.label21.Text = "Base Absorption";
-            // 
+            //
+            // liveStatus
+            //
+            this.liveStatus.Location = new System.Drawing.Point(12, 329);
+            this.liveStatus.Name = "liveStatus";
+            this.liveStatus.Size = new System.Drawing.Size(797, 16);
+            this.liveStatus.TabIndex = 470;
+            //
             // HairAndSkinShadingEditor
-            // 
+            //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(818, 336);
+            this.ClientSize = new System.Drawing.Size(818, 350);
+            this.Controls.Add(this.liveStatus);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
@@ -848,5 +857,6 @@
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.NumericUpDown alpha_threshold_shadow;
         private System.Windows.Forms.Label label5;
+        private System.Windows.Forms.Label liveStatus;
     }
 }

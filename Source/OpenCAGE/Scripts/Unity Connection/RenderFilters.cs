@@ -41,7 +41,7 @@ namespace OpenCAGE.UnityConnection
             foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All)
             {
                 if (!filters.ContainsKey(definition.FunctionTypeUInt))
-                    filters[definition.FunctionTypeUInt] = false;
+                    filters[definition.FunctionTypeUInt] = definition.DefaultEnabled;
             }
             return filters;
         }
@@ -56,6 +56,35 @@ namespace OpenCAGE.UnityConnection
             return LoadAll();
         }
 
+        /* Scene geometry filters (occlusion / collision meshes). These aren't FunctionTypes, so they
+           live under their own settings keys rather than in the box filter dictionary. */
+        public static string SceneFilterSettingKey(SceneFilterKind kind)
+        {
+            return "SceneRenderFilter_" + kind;
+        }
+
+        public static bool IsSceneFilterEnabled(SceneFilterKind kind)
+        {
+            return SettingsManager.GetBool(SceneFilterSettingKey(kind));
+        }
+
+        public static void SetSceneFilterEnabled(SceneFilterKind kind, bool enabled)
+        {
+            SettingsManager.SetBool(SceneFilterSettingKey(kind), enabled);
+        }
+
+        public static Dictionary<string, bool> GetScenePacketFilters()
+        {
+            Dictionary<string, bool> filters = new Dictionary<string, bool>();
+            foreach (SceneFilterDefinition definition in RenderFilterDefinitions.SceneFilters)
+                filters[definition.Key] = IsSceneFilterEnabled(definition.Kind);
+            return filters;
+        }
+
+        public static Color ToMenuColor(SceneFilterDefinition definition)
+        {
+            return Color.FromArgb(255, ToByte(definition.R), ToByte(definition.G), ToByte(definition.B));
+        }
         public static Color ToMenuColor(RenderFilterDefinitions.Definition definition)
         {
             return Color.FromArgb(255, ToByte(definition.R), ToByte(definition.G), ToByte(definition.B));
@@ -160,6 +189,8 @@ namespace OpenCAGE.UnityConnection
                     return Resources.RenderFilter_Particle;
                 case RenderPreviewKind.CameraResource:
                     return Resources.RenderFilter_Camera;
+                case RenderPreviewKind.UiIcon:
+                    return Resources.RenderFilter_UIIcon;
                 default:
                     return null;
             }

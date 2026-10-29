@@ -1,5 +1,6 @@
 using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
+using CATHODE.Enums;
 using CathodeLib;
 using OpenCAGE.Properties;
 using OpenCAGE.UserControls;
@@ -13,6 +14,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Runtime.Remoting.Metadata.W3cXsd2001;
 using System.Text;
 using System.Threading;
@@ -32,7 +34,18 @@ namespace OpenCAGE.DockPanels
         private Entity _entity = null;
         private Composite _entityCompositePtr = null; //The composite that this entity points to, if it does.
 
-        public bool Populated => _entity != null;
+        //Multi-selection state: when more than one entity is selected, the grid edits them all at once
+        private List<Entity> _multiEntities = null;
+        public bool IsMultiEditing => _multiEntities != null && _multiEntities.Count > 1;
+
+        /// <summary>The entities being edited together, first one first. Null unless multi-editing.</summary>
+        public List<Entity> MultiSelectedEntities => IsMultiEditing ? _multiEntities : null;
+
+        //Parameter grid UI (replaces the old stacked parameter UserControls)
+        private SplitContainer _paramSplit;
+        private ParameterGridPanel _gridPanel;
+
+        public bool Populated => _entity != null || IsMultiEditing;
 
         public LevelContent Content => _compositeDisplay?.Content;
 
@@ -46,17 +59,35 @@ namespace OpenCAGE.DockPanels
         {
             this.FormClosing += (s, e) => { DepopulateUI(); };
             this.FormClosed += EntityDisplay_FormClosed;
+            //The dock panel disposes its contents on a level change without always closing them first
+            this.Disposed += (s, e) => Unsubscribe();
 
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
 
-            Singleton.OnEntityAddPending += OnEntityAddPending;
-            Singleton.OnEntityAdded += OnEntityAdded;
-            Singleton.OnEntityRenamed += OnEntityRenamed;
-            Singleton.OnCompositeRenamed += OnCompositeRenamed;
+            //Restructure the parameter area: parameter grid on top, the old scrolling panel below (links only now).
+            //The height is managed by LayoutParamArea so the area can reclaim the link bar's space when it's hidden.
+            _paramSplit = new SplitContainer()
+            {
+                Orientation = Orientation.Horizontal,
+                Bounds = entity_params.Bounds,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Panel1MinSize = 80,
+                Panel2MinSize = 60
+            };
+            entityParamGroup.Controls.Remove(entity_params);
+            _paramSplit.Panel2.Controls.Add(entity_params);
+            entity_params.Dock = DockStyle.Fill;
+            _gridPanel = new ParameterGridPanel() { Dock = DockStyle.Fill };
+            _paramSplit.Panel1.Controls.Add(_gridPanel);
+            entityParamGroup.Controls.Add(_paramSplit);
+            try { _paramSplit.SplitterDistance = (int)(_paramSplit.Height * 0.6f); } catch { }
+            _paramSplit.Panel2Collapsed = true;
+            entityParamGroup.Resize += (s, e) => LayoutParamArea();
 
+            Subscribe();
+            SetupLiveLinkButtons();
             Reload();
-
-            this.DockStateChanged += EntityInspector_DockStateChanged;
 
             this.CloseButton = false;
             this.CloseButtonVisible = false;
@@ -68,19 +99,33 @@ namespace OpenCAGE.DockPanels
             _compositeDisplay = compositeDisplay;
         }
 
-        protected override string GetPersistString()
+        /* There is one inspector per level and it is reused for every selection, so it stays wired
+           to the editor-wide events for as long as it lives - a depopulate (the open composite
+           deleted, undone away or replaced by an import) only clears what it shows. Unhooking there
+           left renames, composite renames and animation-driver changes unheard for the rest of the
+           session, as CompositeDisplay's _isSubbed guards against on its side. */
+        private bool _isSubbed = false;
+        private void Subscribe()
         {
-            return "EntityInspector";
-        }
-
-        private void EntityInspector_DockStateChanged(object sender, EventArgs e)
-        {
-            Debug.Log("Entity Inspector", "Dock state changed to " + DockState);
-            if (DockState == DockState.Unknown || DockState == DockState.Hidden)
+            if (_isSubbed)
                 return;
-
-            if (DockState == _previousDockState) return;
-            _previousDockState = DockState;
+            Singleton.OnEntityAddPending += OnEntityAddPending;
+            Singleton.OnEntityAdded += OnEntityAdded;
+            Singleton.OnEntityRenamed += OnEntityRenamed;
+            Singleton.OnCompositeRenamed += OnCompositeRenamed;
+            AnimationModeSession.DriversChanged += OnAnimationDriversChanged;
+            _isSubbed = true;
+        }
+        private void Unsubscribe()
+        {
+            if (!_isSubbed)
+                return;
+            Singleton.OnEntityAddPending -= OnEntityAddPending;
+            Singleton.OnEntityAdded -= OnEntityAdded;
+            Singleton.OnEntityRenamed -= OnEntityRenamed;
+            Singleton.OnCompositeRenamed -= OnCompositeRenamed;
+            AnimationModeSession.DriversChanged -= OnAnimationDriversChanged;
+            _isSubbed = false;
         }
 
         private void OnEntityAddPending()
@@ -90,6 +135,19 @@ namespace OpenCAGE.DockPanels
                 _prevTaskToken.Cancel();
             }
         }
+        /* A CAGEAnimation gained or lost a parameter it drives: the purple rows have moved */
+        private void OnAnimationDriversChanged()
+        {
+            if (IsDisposed || !IsHandleCreated)
+                return;
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(RefreshParameterHighlights));
+                return;
+            }
+            RefreshParameterHighlights();
+        }
+
         private void OnEntityAdded(Entity e)
         {
             if (_prevTask != null && !_prevTask.IsCompleted)
@@ -150,25 +208,103 @@ namespace OpenCAGE.DockPanels
             if (!Populated || !IsAffectedByEntityRename(entity))
                 return;
 
-            Reload();
+            //Only the name displays need updating - rebuilding the whole inspector would throw away
+            //the user's place in the parameter grid (renaming now happens via the 'name' parameter).
+            UpdateNameDisplays();
         }
-        public void ApplyTransformFromExternal(cTransform transform)
+
+        /* Refresh the labels that show the selected entity's name */
+        private void UpdateNameDisplays()
         {
-            if (!Populated || _entity == null || transform == null)
+            if (_entity == null || Content?.Level?.Commands?.Utils == null || Composite == null)
                 return;
 
-            bool updated = false;
-            foreach (Control control in entity_params.Controls)
+            switch (_entity.variant)
             {
-                if (control is GUI_TransformDataType transformControl)
-                {
-                    transformControl.SetTransformValues(transform);
-                    updated = true;
-                }
+                case EntityVariant.VARIABLE:
+                    selected_entity_name.Text = ShortGuidUtils.FindString(((VariableEntity)_entity).name);
+                    break;
+                default:
+                    selected_entity_name.Text = Content.Level.Commands.Utils.GetEntityName(Composite, _entity);
+                    break;
             }
 
-            if (!updated)
-                _compositeDisplay.ReloadEntity(_entity);
+            if (_entity.variant == EntityVariant.PROXY || _entity.variant == EntityVariant.ALIAS)
+            {
+                List<Tuple<Composite, Entity>> resolved = Content.Level.Commands.Utils.ResolveAliasOrProxy(_entity, Composite);
+                //A dead one shows its stored path, as Reload does
+                hierarchyDisplay.Text = Content.Level.Commands.Utils.CouldResolve(resolved)
+                    ? Content.Level.Commands.Utils.GetResolvedAsString(resolved, SettingsManager.GetBool(Settings.ShowShortGuids))
+                    : DeadPathText(_entity);
+                toolTip1.SetToolTip(hierarchyDisplay, hierarchyDisplay.Text);
+            }
+
+            this.Text = selected_entity_name.Text;
+        }
+        /* Recompute the "fed by flowgraph" parameter highlights (called live as connections change) */
+        public void RefreshParameterHighlights()
+        {
+            if (!Populated || IsMultiEditing)
+                return;
+            _gridPanel?.RefreshStatuses();
+        }
+
+        /// <summary>
+        /// The composite the active hierarchy starts at - the one the Level Viewer populates, and what
+        /// the instance paths below are written from.
+        /// </summary>
+        public Composite HierarchyRootComposite => _compositeDisplay?.Path?.AllComposites.FirstOrDefault() ?? Composite;
+
+        /// <summary>
+        /// Where an entity in the open composite sits in the active hierarchy: the drill path the user
+        /// walked through, with the entity on the end. This is the address that says WHICH instance of
+        /// a shared composite's entity is being looked at, which is what decides its zones and what a
+        /// CAGEAnimation drives on it.
+        /// </summary>
+        public List<uint> InstancePathFor(Entity entity)
+        {
+            List<uint> path = new List<uint>();
+            if (_compositeDisplay?.Path != null)
+            {
+                foreach (Entity step in _compositeDisplay.Path.AllEntities)
+                    path.Add(step.shortGUID.AsUInt32);
+            }
+            if (entity != null)
+                path.Add(entity.shortGUID.AsUInt32);
+            return path;
+        }
+
+        public void ApplyTransformFromExternal(ShortGuid paramName, cTransform transform)
+        {
+            if (!Populated || transform == null)
+                return;
+
+            //The grid reads values live from the entity data, so a refresh picks up the new transform
+            _gridPanel?.RefreshValues();
+        }
+
+        /* An undo or redo changed a value on an entity: repaint its rows if it is on show, or rebuild
+           them when the bold "modified" state may have moved too */
+        public void RefreshParameterGrid(Entity entity, bool rowsChanged)
+        {
+            if (!Populated || _gridPanel == null || entity == null)
+                return;
+            bool shown = _entity == entity || (_multiEntities != null && _multiEntities.Contains(entity));
+            if (!shown)
+                return;
+            if (rowsChanged)
+                _gridPanel.RebuildProperties();
+            else
+                _gridPanel.RefreshValues();
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (OpenCAGE.Undo.UndoKeys.TryHandle(keyData))
+                return true;
+            if (OpenCAGE.UnityConnection.ViewerCreateModeKeys.TryHandle(keyData))
+                return true;
+            return base.ProcessCmdKey(ref msg, keyData);
         }
 
         private void OnCompositeRenamed(Composite composite, string name)
@@ -179,6 +315,88 @@ namespace OpenCAGE.DockPanels
             Reload();
         }
 
+        /* Populate the inspector with multiple selected entities (multi-edit mode) */
+        public void PopulateUI(List<Entity> entities, bool displayLinks)
+        {
+            if (entities == null || entities.Count == 0)
+            {
+                ClearSelectedEntity();
+                return;
+            }
+
+            List<Entity> distinct = new List<Entity>();
+            foreach (Entity entity in entities)
+            {
+                if (entity == null) continue;
+                if (distinct.FirstOrDefault(o => o.shortGUID == entity.shortGUID) == null)
+                    distinct.Add(entity);
+            }
+            if (distinct.Count == 0)
+            {
+                ClearSelectedEntity();
+                return;
+            }
+            if (distinct.Count == 1)
+            {
+                PopulateUI(distinct[0], displayLinks);
+                return;
+            }
+
+            if (IsDisposed || Disposing)
+                return;
+
+            if (!Visible || DockState == DockState.Hidden || DockState == DockState.Float)
+            {
+                if (Singleton.Editor?.DockPanel != null)
+                    Show(Singleton.Editor.DockPanel, DockState.DockRight);
+                else
+                    Show();
+            }
+
+            //Whatever the last single selection was still being looked up is for nobody now
+            _prevTaskToken?.Cancel();
+            _entity = null;
+            _entityCompositePtr = null;
+            _multiEntities = distinct;
+            EditorIcons.BindIcon(this, EditorIcon.Function);
+
+            Subscribe();
+            Reload(false);
+
+            //Viewer-originated selection/paste must not steal Win32 focus from the embedded viewer
+            Control list = Singleton.Editor?.CompositeDisplay?.EntityListPanel;
+            if (!ViewerSelectionSync.IsApplyingViewerSelection
+                && (list == null || !list.ContainsFocus))
+                SurfaceWithoutStealingFocus();
+        }
+
+        /// <summary>The tab's icon for the entity on show. A proxy shows what it points at, so re-pointing one changes it.</summary>
+        public void RefreshEntityIcon()
+        {
+            if (_entity == null)
+                return;
+
+            switch (_entity.variant)
+            {
+                case EntityVariant.VARIABLE:
+                    EditorIcons.BindIcon(this, EditorIcon.Parameter);
+                    break;
+                case EntityVariant.FUNCTION:
+                    if (Content?.Level?.Commands == null || Content.Level.Commands.GetComposite(((FunctionEntity)_entity).function) == null)
+                        EditorIcons.BindIcon(this, ((FunctionEntity)_entity).function.IsFunctionType ? EditorIcons.ForFunctionType(((FunctionEntity)_entity).function.AsFunctionType) : EditorIcon.Function);
+                    else
+                        EditorIcons.BindIcon(this, EditorIcon.CompositeInstance);
+                    break;
+                case EntityVariant.PROXY:
+                    //Its own icon only when it points nowhere
+                    EditorIcons.BindIcon(this, EditorIcons.ForEntity(_entity, _compositeDisplay?.Composite, Content?.Level?.Commands) ?? EditorIcon.Proxy);
+                    break;
+                case EntityVariant.ALIAS:
+                    EditorIcons.BindIcon(this, EditorIcon.Alias);
+                    break;
+            }
+        }
+
         public void PopulateUI(Entity entity, bool displayLinks)
         {
             if (entity == null)
@@ -187,7 +405,9 @@ namespace OpenCAGE.DockPanels
                 return;
             }
 
-            if (Populated && _entity != null && _entity.shortGUID == entity.shortGUID)
+            bool wasMultiEditing = IsMultiEditing;
+            _multiEntities = null;
+            if (!wasMultiEditing && Populated && _entity != null && _entity.shortGUID == entity.shortGUID)
                 return;
 
             if (IsDisposed || Disposing)
@@ -206,56 +426,86 @@ namespace OpenCAGE.DockPanels
                 ? Content.Level.Commands.GetComposite(((FunctionEntity)_entity).function)
                 : null;
 
-            switch (_entity.variant)
-            {
-                case EntityVariant.VARIABLE:
-                    this.Icon = Resources.AnimatorController_Icon;
-                    break;
-                case EntityVariant.FUNCTION:
-                    if (Content?.Level?.Commands == null || Content.Level.Commands.GetComposite(((FunctionEntity)_entity).function) == null)
-                        this.Icon = Resources.d_ScriptableObject_Icon_braces_only;
-                    else
-                        this.Icon = Resources.d_PrefabVariant_Icon;
-                    break;
-                case EntityVariant.PROXY:
-                    this.Icon = Resources.d_ScriptableObject_Icon;
-                    break;
-                case EntityVariant.ALIAS:
-                    this.Icon = Resources.AreaEffector2D_Icon;
-                    break;
-            }
+            RefreshEntityIcon();
 
+            Subscribe();
             Reload(displayLinks);
 
-            this.Activate();
+            //Viewer-originated selection/paste must not steal Win32 focus from the embedded viewer
+            Control list = Singleton.Editor?.CompositeDisplay?.EntityListPanel;
+            if (!ViewerSelectionSync.IsApplyingViewerSelection
+                && (list == null || !list.ContainsFocus))
+                SurfaceWithoutStealingFocus();
         }
 
+        /* Bring our tab to the front, but leave keyboard focus where the user left it: selecting an
+           entity usually means they're still working in the flowgraph, and taking focus here means
+           their shortcuts (Ctrl+C/Ctrl+V on nodes, delete, etc) never reach it. */
+        private void SurfaceWithoutStealingFocus()
+        {
+            Control focused = GetFocusedControl();
+
+            /* Focus in the viewport while the viewer is busy (the selection has usually just asked it to populate):
+               activating this tab takes the focus out of the viewer's window and the restore puts it back, and each
+               waits on the viewer's thread - OpenCAGE froze for the length of the populate. The tab stays as it is. */
+            if (focused is EmbeddedWindowHost host && (UnityConnection.ViewerBusy.Likely || !host.IsEmbeddedWindowResponding(50)))
+                return;
+
+            this.Activate();
+
+            if (focused == null || focused.IsDisposed || focused.ContainsFocus || !focused.CanFocus)
+                return;
+            focused.Focus();
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetFocus();
+
+        private static Control GetFocusedControl()
+        {
+            IntPtr handle = GetFocus();
+            return handle == IntPtr.Zero ? null : Control.FromChildHandle(handle);
+        }
+
+        /* Everything shown goes, but the panel stays where it is: the composite it was showing has been
+           left (a deep-select into another one, the display's tab closed) and hiding the inspector here
+           had the right dock collapse and re-open around every deep-select, shifting the whole layout.
+           It is only ever closed with the level, by CommandsEditor. */
         public void DepopulateUI()
         {
-            this.Hide();
-            EntityDisplay_FormClosed(null, null);
+            ClearContents();
+            Reload(_displayingLinks);
         }
 
         public void ClearSelectedEntity()
         {
-            if (_entity == null)
+            if (_entity == null && !IsMultiEditing)
             {
                 Reload(_displayingLinks);
                 return;
             }
 
+            _prevTaskToken?.Cancel();
             _entity = null;
             _entityCompositePtr = null;
+            _multiEntities = null;
             Reload(_displayingLinks);
+            Singleton.OnSelectionCleared?.Invoke();
         }
 
         private void EntityDisplay_FormClosed(object sender, FormClosedEventArgs e)
         {
             this.FormClosed -= EntityDisplay_FormClosed;
-            Singleton.OnEntityAddPending -= OnEntityAddPending;
-            Singleton.OnEntityAdded -= OnEntityAdded;
-            Singleton.OnEntityRenamed -= OnEntityRenamed;
-            Singleton.OnCompositeRenamed -= OnCompositeRenamed;
+            Unsubscribe();
+            ClearContents();
+
+        }
+
+        /* Everything shown for the selection goes; the inspector stays wired up for the next one */
+        private void ClearContents()
+        {
+            //Nothing to show means nothing left to look up for it
+            _prevTaskToken?.Cancel();
 
             for (int i = 0; i < entity_params.Controls.Count; i++)
             {
@@ -268,18 +518,12 @@ namespace OpenCAGE.DockPanels
                 entity_params.Controls[i].Dispose();
             }
             entity_params.Controls.Clear();
+            _gridPanel?.ClearEntities();
+            DisposeZoneMenu();
 
             _entity = null;
             _entityCompositePtr = null;
-
-            imageList1.Images.Clear();
-            imageList1.Dispose();
-
-            if (add_parameter != null)
-            {
-                add_parameter.OnSaved -= Reload;
-                add_parameter.Close();
-            }
+            _multiEntities = null;
         }
 
         /* Reload this display */
@@ -301,7 +545,6 @@ namespace OpenCAGE.DockPanels
             }
 
             _displayingLinks = displayLinks;
-            ModifyParameters.Visible = !_displayingLinks;
 
             //UI defaults - TODO: just set this in the designer.
             this.Text = "Entity Inspector";
@@ -337,29 +580,52 @@ namespace OpenCAGE.DockPanels
             entity_params.Controls.Clear();
             jumpToComposite.Visible = false;
             editFunction.Enabled = false;
+            LabelFunctionButton();
             editEntityResources.Enabled = false;
-            editEntityMovers.Enabled = false;
             showOverridesAndProxies.Enabled = false;
             goToZone.Enabled = false;
+            //Working out the zone runs in the background, so drop the last entity's name rather than
+            //leave it sitting on the button naming a zone this entity may not be in
+            goToZone.Text = "Zone";
+            toolTip1.SetToolTip(goToZone, "Zone");
             hierarchyDisplay.Visible = false;
+            if (_zoneSwatch != null)
+                _zoneSwatch.Visible = false;
 
             //NOTE: These visibility options should be mirrored in EntityListContextMenu_Opening in EntityList
-            renameEntity.Enabled = _entity != null && _entity.variant != EntityVariant.ALIAS && _entity.variant != EntityVariant.VARIABLE; //TODO: we should support variable renaming, but doing that requires managing renaming all links/params (including node links)
-            duplicateEntity.Enabled = _entity != null && _entity.variant != EntityVariant.ALIAS && _entity.variant != EntityVariant.VARIABLE; //This works, but why would you ever want to?
+            //(renaming is done by editing the entity's 'name' parameter in the grid)
+            //ReloadMulti puts the plural back on when there is a selection of several
+            deleteEntity.Text = "Delete Entity";
             deleteEntity.Enabled = _entity != null;
+            changeProxyTarget.Visible = _entity?.variant == EntityVariant.PROXY;
+            RefreshLiveLinkButtons();
 
-            ModifyParameters.Enabled = _entity != null;
-            ModifyParameters_Link.Enabled = _entity != null;
+            //Links (and the Create Link bar) are only for composites without flowgraph support -
+            //in flowgraph mode links are made by connecting pins on the graph instead
             addLinkOut.Enabled = _entity != null;
-            applyDefaultsToolStripMenuItem.Enabled = _entity != null;
+            tableLayoutPanel2.Visible = _displayingLinks;
+            LayoutParamArea();
 
             if (_entity == null)
             {
+                if (IsMultiEditing)
+                {
+                    ReloadMulti();
+                }
+                else
+                {
+                    _gridPanel.ClearEntities();
+                    _paramSplit.Panel2Collapsed = true;
+                }
 #if DO_ENTITY_PERF_CHECK
                 timer.Stop();
 #endif
                 return;
             }
+
+            // Strip unused FLOAT 0 delay params that mirror T_STRING event pins (forward + reverse_)
+            if (_entity is CAGEAnimation cageAnimForCleanup)
+                CleanupCageAnimationZeroDelayStringParams(cageAnimForCleanup);
 
             if (Content?.Level?.Commands?.Utils == null || Composite == null)
             {
@@ -394,22 +660,17 @@ namespace OpenCAGE.DockPanels
             entityInfoGroup.Text = "Selected " + entityVariantStr + " Info";
             entityParamGroup.Text = "Selected " + entityVariantStr + " Parameters";
 
-            //TODO: change this text contextually based on the linked editor - and hide the button when one isn't available.
-            editFunction.Text = "Function";
-
-            //TODO: we can correctly show the resources button now based on parameter info
             CompositePinInfoTable.PinInfo variableInfo = null;
             string description = "";
             switch (_entity.variant)
             {
                 case EntityVariant.FUNCTION:
-                    selected_entity_name.Text = Content.Level.Commands.Utils.GetEntityName(Composite.shortGUID, _entity.shortGUID);
+                    selected_entity_name.Text = Content.Level.Commands.Utils.GetEntityName(Composite, _entity);
 
                     //Composite Instance
                     if (_entityCompositePtr != null)
                     {
                         jumpToComposite.Visible = true;
-                        editEntityResources.Enabled = false;
                         description = _entityCompositePtr.name;
                         //editFunction.Enabled = true;
                         //editFunction.Text = "Alias Overrides"; //TODO: show count?
@@ -419,11 +680,14 @@ namespace OpenCAGE.DockPanels
                     else
                     {
                         jumpToComposite.Visible = false;
-                        editEntityResources.Enabled = (Content.Level.Models != null); //TODO: we can hide this button completely outside of this state
 
                         FunctionType function = ((FunctionEntity)_entity).function.AsFunctionType;
                         description = function.ToString();
-                        editFunction.Enabled = function == FunctionType.CAGEAnimation || function == FunctionType.TriggerSequence || function == FunctionType.Character;
+                        editFunction.Enabled = function == FunctionType.CAGEAnimation || function == FunctionType.TriggerSequence || function == FunctionType.Character
+                            || (function == FunctionType.EnvironmentMap && CanCaptureCubemap);
+
+                        bool supportsResources = EntitySupportsResources((FunctionEntity)_entity, function);
+                        editEntityResources.Enabled = supportsResources && Content.Level.Models != null;
                     }
                     break;
                 case EntityVariant.VARIABLE:
@@ -443,24 +707,41 @@ namespace OpenCAGE.DockPanels
                     jumpToComposite.Visible = true;
                     if (comp == null || ent == null)
                     {
-                        selected_entity_name.Text = (_entity.variant == EntityVariant.PROXY ? "Proxy" : "Alias") + " (unresolved target)";
-                        description = "Target composite/entity could not be resolved";
+                        //A dead proxy (see CommandsUtils.IsDeadProxy): the hierarchy box is the Type row for
+                        //proxies and aliases (the description stays empty, as for a live one, or the two
+                        //overlap), so it says what the proxy pointed at and as much of the path as still
+                        //leads somewhere, with the whole story in its tooltip
+                        selected_entity_name.Text = Content.Level.Commands.Utils.GetEntityName(Composite, _entity);
+                        hierarchyDisplay.Text = DeadPathText(_entity);
+                        toolTip1.SetToolTip(hierarchyDisplay, (_entity is ProxyEntity deadProxy
+                            ? "Unresolvable proxy: what it points at" + (DeadProxyTargetType(deadProxy) == null ? "" : " (a " + DeadProxyTargetType(deadProxy) + ")") + " is not in this level. Change Target re-points it, keeping the links."
+                            : "Unresolvable alias: what it points at is not in this composite.")
+                            + "\nStored path: " + DescribeStoredPath(_entity));
+                        jumpToComposite.Visible = false;
                     }
                     else
                     {
-                        selected_entity_name.Text = (_entity.variant == EntityVariant.PROXY ? "Proxy to " : "Alias of ") + Content.Level.Commands.Utils.GetEntityName(comp, ent);
+                        //Show the alias/proxy's own name, falling back to the name of the entity it points at
+                        selected_entity_name.Text = Content.Level.Commands.Utils.GetEntityName(Composite, _entity);
+
+                        //Proxies to TriggerSequences carry their own trigger data - allow editing it
+                        if (_entity.variant == EntityVariant.PROXY
+                            && ent is FunctionEntity proxyTargetFunction
+                            && proxyTargetFunction.function.IsFunctionType
+                            && proxyTargetFunction.function.AsFunctionType == FunctionType.TriggerSequence)
+                        {
+                            editFunction.Enabled = true;
+                        }
                     }
                     break;
                 default:
-                    selected_entity_name.Text = Content.Level.Commands.Utils.GetEntityName(Composite.shortGUID, _entity.shortGUID);
+                    selected_entity_name.Text = Content.Level.Commands.Utils.GetEntityName(Composite, _entity);
                     break;
             }
             selected_entity_type_description.Text = description;
             this.Text = selected_entity_name.Text;
-
-            //show mvr editor button if this entity has a mvr link
-            if (Content.Level.Movers != null && Content.Level.Movers.Entries.FirstOrDefault(o => o.Entity?.entity_id == this._entity.shortGUID) != null)
-                editEntityMovers.Enabled = true;
+            LabelFunctionButton();
+            RefreshZoneColour();
 
 #if DO_ENTITY_PERF_CHECK
             Debug.Log("Entity Inspector", $"METADATA UPDATE COMPLETED: {timer.Elapsed.TotalMilliseconds} ms");
@@ -498,187 +779,19 @@ namespace OpenCAGE.DockPanels
 #if AUTO_POPULATE_PARAMS
             //make sure all defaults are applied to the entity so that we're showing everything
             //TODO: this should also factor in links in/out - if a link already exists then we shouldn't add it as a param (or it should add it and highlight it as such)
-            if (!ParameterModificationTracker.IsDefaultsApplied(Composite.shortGUID, Entity.shortGUID))
-            {
-#if DEBUG
-                int count_pre_add = _entity.parameters.Count;
-#endif
-                switch (_entity.variant)
-                {
-                    case EntityVariant.FUNCTION:
-                        EntityUtils.ApplyDefaults((FunctionEntity)_entity, true, false);
-                        break;
-                    case EntityVariant.PROXY:
-                        EntityUtils.ApplyDefaults((ProxyEntity)_entity, true, false);
-                        break;
-                }
-                ParameterModificationTracker.SetDefaultsApplied(Composite.shortGUID, Entity.shortGUID);
-#if DEBUG
-                Debug.Log("Entity Inspector", "Applied " + (_entity.parameters.Count - count_pre_add) + " defaults to entity.");
-#endif
+            ApplyDefaultsForInspection(_entity);
 #if DO_ENTITY_PERF_CHECK
-                Debug.Log("Entity Inspector", $"DEFAULTS APPLIED: {timer.Elapsed.TotalMilliseconds} ms");
+            Debug.Log("Entity Inspector", $"DEFAULTS APPLIED: {timer.Elapsed.TotalMilliseconds} ms");
 #endif
-            }
 #endif
 
-            //figure out what parameters we should show - the input/output pin values are 'delay' values for the pins shown on the flowgraph, not actual parameters
-            List<ShortGuid> visibleParams = new List<ShortGuid>();
-            bool filterParams = CompositeDisplay.SupportsFlowgraphs;
-#if DEBUG
-            filterParams = false; //not filtering in debug mode, like how we always show links
-#endif
-            if (filterParams) 
-            {
-                List<(ShortGuid, ParameterVariant, DataType)> allParameters = Content.Level.Commands.Utils.GetAllParameters(Entity, Composite);
-                foreach ((ShortGuid, ParameterVariant, DataType) parameter in allParameters)
-                {
-                    switch (parameter.Item2)
-                    {
-                        case ParameterVariant.INTERNAL: //NOTE: shouldn't really be showing internal, but until I handle some of the values better, I need to still (e.g. resources, spline points, etc)
-                        case ParameterVariant.INPUT_PIN:
-                        case ParameterVariant.PARAMETER:
-                        case ParameterVariant.STATE_PARAMETER:
-                            visibleParams.Add(parameter.Item1);
-                            break;
-                    }
-                    //NOTE: This same switch case is found in ModifyParameters popup window, keep in sync!
-                }
-            }
-
-            //populate parameters
-            _entity.parameters = _entity.parameters.OrderBy(o => o.name.ToString()).ToList();
-            for (int i = 0; i < _entity.parameters.Count; i++)
-            {
-                if (filterParams && !visibleParams.Contains(_entity.parameters[i].name))
-                {
-                    Debug.Log("Entity Inspector", "Skipping parameter: " + _entity.parameters[i].name);
-                    continue;
-                }
-
-                //Use our metadata to update any wrongly typed cEnumStrings to get the nice UI
-                if (_entity.parameters[i].content.dataType == DataType.STRING)
-                {
-                    ParameterData data = Content.Level.Commands.Utils.CreateDefaultParameterData(Entity, Composite, _entity.parameters[i].name);
-                    if (data != null && data.dataType == DataType.ENUM_STRING)
-                    {
-                        ((cEnumString)data).value = ((cString)_entity.parameters[i].content).value;
-                        _entity.parameters[i].content = data;
-                    }
-                }
-
-                ParameterData this_param = _entity.parameters[i].content;
-                ParameterUserControl parameterGUI = null;
-                string paramName = _entity.parameters[i].name.ToString();
-
-                //HACK: We handle composite material mappings as a special type!
-                if (paramName == "mapping")
-                {
-                    if (this_param.dataType != DataType.RESOURCE)
-                    {
-                        _entity.parameters[i].content = new cResource(null, ShortGuid.Invalid);
-                        this_param = _entity.parameters[i].content;
-                    }
-
-                    parameterGUI = new GUI_StringVariant_MappingSelect();
-                    ((GUI_StringVariant_MappingSelect)parameterGUI).PopulateUI((cResource)this_param);
-                }
-                else
-                {
-                    switch (this_param.dataType)
-                    {
-                        case DataType.TRANSFORM:
-                            parameterGUI = new GUI_TransformDataType();
-                            ((GUI_TransformDataType)parameterGUI).PopulateUI(_entity, (cTransform)this_param, paramName);
-                            break;
-                        case DataType.INTEGER:
-                            parameterGUI = new GUI_NumericDataType();
-                            ((GUI_NumericDataType)parameterGUI).PopulateUI_Int((cInteger)this_param, paramName);
-                            break;
-                        case DataType.ENUM_STRING:
-                            parameterGUI = new GUI_StringVariant_AssetDropdown();
-                            ((GUI_StringVariant_AssetDropdown)parameterGUI).PopulateUI((cEnumString)this_param, paramName, false); //TODO: allow type selection?
-                            break;
-                        case DataType.STRING:
-                            parameterGUI = new GUI_StringDataType();
-                            ((GUI_StringDataType)parameterGUI).PopulateUI((cString)this_param, paramName);
-                            break;
-                        case DataType.BOOL:
-                            parameterGUI = new GUI_BoolDataType();
-                            ((GUI_BoolDataType)parameterGUI).PopulateUI((cBool)this_param, paramName);
-                            break;
-                        case DataType.FLOAT:
-                            parameterGUI = new GUI_NumericDataType();
-                            ((GUI_NumericDataType)parameterGUI).PopulateUI_Float((cFloat)this_param, paramName);
-                            break;
-                        case DataType.VECTOR:
-                            //TODO: Should add a "colour" flag to handle this nicer.
-                            switch (paramName)
-                            {
-                                case "AMBIENT_LIGHTING_COLOUR":
-                                case "COLOUR_TINT_START":
-                                case "COLOUR_TINT_MID":
-                                case "COLOUR_TINT_END":
-                                case "COLOUR_TINT":
-                                case "COLOUR_TINT_OUTER":
-                                case "DEPTH_INTERSECT_COLOUR_VALUE":
-                                case "DEPTH_INTERSECT_INITIAL_COLOUR":
-                                case "DEPTH_INTERSECT_MIDPOINT_COLOUR":
-                                case "DEPTH_INTERSECT_END_COLOUR":
-                                case "DEPTH_FOG_INITIAL_COLOUR":
-                                case "DEPTH_FOG_MIDPOINT_COLOUR":
-                                case "DEPTH_FOG_END_COLOUR":
-                                case "ColourFactor":
-                                case "lens_flare_colour":
-                                case "light_shaft_colour":
-                                case "initial_colour":
-                                case "near_colour":
-                                case "far_colour":
-                                case "colour":
-                                case "Colour":
-                                    parameterGUI = new GUI_VectorVariant_Colour();
-                                    ((GUI_VectorVariant_Colour)parameterGUI).PopulateUI((cVector3)this_param, paramName);
-                                    break;
-                                default:
-                                    parameterGUI = new GUI_VectorDataType();
-                                    ((GUI_VectorDataType)parameterGUI).PopulateUI((cVector3)this_param, paramName);
-                                    break;
-                            }
-                            break;
-                        case DataType.ENUM:
-                            parameterGUI = new GUI_EnumDataType();
-                            ParameterData defaultData = Content.Level.Commands.Utils.CreateDefaultParameterData(Entity, Composite, paramName);
-                            ((GUI_EnumDataType)parameterGUI).PopulateUI((cEnum)this_param, paramName, defaultData == null || (defaultData.dataType == DataType.ENUM && ((cEnum)defaultData).enumID == ShortGuid.Invalid));
-                            break;
-                        case DataType.RESOURCE:
-                            parameterGUI = new GUI_ResourceDataType();
-                            ((GUI_ResourceDataType)parameterGUI).PopulateUI(this, (cResource)this_param, paramName);
-                            break;
-                        case DataType.SPLINE:
-                            parameterGUI = new GUI_SplineDataType(_entity);
-                            ((GUI_SplineDataType)parameterGUI).PopulateUI((cSpline)this_param, paramName);
-                            break;
-                    }
-                }
-
-                parameterGUI.Parameter = _entity.parameters[i];
-                parameterGUI.OnDeleted += OnDeleteParam;
-                parameterGUI.TrackInstanceInfo(Composite.shortGUID, Entity.shortGUID, _entity.parameters[i].name);
-                parameterGUI.Location = new Point(15, current_ui_offset);
-                parameterGUI.Width = entity_params.Width - 30;
-                parameterGUI.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
-                current_ui_offset += parameterGUI.Height + 6;
-                controls.Add(parameterGUI);
-
-#if AUTO_POPULATE_PARAMS
-                //Note: we always mark variable entity parameters as "modified", because they have no defaults - they're by definition variable.
-                if (_entity.variant == EntityVariant.VARIABLE || ParameterModificationTracker.IsParameterModified(Composite.shortGUID, Entity.shortGUID, _entity.parameters[i].name))
-                    parameterGUI.HighlightAsModified(false);
-#endif
-            }
+            //populate parameters via the grid (visibility filtering, enum-string fixups and special
+            //types are handled by EntityParameterProxy)
+            _gridPanel.ShowEntities(this, new List<Entity>() { _entity }, Composite, Content, FilterPinParameters());
+            _paramSplit.Panel2Collapsed = !_displayingLinks;
 
 #if DO_ENTITY_PERF_CHECK
-            Debug.Log("Entity Inspector", $"PARAMETER CONTROLS COMPLETED: {timer.Elapsed.TotalMilliseconds} ms");
+            Debug.Log("Entity Inspector", $"PARAMETER GRID COMPLETED: {timer.Elapsed.TotalMilliseconds} ms");
 #endif
 
             if (_displayingLinks)
@@ -771,13 +884,234 @@ namespace OpenCAGE.DockPanels
             Cursor.Current = Cursors.Default;
         }
 
+        /* Size the parameter area to the space above the Create Link bar (or the full group when it's hidden) */
+        private void LayoutParamArea()
+        {
+            if (_paramSplit == null || _paramSplit.IsDisposed || entityParamGroup == null)
+                return;
+
+            int bottom = tableLayoutPanel2.Visible
+                ? tableLayoutPanel2.Top - 6
+                : entityParamGroup.ClientSize.Height - 8;
+            int height = bottom - _paramSplit.Top;
+            if (height < _paramSplit.Panel1MinSize)
+                height = _paramSplit.Panel1MinSize;
+
+            if (_paramSplit.Height != height)
+                _paramSplit.Height = height;
+        }
+
+        /* Should pin-delay/output params be hidden from the parameter list? */
+        private bool FilterPinParameters()
+        {
+            return CompositeDisplay.SupportsFlowgraphs;
+        }
+
+#if AUTO_POPULATE_PARAMS
+        /* Apply all default parameters to the entity (once) so the grid shows everything available */
+        private void ApplyDefaultsForInspection(Entity entity)
+        {
+            EnsureDefaultsApplied(entity, Composite, Content);
+        }
+
+        /* Static variant so the parameter grid can also apply defaults (e.g. to an alias's resolved target) */
+        public static void EnsureDefaultsApplied(Entity entity, Composite composite, LevelContent content)
+        {
+            if (entity == null || composite == null || content?.Level?.Commands?.Utils == null)
+                return;
+            if (entity.variant != EntityVariant.FUNCTION && entity.variant != EntityVariant.PROXY)
+                return;
+
+            //Nothing is edited, so no edit event goes out - but what shows the entity's values (the values over its pins on
+            //the flowgraph) has more to show
+            int before = entity.parameters.Count;
+            FillDefaults(entity, composite, content);
+            if (entity.parameters.Count != before)
+                Singleton.OnEntityDefaultsApplied?.Invoke(entity);
+        }
+
+        private static void FillDefaults(Entity entity, Composite composite, LevelContent content)
+        {
+            /* A proxy gets its own defaults only (issue 742). Everything else it carries is applied to the entity it stands for
+             * when it is enabled, so filling in that entity's defaults here - which this did, the first time a proxy was
+             * shown - overrode the real values: a door proxy's zonelink 0 cut the door off from its ZoneLink, and its card and
+             * gate defaults undid edits made on the door. The grid shows that entity's values as inherited rows instead. */
+            if (entity is ProxyEntity)
+            {
+                AddDefaults(entity, composite, content.Level.Commands);
+                ParameterModificationTracker.SetDefaultsApplied(composite.shortGUID, entity.shortGUID);
+                return;
+            }
+
+            CompositeInstanceParameters.Ensure(entity, content.Level.Commands);
+
+            /* Input pins that take a value (LogicDelay's delay and can_suspend) are set as plain parameters
+             * whenever nothing is wired into them - retail stores delay on 314 of BSP_TORRENS's 536
+             * LogicDelays - so they get a row like any other default. Pins that only take a link (objects,
+             * zones) come back with no default and are left out. Levels inspected by earlier builds carry
+             * the applied flag without ever having had this pass, so an entity showing no input pin is
+             * given the pass again; it only adds what is missing. */
+            bool applied = ParameterModificationTracker.IsDefaultsApplied(composite.shortGUID, entity.shortGUID);
+            if (applied && entity.parameters.Any(p => p.variant == ParameterVariant.INPUT_PIN))
+                return;
+
+            AddDefaults(entity, composite, content.Level.Commands);
+            ParameterModificationTracker.SetDefaultsApplied(composite.shortGUID, entity.shortGUID);
+        }
+
+        /// <summary>
+        /// What inspecting an entity fills in, without the record of having done it: its default parameters (a proxy, its
+        /// own only), and a composite instance's parameters. Only adds what is missing. Create a Mod fills the same into
+        /// the unmodified level, so the defaults OpenCAGE added to the user's level aren't taken for their changes.
+        /// </summary>
+        public static void AddDefaults(Entity entity, Composite composite, CATHODE.Commands commands)
+        {
+            if (entity == null || composite == null || commands?.Utils == null)
+                return;
+
+            if (entity is ProxyEntity proxy)
+            {
+                FunctionEntity proxyInterface = new FunctionEntity(ShortGuid.Invalid) { function = new ShortGuid((uint)FunctionType.ProxyInterface) };
+                commands.Utils.AddAllDefaultParameters(proxyInterface, composite, false, ParameterVariant.STATE_PARAMETER | ParameterVariant.PARAMETER | ParameterVariant.INPUT_PIN);
+                foreach (Parameter own in proxyInterface.parameters)
+                {
+                    if (own?.content == null || own.name == ShortGuids.delete_me || !ProxyParameters.IsOwn(own.name) || proxy.GetParameter(own.name) != null)
+                        continue;
+                    proxy.AddParameter(own.name, own.content, own.variant);
+                }
+                return;
+            }
+            if (entity.variant != EntityVariant.FUNCTION)
+                return;
+
+            CompositeInstanceParameters.Ensure(entity, commands);
+
+            /* INTERNAL stays out of the mask: most INTERNAL parameters are indices the level build writes. CathodeLib adds
+             * the entity's own data whatever the mask - its resource, and a SplinePath's (empty) points. A SplinePath has
+             * no input pin that takes a value, so the gate above lets the pass run again, and one saved without points by
+             * an earlier build gains them the first time it is shown. */
+            bool hasDeleteMe = entity.GetParameter("delete_me") != null;
+            Parameter resourceBefore = entity.GetParameter(ShortGuids.resource);
+            ParameterData resourceContent = resourceBefore?.content;
+            ParameterVariant resourceVariant = resourceBefore?.variant ?? ParameterVariant.PARAMETER;
+            commands.Utils.AddAllDefaultParameters(entity, composite, false, ParameterVariant.STATE_PARAMETER | ParameterVariant.PARAMETER | ParameterVariant.INPUT_PIN);
+            if (!hasDeleteMe) entity.RemoveParameter("delete_me");
+
+            /* Looking at an entity must not change its resources. CathodeLib takes an empty 'resource' parameter for a missing
+             * one and replaces it, giving the resource a new id (retail's are often name hashes: 29 RadiosityProxies on
+             * BSP_LV426_PT02), so one the entity had is put back as it was. And most entities that draw or mark something keep
+             * their resources on their own list with no parameter (particle, ribbon, fog, surface effect and light emitters,
+             * traversal segments, sound barriers: 2,000+ on BSP_LV426_PT02); the parameter the pass gives them only repeats a
+             * type that list holds, as an empty default the save then writes beside the real one, so it is taken off again. */
+            if (resourceBefore != null)
+            {
+                resourceBefore.content = resourceContent;
+                resourceBefore.variant = resourceVariant;
+            }
+            else if (entity is FunctionEntity function && entity.GetParameter(ShortGuids.resource)?.content is cResource added
+                && added.value != null && added.value.Count != 0
+                && added.value.All(o => o != null && function.resources != null && function.resources.Any(r => r != null && r.resource_type == o.resource_type)))
+            {
+                entity.RemoveParameter(ShortGuids.resource);
+            }
+        }
+#endif
+
+        /* Populate the inspector for a multi-selection: tabs per entity type, per-entity buttons disabled */
+        private void ReloadMulti()
+        {
+            EditorIcons.BindIcon(this, EditorIcon.Function);
+
+            int count = _multiEntities.Count;
+            entityInfoGroup.Text = "Multi-Selection Info";
+            entityParamGroup.Text = "Multi-Selection Parameters";
+
+            //Deleting works on the whole selection here, as it does in the entity list, so say so
+            deleteEntity.Text = "Delete Entities";
+            deleteEntity.Enabled = true;
+            RefreshLiveLinkButtons();
+
+            selected_entity_name.Text = count + " entities selected";
+            selected_entity_type_description.Text = SummariseMultiSelectionTypes();
+            this.Text = "Entity Inspector (" + count + ")";
+
+            if (Content?.Level?.Commands?.Utils == null || Composite == null)
+                return;
+
+            Cursor.Current = Cursors.WaitCursor;
+#if AUTO_POPULATE_PARAMS
+            foreach (Entity entity in _multiEntities)
+                ApplyDefaultsForInspection(entity);
+#endif
+            _gridPanel.ShowEntities(this, _multiEntities, Composite, Content, FilterPinParameters());
+            _paramSplit.Panel2Collapsed = true;
+            Cursor.Current = Cursors.Default;
+
+            //The level viewer marks all of them, the same as it does for a single selection
+            Singleton.OnEntitiesReloaded?.Invoke(_multiEntities);
+        }
+
+        private string SummariseMultiSelectionTypes()
+        {
+            Dictionary<string, int> counts = new Dictionary<string, int>();
+            List<string> order = new List<string>();
+            foreach (Entity entity in _multiEntities)
+            {
+                string label;
+                switch (entity.variant)
+                {
+                    case EntityVariant.FUNCTION:
+                        FunctionEntity function = (FunctionEntity)entity;
+                        if (function.function.IsFunctionType)
+                            label = function.function.AsFunctionType.ToString();
+                        else
+                        {
+                            Composite pointedComposite = Content?.Level?.Commands?.GetComposite(function.function);
+                            label = pointedComposite != null ? pointedComposite.name : "Composite Instance";
+                        }
+                        break;
+                    case EntityVariant.VARIABLE:
+                        label = "Variable";
+                        break;
+                    case EntityVariant.PROXY:
+                        label = "Proxy";
+                        break;
+                    case EntityVariant.ALIAS:
+                        label = "Alias";
+                        break;
+                    default:
+                        label = "Entity";
+                        break;
+                }
+                if (!counts.ContainsKey(label))
+                {
+                    counts.Add(label, 0);
+                    order.Add(label);
+                }
+                counts[label]++;
+            }
+
+            StringBuilder summary = new StringBuilder();
+            foreach (string label in order)
+            {
+                if (summary.Length != 0)
+                    summary.Append(", ");
+                summary.Append(counts[label]).Append("x ").Append(label);
+            }
+            return summary.ToString();
+        }
+
         private void OnDeleteParam(Parameter param)
         {
+            int index = _entity.parameters.IndexOf(param);
+            bool wasModified = Composite != null && ParameterModificationTracker.IsParameterModified(Composite.shortGUID, _entity.shortGUID, param.name);
             Singleton.OnEntityParameterModified?.Invoke(_entity, param, true);
             if (param?.content != null && param.name == ShortGuidUtils.Generate("position") && param.content.dataType == DataType.TRANSFORM)
                 Singleton.OnEntityMoved?.Invoke(null, _entity);
             Singleton.OnParameterModified?.Invoke();
             _entity.parameters.Remove(param);
+            if (index >= 0 && Composite != null)
+                OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.ParameterPresenceEdit(Composite, _entity, param, index, false, wasModified, "Remove " + param.name + " from " + OpenCAGE.Undo.UndoLabels.Entity(Composite, _entity)));
             _compositeDisplay.ReloadEntity(_entity);
         }
 
@@ -795,75 +1129,218 @@ namespace OpenCAGE.DockPanels
             if (_prevTaskToken != null)
                 _prevTaskToken.Cancel();
 
+            //Nothing shown means nothing to look up (a dead pointer resolves to null, which would
+            //otherwise count as a reference to "no entity" and light References for it)
+            if (_entity == null)
+                return;
+
             _prevTaskToken = new CancellationTokenSource();
-            _prevTask = Task.Run(() => BackgroundEntityLoader(_entity, this, _prevTaskToken.Token), _prevTaskToken.Token);
+
+            /* The drill path has to be read here, on the UI thread: it is what the user walked through
+               to get to this entity, and it decides which instance's zones the answer is about. */
+            Composite startComposite = HierarchyRootComposite;
+            List<uint> instancePath = ZoneLookupPathFor(_entity, startComposite);
+
+            //Kept for the jump: the zones' paths are written from here, so this is where a walk to one starts
+            _zoneLookupStartComposite = startComposite;
+
+            //Taken now, on the UI thread: by the time the pool runs the lambda the selection may have moved on
+            Entity entity = _entity;
+            CancellationToken token = _prevTaskToken.Token;
+            _prevTask = Task.Run(() => BackgroundEntityLoader(entity, this, startComposite, instancePath, token), token);
         }
-        private void BackgroundEntityLoader(Entity ent, EntityInspector mainInst, CancellationToken ct)
+        private void BackgroundEntityLoader(Entity ent, EntityInspector mainInst, Composite startComposite, List<uint> instancePath, CancellationToken ct)
         {
             bool isPointedTo = false;
-            Composite zoneComp = null;
-            FunctionEntity zoneEnt = null;
-            Parallel.For(0, 2, (i) =>
+            List<EditorUtils.ZoneReference> zones = null;
+
+            /* Both lookups read the level while the UI thread may be editing it - a delete strips its
+               links from every entity, a de-instance rewires them - and a list changing under a foreach
+               throws. The edit is usually over by a second look; if it still fails, the buttons keep what
+               they had rather than the answer dying in a task nobody observes. */
+            for (int attempt = 0; ; attempt++)
             {
-                switch (i)
+                try
                 {
-                    case 0:
-                        isPointedTo = mainInst.CompositeDisplay.AnyFlowgraphsContainEntity(ent);
-                        if (!isPointedTo)
-                            isPointedTo = mainInst.Content.EditorUtils.IsEntityReferencedExternally(ent, ct);
-                        break;
-                    case 1:
-                        mainInst.Content.EditorUtils.TryFindZoneForEntity(ent, mainInst.Composite, out zoneComp, out zoneEnt, ct);
-                        break;
+                    Parallel.For(0, 2, (i) =>
+                    {
+                        switch (i)
+                        {
+                            case 0:
+                                isPointedTo = mainInst.CompositeDisplay.AnyFlowgraphsContainEntity(ent);
+                                if (!isPointedTo)
+                                    isPointedTo = mainInst.Content.EditorUtils.IsEntityReferencedExternally(ent, ct);
+                                break;
+                            case 1:
+                                zones = mainInst.Content.EditorUtils.FindZonesForEntity(startComposite, instancePath, ct);
+                                break;
+                        }
+                    });
+                    break;
                 }
-            });
-            mainInst.ThreadedEntityUIUpdate(ent, isPointedTo, zoneComp, zoneEnt);
+                catch (AggregateException ex)
+                {
+                    if (ct.IsCancellationRequested)
+                        return;
+                    if (attempt == 2)
+                    {
+                        Debug.Log("Entity Inspector", "Reference/zone lookup gave up: " + ex.Flatten().InnerException?.Message);
+                        return;
+                    }
+                    Thread.Sleep(100);
+                }
+            }
+            if (ct.IsCancellationRequested)
+                return;
+            mainInst.ThreadedEntityUIUpdate(ent, isPointedTo, zones);
         }
-        private Composite zoneCompositeForSelectedEntity = null;
-        private FunctionEntity zoneEntityForSelectedEntity = null;
-        public void ThreadedEntityUIUpdate(Entity ent, bool isPointedTo, Composite zoneComp, FunctionEntity zoneEnt)
+        /* Which zones an entity is in is decided by where it sits - except for an alias or proxy, which draws nothing of its
+           own: a zone names what it points at, never the pointer, so that is what is looked up. A proxy's path is written
+           from the level root, so it can only be followed when the hierarchy starts there. */
+        private List<uint> ZoneLookupPathFor(Entity entity, Composite startComposite)
+        {
+            List<uint> path = InstancePathFor(entity);
+            if (!(entity is AliasEntity || entity is ProxyEntity))
+                return path;
+
+            CATHODE.Commands commands = Content?.Level?.Commands;
+            Composite levelRoot = commands?.EntryPoints != null && commands.EntryPoints.Length != 0 ? commands.EntryPoints[0] : null;
+            if (EntityInstancePath.TryResolvePointer(commands, Composite, path.GetRange(0, path.Count - 1), entity, out List<uint> target, out bool relative)
+                && (relative || startComposite == levelRoot))
+                return target;
+            return path;
+        }
+
+        private List<EditorUtils.ZoneReference> _zonesForSelectedEntity = null;
+        private Composite _zoneLookupStartComposite = null;
+
+        //The "which zone?" menu, kept so it can be taken away somewhere other than its own Closed handler
+        private ContextMenuStrip _zoneMenu = null;
+        private DateTime _zoneMenuClosedAt = DateTime.MinValue;
+        public void ThreadedEntityUIUpdate(Entity ent, bool isPointedTo, List<EditorUtils.ZoneReference> zones)
         {
             //TODO: we have an issue here where this can be called after the entitydisplay object has been disposed
 
             try
             {
-                showOverridesAndProxies.Invoke(new Action(() => { showOverridesAndProxies.Enabled = isPointedTo; }));
-                zoneCompositeForSelectedEntity = zoneComp;
-                zoneEntityForSelectedEntity = zoneEnt;
-                string zoneText = "Zone";
-                if (zoneEnt != null)
+                /* The answer is for the entity that was shown when the lookup began. If the selection
+                   has moved on since - cleared, or grown to several - it is nobody's: enabling
+                   References for it opened a window on nothing (crash 385). */
+                showOverridesAndProxies.Invoke(new Action(() =>
                 {
-                    Parameter name = zoneEnt.GetParameter("name");
-                    if (name != null) zoneText += " (" + ((cString)name.content).value + ")";
-                }
-                goToZone.Invoke(new Action(() => { goToZone.Enabled = zoneEnt != null; goToZone.Text = zoneText; }));
+                    if (ent == null || ent != _entity)
+                        return;
+                    showOverridesAndProxies.Enabled = isPointedTo;
+                }));
+                if (ent == null || ent != _entity)
+                    return;
+                _zonesForSelectedEntity = zones;
+
+                /* Name the zone the button goes to, the way the rest of the editor names it: a zone
+                   without a 'name' parameter of its own still has one in the level's name tables, and
+                   reading the parameter alone left those saying nothing but "Zone". */
+                string zoneText = ZoneButtonText(zones);
+                string zoneTip = ZoneButtonTooltip(zones);
+                goToZone.Invoke(new Action(() =>
+                {
+                    if (ent == null || ent != _entity)
+                        return;
+                    goToZone.Enabled = zones != null && zones.Count != 0;
+                    goToZone.Text = zoneText;
+                    //The name can outrun the button; the tooltip always has it in full
+                    toolTip1.SetToolTip(goToZone, zoneTip);
+                }));
             }
             catch { }
         }
 
-        private void contextMenuStrip2_Opening(object sender, System.ComponentModel.CancelEventArgs e)
+        /// <summary>
+        /// "Zone" on its own when the entity is in none, the zone's name when it is in one, and a count
+        /// when it is in several - the names are all in the tooltip, and the button asks which.
+        /// </summary>
+        private static string ZoneButtonText(List<EditorUtils.ZoneReference> zones)
         {
-            toolStripMenuItem1.Enabled = _entity != null;
-            createLinkToolStripMenuItem.Enabled = _entity != null;
-            createLinkToolStripMenuItem.Visible = DisplayingLinks;
+            if (zones == null || zones.Count == 0)
+                return "Zone";
+            if (zones.Count > 1)
+                return "Zones (" + zones.Count + ")";
+
+            return string.IsNullOrWhiteSpace(zones[0].Name) ? "Zone" : "Zone (" + zones[0].Name + ")";
         }
 
-        ModifyParameters add_parameter;
-        private void ModifyParameters_Click(object sender, EventArgs e)
+        private static string ZoneButtonTooltip(List<EditorUtils.ZoneReference> zones)
         {
-            if (add_parameter != null)
-            {
-                add_parameter.OnSaved -= Reload;
-                add_parameter.Close();
-            }
-            
-            add_parameter = new ModifyParameters(this);
-            add_parameter.Show();
-            add_parameter.OnSaved += Reload;
+            if (zones == null || zones.Count == 0)
+                return "Zone";
+            if (zones.Count == 1)
+                return ZoneButtonText(zones);
+
+            return "In " + zones.Count + " zones: " + string.Join(", ", zones.Select(o => o.Name));
         }
-        private void toolStripMenuItem1_Click(object sender, EventArgs e)
+
+        //A square in the zone's colour, beside the entity's name; made the first time there is one to show
+        private Panel _zoneSwatch = null;
+        private Color _zoneSwatchColour = Color.Empty;
+        private const int ZoneSwatchSize = 14;
+
+        /// <summary>
+        /// Show the colour of the zone the entity goes with beside its name, while the viewport is
+        /// highlighting zones: the colour it draws that zone in, and the one the entity's flowgraph nodes
+        /// are ringed in, so the three can be matched at a glance.
+        /// </summary>
+        public void RefreshZoneColour()
         {
-            ModifyParameters_Click(null, null);
+            if (IsDisposed)
+                return;
+
+            ZoneColours.Match match = null;
+            if (_entity != null && !IsMultiEditing)
+                match = ZoneColours.For(Composite, _compositeDisplay?.Path)?.Find(_entity);
+
+            if (match == null)
+            {
+                if (_zoneSwatch != null)
+                    _zoneSwatch.Visible = false;
+                return;
+            }
+
+            if (_zoneSwatch == null)
+            {
+                _zoneSwatch = new Panel()
+                {
+                    Name = "zoneSwatch",
+                    Size = new Size(ZoneSwatchSize, ZoneSwatchSize),
+                    Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                    Visible = false,
+                };
+                _zoneSwatch.Paint += ZoneSwatch_Paint;
+                entityInfoGroup.Controls.Add(_zoneSwatch);
+            }
+
+            _zoneSwatchColour = match.Colour;
+
+            //On the name's row, clear of the Go button when a composite instance or pointer shows one
+            int right = jumpToComposite.Visible ? jumpToComposite.Left - 6 : entityInfoGroup.ClientSize.Width - 8;
+            _zoneSwatch.Location = new Point(right - ZoneSwatchSize, selected_entity_name.Top + (selected_entity_name.Height - ZoneSwatchSize) / 2);
+            _zoneSwatch.Visible = true;
+            _zoneSwatch.BringToFront();
+            _zoneSwatch.Invalidate();
+            toolTip1.SetToolTip(_zoneSwatch, match.Describe() + " - the colour the viewport draws it in");
+        }
+
+        private void ZoneSwatch_Paint(object sender, PaintEventArgs e)
+        {
+            Rectangle square = new Rectangle(0, 0, ZoneSwatchSize - 1, ZoneSwatchSize - 1);
+            using (SolidBrush fill = new SolidBrush(_zoneSwatchColour))
+                e.Graphics.FillRectangle(fill, square);
+            using (Pen outline = new Pen(Theming.ThemeManager.IsDark ? Theming.ThemeColours.BorderStrong : SystemColors.ControlDarkDark))
+                e.Graphics.DrawRectangle(outline, square);
+        }
+
+        private void contextMenuStrip2_Opening(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            createLinkToolStripMenuItem.Enabled = _entity != null;
+            createLinkToolStripMenuItem.Visible = DisplayingLinks;
         }
 
         /* Add a new link out */
@@ -882,19 +1359,11 @@ namespace OpenCAGE.DockPanels
             addLinkOut_Click(null, null);
         }
 
-        EditMVR _mvrDialog = null;
-        private void editEntityMovers_Click(object sender, EventArgs e)
-        {
-            if (_mvrDialog != null)
-                _mvrDialog.Close();
-
-            _mvrDialog = new EditMVR(this);
-            _mvrDialog.Show();
-        }
-
         ShowCrossRefs _crossRefsDialog = null;
         private void showOverridesAndProxies_Click(object sender, EventArgs e)
         {
+            if (Entity == null)
+                return;
             if (_crossRefsDialog != null)
                 _crossRefsDialog.Close();
 
@@ -910,17 +1379,314 @@ namespace OpenCAGE.DockPanels
             if (_resourceDialog != null)
                 _resourceDialog.Close();
 
-            _resourceDialog = new AddOrEditResource(this);
+            if (!(_entity is FunctionEntity functionEntity))
+                return;
+
+            FunctionType function = functionEntity.function.AsFunctionType;
+            Composite composite = Composite;
+            if (FunctionHasResourceParameter(function))
+            {
+                //The dialog edits the live parameter; the session is recorded when it closes, against
+                //what was there when it opened (the parameter itself may only exist because it opened)
+                Parameter existing = functionEntity.GetParameter(ShortGuids.resource);
+                bool hadParameter = existing != null;
+                int index = hadParameter ? functionEntity.parameters.IndexOf(existing) : functionEntity.parameters.Count;
+                ParameterData beforeContent = OpenCAGE.Undo.ParameterValues.Clone(existing?.content);
+                ParameterVariant beforeVariant = existing?.variant ?? ParameterVariant.INTERNAL;
+                cResource resourceParam = EnsureResourceParameter(functionEntity);
+                Parameter parameter = functionEntity.GetParameter(ShortGuids.resource);
+                cResource opened = (cResource)OpenCAGE.Undo.ParameterValues.Clone(resourceParam);
+                _resourceDialog = new AddOrEditResource(this, resourceParam, "resource");
+                _resourceDialog.FormClosed += (closedSender, closedArgs) =>
+                {
+                    cResource closed = (cResource)OpenCAGE.Undo.ParameterValues.Clone(resourceParam);
+                    bool changed = !hadParameter || opened.shortGUID != closed.shortGUID || !OpenCAGE.Undo.ResourceSessionEdit.ReferencesEqual(opened.value, closed.value);
+                    if (changed && composite != null)
+                        OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.ResourceSessionEdit(composite, functionEntity, parameter, hadParameter, index, beforeContent, beforeVariant, closed,
+                            "Edit resources of " + OpenCAGE.Undo.UndoLabels.Entity(composite, functionEntity)));
+                };
+            }
+            else
+            {
+                List<ResourceReference> opened = OpenCAGE.Undo.ResourceSessionEdit.CloneReferences(functionEntity.resources);
+                _resourceDialog = new AddOrEditResource(this);
+                _resourceDialog.FormClosed += (closedSender, closedArgs) =>
+                {
+                    if (composite == null || OpenCAGE.Undo.ResourceSessionEdit.ReferencesEqual(opened, functionEntity.resources))
+                        return;
+                    OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.ResourceSessionEdit(composite, functionEntity, opened,
+                        OpenCAGE.Undo.ResourceSessionEdit.CloneReferences(functionEntity.resources),
+                        "Edit resources of " + OpenCAGE.Undo.UndoLabels.Entity(composite, functionEntity)));
+                };
+            }
             _resourceDialog.Show();
+        }
+
+        /// <summary>
+        /// True when this function declares an internal <c>resource</c> parameter (CathodeEntities),
+        /// uses <see cref="FunctionEntity.resources"/> (e.g. PhysicsSystem), or already has entity-level resources.
+        /// </summary>
+        bool EntitySupportsResources(FunctionEntity entity, FunctionType function)
+        {
+            // Marker-only resource types are auto-managed on load/defaults/instancing — nothing to edit.
+            if (FunctionIsMarkerResourceOnly(function))
+                return false;
+
+            // ...and neither is a renderable the instancing pass derives in full from the entity's
+            // own parameters.
+            if (FunctionResourcesAreGenerated(function))
+                return false;
+
+            if (FunctionHasResourceParameter(function))
+                return true;
+            if (FunctionUsesEntityResourceList(function))
+                return true;
+            if (entity.resources == null)
+                return false;
+            for (int i = 0; i < entity.resources.Count; i++)
+            {
+                if (entity.resources[i] != null && !IsMarkerOnlyResourceType(entity.resources[i].resource_type))
+                    return true;
+            }
+            return false;
+        }
+
+        bool FunctionHasResourceParameter(FunctionType function)
+        {
+            if (Content?.Level?.Commands?.Utils == null)
+                return false;
+
+            List<(ShortGuid, ParameterVariant, DataType)> parameters = Content.Level.Commands.Utils.GetAllParameters(function);
+            for (int i = 0; i < parameters.Count; i++)
+            {
+                if (parameters[i].Item1 == ShortGuids.resource
+                    && parameters[i].Item2 == ParameterVariant.INTERNAL
+                    && parameters[i].Item3 == DataType.RESOURCE)
+                    return true;
+            }
+            return false;
+        }
+
+        internal static bool FunctionUsesEntityResourceList(FunctionType function)
+        {
+            // PhysicsSystem stores DYNAMIC_PHYSICS_SYSTEM on FunctionEntity.resources (not a resource param).
+            return function == FunctionType.PhysicsSystem;
+        }
+
+        /// <summary>
+        /// Function types whose renderable the instancing pass builds.
+        /// </summary>
+        public static bool FunctionResourcesAreGenerated(FunctionType function)
+        {
+            switch (function)
+            {
+                case FunctionType.FogBox:
+                case FunctionType.FogSphere:
+                case FunctionType.SurfaceEffectBox:
+                case FunctionType.SurfaceEffectSphere:
+                case FunctionType.ParticleEmitterReference:
+                case FunctionType.RibbonEmitterReference:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// Function types whose only Commands resource is a marker with no editable payload.
+        /// </summary>
+        internal static bool FunctionIsMarkerResourceOnly(FunctionType function)
+        {
+            switch (function)
+            {
+                case FunctionType.ExclusiveMaster:
+                case FunctionType.NavMeshBarrier:
+                case FunctionType.TRAV_1ShotClimbUnder:
+                case FunctionType.TRAV_1ShotFloorVentEntrance:
+                case FunctionType.TRAV_1ShotFloorVentExit:
+                case FunctionType.TRAV_1ShotLeap:
+                case FunctionType.TRAV_1ShotSpline:
+                case FunctionType.TRAV_1ShotVentEntrance:
+                case FunctionType.TRAV_1ShotVentExit:
+                case FunctionType.TRAV_ContinuousBalanceBeam:
+                case FunctionType.TRAV_ContinuousCinematicSidle:
+                case FunctionType.TRAV_ContinuousClimbingWall:
+                case FunctionType.TRAV_ContinuousLadder:
+                case FunctionType.TRAV_ContinuousLedge:
+                case FunctionType.TRAV_ContinuousPipe:
+                case FunctionType.TRAV_ContinuousTightGap:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// Marker resource types written for Commands/RESOURCES round-trip but with no editable payload.
+        /// </summary>
+        internal static bool IsMarkerOnlyResourceType(ResourceType type)
+        {
+            switch (type)
+            {
+                case ResourceType.TRAVERSAL_SEGMENT:
+                case ResourceType.NAV_MESH_BARRIER_RESOURCE:
+                case ResourceType.EXCLUSIVE_MASTER_STATE_RESOURCE:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        static cResource EnsureResourceParameter(FunctionEntity entity)
+        {
+            Parameter param = entity.GetParameter(ShortGuids.resource);
+            if (param == null)
+            {
+                param = new Parameter(ShortGuids.resource, new cResource(entity.shortGUID), ParameterVariant.INTERNAL);
+                entity.parameters.Add(param);
+            }
+            else if (!(param.content is cResource))
+            {
+                param.content = new cResource(entity.shortGUID);
+                param.variant = ParameterVariant.INTERNAL;
+            }
+            return (cResource)param.content;
         }
 
         private void goToZone_Click(object sender, EventArgs e)
         {
-            CompositeDisplay display = _compositeDisplay;
-            if (Composite != zoneCompositeForSelectedEntity)
-                display = _compositeDisplay.CompositeBrowser.LoadComposite(zoneCompositeForSelectedEntity);
+            List<EditorUtils.ZoneReference> zones = _zonesForSelectedEntity;
+            if (zones == null || zones.Count == 0)
+                return;
 
-            display.LoadEntity(zoneEntityForSelectedEntity, true);
+            if (zones.Count == 1)
+            {
+                GoToZone(zones[0]);
+                return;
+            }
+
+            /* Clicking the button while its menu is open is how the menu is dismissed: WinForms closes
+               the popup on the mouse-down, and this Click arrives on the mouse-up afterwards - so
+               opening a new one here would leave the button impossible to toggle off. A click landing
+               in the moment after a dismissal IS that dismissal. (The Visible check covers activating
+               the button from the keyboard, which never goes through that mouse-down.) */
+            if ((DateTime.UtcNow - _zoneMenuClosedAt).TotalMilliseconds < 300)
+                return;
+            if (_zoneMenu != null && !_zoneMenu.IsDisposed && _zoneMenu.Visible)
+            {
+                _zoneMenu.Close();
+                return;
+            }
+
+            /* In more than one zone, so the button has nowhere single to go: offer them under it and
+               let the user say which. */
+            DisposeZoneMenu();
+            ContextMenuStrip menu = new ContextMenuStrip();
+            foreach (EditorUtils.ZoneReference zone in zones)
+            {
+                EditorUtils.ZoneReference target = zone;
+                ToolStripMenuItem item = new ToolStripMenuItem(zone.Name);
+                item.ToolTipText = "Go to this zone in " + EditorUtils.GetCompositeName(zone.Composite);
+                item.Click += (s, args) => GoToZone(target);
+                menu.Items.Add(item);
+            }
+            /* Deliberately not disposed from its own Closed handler: the close is still unwinding when
+               that runs, and the next thing to touch the strip throws ObjectDisposedException. The one
+               after it takes it away instead, and so does closing the inspector. */
+            menu.Closed += (s, args) => _zoneMenuClosedAt = DateTime.UtcNow;
+            _zoneMenu = menu;
+            menu.Show(goToZone, new Point(0, goToZone.Height));
+        }
+
+        private void DisposeZoneMenu()
+        {
+            ContextMenuStrip menu = _zoneMenu;
+            _zoneMenu = null;
+            if (menu != null && !menu.IsDisposed)
+                menu.Dispose();
+        }
+
+        /* The zone was found through the hierarchy the user is standing in, so that is the way to it:
+           walk the same instance path rather than opening its composite on its own. Opening it bare
+           lost the breadcrumb - and with it any way back up - and in a composite placed more than once
+           it also stopped saying WHICH placement's zone this is, which is the whole point of working
+           the zones out per instance. */
+        private void GoToZone(EditorUtils.ZoneReference zone)
+        {
+            if (zone?.Zone == null || zone.Composite == null || _compositeDisplay == null)
+                return;
+
+            Composite start = _zoneLookupStartComposite;
+            if (start != null && zone.InstancePath != null)
+            {
+                List<uint> path = new List<uint>(zone.InstancePath) { zone.Zone.shortGUID.AsUInt32 };
+                if (_compositeDisplay.ApplyViewerSelectionPath(start, path, true, StepIntoComposite))
+                    return;
+            }
+
+            //The path no longer walks (something on it was deleted or rewired): show it where it is
+            CompositeDisplay display = _compositeDisplay;
+            if (Composite != zone.Composite)
+                display = _compositeDisplay.CompositeBrowser.LoadComposite(zone.Composite);
+
+            display?.LoadEntity(zone.Zone, true);
+        }
+
+        /// <summary>The composite a placement entity places, for walking an instance path.</summary>
+        private Composite StepIntoComposite(Entity entity)
+        {
+            if (entity == null || entity.variant != EntityVariant.FUNCTION)
+                return null;
+
+            FunctionEntity function = (FunctionEntity)entity;
+            if (function.function.IsFunctionType)
+                return null;
+
+            return Content?.Level?.Commands?.GetComposite(function.function);
+        }
+
+        /// <summary>
+        /// Names the Function button after what it does for the entity shown, as it stands now: Edit Tracks for a
+        /// CAGEAnimation, Edit Sequence for a TriggerSequence (or a proxy to one), Edit Character, Capture for an
+        /// EnvironmentMap (Capturing... while a capture runs) - and plain Function whenever it does nothing.
+        /// </summary>
+        private void LabelFunctionButton()
+        {
+            string text = "Function", tip = null;
+            if (_entity is ProxyEntity && editFunction.Enabled)
+            {
+                text = "Edit Sequence";
+                tip = "Edit the trigger data this proxy carries for the TriggerSequence it points at";
+            }
+            else if (_entity is FunctionEntity function && _entityCompositePtr == null && function.function.IsFunctionType)
+            {
+                switch (function.function.AsFunctionType)
+                {
+                    case FunctionType.CAGEAnimation:
+                        text = "Edit Tracks";
+                        tip = "Edit this animation's tracks, keyframes and events";
+                        break;
+                    case FunctionType.TriggerSequence:
+                        text = "Edit Sequence";
+                        tip = "Edit the entities this TriggerSequence triggers, and when";
+                        break;
+                    case FunctionType.Character:
+                        text = "Edit Character";
+                        tip = "Edit this character's appearance";
+                        break;
+                    case FunctionType.EnvironmentMap:
+                        if (EnvironmentMapCapture.Busy)
+                            text = "Capturing...";
+                        else
+                            text = "Capture";
+                        tip = "Capture this environment map's cubemap in the running game, from where it is, and use it (Live Link)";
+                        break;
+                }
+            }
+            if (!editFunction.Enabled && text != "Capturing...")
+                text = "Function";
+            editFunction.Text = text;
+            toolTip1.SetToolTip(editFunction, editFunction.Enabled ? tip : null);
         }
 
         ShowCompositeInstanceOverrides _instanceOverridesDialog = null;
@@ -929,6 +1695,16 @@ namespace OpenCAGE.DockPanels
         CharacterEditor _charEditorDialog = null;
         private void editFunction_Click(object sender, EventArgs e)
         {
+            //Proxy to a TriggerSequence: edit the trigger data carried on the proxy itself
+            if (Entity.variant == EntityVariant.PROXY)
+            {
+                if (_triggerSeqDialog != null)
+                    _triggerSeqDialog.Close();
+                _triggerSeqDialog = new TriggerSequenceEditor(this);
+                _triggerSeqDialog.Show();
+                return;
+            }
+
             if (Entity.variant != EntityVariant.FUNCTION) return;
             if (_entityCompositePtr != null)
             {
@@ -949,7 +1725,9 @@ namespace OpenCAGE.DockPanels
                             _cageAnimDialog.Close();
                         _cageAnimDialog = new CAGEAnimationEditor(this);
                         _cageAnimDialog.Show();
-                        _cageAnimDialog.OnSaved += CAGEAnimationEditor_OnSaved;
+                        //The window writes its edits back as it makes them, so there is nothing to apply
+                        //here - only the inspector's own rows to bring up to date with them
+                        _cageAnimDialog.FormClosed += CAGEAnimationEditor_Closed;
                         break;
                     case FunctionType.TriggerSequence:
                         if (_triggerSeqDialog != null)
@@ -964,16 +1742,16 @@ namespace OpenCAGE.DockPanels
                         _charEditorDialog = new CharacterEditor(this);
                         _charEditorDialog.Show();
                         break;
+                    case FunctionType.EnvironmentMap:
+                        CaptureCubemapInGame();
+                        break;
                 }
             }
         }
-        private void CAGEAnimationEditor_OnSaved(CAGEAnimation newEntity)
+        private void CAGEAnimationEditor_Closed(object sender, FormClosedEventArgs e)
         {
-            CAGEAnimation entity = (CAGEAnimation)Entity;
-            entity.connections = newEntity.connections;
-            entity.events = newEntity.events;
-            entity.animations = newEntity.animations;
-            entity.parameters = newEntity.parameters;
+            if (IsDisposed || !Populated)
+                return;
             Reload();
         }
 
@@ -982,60 +1760,127 @@ namespace OpenCAGE.DockPanels
             _compositeDisplay.StepIntoEntity(Entity);
         }
 
+        private void changeProxyTarget_Click(object sender, EventArgs e)
+        {
+            if (Entity is ProxyEntity proxy)
+                _compositeDisplay.ChangeProxyTarget(proxy);
+        }
+
+        /* What the hierarchy box shows for a dead proxy or alias: that it is dead, what it pointed at, and the stored path */
+        private string DeadPathText(Entity entity)
+        {
+            string path = DescribeStoredPath(entity);
+            if (entity is ProxyEntity proxy)
+            {
+                string target = DeadProxyTargetType(proxy);
+                return "UNRESOLVABLE PROXY" + (target == null ? "" : " (was " + target + ")") + ": " + path;
+            }
+            return "UNRESOLVABLE ALIAS: " + path;
+        }
+
+        /* The function type or composite a dead proxy's target had (ProxyEntity.function); null when this
+           level has no name for it - a guid tells the user nothing */
+        private string DeadProxyTargetType(ProxyEntity proxy)
+        {
+            if (proxy.function.IsFunctionType)
+                return proxy.function.AsFunctionType.ToString();
+            Composite composite = Content.Level.Commands.GetComposite(proxy.function);
+            return composite != null ? EditorUtils.GetCompositeName(composite) : null;
+        }
+
+        /* A proxy's or alias's stored path, hop by hop, naming what each hop reaches and marking the
+           first that reaches nothing - read from the level's root for a proxy, from this composite for an
+           alias, the way the resolvers do. */
+        private string DescribeStoredPath(Entity entity)
+        {
+            ShortGuid[] path = entity is ProxyEntity proxy ? proxy.proxy?.path : (entity as AliasEntity)?.alias?.path;
+            if (path == null || path.Length == 0)
+                return "(no path)";
+
+            CATHODE.Commands commands = Content.Level.Commands;
+            bool showIds = SettingsManager.GetBool(Settings.ShowShortGuids);
+            Composite current = entity is ProxyEntity ? commands.EntryPoints[0] : Composite;
+            int first = 0;
+            if (entity is ProxyEntity && path.Length > 1)
+            {
+                //A proxy path starts with the composite it is read from: that is a composite id, not a hop
+                Composite named = commands.GetComposite(path[0]);
+                if (named != null && current?.GetEntityByID(path[1]) == null)
+                    current = named;
+                first = 1;
+            }
+
+            StringBuilder text = new StringBuilder();
+            bool any = false;
+            for (int i = first; i < path.Length; i++)
+            {
+                if (path[i] == ShortGuid.Invalid)
+                    break;
+                if (i > first && path[i] == path[i - 1])
+                    continue; //a doubled hop, which the resolver skips too
+                if (any)
+                    text.Append(" -> ");
+                any = true;
+                Entity hop = current?.GetEntityByID(path[i]);
+                if (hop == null)
+                {
+                    text.Append("[" + path[i].ToByteString() + "] MISSING");
+                    if (i != path.Length - 1 && path[i + 1] != ShortGuid.Invalid)
+                        text.Append(" -> ...");
+                    break;
+                }
+                if (showIds)
+                    text.Append("[" + hop.shortGUID.ToByteString() + "] ");
+                text.Append(commands.Utils.GetEntityName(current, hop));
+                current = hop is FunctionEntity function && !function.function.IsFunctionType ? commands.GetComposite(function.function) : null;
+            }
+            return text.ToString();
+        }
+
         private void deleteEntity_Click(object sender, EventArgs e)
         {
-            _compositeDisplay.DeleteEntity(Entity);
+            //One question and one undo step for a multi-selection, the same as deleting from the list
+            if (IsMultiEditing)
+                _compositeDisplay.DeleteEntities(new List<Entity>(MultiSelectedEntities));
+            else
+                _compositeDisplay.DeleteEntity(Entity);
         }
-
-        private void duplicateEntity_Click(object sender, EventArgs e)
+        /// <summary>
+        /// Remove FLOAT parameters at 0.0 that exist only as unused pin-delay slots for T_STRING
+        /// event names (forward and reverse_). Non-zero delays are kept.
+        /// </summary>
+        private static void CleanupCageAnimationZeroDelayStringParams(CAGEAnimation anim)
         {
-            _compositeDisplay.DuplicateEntity(Entity);
-        }
+            if (anim?.eventTracks == null || anim.parameters == null) return;
 
-        RenameEntity _renameDialog = null;
-        private void renameEntity_Click(object sender, EventArgs e)
-        {
-            if (_renameDialog != null)
-                _renameDialog.Close();
-
-            _renameDialog = new RenameEntity(this.Entity, this.Composite);
-            _renameDialog.Show();
-        }
-
-        /* Apply defaults */
-        private void addUnsetParametersToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            //Add only the parameters not already set
-            bool hasDeleteMe = Entity.GetParameter("delete_me") != null;
-            Content.Level.Commands.Utils.AddAllDefaultParameters(Entity, Composite, false);
-            if (!hasDeleteMe) Entity.RemoveParameter("delete_me");
-            _compositeDisplay.ReloadEntity(Entity);
-
-            foreach (Parameter param in Entity.parameters)
+            HashSet<ShortGuid> stringEventPins = new HashSet<ShortGuid>();
+            for (int t = 0; t < anim.eventTracks.Count; t++)
             {
-                if (param?.content != null && param.name == ShortGuidUtils.Generate("position") && param.content.dataType == DataType.TRANSFORM)
-                    Singleton.OnEntityMoved?.Invoke((cTransform)param.content, _entity);
-                if (param?.content != null && param.name == ShortGuidUtils.Generate("resource") && param.content.dataType == DataType.RESOURCE)
-                    Singleton.OnResourceModified?.Invoke();
+                CAGEAnimation.EventTrack track = anim.eventTracks[t];
+                if (track?.keyframes == null) continue;
+                for (int k = 0; k < track.keyframes.Count; k++)
+                {
+                    CAGEAnimation.EventTrack.Keyframe key = track.keyframes[k];
+                    if (key.track_type != ANIM_TRACK_TYPE.T_STRING) continue;
+                    stringEventPins.Add(key.forward);
+                    stringEventPins.Add(key.reverse);
+                }
             }
-            Singleton.OnParameterModified?.Invoke();
-        }
-        private void applyAllDefaultsToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            //Add all defaults, overwriting the ones already set
-            Entity.parameters.Clear();
-            Content.Level.Commands.Utils.AddAllDefaultParameters(Entity, Composite);
-            Entity.RemoveParameter("delete_me");
-            _compositeDisplay.ReloadEntity(Entity);
+            if (stringEventPins.Count == 0) return;
 
-            foreach (Parameter param in Entity.parameters)
+            List<Parameter> toRemove = new List<Parameter>();
+            for (int i = 0; i < anim.parameters.Count; i++)
             {
-                if (param?.content != null && param.name == ShortGuidUtils.Generate("position") && param.content.dataType == DataType.TRANSFORM)
-                    Singleton.OnEntityMoved?.Invoke((cTransform)param.content, _entity);
-                if (param?.content != null && param.name == ShortGuidUtils.Generate("resource") && param.content.dataType == DataType.RESOURCE)
-                    Singleton.OnResourceModified?.Invoke();
+                Parameter param = anim.parameters[i];
+                if (param == null || !stringEventPins.Contains(param.name)) continue;
+                cFloat asFloat = param.content as cFloat;
+                if (asFloat == null) continue;
+                if (Math.Abs(asFloat.value) > 0.00001f) continue;
+                toRemove.Add(param);
             }
-            Singleton.OnParameterModified?.Invoke();
+
+            for (int i = 0; i < toRemove.Count; i++)
+                anim.RemoveParameter(toRemove[i]);
         }
     }
 }

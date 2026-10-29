@@ -1,0 +1,968 @@
+#if ENABLE_MOD_PACKAGES
+using CATHODE;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Xml;
+
+namespace OpenCAGE.Modding
+{
+    public class ExportEntrySummary
+    {
+        public string Target;
+        public string Kind;
+        public long PayloadSize;
+        public long FileSize;
+    }
+
+    public class ExportResult
+    {
+        public List<ExportEntrySummary> Entries = new List<ExportEntrySummary>();
+        public List<string> Warnings = new List<string>();
+        public long PackageSize;
+    }
+
+    /* Turns "what the user changed" into a package. Every included file that differs from vanilla
+     * ships either whole or - when the baseline store holds the pristine bytes and the patch is
+     * worth it - as a delta against them. Config files ship as the changed values themselves. */
+    public class ModExportBuilder
+    {
+        private readonly string _gameRoot;
+        private readonly VanillaManifest _manifest;
+        private readonly HashCache _cache;
+        private readonly ModInstaller _installer;
+
+        public ModPackageInfo Info = new ModPackageInfo();
+
+        private readonly List<string> _files = new List<string>();
+        private readonly Dictionary<string, List<BmlPatchOp>> _configs = new Dictionary<string, List<BmlPatchOp>>();
+        private readonly Dictionary<string, byte[]> _configVanilla = new Dictionary<string, byte[]>();
+
+        public ModExportBuilder(string gameRoot, VanillaManifest manifest, HashCache cache, ModInstaller installer)
+        {
+            //What a mod changes is what differs from the shipped files: without them, every file is a change
+            if (manifest.Unsupported != null)
+                throw new InvalidOperationException(manifest.Unsupported);
+            _gameRoot = gameRoot;
+            _manifest = manifest;
+            _cache = cache;
+            _installer = installer;
+            Info.Id = Guid.NewGuid().ToString("N");
+            Info.CreatedUtc = DateTime.UtcNow;
+            Info.HashSet = manifest.Platform;
+        }
+
+        /// <summary>
+        /// The OpenCAGE sidecar suffix: the Commands custom tables, a level's radiosity ownership
+        /// marker. See <see cref="CathodeLib.CustomTable"/> and <see cref="CATHODE.RadiosityRuntime"/>.
+        /// </summary>
+        private const string SidecarSuffix = ".META";
+
+        /// <summary>
+        /// Include a file, together with its sidecar: its .META if it has one (an animation PAK carries its tree layouts
+        /// inside it). Vanilla files are skipped silently - they carry nothing.
+        /// </summary>
+        public void AddFile(string normalisedPath)
+        {
+            Include(normalisedPath);
+            foreach (string sidecar in SidecarsFor(normalisedPath))
+                Include(sidecar);
+        }
+
+        /// <summary>The sidecars that ship with a file (whether or not they're on disk): its .META.</summary>
+        public static IEnumerable<string> SidecarsFor(string normalisedPath)
+        {
+            if (normalisedPath == null)
+                yield break;
+            if (!normalisedPath.EndsWith(SidecarSuffix, StringComparison.OrdinalIgnoreCase))
+                yield return normalisedPath + SidecarSuffix;
+        }
+
+        public static bool IsSidecar(string normalisedPath)
+        {
+            return normalisedPath != null && normalisedPath.EndsWith(SidecarSuffix, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>The file a sidecar ships with, or none if this isn't a sidecar.</summary>
+        public static IEnumerable<string> SidecarParents(string normalisedPath)
+        {
+            if (normalisedPath == null)
+                return new string[0];
+            if (normalisedPath.EndsWith(SidecarSuffix, StringComparison.OrdinalIgnoreCase))
+                return new[] { normalisedPath.Substring(0, normalisedPath.Length - SidecarSuffix.Length) };
+            return new string[0];
+        }
+
+        /// <summary>
+        /// Whether a changed file goes in with another of the changed files rather than as a choice of its own: a
+        /// sidecar whose parent is among them. A sidecar whose parent is unchanged has nothing to go in with.
+        /// </summary>
+        public static bool ShipsWithParent(string normalisedPath, ICollection<string> changed)
+        {
+            return IsSidecar(normalisedPath) && SidecarParents(normalisedPath).Any(changed.Contains);
+        }
+
+        /// <summary>
+        /// Package files exactly as they are on disk, even where the user's own version of one is kept apart from the
+        /// mods combined into it - for keeping what was changed in installed mods' files since they went in.
+        /// </summary>
+        public bool AsOnDisk;
+
+        private readonly List<string> _deleted = new List<string>();
+        /* Files whose content isn't what's on disk: the user's own version of a file combined with installed mods there */
+        private readonly Dictionary<string, byte[]> _content = new Dictionary<string, byte[]>();
+        /* ...or a part of a level built elsewhere (see AddLevelPart): where each such file is */
+        private readonly Dictionary<string, string> _sources = new Dictionary<string, string>();
+
+        /// <summary>
+        /// Include part of a level: <see cref="ModLevelMerger.Extract"/>'s result, laid out as a game folder under
+        /// <paramref name="partRoot"/>. Its files that aren't as the game shipped them go in.
+        /// </summary>
+        public void AddLevelPart(string partRoot, string level)
+        {
+            foreach (string folder in new[] { ModToolkit.LevelFolder(level), ModToolkit.LevelFolder(level + "_PATCH") })
+            {
+                string dir = ModToolkit.Denormalise(partRoot, folder);
+                if (!Directory.Exists(dir))
+                    continue;
+                foreach (string file in Directory.GetFiles(dir, "*", SearchOption.AllDirectories))
+                {
+                    string normalised = ModToolkit.NormaliseFull(partRoot, file);
+                    if (normalised == null || ModToolkit.IsRegenerated(normalised) || ModToolkit.IsExcluded(normalised))
+                        continue;
+                    if (_manifest.IsVanilla(normalised, ModToolkit.Sha256File(file)))
+                        continue;
+                    _sources[normalised] = file;
+                    if (!_files.Contains(normalised))
+                        _files.Add(normalised);
+                }
+            }
+        }
+
+        /* What a file was as the game shipped it, to make it a patch against: the kept original, or the game folder's
+           copy when that's still as shipped */
+        private byte[] OriginalBytes(string normalisedPath)
+        {
+            if (_installer == null)
+                return null;
+            byte[] kept = _installer.VanillaBytes(normalisedPath);
+            if (kept != null)
+                return kept;
+            byte[] hash = _cache.Hash(normalisedPath);
+            return hash != null && _manifest.IsVanilla(normalisedPath, hash) ? ModToolkit.ReadContent(_gameRoot, normalisedPath) : null;
+        }
+
+        /* A level's scripts as a mod carries them: without the edit history kept in them (when their owner changed what),
+           which is the history of the level they came from, not of the ones they go into */
+        private static byte[] WithoutEditHistory(string normalisedPath, byte[] content)
+        {
+            string file = normalisedPath.Substring(normalisedPath.LastIndexOf('/') + 1);
+            if (file != "COMMANDS.PAK" && file != "COMMANDS.PAK.META")
+                return content;
+            CATHODE.Scripting.Internal.CustomTableFileType type = file == "COMMANDS.PAK" ? CATHODE.Scripting.Internal.CustomTableFileType.COMMANDS_PAK : CATHODE.Scripting.Internal.CustomTableFileType.STANDALONE;
+            bool any = (CathodeLib.CustomTable.ReadTable(content, CATHODE.Scripting.Internal.CustomTableType.COMPOSITE_MODIFICATION_INFO, type) as CathodeLib.CompositeModificationInfoTable)?.modification_info.Count > 0
+                || (CathodeLib.CustomTable.ReadTable(content, CATHODE.Scripting.Internal.CustomTableType.ASSET_MODIFICATION_INFO, type) as CathodeLib.AssetModificationInfoTable)?.modification_info.Count > 0;
+            if (!any)
+                return content;
+            string dir = Path.Combine(Path.GetTempPath(), "OpenCAGE_" + Guid.NewGuid().ToString("N").Substring(0, 8));
+            Directory.CreateDirectory(dir);
+            try
+            {
+                string temp = Path.Combine(dir, file);
+                File.WriteAllBytes(temp, content);
+                CathodeLib.CustomTable.WriteTable(temp, CATHODE.Scripting.Internal.CustomTableType.COMPOSITE_MODIFICATION_INFO, new CathodeLib.CompositeModificationInfoTable());
+                CathodeLib.CustomTable.WriteTable(temp, CATHODE.Scripting.Internal.CustomTableType.ASSET_MODIFICATION_INFO, new CathodeLib.AssetModificationInfoTable());
+                return File.ReadAllBytes(temp);
+            }
+            finally
+            {
+                try { Directory.Delete(dir, true); } catch { }
+            }
+        }
+        private readonly HashSet<string> _ownVersions = new HashSet<string>();
+
+        private void Include(string normalisedPath)
+        {
+            //Worked out again after every install - never carried
+            if (ModToolkit.IsRegenerated(normalisedPath) || ModToolkit.IsExcluded(normalisedPath))
+                return;
+            //Under installed mods, the user's work is their own version, not the combined file
+            if (!AsOnDisk && _installer != null && _installer.TryGetOwnVersion(normalisedPath, out byte[] own))
+            {
+                _ownVersions.Add(normalisedPath);
+                if (own == null)
+                {
+                    if (_manifest.Contains(normalisedPath) && !_deleted.Contains(normalisedPath))
+                        _deleted.Add(normalisedPath);
+                }
+                else if (!_manifest.IsVanilla(normalisedPath, ModToolkit.Sha256(own)))
+                {
+                    _content[normalisedPath] = own;
+                    if (!_files.Contains(normalisedPath))
+                        _files.Add(normalisedPath);
+                }
+                return;
+            }
+            byte[] hash = _cache.Hash(normalisedPath);
+            if (hash == null)
+            {
+                //A shipped file that's gone: the mod deletes it
+                if (_manifest.Contains(normalisedPath) && !_deleted.Contains(normalisedPath))
+                    _deleted.Add(normalisedPath);
+                return;
+            }
+            if (_manifest.IsVanilla(normalisedPath, hash))
+                return;
+            if (!_files.Contains(normalisedPath))
+                _files.Add(normalisedPath);
+        }
+
+        public void AddFiles(IEnumerable<string> normalisedPaths)
+        {
+            foreach (string path in normalisedPaths)
+                AddFile(path);
+        }
+
+        /* Archives only some of whose changes go in (see AddParts): the changes chosen */
+        private readonly Dictionary<string, List<PakPart>> _parts = new Dictionary<string, List<PakPart>>();
+
+        /// <summary>
+        /// Include some of the changes inside an archive game file (UI.PAK, ANIMATION.PAK...) - parts <see cref="PakParts.Find"/>
+        /// found in it: the mod carries the file as it shipped with only those changes put in. The file is built when the
+        /// package is written.
+        /// </summary>
+        public void AddParts(string normalisedPath, IEnumerable<PakPart> parts)
+        {
+            List<PakPart> chosen = parts.ToList();
+            if (chosen.Count == 0)
+                return;
+            _parts[normalisedPath] = chosen;
+            if (!AsOnDisk && _installer != null && _installer.TryGetOwnVersion(normalisedPath, out _))
+                _ownVersions.Add(normalisedPath);
+        }
+
+        /// <summary>
+        /// What a file is as the user made it, as a mod carries it whole: their own version where it's under installed mods
+        /// (unless <paramref name="asOnDisk"/>), else what's on disk without OpenCAGE's own content. Null when it's gone.
+        /// </summary>
+        public static byte[] UsersVersion(string gameRoot, ModInstaller installer, string normalisedPath, bool asOnDisk = false)
+        {
+            if (!asOnDisk && installer != null && installer.TryGetOwnVersion(normalisedPath, out byte[] own))
+                return own;
+            return File.Exists(ModToolkit.Denormalise(gameRoot, normalisedPath)) ? ModToolkit.ReadContent(gameRoot, normalisedPath) : null;
+        }
+
+        /* Each archive only some of whose changes go in, as the file it goes in as */
+        private void BuildParts()
+        {
+            foreach (KeyValuePair<string, List<PakPart>> archive in _parts.OrderBy(o => o.Key))
+            {
+                string path = archive.Key;
+                byte[] original = _installer?.VanillaBytes(path);
+                byte[] current = UsersVersion(_gameRoot, _installer, path, AsOnDisk);
+                byte[] built = original == null || current == null ? null : PakParts.Build(path, original, current, archive.Value);
+                if (built == null)
+                    throw new Exception("the changes you chose in " + path + " couldn't be put together on their own - include the whole file instead.");
+                if (built.AsSpan().SequenceEqual(original))
+                    continue;
+                _content[path] = built;
+                if (!_files.Contains(path))
+                    _files.Add(path);
+            }
+        }
+
+        /// <summary>
+        /// Include a config file as its changed values. Pass the ops the user selected (from
+        /// DiffConfig) and the vanilla bytes they were diffed against.
+        /// </summary>
+        public void AddConfigPatch(string normalisedPath, List<BmlPatchOp> ops, byte[] vanillaBytes)
+        {
+            if (ops == null || ops.Count == 0)
+                return;
+            _configs[ModToolkit.Normalise(normalisedPath)] = ops;
+            _configVanilla[ModToolkit.Normalise(normalisedPath)] = vanillaBytes;
+            //Diffed from the user's own version when the file is under mods (ConfigDiff.Diff): said like any other file if it's stale
+            if (!AsOnDisk && _installer != null && _installer.TryGetOwnVersion(ModToolkit.Normalise(normalisedPath), out _))
+                _ownVersions.Add(ModToolkit.Normalise(normalisedPath));
+        }
+
+        /* Blocks of DATA/LEVEL_TEXT_DATABASES.XML to carry besides the included levels' own (see AddLevelTextBlocks) */
+        private readonly List<string> _levelTextBlocks = new List<string>();
+        /* Whether that file goes in built from blocks (BuildLevelText) rather than whole */
+        private bool _levelTextBuilt;
+
+        /// <summary>
+        /// DATA/LEVEL_TEXT_DATABASES.XML as the game shipped it, for when no original of it is kept: the editor's own copy.
+        /// </summary>
+        public byte[] LevelTextOriginal;
+
+        /// <summary>
+        /// Include blocks of DATA/LEVEL_TEXT_DATABASES.XML as the user has them that no level in the mod brings: the "globals"
+        /// block, or that of a level whose own files are as the game shipped them. A level in the mod brings its own anyway.
+        /// </summary>
+        public void AddLevelTextBlocks(IEnumerable<string> blocks)
+        {
+            foreach (string block in blocks)
+                if (!_levelTextBlocks.Contains(block, StringComparer.OrdinalIgnoreCase))
+                    _levelTextBlocks.Add(block);
+        }
+
+        /* Which text databases a level loads goes in with the level: DATA/LEVEL_TEXT_DATABASES.XML as it shipped, with the
+           blocks of the levels in the mod (and any chosen besides) as the user has them - so blocks for the user's other levels
+           stay out, and another mod's blocks merge with these. Unless the whole file was chosen. */
+        private void BuildLevelText()
+        {
+            string path = LevelTextBlocks.Path;
+            if (_files.Contains(path) || _deleted.Contains(path))
+                return;
+            List<string> blocks = _files.Concat(_parts.Keys).Concat(_configs.Keys).Concat(_deleted)
+                .Select(ModInstaller.LevelUnitOf).Where(o => o != null).Distinct().Select(LevelTextBlocks.BlockOf)
+                .Concat(_levelTextBlocks).ToList();
+            if (blocks.Count == 0)
+                return;
+            byte[] original = OriginalBytes(path) ?? LevelTextOriginal;
+            if (original == null)
+            {
+                //Blocks can't be told apart without the original: the whole file, as the user has it
+                Include(path);
+                return;
+            }
+            byte[] current = UsersVersion(_gameRoot, _installer, path, AsOnDisk);
+            byte[] built = current == null ? null : LevelTextBlocks.WithBlocks(original, current, blocks);
+            if (built == null)
+                return;
+            _content[path] = built;
+            _files.Add(path);
+            _levelTextBuilt = true;
+            if (!AsOnDisk && _installer != null && _installer.TryGetOwnVersion(path, out _))
+                _ownVersions.Add(path);
+        }
+
+        /// <summary>A picture to show for the mod in the Mod Manager (PNG bytes), or null.</summary>
+        public byte[] Preview;
+
+        public ExportResult Write(string outputPath)
+        {
+            ExportResult result = new ExportResult();
+            //A replacement mod carries each thing it changes whole, as the user has it: settings files rather than their values,
+            //archives rather than their changes, levels rather than parts of them
+            if (Info.Replaces)
+            {
+                if (_sources.Count != 0)
+                    throw new InvalidOperationException("A replacement mod carries whole levels, not parts of them.");
+                foreach (string path in _configs.Keys.Concat(_parts.Keys).ToList())
+                    AddFile(path);
+                _configs.Clear();
+                _configVanilla.Clear();
+                _parts.Clear();
+            }
+            ModPackageWriter writer = new ModPackageWriter(Info);
+            writer.SetPreview(Preview);
+            BuildParts();
+            BuildLevelText();
+            if (string.IsNullOrWhiteSpace(Info.Summary))
+            {
+                //Files kept as they are on disk under installed mods hold the mods' changes too: not only layouts, as good as always
+                if (!AsOnDisk)
+                    ExamineAnimationPaks();
+                Info.Summary = Summarise();
+            }
+
+            //The user's own version of a file under mods is what it was when the mods last went in: changes since are only on disk,
+            //mixed in with the mods' own
+            if (_ownVersions.Count != 0)
+                foreach (string path in _installer.EditedSinceApplied().Where(_ownVersions.Contains).OrderBy(o => o))
+                    result.Warnings.Add(path + " has changed since your mods were last applied. Those changes can't be told apart from the mods' changes to it, so they aren't in the package: it holds your own version from before the mods went in.");
+
+            foreach (string path in _files.OrderBy(o => o))
+            {
+                byte[] content = _content.TryGetValue(path, out byte[] own) ? own
+                    : _sources.TryGetValue(path, out string source) ? File.ReadAllBytes(source) : ModToolkit.ReadContent(_gameRoot, path);
+                AddContent(writer, result, path, WithoutEditHistory(path, content), _sources.ContainsKey(path) ? OriginalBytes(path) : (_installer == null ? null : _installer.VanillaBytes(path)));
+            }
+
+            //Configs ship as the finished file - vanilla with the chosen values changed - which the installer can
+            //merge with any other mod's version of the same config
+            foreach (KeyValuePair<string, List<BmlPatchOp>> config in _configs.OrderBy(o => o.Key))
+            {
+                _configVanilla.TryGetValue(config.Key, out byte[] vanilla);
+                if (vanilla == null)
+                    throw new Exception("No original copy of " + config.Key + " to build its changed values on.");
+                AddContent(writer, result, config.Key, ConfigDiff.Build(config.Key, vanilla, config.Value), vanilla);
+            }
+
+            foreach (string path in _deleted.OrderBy(o => o))
+            {
+                writer.AddDelete(path);
+                result.Entries.Add(new ExportEntrySummary() { Target = path, Kind = ModPackageEntry.KindDelete });
+            }
+
+            writer.Write(outputPath);
+            result.PackageSize = new FileInfo(outputPath).Length;
+            return result;
+        }
+
+        /// <summary>
+        /// In words, what the package changes: which levels, how many config values, which other files. Shown
+        /// before installing; the author can write their own.
+        /// </summary>
+        public string Summarise()
+        {
+            List<string> parts = new List<string>();
+            List<string> all = _files.Concat(_parts.Keys).Concat(_configs.Keys).Concat(_deleted).Distinct().ToList();
+            List<string> levels = all.Select(ModInstaller.LevelUnitOf).Where(o => o != null).Distinct().OrderBy(o => o).ToList();
+            if (levels.Count != 0)
+                parts.Add("Changes the level" + (levels.Count == 1 ? " " : "s ") + string.Join(", ", levels.Select(ModToolkit.LevelName)));
+            //Settings by what they're for; behaviour trees by tree (the tree directory is one config file, but a tree is a tree)
+            List<KeyValuePair<string, List<BmlPatchOp>>> settings = _configs.Where(o => !o.Key.StartsWith("DATA/BINARY_BEHAVIOR/")).ToList();
+            int values = settings.Sum(o => o.Value.Count);
+            if (values != 0)
+                parts.Add("changes " + values + " setting" + (values == 1 ? "" : "s") + " for " + string.Join(", ", settings.Select(o => FriendlyConfigName(o.Key)).Distinct()));
+            List<BmlPatchOp> treeOps = _configs.Where(o => o.Key.StartsWith("DATA/BINARY_BEHAVIOR/")).SelectMany(o => o.Value).ToList();
+            if (treeOps.Count != 0)
+            {
+                int added = treeOps.Count(o => o.Kind == "add" && o.Path.IndexOf('/') < 0);
+                int changed = treeOps.Where(o => !(o.Kind == "add" && o.Path.IndexOf('/') < 0)).Select(BmlPatch.TreeOf).Distinct().Count();
+                List<string> trees = new List<string>();
+                if (changed != 0) trees.Add("changes " + changed + " behaviour tree" + (changed == 1 ? "" : "s"));
+                if (added != 0) trees.Add("adds " + added + " new " + (changed != 0 ? "one" : "behaviour tree") + (added == 1 ? "" : "s"));
+                parts.Add(string.Join(" and ", trees));
+            }
+            //Which text databases levels load: the levels' own blocks are part of the levels, others said as what they're for
+            if (_levelTextBlocks.Count != 0)
+                parts.Add("changes the text databases loaded by " + LevelTextBlocks.Describe(_levelTextBlocks));
+            List<string> others = all.Where(o => ModInstaller.LevelUnitOf(o) == null && !_configs.ContainsKey(o) && !(_levelTextBuilt && o == LevelTextBlocks.Path)).ToList();
+            if (others.Any(o => o.StartsWith("DATA/BINARY_BEHAVIOR/"))) parts.Add("changes AI behaviour trees");
+            if (others.Any(o => o.StartsWith("DATA/TEXT/"))) parts.Add("changes in-game text");
+            if (others.Any(o => o.StartsWith("DATA/SOUND/"))) parts.Add("changes sounds");
+            if (others.Any(IsInterface)) parts.Add("changes the user interface");
+            //An animation PAK whose only change is OpenCAGE's tree layouts in it changes nothing in the game
+            List<string> animationPaks = others.Where(IsAnimationPak).ToList();
+            List<int?> layoutsOnly = animationPaks.Select(LaidOutTreesKnown).ToList();
+            if (animationPaks.Count != 0 && layoutsOnly.All(o => o != null))
+            {
+                int trees = layoutsOnly.Max(o => o.Value);
+                parts.Add("changes how " + (trees == 0 ? "animation trees are" : trees == 1 ? "an animation tree is" : trees + " animation trees are")
+                    + " laid out in OpenCAGE's Animation Tree Editor (nothing in the game changes)");
+            }
+            else if (animationPaks.Count != 0)
+                parts.Add("changes animations");
+            //Settings files carried whole (a replacement mod's), by what they're for
+            List<string> wholeSettings = others.Where(o => ConfigDiff.ByValue(o) && !o.StartsWith("DATA/BINARY_BEHAVIOR/")).ToList();
+            if (wholeSettings.Count != 0)
+                parts.Add("changes the settings for " + string.Join(", ", wholeSettings.Select(FriendlyConfigName).Distinct()));
+            int rest = others.Count(o => !o.StartsWith("DATA/BINARY_BEHAVIOR/") && !o.StartsWith("DATA/TEXT/") && !o.StartsWith("DATA/SOUND/") && !IsInterface(o) && !IsAnimationPak(o) && !wholeSettings.Contains(o));
+            if (rest != 0) parts.Add("changes " + rest + " other game file" + (rest == 1 ? "" : "s"));
+            if (parts.Count == 0) return "";
+            string text = string.Join("; ", parts) + ".";
+            return char.ToUpperInvariant(text[0]) + text.Substring(1);
+        }
+
+        private static bool IsInterface(string normalisedPath) => normalisedPath == "DATA/UI.PAK" || normalisedPath == "DATA/GLOBAL/UI.PAK";
+
+        /// <summary>Whether a file is an animation PAK: ANIMATION.PAK, or the Switch build's ANIMATION_SWITCH.PAK.</summary>
+        public static bool IsAnimationPak(string normalisedPath) => normalisedPath == "DATA/GLOBAL/ANIMATION.PAK" || normalisedPath == "DATA/GLOBAL/ANIMATION_SWITCH.PAK";
+
+        /* Animation PAKs by the hash of their bytes: how many trees they lay out when OpenCAGE's tree layouts are all that's
+           changed in them, else null - for every version of one looked at so far */
+        private static readonly Dictionary<string, int?> _layoutChanges = new Dictionary<string, int?>();
+
+        /// <summary>
+        /// Work out what the animation PAKs among the files change - only OpenCAGE's tree layouts in them, or more - so
+        /// <see cref="Summarise"/> can say. A PAK that size takes seconds to read, so this is apart from it (best called off
+        /// the UI thread); a version of a file already looked at isn't read again.
+        /// </summary>
+        public void ExamineAnimationPaks()
+        {
+            foreach (string path in _files.Where(IsAnimationPak).Where(o => !_parts.ContainsKey(o)).ToList())
+            {
+                string key = ContentKey(path);
+                if (key == null)
+                    continue;
+                lock (_layoutChanges)
+                    if (_layoutChanges.ContainsKey(key))
+                        continue;
+                int? trees;
+                try
+                {
+                    byte[] vanilla = _installer?.VanillaBytes(path);
+                    byte[] content = _content.TryGetValue(path, out byte[] own) ? own : File.ReadAllBytes(ModToolkit.Denormalise(_gameRoot, path));
+                    trees = vanilla == null ? null : LaidOutTreesOnly(content, vanilla);
+                }
+                catch
+                {
+                    //Not known (out of memory, say): looked at again next time rather than taken as more than layouts for good
+                    continue;
+                }
+                lock (_layoutChanges)
+                    _layoutChanges[key] = trees;
+            }
+        }
+
+        /* What ExamineAnimationPaks found for a file as it is now, or null when it changes more than its layouts (or hasn't been looked at) */
+        private int? LaidOutTreesKnown(string path)
+        {
+            //Only some of its changes going in: they say
+            if (_parts.TryGetValue(path, out List<PakPart> parts))
+                return parts.All(o => o.Group == PakParts.LayoutGroup) ? parts.Count : (int?)null;
+            string key = ContentKey(path);
+            lock (_layoutChanges)
+                return key != null && _layoutChanges.TryGetValue(key, out int? trees) ? trees : null;
+        }
+
+        /* The identity of the bytes going in for a file: the user's own version's hash, or the one the index has for what's on disk */
+        private string ContentKey(string path)
+        {
+            try
+            {
+                if (_content.ContainsKey(path))
+                    return _installer?.OwnVersionSha(path);
+                byte[] hash = _cache?.Hash(path);
+                return hash == null ? null : ModToolkit.ToHex(hash);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /* How many trees an animation PAK lays out when OpenCAGE's tree layouts in it are all that differs from the original, else null */
+        private static int? LaidOutTreesOnly(byte[] content, byte[] original)
+        {
+            PAK2 now = new PAK2(content), was = new PAK2(original);
+            Dictionary<string, byte[]> shipped = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+            foreach (PAK2.File entry in was.Entries)
+                if (!AnimTreeLayouts.IsEntry(entry.Filename))
+                    shipped[entry.Filename ?? ""] = entry.Content;
+            if (shipped.Count == 0)
+                return null;
+            int same = 0;
+            AnimTreeLayouts layouts = null;
+            foreach (PAK2.File entry in now.Entries)
+            {
+                if (AnimTreeLayouts.IsEntry(entry.Filename))
+                {
+                    if (!Merging.AnimTreeLayoutsMerge.TryRead(entry.Content, out layouts))
+                        return null;
+                    continue;
+                }
+                if (!shipped.TryGetValue(entry.Filename ?? "", out byte[] bytes) || bytes == null || entry.Content == null || !bytes.AsSpan().SequenceEqual(entry.Content))
+                    return null;
+                same++;
+            }
+            return same == shipped.Count && layouts != null ? layouts.Trees.Count : (int?)null;
+        }
+
+        /// <summary>What a config file sets things for, in a player's words ("changes 2 settings for the alien").</summary>
+        public static string FriendlyConfigName(string normalisedPath)
+        {
+            string p = normalisedPath.ToUpperInvariant();
+            if (p.StartsWith("DATA/ALIENCONFIGS/")) return "the alien";
+            if (p.StartsWith("DATA/BINARY_BEHAVIOR/")) return "the AI's behaviour trees";
+            if (p.StartsWith("DATA/CHR_INFO/")) return "characters";
+            if (p.StartsWith("DATA/DIFFICULTYSETTINGS/")) return "the difficulty levels";
+            if (p.StartsWith("DATA/VIEW_CONE_SETS/")) return "what characters can see";
+            if (p.StartsWith("DATA/WEAPON_INFO/")) return "weapons and ammo";
+            if (p.StartsWith("DATA/AIM_IK_DATA/")) return "aiming";
+            if (p.StartsWith("DATA/AWARDS/")) return "achievements";
+            if (p == "DATA/GBL_ITEM.BML") return "items";
+            if (p == "DATA/GLOBALCONSTANTS.BML") return "the whole game";
+            if (p == "DATA/COVERANDTRAVERSALRULES.BML") return "cover and movement";
+            if (p == "DATA/FONT_CONFIG.BML" || p == "DATA/FONT_CONFIG.XML") return "fonts";
+            if (p == "DATA/LEVEL_TEXT_DATABASES.BML") return "level text";
+            if (p == "DATA/MATERIAL_DATA/MATERIALS.BML") return "surface materials";
+            if (p == ConfigDiff.EngineSettingsPath) return "the graphics and sound options";
+            if (p == "DATA/INPUT.XML") return "the controls";
+            return p.Substring(p.LastIndexOf('/') + 1);
+        }
+
+        /* One finished file into the package: a patch from the vanilla bytes when that's smaller, else whole */
+        private void AddContent(ModPackageWriter writer, ExportResult result, string path, byte[] content, byte[] vanilla)
+        {
+            string targetSha = ModToolkit.ToHex(ModToolkit.Sha256(content));
+            string sourceAlso = null;
+            if (vanilla != null)
+            {
+                /* A level texture pak that absorbed the global textures holds ~80MB of bytes
+                 * that came straight out of the global pak - extend the delta source with the
+                 * pristine global bytes so those become copies, not literals */
+                string globalPak = GlobalTexturesPath(path);
+                if (globalPak != null)
+                {
+                    if (_installer != null)
+                        _installer.CaptureVanillaBaseline(globalPak);
+                    byte[] globalVanilla = _installer == null ? null : _installer.VanillaBytes(globalPak);
+                    if (globalVanilla != null)
+                    {
+                        vanilla = Concat(vanilla, globalVanilla);
+                        sourceAlso = globalPak;
+                    }
+                }
+            }
+
+            byte[] delta = null;
+            if (vanilla != null)
+                delta = DeltaCodec.Encode(vanilla, content, (long)(content.Length * 0.6));
+
+            if (delta != null)
+            {
+                writer.Add(ModPackageEntry.KindDelta, path, delta,
+                    ModToolkit.ToHex(ModToolkit.Sha256(vanilla)), targetSha, content.Length, null, sourceAlso);
+                result.Entries.Add(new ExportEntrySummary() { Target = path, Kind = ModPackageEntry.KindDelta, PayloadSize = delta.Length, FileSize = content.Length });
+            }
+            else
+            {
+                if (vanilla == null && _manifest.Contains(path))
+                    result.Warnings.Add(path + " ships whole (" + PrettySize(content.Length) + ") - no pristine copy of it is stored to diff against.");
+                writer.Add(ModPackageEntry.KindFile, path, content, null, targetSha, content.Length);
+                result.Entries.Add(new ExportEntrySummary() { Target = path, Kind = ModPackageEntry.KindFile, PayloadSize = content.Length, FileSize = content.Length });
+            }
+        }
+
+        public const string GlobalTexturesPak = "DATA/ENV/GLOBAL/WORLD/GLOBAL_TEXTURES.ALL.PAK";
+
+        /// <summary>
+        /// The global pak to extend a delta source with, for targets that absorb global textures -
+        /// or null when the target isn't one of those.
+        /// </summary>
+        public static string GlobalTexturesPath(string normalisedTarget)
+        {
+            if (ModToolkit.LevelOf(normalisedTarget) == null)
+                return null;
+            string fileName = normalisedTarget.Substring(normalisedTarget.LastIndexOf('/') + 1);
+            return fileName.StartsWith("LEVEL_TEXTURES") ? GlobalTexturesPak : null;
+        }
+
+        public static byte[] Concat(byte[] a, byte[] b)
+        {
+            byte[] result = new byte[a.Length + b.Length];
+            Array.Copy(a, result, a.Length);
+            Array.Copy(b, 0, result, a.Length, b.Length);
+            return result;
+        }
+
+        public static string PrettySize(long bytes)
+        {
+            if (bytes >= 1024 * 1024 * 1024) return (bytes / (1024.0 * 1024.0 * 1024.0)).ToString("0.0") + " GB";
+            if (bytes >= 1024 * 1024) return (bytes / (1024.0 * 1024.0)).ToString("0.0") + " MB";
+            if (bytes >= 1024) return (bytes / 1024.0).ToString("0.0") + " KB";
+            return bytes + " B";
+        }
+    }
+
+    /// <summary>
+    /// DATA/LEVEL_TEXT_DATABASES.XML: which of DATA/TEXT's databases each level loads - a block per level, named by the last
+    /// part of the level's name, and a "globals" block every level loads. A level's block is part of the level as a mod
+    /// carries it (see ModExportBuilder). Shared by the exporter UI, the MCP and tests.
+    /// </summary>
+    public static class LevelTextBlocks
+    {
+        public const string Path = "DATA/LEVEL_TEXT_DATABASES.XML";
+
+        /// <summary>The block every level loads.</summary>
+        public const string Globals = "globals";
+
+        /// <summary>The block a level is listed in: the last part of its name ("BSP_TORRENS" for PRODUCTION/BSP_TORRENS - the file spells it its own way, matched either way).</summary>
+        public static string BlockOf(string level) => ModToolkit.LevelName(level);
+
+        /// <summary>Blocks in words: "every level" for the globals block, else the level's name.</summary>
+        public static string Describe(IEnumerable<string> blocks)
+        {
+            return string.Join(", ", blocks.Select(o => string.Equals(o, Globals, StringComparison.OrdinalIgnoreCase) ? "every level" : o));
+        }
+
+        /// <summary>
+        /// The blocks that differ between two versions of the file - added, taken out, or naming other databases - as the
+        /// second spells them (else the first). Null when either is missing or can't be read.
+        /// </summary>
+        public static List<string> Changed(byte[] original, byte[] current)
+        {
+            Dictionary<string, XmlElement> was = Blocks(original), now = Blocks(current);
+            if (was == null || now == null)
+                return null;
+            List<string> changed = new List<string>();
+            foreach (string name in now.Keys.Concat(was.Keys.Where(o => !now.ContainsKey(o))))
+            {
+                was.TryGetValue(name, out XmlElement a);
+                now.TryGetValue(name, out XmlElement b);
+                if (Content(a) != Content(b))
+                    changed.Add((b ?? a).GetAttribute("name"));
+            }
+            return changed;
+        }
+
+        /// <summary>
+        /// The original file with the named blocks as the current one has them - each added, replaced or taken out - and the
+        /// rest as it was. Null when that leaves the original as it is, or either can't be read.
+        /// </summary>
+        public static byte[] WithBlocks(byte[] original, byte[] current, IEnumerable<string> blocks)
+        {
+            XmlDocument result, mine;
+            Encoding encoding;
+            bool declared;
+            try
+            {
+                result = Merging.FileMerger.ReadXml(original, out encoding, out declared);
+                mine = Merging.FileMerger.ReadXml(current, out _, out _);
+            }
+            catch (XmlException)
+            {
+                return null;
+            }
+            XmlElement root = result.DocumentElement, theirs = mine.DocumentElement;
+            if (root == null || theirs == null || root.Name != theirs.Name)
+                return null;
+
+            bool changed = false;
+            foreach (string name in blocks.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                XmlElement was = Find(root, name), now = Find(theirs, name);
+                if (Content(was) == Content(now))
+                    continue;
+                changed = true;
+                if (now == null)
+                {
+                    //Taken out, with the line it was on
+                    if (was.PreviousSibling is XmlWhitespace line)
+                        root.RemoveChild(line);
+                    root.RemoveChild(was);
+                }
+                else if (was != null)
+                    root.ReplaceChild(result.ImportNode(now, true), was);
+                else
+                {
+                    //Added after the last block, on a line of its own like the others
+                    XmlElement last = root.ChildNodes.OfType<XmlElement>().LastOrDefault();
+                    XmlNode added = result.ImportNode(now, true);
+                    XmlNode line = result.CreateWhitespace(last?.PreviousSibling is XmlWhitespace before ? before.Value : "\r\n\t");
+                    if (last != null)
+                    {
+                        root.InsertAfter(added, last);
+                        root.InsertAfter(line, last);
+                    }
+                    else
+                    {
+                        root.PrependChild(added);
+                        root.PrependChild(line);
+                    }
+                }
+            }
+            return changed ? Merging.FileMerger.WriteXml(result, encoding, declared) : null;
+        }
+
+        /* A block as what it says, whatever its layout: its attributes and each database it names */
+        private static string Content(XmlElement block)
+        {
+            if (block == null)
+                return null;
+            StringBuilder content = new StringBuilder();
+            foreach (XmlAttribute attribute in block.Attributes)
+                content.Append(attribute.Name).Append('=').Append(attribute.Value).Append('\n');
+            foreach (XmlElement child in block.ChildNodes.OfType<XmlElement>())
+                content.Append(child.OuterXml).Append('\n');
+            return content.ToString();
+        }
+
+        private static XmlElement Find(XmlElement root, string name)
+        {
+            return root.ChildNodes.OfType<XmlElement>().FirstOrDefault(o => o.Name == "level" && string.Equals(o.GetAttribute("name"), name, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static Dictionary<string, XmlElement> Blocks(byte[] bytes)
+        {
+            if (bytes == null)
+                return null;
+            try
+            {
+                XmlElement root = Merging.FileMerger.ReadXml(bytes, out _, out _).DocumentElement;
+                if (root == null)
+                    return null;
+                Dictionary<string, XmlElement> blocks = new Dictionary<string, XmlElement>(StringComparer.OrdinalIgnoreCase);
+                foreach (XmlElement block in root.ChildNodes.OfType<XmlElement>().Where(o => o.Name == "level"))
+                    if (!blocks.ContainsKey(block.GetAttribute("name")))
+                        blocks[block.GetAttribute("name")] = block;
+                return blocks;
+            }
+            catch (XmlException)
+            {
+                return null;
+            }
+        }
+    }
+
+    /* The value-level view of a changed config file, shared by the exporter UI and tests */
+    public static class ConfigDiff
+    {
+        /// <summary>The graphics and sound options: named settings, each with named quality levels.</summary>
+        public const string EngineSettingsPath = "DATA/ENGINE_SETTINGS.XML";
+
+        /// <summary>
+        /// Whether a changed file goes in a mod as the values changed in it rather than whole, so mods changing different values
+        /// of it all keep theirs: a settings file outside the levels - a .BML config, or an .XML one (the graphics and sound
+        /// options, the controls). Not DATA/LEVEL_TEXT_DATABASES.XML: that goes block by block, each level's with the level.
+        /// </summary>
+        public static bool ByValue(string normalisedPath)
+        {
+            if (normalisedPath == null || ModInstaller.LevelUnitOf(normalisedPath) != null)
+                return false;
+            if (normalisedPath.EndsWith(".BML", StringComparison.OrdinalIgnoreCase))
+                return true;
+            return normalisedPath.EndsWith(".XML", StringComparison.OrdinalIgnoreCase) && normalisedPath != LevelTextBlocks.Path;
+        }
+
+        /// <summary>A config file's document: a .BML read as the XML it holds, an .XML as itself. Null when it can't be read.</summary>
+        public static XmlDocument Read(string normalisedPath, byte[] bytes)
+        {
+            if (bytes == null)
+                return null;
+            try
+            {
+                if (normalisedPath.EndsWith(".BML", StringComparison.OrdinalIgnoreCase))
+                    return new BML(bytes).Content;
+                return Merging.FileMerger.ReadXml(bytes, out _, out _);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// The config file as it shipped with these of its changes made, and nothing else changed: what a mod carries for it.
+        /// An .XML keeps the original's own layout (<see cref="Merging.XmlLayout"/>), so the file differs from the original by
+        /// exactly those values.
+        /// </summary>
+        public static byte[] Build(string normalisedPath, byte[] vanillaBytes, List<BmlPatchOp> ops)
+        {
+            if (normalisedPath.EndsWith(".BML", StringComparison.OrdinalIgnoreCase))
+            {
+                XmlDocument config = new BML(vanillaBytes).Content;
+                BmlPatch.Apply(config, ops);
+                return Merging.FileMerger.WriteBml(vanillaBytes, config);
+            }
+            XmlDocument document = Merging.FileMerger.ReadXml(vanillaBytes, out Encoding encoding, out bool declared);
+            BmlPatch.Apply(document, ops);
+            return Merging.XmlLayout.Rewrite(vanillaBytes, document) ?? Merging.FileMerger.WriteXml(document, encoding, declared);
+        }
+
+        /// <summary>
+        /// A change in words, as Create a Mod lists it (<see cref="BmlPatch.Describe"/>). The graphics and sound options are said
+        /// by their setting's and quality level's names, and the value a level gives its setting as that level's value:
+        /// "Graphics › Streaming Texture Heap Size › Default: 300 → 512".
+        /// </summary>
+        public static string Describe(string normalisedPath, BmlPatchOp op, XmlDocument original)
+        {
+            if (normalisedPath != EngineSettingsPath)
+                return BmlPatch.Describe(op, original);
+            //Said with its whole place: "removes Field Of View › 90" rather than "removes Quality '90'"
+            string text = op.Kind == "remove" ? "removes " + BmlPatch.FriendlyPath(op.Path) : BmlPatch.Describe(op, original);
+            text = System.Text.RegularExpressions.Regex.Replace(text, @"\b(?:Setting|Quality) '([^']*)'", "$1");
+            return System.Text.RegularExpressions.Regex.Replace(text, @" › (?:int|float|bool): ", ": ");
+        }
+
+        /// <summary>
+        /// The ops that separate the current config from vanilla, or null when the vanilla bytes
+        /// aren't obtainable or either side fails to parse.
+        /// </summary>
+        public static List<BmlPatchOp> Diff(string gameRoot, string normalisedPath, byte[] vanillaBytes, ModInstaller installer = null)
+        {
+            try
+            {
+                //Under installed mods, the user's changes are their own version, not the combined file
+                byte[] currentBytes = null;
+                if (installer == null || !installer.TryGetOwnVersion(normalisedPath, out currentBytes))
+                {
+                    string fullPath = ModToolkit.Denormalise(gameRoot, normalisedPath);
+                    currentBytes = File.Exists(fullPath) ? File.ReadAllBytes(fullPath) : null;
+                }
+                if (vanillaBytes == null || currentBytes == null)
+                    return null;
+
+                XmlDocument vanilla = Read(normalisedPath, vanillaBytes);
+                XmlDocument current = Read(normalisedPath, currentBytes);
+                if (vanilla == null || current == null)
+                    return null;
+                //(Only a .BML config inherits values from a template)
+                if (!normalisedPath.EndsWith(".BML", StringComparison.OrdinalIgnoreCase))
+                    return BmlPatch.Diff(vanilla, current);
+                return BmlPatch.Diff(vanilla, current, Inherited(current, normalisedPath, path => ModExportBuilder.UsersVersion(gameRoot, installer, path)));
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /* A config whose root names a template (Template_Name: character attributes, alien configs, ammo, difficulty
+           settings) takes whatever it doesn't give itself from that file in the same folder, and it from its own template.
+           The config editors save every entry they show, values it only inherits included - on purpose, so an edit to a
+           template never half-changes what inherits from it - which writes each inherited value into the file. A value
+           the file only spells out, where its templates (as the user has them) give the same, is no change of the user's:
+           left out of a mod, the file still gets it from its template. Looked up as the editors look values up: by element
+           name, the first of each. Null when the file names no template. */
+        private static Func<XmlElement, bool> Inherited(XmlDocument current, string normalisedPath, Func<string, byte[]> read)
+        {
+            List<XmlDocument> templates = new List<XmlDocument>();
+            string folder = normalisedPath.Substring(0, normalisedPath.LastIndexOf('/') + 1);
+            HashSet<string> seen = new HashSet<string>() { ModToolkit.Normalise(normalisedPath) };
+            XmlDocument at = current;
+            while (true)
+            {
+                string template = at.DocumentElement?["Template_Name"]?.InnerText?.Trim();
+                if (string.IsNullOrEmpty(template))
+                    break;
+                string path = ModToolkit.Normalise(folder + template + ".BML");
+                if (!seen.Add(path))
+                    break; //a template that comes round again
+                byte[] bytes = read(path);
+                XmlDocument document = bytes == null ? null : new BML(bytes).Content;
+                if (document?.DocumentElement == null)
+                    break;
+                templates.Add(document);
+                at = document;
+            }
+            if (templates.Count == 0)
+                return null;
+
+            return element =>
+            {
+                List<string> names = NamesFromRoot(element);
+                if (names == null)
+                    return false;
+                foreach (XmlDocument template in templates)
+                {
+                    XmlNode there = template;
+                    foreach (string name in names)
+                    {
+                        there = there[name];
+                        if (there == null)
+                            break;
+                    }
+                    if (there == null)
+                        continue;
+                    //The nearest template that has it is what the file would get
+                    return !there.ChildNodes.OfType<XmlElement>().Any() && ((XmlElement)there).Attributes.Count == 0
+                        && BmlPatch.SameValue(there.InnerText, element.InnerText);
+                }
+                return false;
+            };
+        }
+
+        /* The element names from the document's root down to this element - or null when one of them isn't the first of its
+           name under its parent, so the editors' lookup would never reach it */
+        private static List<string> NamesFromRoot(XmlElement element)
+        {
+            List<string> names = new List<string>();
+            for (XmlNode node = element; node is XmlElement; node = node.ParentNode)
+            {
+                if (node.ParentNode == null || node.ParentNode[node.Name] != node)
+                    return null;
+                names.Insert(0, node.Name);
+            }
+            return names;
+        }
+    }
+}
+#endif

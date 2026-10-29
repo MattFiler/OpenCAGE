@@ -1,14 +1,17 @@
-using AlienPAK;
+﻿using AlienPAK;
 using CATHODE;
 using CATHODE.ShaderTypes;
 using CathodeLib;
+using CathodeLib.Ubershaders;
 using CathodeLib.ObjectExtensions;
+using OpenCAGE.Modding;
 using OpenCAGE.Popups.Base;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Forms;
@@ -25,6 +28,7 @@ using WpfTextBlock = System.Windows.Controls.TextBlock;
 using WpfTextBox = System.Windows.Controls.TextBox;
 using System.Windows.Media;
 using static CATHODE.Materials.Material;
+using AssetKind = CathodeLib.AssetModificationInfoTable.AssetKind;
 
 namespace OpenCAGE
 {
@@ -37,25 +41,35 @@ namespace OpenCAGE
 
         MaterialInfoWPF _controls = null;
 
+        //The material to select when the list is first filled, in Load
+        Materials.Material _initialMaterial = null;
+
         public Action<Materials.Material> OnMaterialSelected;
 
-        public EditMaterial(Materials.Material material = null, bool showSelectBtn = true) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
+        public EditMaterial(Materials.Material material = null, bool showSelectBtn = true) : base(EditorOrPicker(showSelectBtn))
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/material-editor/");
 
             this.Text = "Material Editor";
 
             _controls = (MaterialInfoWPF)elementHost1.Child;
+            Theming.WpfTheme.Follow(_controls);
             _controls.OnSamplerSelected += OnSamplerSelected;
             _controls.OnPickTexture += OnPickTexture;
 
-            PopulateUI(material);
+            _initialMaterial = material;
 
             selectMaterialBtn.Visible = showSelectBtn;
         }
 
         private void EditMaterial_Load(object sender, EventArgs e)
         {
+            //Filled here, once the list's window exists, not in the constructor: items added before that are inserted one at
+            //a time while the window is being created, which took minutes for a big level's materials
+            PopulateUI(_initialMaterial);
+            _initialMaterial = null;
+
             if (materialList.SelectedItems.Count > 0)
             {
                 materialList.SelectedItems[0].EnsureVisible();
@@ -99,21 +113,12 @@ namespace OpenCAGE
                 currentTexture = textureRef?.Texture;
             }
 
-            int initialSource = 0;
-            if (currentTexture != null && !string.IsNullOrEmpty(currentTexture.Name))
-            {
-                string norm = currentTexture.Name.Replace('\\', '/');
-                bool inLevel = levelTex?.Entries != null && levelTex.Entries.Any(e => e.Name.Replace('\\', '/') == norm);
-                bool inGlobal = globalTex?.Entries != null && globalTex.Entries.Any(e => e.Name.Replace('\\', '/') == norm);
-                if (inGlobal && !inLevel)
-                    initialSource = 1;
-            }
-
             Textures.TEX4 chosenTexture = null;
-            using (var textureEditor = new EditTexture(currentTexture, showSelectBtn: true, initialTextureSourceIndex: initialSource))
+            using (var textureEditor = new EditTexture(currentTexture, showSelectBtn: true))
             {
                 void OnChosen(Textures.TEX4 tex) { chosenTexture = tex; }
                 textureEditor.OnTextureSelected += OnChosen;
+                textureEditor.CloseWith(this);
                 textureEditor.ShowDialog(this);
                 textureEditor.OnTextureSelected -= OnChosen;
             }
@@ -125,28 +130,50 @@ namespace OpenCAGE
             {
                 var textureRef = material.TextureReferences[textureRefIndex];
                 textureRef.Texture = chosenTexture;
+                textureRef.Location = TexturePtr.Source.LEVEL;
             }
             else
             {
-                if (material.Shader.SamplerRemaps.Count <= samplerIndex)
-                {
-                    while (material.Shader.SamplerRemaps.Count <= samplerIndex)
-                        material.Shader.SamplerRemaps.Add(255);
-                }
+                Shaders.Shader shader = OwnShader(material);
+                while (shader.SamplerRemaps.Count <= samplerIndex)
+                    shader.SamplerRemaps.Add(255);
 
                 textureRefIndex = material.TextureReferences.Count;
                 TexturePtr texturePtr = new TexturePtr
                 {
-                    Texture = chosenTexture
+                    Texture = chosenTexture,
+                    Location = TexturePtr.Source.LEVEL
                 };
                 material.TextureReferences.Add(texturePtr);
-                material.Shader.SamplerRemaps[samplerIndex] = textureRefIndex;
+                shader.SamplerRemaps[samplerIndex] = textureRefIndex;
 
                 _samplerInfo[samplerTabIndex] = new Tuple<string, int, int>(samplerInfo.Item1, samplerIndex, textureRefIndex);
             }
 
+            EditHistory.AssetChanged(Content?.Level, AssetKind.MATERIAL, material.Name);
             Singleton.OnResourceModified?.Invoke();
             materialList_SelectedIndexChanged(null, EventArgs.Empty);
+        }
+
+        /* The level's shader entries are shared by many materials, and a sampler's texture slot (its remap) lives on the
+           entry: before changing one for a material, it gets an entry of its own - otherwise every material sharing it
+           would lose or change that texture too. The copy shares the original's bytecode (as the permutation service's
+           clones do), so the save writes it once. */
+        private Shaders.Shader OwnShader(Materials.Material material)
+        {
+            if (!Content.Level.Materials.Entries.Any(o => !ReferenceEquals(o, material) && ReferenceEquals(o.Shader, material.Shader)))
+                return material.Shader;
+            Shaders.Shader original = material.Shader;
+            Shaders.Shader own = original.Copy();
+            own.VertexShader = original.VertexShader;
+            own.PixelShader = original.PixelShader;
+            own.HullShader = original.HullShader;
+            own.DomainShader = original.DomainShader;
+            own.GeometryShader = original.GeometryShader;
+            own.ComputeShader = original.ComputeShader;
+            Content.Level.Shaders.Entries.Add(own);
+            material.Shader = own;
+            return own;
         }
 
         private void ClearSamplerTexture()
@@ -172,21 +199,59 @@ namespace OpenCAGE
             }
 
             if (samplerIndex < material.Shader.SamplerRemaps.Count)
-                material.Shader.SamplerRemaps[samplerIndex] = 255;
+                OwnShader(material).SamplerRemaps[samplerIndex] = 255;
 
             _samplerInfo[samplerTabIndex] = new Tuple<string, int, int>(samplerInfo.Item1, samplerIndex, 255);
 
+            EditHistory.AssetChanged(Content?.Level, AssetKind.MATERIAL, material.Name);
             Singleton.OnResourceModified?.Invoke();
             materialList_SelectedIndexChanged(null, EventArgs.Empty);
         }
 
-        private void OnFeatureCheckboxChanged(Materials.Material material, int featureIndex, bool isChecked)
+        private bool _suppressFeatureEvents = false;
+
+        /* Toggling a feature means binding the material to a DIFFERENT shader permutation - the
+         * flags on a shader entry describe its bytecode and can't just be edited in place. Resolve
+         * the new mask (level pool -> database -> recompile), rebind, and carry the material's constants 
+         * over to the new entry's slot layout. */
+        private void OnFeatureCheckboxChanged(Materials.Material material, int featureIndex, bool isChecked, WpfCheckBox checkBox)
         {
-            if (isChecked)
-                material.Shader.UbershaderFeatureFlags |= (1L << featureIndex);
-            else
-                material.Shader.UbershaderFeatureFlags &= ~(1L << featureIndex);
+            if (_suppressFeatureEvents)
+                return;
+
+            Shaders.Shader oldShader = material.Shader;
+            long newMask = isChecked
+                ? oldShader.UbershaderFeatureFlags | (1L << featureIndex)
+                : oldShader.UbershaderFeatureFlags & ~(1L << featureIndex);
+            if (newMask == oldShader.UbershaderFeatureFlags)
+                return;
+
+            PermutationSource source;
+            string error;
+            Shaders.Shader newShader = ShaderPermutationService.Resolve(
+                Content.Level.Shaders, oldShader.Ubershader, newMask, oldShader, Singleton.PathToAI, out source, out error);
+
+            if (newShader == null)
+            {
+                _suppressFeatureEvents = true;
+                checkBox.IsChecked = !isChecked;
+                _suppressFeatureEvents = false;
+                System.Windows.Forms.MessageBox.Show(
+                    error ?? "This feature combination isn't available.",
+                    "Cannot change feature", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (!ReferenceEquals(newShader, oldShader))
+            {
+                ShaderPermutationService.MigrateConstants(material, oldShader, newShader);
+                material.Shader = newShader;
+            }
+
+            WarnIfInconsistent(material);
+            EditHistory.AssetChanged(Content?.Level, AssetKind.MATERIAL, material.Name);
             Singleton.OnResourceModified?.Invoke();
+            materialList_SelectedIndexChanged(null, EventArgs.Empty);
         }
 
         private static bool IsColorLikeParameter(string parameterName, UberShaderParameterType parameterType)
@@ -305,6 +370,7 @@ namespace OpenCAGE
                             box.Text = toString(current);
                     }
                     updateColorPreview?.Invoke();
+                    EditHistory.AssetChanged(Content?.Level, AssetKind.MATERIAL, material.Name);
                     Singleton.OnResourceModified?.Invoke();
                 };
             };
@@ -399,6 +465,7 @@ namespace OpenCAGE
                         if (floatCount >= 4 && remappedIndex + 3 < material.PixelShaderConstants.Count)
                             material.PixelShaderConstants[remappedIndex + 3] = fromByte(dialog.Color.A);
 
+                        EditHistory.AssetChanged(Content?.Level, AssetKind.MATERIAL, material.Name);
                         Singleton.OnResourceModified?.Invoke();
                         RefreshParameterGroupBox(material, parameterName);
                     }
@@ -410,7 +477,7 @@ namespace OpenCAGE
 
             return new WpfGroupBox
             {
-                Header = $"{parameterName} ({parameterType})",
+                Header = new WpfTextBlock { Text = $"{parameterName} ({parameterType})" },   //not a string: AccessText would eat the first underscore
                 Tag = parameterName,
                 Margin = new Thickness(0, 0, 0, 10),
                 Padding = new Thickness(10, 8, 10, 8),
@@ -613,9 +680,13 @@ namespace OpenCAGE
                     HorizontalScrollBarVisibility = ScrollBarVisibility.Auto
                 };
 
+                //The GDI+ bitmap is only a step on the way to the image, so it goes as soon as the image is made
+                System.Windows.Media.ImageSource textureImage = null;
+                using (System.Drawing.Bitmap bitmap = texture?.ToBitmap())
+                    textureImage = bitmap?.ToImageSource();
                 var texturePreview = new WpfImage
                 {
-                    Source = texture?.ToDDS()?.ToBitmap()?.ToImageSource(),
+                    Source = textureImage,
                     Stretch = Stretch.Uniform,
                     MaxHeight = 400
                 };
@@ -696,26 +767,88 @@ namespace OpenCAGE
             }
 
             List<string> features = ShaderUtility.GetFeatures(material.Shader.Ubershader);
+            List<Tuple<string, int>> featureBits = new List<Tuple<string, int>>();
             foreach (string feature in features)
             {
                 int? featureIndexNullable = ShaderUtility.GetShaderFunctionalityIndex(material.Shader.Ubershader, ShaderIndexType.FEATURES, feature);
-                if (!featureIndexNullable.HasValue)
-                    continue;
+                if (featureIndexNullable.HasValue)
+                    featureBits.Add(new Tuple<string, int>(feature, featureIndexNullable.Value));
+            }
 
-                int featureIndex = featureIndexNullable.Value;
-                bool isEnabled = (material.Shader.UbershaderFeatureFlags & (1L << featureIndex)) != 0;
+            _controls.FeatureDetailsPanel.Children.Add(BuildFeatureHeader(material));
 
-                var checkBox = new WpfCheckBox
+            /* Families CathodeLib ships no reconstructed master for cannot have a permutation
+             * compiled for them, so their features are not free to tick - the only masks obtainable
+             * are the ones the game already shipped. Show them read-only and send the user to the
+             * combination picker instead. The test is derived from the shipped table, so removing a
+             * family from it moves that family onto this path with no list here to update. */
+            if (!ShaderPermutationService.CanBuildArbitraryPermutations(material.Shader.Ubershader))
+            {
+                BuildFixedFeatureList(material, featureBits);
+            }
+            else
+            {
+                Dictionary<int, PermutationSource> availability = ShaderPermutationService.AvailabilityForToggles(
+                    Content.Level.Shaders, material.Shader.Ubershader, material.Shader.UbershaderFeatureFlags,
+                    Singleton.PathToAI, featureBits.Select(o => o.Item2));
+
+                //A feature we can't switch is not shown at all. Leaving a dead checkbox on screen only
+                //invites someone to click it and wonder why nothing happened.
+                int hiddenFeatures = 0;
+
+                foreach (Tuple<string, int> featureBit in featureBits)
                 {
-                    Content = feature,
-                    IsChecked = isEnabled,
-                    Margin = new System.Windows.Thickness(0, 0, 0, 5)
-                };
+                    string feature = featureBit.Item1;
+                    int featureIndex = featureBit.Item2;
+                    bool isEnabled = (material.Shader.UbershaderFeatureFlags & (1L << featureIndex)) != 0;
 
-                checkBox.Checked += (s, args) => OnFeatureCheckboxChanged(material, featureIndex, true);
-                checkBox.Unchecked += (s, args) => OnFeatureCheckboxChanged(material, featureIndex, false);
+                    PermutationSource source = availability[featureIndex];
+                    if (source == PermutationSource.Unimplemented || source == PermutationSource.None)
+                    {
+                        hiddenFeatures++;
+                        continue;
+                    }
 
-                _controls.FeatureDetailsPanel.Children.Add(checkBox);
+                    var checkBox = new WpfCheckBox
+                    {
+                        Content = new WpfTextBlock { Text = feature },   //not a string: AccessText would eat the first underscore
+                        IsChecked = isEnabled,
+                        Margin = new System.Windows.Thickness(0, 0, 0, 5)
+                    };
+
+                    switch (source)
+                    {
+                        case PermutationSource.LevelPool:
+                            checkBox.ToolTip = (isEnabled ? "Disabling" : "Enabling") + " this uses a permutation already shipped in this level.";
+                            break;
+                        case PermutationSource.Database:
+                            checkBox.ToolTip = (isEnabled ? "Disabling" : "Enabling") + " this pulls a permutation harvested from your game data.";
+                            break;
+                        case PermutationSource.Recompiled:
+                            checkBox.ToolTip = (isEnabled ? "Disabling" : "Enabling") + " this creates a permutation reconstructed via CathodeLib.";
+                            break;
+                    }
+
+                    checkBox.Checked += (s, args) => OnFeatureCheckboxChanged(material, featureIndex, true, checkBox);
+                    checkBox.Unchecked += (s, args) => OnFeatureCheckboxChanged(material, featureIndex, false, checkBox);
+
+                    _controls.FeatureDetailsPanel.Children.Add(checkBox);
+                }
+
+                if (hiddenFeatures != 0)
+                {
+                    var hiddenNote = new WpfTextBlock
+                    {
+                        Text = hiddenFeatures + (hiddenFeatures == 1 ? " feature is" : " features are") + " not listed: nothing in your game data uses "
+                            + (hiddenFeatures == 1 ? "it" : "them") + ", so there is no shader to switch to."
+                            + (ShaderDatabase.IsBuilt(Singleton.PathToAI) ? "" : " More may appear once the shader harvest finishes."),
+                        TextWrapping = TextWrapping.Wrap,
+                        FontStyle = FontStyles.Italic,
+                        Foreground = System.Windows.Media.Brushes.Gray,
+                        Margin = new System.Windows.Thickness(0, 6, 0, 0)
+                    };
+                    _controls.FeatureDetailsPanel.Children.Add(hiddenNote);
+                }
             }
 
             List<string> parameters = ShaderUtility.GetParameters(material.Shader.Ubershader);
@@ -731,6 +864,292 @@ namespace OpenCAGE
             }
         }
 
+        /* Two different things put a family on the read-only path and they want different wording:
+         * CathodeLib ships nothing for it (the usual case - the table carries the instancing families only), 
+         * or it does but there is no compiler on this machine to use it with (in which case nothing is 
+         * recompilable and saying otherwise would send them looking for a shader problem that isn't there). */
+        internal static string FixedFeatureReason(SHADER_LIST family)
+        {
+            if (!UberShaderRecompiler.HasMaster(family))
+                return "OpenCAGE doesn't carry content for this shader type,";
+            return "No HLSL compiler (d3dcompiler_43.dll) was found on this machine,";
+        }
+
+        /* The read-only half of the feature UI. Every feature is listed - including the ones no
+         * shipped permutation ever turns on - because they are describing the shader rather than
+         * offering a switch, and a feature silently missing from a read-only list is just confusing.
+         * Changing anything goes through the combination picker. */
+        private void BuildFixedFeatureList(Materials.Material material, List<Tuple<string, int>> featureBits)
+        {
+            List<ShaderPermutationService.Permutation> permutations = ShaderPermutationService.AvailablePermutations(
+                Content.Level.Materials, Content.Level.Shaders, material.Shader.Ubershader, Singleton.PathToAI);
+
+            var note = new WpfTextBlock
+            {
+                Text = FixedFeatureReason(material.Shader.Ubershader)
+                     + " so its features can only be set to a combination your game data already ships. "
+                     + permutations.Count
+                     + (permutations.Count == 1 ? " combination is" : " combinations are") + " available."
+                     + (ShaderDatabase.IsBuilt(Singleton.PathToAI) ? "" : " More may appear once the shader harvest finishes."),
+                TextWrapping = TextWrapping.Wrap,
+                FontStyle = FontStyles.Italic,
+                Foreground = System.Windows.Media.Brushes.Gray,
+                Margin = new System.Windows.Thickness(0, 0, 0, 8)
+            };
+            _controls.FeatureDetailsPanel.Children.Add(note);
+
+            var change = new WpfButton
+            {
+                Content = "Change combination...",
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
+                Padding = new System.Windows.Thickness(10, 3, 10, 3),
+                Margin = new System.Windows.Thickness(0, 0, 0, 10),
+                IsEnabled = permutations.Count > 1,
+                ToolTip = permutations.Count > 1
+                    ? "Pick from the feature combinations shipped for this shader type."
+                    : "Your game data only ships one combination for this shader type, so there is nothing to switch to."
+            };
+            change.Click += (s, args) => ChoosePermutation(material, permutations);
+            _controls.FeatureDetailsPanel.Children.Add(change);
+
+            foreach (Tuple<string, int> featureBit in featureBits)
+            {
+                _controls.FeatureDetailsPanel.Children.Add(new WpfCheckBox
+                {
+                    Content = new WpfTextBlock { Text = featureBit.Item1 },
+                    IsChecked = (material.Shader.UbershaderFeatureFlags & (1L << featureBit.Item2)) != 0,
+                    IsEnabled = false,
+                    Margin = new System.Windows.Thickness(0, 0, 0, 5)
+                });
+            }
+        }
+
+        /* Same rebind as a checkbox toggle, just with the whole mask chosen at once. */
+        private void ChoosePermutation(Materials.Material material, List<ShaderPermutationService.Permutation> permutations)
+        {
+            Shaders.Shader oldShader = material.Shader;
+            SelectShaderPermutation picker = new SelectShaderPermutation(
+                oldShader.Ubershader, oldShader.UbershaderFeatureFlags, permutations, material);
+            if (picker.ShowDialog() != System.Windows.Forms.DialogResult.OK)
+                return;
+            if (picker.Mask == oldShader.UbershaderFeatureFlags)
+                return;
+
+            PermutationSource source;
+            string error;
+            Shaders.Shader newShader = ShaderPermutationService.Resolve(
+                Content.Level.Shaders, oldShader.Ubershader, picker.Mask, oldShader, Singleton.PathToAI, out source, out error);
+
+            if (newShader == null)
+            {
+                System.Windows.Forms.MessageBox.Show(
+                    error ?? "That feature combination isn't available.",
+                    "Cannot change features", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (!ReferenceEquals(newShader, oldShader))
+            {
+                ShaderPermutationService.MigrateConstants(material, oldShader, newShader);
+                material.Shader = newShader;
+            }
+
+            WarnIfInconsistent(material);
+            EditHistory.AssetChanged(Content?.Level, AssetKind.MATERIAL, material.Name);
+            Singleton.OnResourceModified?.Invoke();
+            materialList_SelectedIndexChanged(null, EventArgs.Empty);
+        }
+
+        /* Changing the feature mask does not change the material's textures, so a permutation that
+         * samples maps this material has not got leaves it declaring features it cannot feed. Every
+         * one of 15,625 shipped materials keeps feature and sampler in step, and the engine relies on
+         * it - a material that breaks it renders wrongly rather than failing, so nothing would say
+         * what happened. Say it here instead. */
+        private void WarnIfInconsistent(Materials.Material material)
+        {
+            List<MaterialConsistency.Problem> problems = MaterialConsistency.Check(material);
+            if (problems.Count == 0)
+                return;
+
+            System.Windows.Forms.MessageBox.Show(
+                "This feature combination doesn't match the material's textures:\n\n  "
+                + string.Join("\n  ", problems.Select(o => o.Text))
+                + "\n\nNo shipped material is like this, and the engine will not draw it correctly. "
+                + "Set the missing textures in the Samplers tab, or pick a combination that matches what this material has.",
+                "Features and textures disagree", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+
+        /// <summary>
+        /// Render priority, which had no control at all before. It decides which pass a material draws
+        /// in, separately from any feature: measured over six pristine levels, first-person materials
+        /// sit at 31 (2,020 of 2,680, none above 52) and world geometry at 70 (15,003). A first-person
+        /// model left at a world priority draws behind the player's hands, and nothing in the feature
+        /// list explains why - so it belongs on screen next to them.
+        /// </summary>
+        private WpfStackPanel BuildPriorityRow(Materials.Material material)
+        {
+            var row = new WpfStackPanel { Orientation = WpfOrientation.Horizontal, Margin = new System.Windows.Thickness(0, 4, 0, 0) };
+            row.Children.Add(new WpfTextBlock
+            {
+                Text = "Render priority:",
+                VerticalAlignment = System.Windows.VerticalAlignment.Center,
+                Margin = new System.Windows.Thickness(0, 0, 6, 0)
+            });
+
+            var box = new WpfTextBox
+            {
+                Text = material.Priority.ToString(CultureInfo.InvariantCulture),
+                Width = 50,
+                ToolTip = "Which pass this material draws in. " + MaterialConsistency.WorldPriority
+                        + " is the world pass, and the one that draws a model lit, opaque and textured - "
+                        + "retail's hand-held weapons use it too. Lower priorities are special passes: "
+                        + "52 draws translucent, 39 draws unlit, 31 draws untextured over everything."
+            };
+            box.LostKeyboardFocus += (s, e) =>
+            {
+                int value;
+                if (int.TryParse(box.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out value) && value >= 0 && value <= 255)
+                {
+                    if (value == material.Priority) return;
+                    material.Priority = value;
+                    EditHistory.AssetChanged(Content?.Level, AssetKind.MATERIAL, material.Name);
+                    Singleton.OnResourceModified?.Invoke();
+                    materialList_SelectedIndexChanged(null, EventArgs.Empty);
+                }
+                else
+                {
+                    box.Text = material.Priority.ToString(CultureInfo.InvariantCulture);
+                }
+            };
+            row.Children.Add(box);
+
+            row.Children.Add(new WpfTextBlock
+            {
+                Text = "   (world " + MaterialConsistency.WorldPriority + ")",
+                VerticalAlignment = System.Windows.VerticalAlignment.Center,
+                Foreground = System.Windows.Media.Brushes.Gray
+            });
+            return row;
+        }
+
+        private WpfStackPanel BuildFeatureHeader(Materials.Material material)
+        {
+            var panel = new WpfStackPanel { Margin = new System.Windows.Thickness(0, 0, 0, 10) };
+
+            var maskText = new WpfTextBlock
+            {
+                Text = "Permutation mask: 0x" + material.Shader.UbershaderFeatureFlags.ToString("X"),
+                TextWrapping = TextWrapping.Wrap
+            };
+            panel.Children.Add(maskText);
+            panel.Children.Add(BuildPriorityRow(material));
+
+            /* Stays up for as long as the material is inconsistent, not just at the moment it is made
+             * so - a material can be left in this state, saved, and opened again days later, and the
+             * only symptom in game is that it draws wrongly. */
+            List<MaterialConsistency.Problem> problems = MaterialConsistency.Check(material);
+            if (problems.Count != 0)
+            {
+                panel.Children.Add(new WpfTextBlock
+                {
+                    Text = "This material's features and textures disagree, which no shipped material does:\n  "
+                         + string.Join("\n  ", problems.Select(o => o.Text)),
+                    TextWrapping = TextWrapping.Wrap,
+                    Foreground = System.Windows.Media.Brushes.Firebrick,
+                    Margin = new System.Windows.Thickness(0, 6, 0, 0)
+                });
+            }
+
+            /* The database harvests itself in the background on startup, so there is normally nothing
+             * to ask for here - just say which permutations are reachable right now. The only case
+             * that still needs a control is a harvest that failed, where saying nothing would leave
+             * someone wondering why half the combinations are missing. */
+            if (!ShaderDatabase.IsBuilt(Singleton.PathToAI))
+            {
+                ShaderDatabase.AutoBuildState state = ShaderDatabase.AutoBuild;
+                string message;
+                if (state == ShaderDatabase.AutoBuildState.Running)
+                    message = "Harvesting shipped shader permutations in the background"
+                            + (string.IsNullOrEmpty(ShaderDatabase.AutoBuildProgress) ? "" : " (" + ShaderDatabase.AutoBuildProgress + ")")
+                            + " - until it finishes, only permutations shipped with this level are available. Reopen this window to pick up the rest.";
+                else if (state == ShaderDatabase.AutoBuildState.Failed)
+                    message = "Couldn't harvest the shipped shader permutations: "
+                            + (ShaderDatabase.AutoBuildError ?? "unknown error")
+                            + ". Only permutations shipped with this level are available.";
+                else
+                    message = "Only permutations shipped with this level are available.";
+
+                var note = new WpfTextBlock
+                {
+                    Text = message,
+                    TextWrapping = TextWrapping.Wrap,
+                    FontStyle = FontStyles.Italic,
+                    Margin = new System.Windows.Thickness(0, 6, 0, 6)
+                };
+                panel.Children.Add(note);
+
+                if (state == ShaderDatabase.AutoBuildState.Failed)
+                {
+                    var retryButton = new WpfButton
+                    {
+                        Content = "Try again",
+                        HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
+                        Padding = new System.Windows.Thickness(10, 3, 10, 3),
+                        ToolTip = "Re-scan every level's shader data (pristine files only) so any shipped feature combination becomes available here."
+                    };
+                    retryButton.Click += (s, args) => BuildShaderDatabase();
+                    panel.Children.Add(retryButton);
+                }
+            }
+
+            return panel;
+        }
+
+        /* Only reachable from the retry button after a background harvest failed, so this one is
+         * modal and does report its result - the user explicitly asked for it this time. */
+        private void BuildShaderDatabase()
+        {
+            ShaderDatabase.ResetAutoBuild();
+
+            ProgressUI progress = new ProgressUI();
+            progress.ShowTransferring("Building shader database...");
+
+            string gameRoot = Singleton.PathToAI;
+            Task.Run(() => ShaderDatabase.Build(gameRoot, msg =>
+            {
+                try
+                {
+                    progress.BeginInvoke(new Action(() => { progress.Text = "Shader database: " + msg; }));
+                }
+                catch { }
+            })).ContinueWith(task =>
+            {
+                progress.Close();
+                ShaderPermutationService.InvalidateDatabase();
+
+                if (task.IsFaulted)
+                {
+                    System.Windows.Forms.MessageBox.Show(
+                        "Failed to build the shader database:\n" + (task.Exception?.GetBaseException()?.Message ?? "unknown error"),
+                        "Shader database", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                else
+                {
+                    ShaderDatabase.BuildReport report = task.Result;
+                    int totalMasks = report.FamilyMaskCounts.Values.Sum();
+                    string summary = "Harvested " + totalMasks + " shader permutations across " + report.FamilyMaskCounts.Count +
+                        " shader types, from " + report.LevelsHarvested.Count + " levels.";
+                    if (report.LevelsSkipped.Count > 0)
+                        summary += "\n\nSkipped " + report.LevelsSkipped.Count + " level(s) with modified or missing shader data:\n - " +
+                            string.Join("\n - ", report.LevelsSkipped.Take(10)) +
+                            (report.LevelsSkipped.Count > 10 ? "\n   ..." : "");
+                    System.Windows.Forms.MessageBox.Show(summary, "Shader database", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+
+                materialList_SelectedIndexChanged(null, EventArgs.Empty);
+            }, TaskScheduler.FromCurrentSynchronizationContext());
+        }
+
         private void selectMaterial_Click(object sender, EventArgs e)
         {
             if (materialList.SelectedItems.Count == 0)
@@ -744,6 +1163,118 @@ namespace OpenCAGE
             Close();
         }
 
+        /* A material from nothing. The shader family is the only thing that can't be changed later -
+         * everything else the material needs is reached from the editor once it exists, so the popup
+         * asks for that and a name and stops there. */
+        private void newMaterial_Click(object sender, EventArgs e)
+        {
+            List<ShaderPermutationService.Creatable> options =
+                ShaderPermutationService.CreatableFamilies(Content.Level.Shaders, Singleton.PathToAI);
+            if (options.Count == 0)
+            {
+                System.Windows.Forms.MessageBox.Show("No shader families are available to build a material on.",
+                    "New material", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            SHADER_LIST family;
+            string name;
+            using (NewMaterialPicker picker = new NewMaterialPicker(options, o => Content.Level.Materials.GetMaterialName(MaterialCalled(o))))
+            {
+                if (picker.ShowDialog(this) != DialogResult.OK)
+                    return;
+                family = picker.Family;
+                name = picker.MaterialName;
+            }
+            Materials.Material clash = MaterialCalled(name);
+            if (clash != null)
+            {
+                System.Windows.Forms.MessageBox.Show("The level already has a material called '" + Content.Level.Materials.GetMaterialName(clash) + "'. Pick another name.",
+                    "New material", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            string error;
+            Materials.Material material = ShaderPermutationService.CreateMaterial(
+                Content.Level.Materials, Content.Level.Shaders, family, name, Singleton.PathToAI, out error);
+            if (material == null)
+            {
+                System.Windows.Forms.MessageBox.Show(error ?? "The material couldn't be created.",
+                    "New material", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            EditHistory.AssetChanged(Content?.Level, AssetKind.MATERIAL, material.Name);
+            Singleton.OnResourceModified?.Invoke();
+            PopulateUI(material);
+
+            foreach (System.Windows.Forms.ListViewItem item in materialList.Items)
+            {
+                if (ReferenceEquals(item.Tag, material))
+                {
+                    item.Selected = true;
+                    item.EnsureVisible();
+                    break;
+                }
+            }
+        }
+
+        /* The material already called this - by its stored name or the name it shows as, in any case - or null. Two of one
+         * name can't be told apart by what finds a material by name (a material mapping's target, an entity's material
+         * parameter, the MCP tools), so a new or copied material never takes a name in use */
+        private Materials.Material MaterialCalled(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name) || Content?.Level?.Materials?.Entries == null)
+                return null;
+            string tidy = name.Trim();
+            return Content.Level.Materials.Entries.FirstOrDefault(o => o != null &&
+                (string.Equals(o.Name, tidy, StringComparison.OrdinalIgnoreCase) || string.Equals(Content.Level.Materials.GetMaterialName(o), tidy, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        /* Only a material nothing draws with can go - a save writes anything still pointing at a
+         * removed one as -1 - so what does use it is named, to be pointed elsewhere first. Its
+         * textures can go with it, again only those nothing else is left using. */
+        private void deleteMaterial_Click(object sender, EventArgs e)
+        {
+            if (materialList.SelectedItems.Count == 0)
+                return;
+
+            Materials.Material material = materialList.SelectedItems[0].Tag as Materials.Material;
+            if (material == null)
+                return;
+
+            string name = Content.Level.Materials.GetMaterialName(material);
+            List<string> uses = AssetUsage.FindMaterialReferences(Content.Level).Describe(material);
+            if (uses.Count != 0)
+            {
+                System.Windows.Forms.MessageBox.Show("'" + name + "' can't be deleted while it is still used by:\n\n"
+                    + string.Join("\n", uses.Select(o => "    " + o)) + "\n\nPoint those at another material first.",
+                    "Material in use", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if (System.Windows.Forms.MessageBox.Show("Are you sure you want to delete '" + name + "'?", "About to delete...",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+
+            List<Materials.Material> deleting = new List<Materials.Material> { material };
+            List<Textures.TEX4> textures = AssetUsage.TexturesOnlyUsedBy(Content.Level, deleting, out int sharedTextures);
+            if (textures.Count != 0 && System.Windows.Forms.MessageBox.Show(
+                    "Also delete the " + (textures.Count == 1 ? "texture" : textures.Count + " textures") + " only this material uses?\n\n"
+                    + AssetUsage.ListNames(textures.Select(o => o.Name))
+                    + (sharedTextures == 0 ? "" : "\n\n" + sharedTextures + (sharedTextures == 1 ? " other texture it uses is" : " other textures it uses are") + " used elsewhere too, and will be kept."),
+                    "Delete associated textures?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                textures.Clear();
+
+            EditHistory.AssetChanged(Content.Level, AssetKind.MATERIAL, material.Name);
+            AssetUsage.RemoveByReference(Content.Level.Materials.Entries, deleting);
+            foreach (Textures.TEX4 texture in textures)
+                EditHistory.AssetChanged(Content.Level, AssetKind.TEXTURE, texture.Name);
+            AssetUsage.RemoveByReference(Content.Level.Textures.Entries, textures);
+
+            Singleton.OnResourceModified?.Invoke();
+            PopulateUI(null, materialSearchTextBox.Text);
+        }
+
         private void duplicateMaterial_Click(object sender, EventArgs e)
         {
             if (materialList.SelectedItems.Count == 0)
@@ -753,9 +1284,15 @@ namespace OpenCAGE
             if (material == null)
                 return;
 
+            //A second copy of the same material gets a number, never the first copy's name
+            string cloneOf = Content.Level.Materials.GetMaterialName(material) + " Clone";
+            string cloneName = cloneOf;
+            for (int i = 2; MaterialCalled(cloneName) != null; i++)
+                cloneName = cloneOf + " " + i;
+
             var newMaterial = new Materials.Material
             {
-                Name = Content.Level.Materials.GetMaterialName(material) + " Clone",
+                Name = cloneName,
                 EngineConstants = new List<float>(material.EngineConstants),
                 VertexShaderConstants = new List<float>(material.VertexShaderConstants),
                 PixelShaderConstants = new List<float>(material.PixelShaderConstants),
@@ -782,6 +1319,7 @@ namespace OpenCAGE
                 : (Materials.LightFlags)material.OfflineLightFeatures.Copy();
 
             Content.Level.Materials.Entries.Add(newMaterial);
+            EditHistory.AssetChanged(Content.Level, AssetKind.MATERIAL, newMaterial.Name);
             Singleton.OnResourceModified?.Invoke();
             PopulateUI(newMaterial);
 

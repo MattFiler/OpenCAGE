@@ -5,7 +5,10 @@ using OpenCAGE.DockPanels;
 using Newtonsoft.Json;
 using OpenCAGE;
 using System;
+using System.Diagnostics;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -29,6 +32,8 @@ namespace OpenCAGE.UnityConnection
 
         private static bool _isDirty = false;
         private static string _pendingLevelLoadName;
+        //The level the viewer has already been told to read from disk for the load in progress (when it started, or when the viewer connected during it)
+        private static string _viewerLoadRequested;
 
         static Send()
         {
@@ -39,11 +44,19 @@ namespace OpenCAGE.UnityConnection
             Singleton.OnCompositeSelected += CompositeSelected;
             Singleton.OnCompositeDeleted += CompositeDeleted;
             Singleton.OnEntityReloaded += EntitySelected;
+            Singleton.OnEntitiesReloaded += EntitiesSelected;
+            Singleton.OnSelectionCleared += SelectionCleared;
             Singleton.OnEntityMoved += EntityMoved;
             Singleton.OnEntityAdded += EntityAdded;
+            Singleton.OnEntityDeletePending += EntityDeletePending;
             Singleton.OnEntityDeleted += EntityDeleted;
             Singleton.OnResourceModified += ResourceModified;
             Singleton.OnEntityParameterModified += EntityParameterModified;
+            EntityClipboard.Changed += EntityClipboardChanged;
+
+            ViewerResourceSync.Initialise();
+            ViewerZoneSync.Initialise();
+            ViewerScriptResync.Initialise();
         }
 
         public static bool Start()
@@ -57,6 +70,13 @@ namespace OpenCAGE.UnityConnection
                 try
                 {
                     WebSocketServer server = new WebSocketServer("ws://localhost:" + port);
+                    /* websocket-sharp pings every session once a minute and drops any that doesn't answer
+                     * within WaitTime (1 s). The viewer answers from its IO thread while a receive is pending,
+                     * but a packet that lands while its main thread is busy (a populate, a big refresh) completes
+                     * that receive and the next one isn't issued until the main thread frees up - so the sweep
+                     * dropped the session mid-load and the reconnect triggered a full resync and repopulate.
+                     * One local client that reconnects on its own needs no sweeping. */
+                    server.KeepClean = false;
                     server.AddWebSocketService<Client>("/commands_editor", (service) =>
                     {
                         _serverLogic = service;
@@ -96,12 +116,25 @@ namespace OpenCAGE.UnityConnection
         {
             Packet packet = new Packet(PacketEvent.RENDER_FILTERS_CHANGED);
             packet.box_render_filters = RenderFilters.GetPacketFilters();
+            packet.scene_render_filters = RenderFilters.GetScenePacketFilters();
+            SendData(packet);
+        }
+
+        /* Send the level's zones and what each one covers. Only ViewerZoneSync calls this - it owns
+           when the table is worth recalculating. */
+        internal static void SendZonesPacket(List<SyncedZone> zones)
+        {
+            Packet packet = new Packet(PacketEvent.ZONES_CHANGED);
+            packet.zones = zones ?? new List<SyncedZone>();
+            packet.show_zones = SettingsManager.GetBool(Settings.ShowZones);
             SendData(packet);
         }
 
         /* Push one edited material-mapping set to the viewer (in-memory; disk save happens on level save). */
         public static void NotifyMaterialMappingModified(MaterialMappings.MaterialMapping mapping)
         {
+            //Noted with or without a viewer to tell: one that connects later reads the mappings from disk
+            ViewerScriptResync.NoteMaterialMapping(mapping);
             if (!Connected || mapping == null)
                 return;
 
@@ -116,34 +149,256 @@ namespace OpenCAGE.UnityConnection
             SendData(packet);
         }
 
+        /* Animation Mode in the CAGEAnimation editor: what its tracks hold at the playhead, for the
+           viewer to paint on top of the scene. The whole set goes each time - a target dropping out of
+           it is how the viewer learns to put that one back. */
+        internal static void SendAnimationPreviewPacket(float time, List<SyncedAnimationTarget> targets)
+        {
+            if (!Connected)
+                return;
+
+            Packet packet = new Packet(PacketEvent.ANIMATION_PREVIEW);
+            packet.animation_preview_active = true;
+            packet.animation_preview_time = time;
+            packet.animation_preview = targets ?? new List<SyncedAnimationTarget>();
+            SendData(packet);
+        }
+
+        /* Animation Mode is over - everything the preview was holding goes back to where it rests. */
+        internal static void SendAnimationPreviewCleared()
+        {
+            if (!Connected)
+                return;
+
+            Packet packet = new Packet(PacketEvent.ANIMATION_PREVIEW);
+            packet.animation_preview_active = false;
+            packet.animation_preview = new List<SyncedAnimationTarget>();
+            SendData(packet);
+        }
+
+        /* The spline editor's Edit in Viewport: the whole working spline every time - the editor's copy, never the
+           entity's - or the mode switched off, which puts the saved spline back on screen. */
+        internal static void SendSplineEdit(bool active, ShortGuid entity, List<cTransform> points, bool loop, int selected)
+        {
+            if (!Connected)
+                return;
+
+            Packet packet = GeneratePacket(PacketEvent.SPLINE_EDIT);
+            packet.spline_edit_active = active;
+            packet.spline_edit_entity = active ? entity.AsUInt32 : 0;
+            packet.spline_edit_loop = loop;
+            packet.spline_edit_selected = selected;
+            if (active && points != null)
+            {
+                foreach (cTransform point in points)
+                {
+                    packet.spline_edit_points.Add(new SplineEditPoint
+                    {
+                        position = new float[] { point.position.X, point.position.Y, point.position.Z },
+                        rotation = new float[] { point.rotation.X, point.rotation.Y, point.rotation.Z },
+                    });
+                }
+            }
+            SendData(packet);
+        }
+
         /* Send viewer settings (focus, hide nested previews, etc.) */
         public static void SendSettingsPacket()
         {
             Packet packet = new Packet(PacketEvent.SETTINGS_CHANGED);
+            packet.focus_object = SettingsManager.GetBool(Settings.FocusOnSelected);
+            packet.fix_camera_to_selected = SettingsManager.GetBool(Settings.FixCameraToSelected);
             packet.show_camera_position = SettingsManager.GetBool(Settings.ShowCameraPosition);
             packet.model_reference_wireframe = SettingsManager.GetBool(Settings.RenderWireframe);
             packet.hide_nested_script_entities = SettingsManager.GetBool(Settings.HideNestedScriptEntities);
             packet.highlight_aliases = SettingsManager.GetBool(Settings.HighlightAliases);
             packet.highlight_proxies = SettingsManager.GetBool(Settings.HighlightProxies);
-            packet.transform_grid_snap = TransformSnapDefinitions.NormalizeGridSnap(SettingsManager.GetFloat(Settings.TransformGridSnap));
-            packet.rotation_snap_degrees = TransformSnapDefinitions.NormalizeRotationSnap(SettingsManager.GetFloat(Settings.RotationSnapDegrees));
+            packet.transform_grid_snap = SnapIncrementSettings.NormalizeGrid(SettingsManager.GetFloat(Settings.TransformGridSnap));
+            packet.rotation_snap_degrees = SnapIncrementSettings.NormalizeRotation(SettingsManager.GetFloat(Settings.RotationSnapDegrees));
+            packet.transform_vertex_snap = SettingsManager.GetBool(Settings.TransformVertexSnap);
             packet.deep_select_mode = (int)LevelViewerViewportDefinitions.NormalizeDeepSelectMode(
                 SettingsManager.GetInteger(Settings.LevelViewerDeepSelectMode));
             packet.gizmo_mode = (int)LevelViewerViewportDefinitions.NormalizeGizmoMode(
                 SettingsManager.GetInteger(Settings.LevelViewerGizmoMode));
+            packet.create_function_type = ViewerCreateMode.ActiveFunctionType;
+            packet.measure_mode = ViewerMeasureMode.Active;
+            packet.show_navmesh_state = ViewerStateInfoMode.NavMeshState;
+            packet.show_cover_state = ViewerStateInfoMode.CoverState;
+            packet.show_zones = SettingsManager.GetBool(Settings.ShowZones);
+            packet.selection_highlight_mode = (int)LevelViewerViewportDefinitions.NormalizeHighlightMode(
+                SettingsManager.GetInteger(Settings.LevelViewerHighlightMode));
+            packet.render_galaxy = SettingsManager.GetBool(Settings.RenderGalaxy);
+            packet.render_fog = SettingsManager.GetBool(Settings.RenderFog);
+            packet.render_water = SettingsManager.GetBool(Settings.RenderWater);
+            packet.render_planets = SettingsManager.GetBool(Settings.RenderPlanets);
+            packet.planar_reflections = SettingsManager.GetBool(Settings.PlanarReflections);
+            packet.antialias_mode = (int)LevelViewerViewportDefinitions.NormalizeAntialiasMode(
+                SettingsManager.GetInteger(Settings.LevelViewerAntialiasMode));
+            packet.draw_distance = (int)LevelViewerViewportDefinitions.NormalizeDrawDistance(
+                SettingsManager.GetInteger(Settings.LevelViewerDrawDistance));
+            packet.scene_render_filters = RenderFilters.GetScenePacketFilters();
+            packet.stream_camera_pose = RuntimeUtilsConnection.LiveLinkCameraSync.StreamPose;
+            packet.camera_follows_game = RuntimeUtilsConnection.LiveLinkCameraSync.CameraFollowsGame;
+            SendData(packet);
+        }
+
+        /* A composite was dropped on the viewport -> ask the viewer to raycast the spot it landed on.
+           It answers with ENTITY_CREATE_REQUEST, which is where the instance actually gets created. */
+        public static void SendCompositeDropPacket(Composite compositeToInstance, float viewportX, float viewportY)
+        {
+            if (!Connected || compositeToInstance == null)
+                return;
+
+            Packet packet = GeneratePacket(PacketEvent.VIEWPORT_DROP_REQUEST);
+            packet.create_composite_instance = compositeToInstance.shortGUID.AsUInt32;
+            packet.drop_viewport_x = viewportX;
+            packet.drop_viewport_y = viewportY;
+            SendData(packet);
+        }
+
+        /* A function type was dropped on the viewport out of the entity palette (ViewerFunctionDrop) -> the same
+           request as a composite drop, and the same ENTITY_CREATE_REQUEST answer, which creates the entity. */
+        public static void SendFunctionDropPacket(FunctionType function, float viewportX, float viewportY)
+        {
+            if (!Connected)
+                return;
+
+            Packet packet = GeneratePacket(PacketEvent.VIEWPORT_DROP_REQUEST);
+            packet.drop_function_type = (uint)function;
+            packet.drop_viewport_x = viewportX;
+            packet.drop_viewport_y = viewportY;
+            SendData(packet);
+        }
+
+        /* The viewport's context menu (ViewerContextMenu): an entry whose action lives in the viewer, or word
+           that the menu has opened or closed. A full packet, so a viewer that doesn't know this event takes
+           it as nothing more than a re-sync of the selection it already has. */
+        public static void SendViewportAction(ViewportAction action)
+        {
+            if (!Connected)
+                return;
+
+            Packet packet = GeneratePacket(PacketEvent.VIEWPORT_ACTION);
+            packet.viewport_action = (int)action;
+            SendData(packet);
+        }
+
+        /* Put the viewport camera at a position, looking along forward with up as up: in the level's space and CATHODE's
+           axes, as VIEWER_CAMERA_POSE reports it (so where the game's camera is can be copied straight in). A full packet,
+           so a viewer that doesn't know this event takes it as nothing more than a re-sync of the selection it already has. */
+        public static void SendViewportSetCamera(System.Numerics.Vector3 position, System.Numerics.Vector3 forward, System.Numerics.Vector3 up)
+        {
+            SendViewportSetCamera(position, forward, up, 0f, null, false);
+        }
+
+        /* The same, with a field of view (vertical degrees; above 0 holds it until the camera is next moved by anything else, below
+           0 puts the viewer's own back, 0 leaves it), and optionally an entity to look through: its instance path from the composite
+           the viewer built its scene from, the entity last, which the viewer reads from where it draws the entity now (an Animation
+           Mode pose included) - position/forward/up being this side's working-out of the same, for a viewer from before that.
+           With follow, the camera stays on the entity as it moves until anything else moves it. */
+        internal static void SendViewportSetCamera(System.Numerics.Vector3 position, System.Numerics.Vector3 forward, System.Numerics.Vector3 up, float fov, List<uint> lookThrough, bool follow)
+        {
+            if (!Connected)
+                return;
+
+            Packet packet = GeneratePacket(PacketEvent.VIEWPORT_SET_CAMERA);
+            packet.camera_position = position;
+            packet.camera_forward = forward;
+            packet.camera_up = up;
+            packet.camera_fov = fov;
+            packet.camera_look_through = lookThrough != null && lookThrough.Count != 0 ? new List<uint>(lookThrough) : null;
+            packet.camera_look_through_follow = follow && packet.camera_look_through != null;
+            SendData(packet);
+        }
+
+        /* Ask the viewer where its camera is now, and what lies under some points of the viewport ([x, y] 0-1 fractions) or along
+           some rays (in the space VIEWER_CAMERA_POSE uses): VIEWPORT_QUERY. Answered by a VIEWER_CAMERA_POSE carrying the same id,
+           which ViewportQueryAnswered hands on. A full packet, so a viewer from before this takes it as nothing more than a re-sync
+           of the selection it already has - and never answers. False when there is no viewer to ask. */
+        internal static bool SendViewportQuery(uint id, List<float[]> points, List<ViewportPickRay> rays)
+        {
+            if (!Connected || id == 0)
+                return false;
+
+            Packet packet = GeneratePacket(PacketEvent.VIEWPORT_QUERY);
+            packet.viewport_query_id = id;
+            packet.viewport_pick_points = points != null && points.Count != 0 ? points : null;
+            packet.viewport_pick_rays = rays != null && rays.Count != 0 ? rays : null;
+            SendData(packet);
+            return true;
+        }
+
+        /* The viewer's answer to a VIEWPORT_QUERY (a VIEWER_CAMERA_POSE with a non-zero viewport_query_id), as it arrives: on the
+           viewer socket's thread, from LiveLinkCameraSync, which leaves it out of the pose stream. */
+        internal static event Action<Packet> ViewportQueryAnswered;
+
+        internal static void OnViewportQueryAnswered(Packet packet)
+        {
+            try
+            {
+                ViewportQueryAnswered?.Invoke(packet);
+            }
+            catch (Exception e)
+            {
+                Debug.Log("Websocket", "A viewport query's answer could not be taken: " + e.Message);
+            }
+        }
+
+        /* The viewport following the game's camera (LiveLinkCameraSync, about 30 a second): the game's camera, to put the
+           viewport's at, field of view included. Only the camera goes - building the whole packet each time would walk the
+           composite on screen and the selection on every frame - and only to a viewer that has said it follows (one from
+           before this would take a packet it does not know for a resync, and this one carries nothing to resync from).
+           Kept out of the packet log like the poses the viewer streams. Any thread. */
+        internal static void SendCameraFollowPose(System.Numerics.Vector3 position, System.Numerics.Vector3 forward, System.Numerics.Vector3 up, float fov)
+        {
+            if (!Connected)
+                return;
+
+            Packet packet = new Packet(PacketEvent.VIEWPORT_SET_CAMERA);
+            packet.camera_position = position;
+            packet.camera_forward = forward;
+            packet.camera_up = up;
+            packet.camera_fov = fov;
+            packet.camera_follows_game = true;
+            //One place in the outbox, holding whichever pose is newest when the sender reaches it (see FollowPoseSlot)
+            if (Interlocked.Exchange(ref _followPoseJson, JsonConvert.SerializeObject(packet)) == null)
+            {
+                EnsureSender();
+                _outbox.Add(FollowPoseSlot);
+            }
+        }
+
+        /* Ask the viewer for a preview of each of these composites, written as <id>.png into the folder.
+           Size 0 leaves the size to the viewer. Answered by COMPOSITE_PREVIEW_CAPTURED carrying the request id. */
+        internal static void SendPreviewCaptureRequest(List<uint> composites, string outputDir, uint requestId)
+        {
+            if (!Connected)
+                return;
+
+            Packet packet = GeneratePacket(PacketEvent.COMPOSITE_PREVIEW_CAPTURE_REQUEST);
+            packet.preview_request_id = requestId;
+            packet.preview_composites = composites ?? new List<uint>();
+            packet.preview_output_dir = outputDir ?? "";
+            packet.preview_size = 0;
+            packet.preview_skip_existing = false;
             SendData(packet);
         }
 
         public static void NotifyLevelLoadStarting(string levelName)
         {
             _pendingLevelLoadName = levelName;
+            _viewerLoadRequested = null;
             if (Connected)
+            {
                 SendLevelLoadedPacket(levelName);
+                _viewerLoadRequested = levelName;
+            }
         }
 
         public static void NotifyLevelLoadAborted()
         {
             _pendingLevelLoadName = null;
+            _viewerLoadRequested = null;
             CommandsEditor editor = Singleton.Editor;
             if (editor == null || editor.IsDisposed)
                 return;
@@ -153,11 +408,16 @@ namespace OpenCAGE.UnityConnection
 
         private static void OnViewerDisconnected()
         {
+            DropQueuedPackets();
+            //A drag it was in the middle of will never be let go: what it was showing is put back
+            ViewerParameterSync.EndAllPreviews();
+            //No viewport, nothing for the game's camera to follow: it is given back to the game
+            RuntimeUtilsConnection.LiveLinkCameraSync.OnViewerGone();
             CommandsEditor editor = Singleton.Editor;
             if (editor == null || editor.IsDisposed)
                 return;
 
-            editor.BeginInvoke(new System.Action(() => editor.EndViewerPopulateProgress(0, forceClose: true)));
+            editor.BeginInvoke(new System.Action(() => editor.OnViewerDisconnected()));
         }
 
         /* A level has just been loaded -> load its data in Unity */
@@ -165,22 +425,85 @@ namespace OpenCAGE.UnityConnection
         {
             _isDirty = false;
             _pendingLevelLoadName = null;
-            SendLevelLoadedPacket();
+
+            /* The viewer reads the level alongside us: it was told to when the load started (or when it connected
+               part way through), and has it by now or is still reading it. Forcing the reload again here made it
+               throw that away and read the whole level from disk a second time once it had finished - every level
+               load cost the viewer twice over. Only a viewer that was never asked for this level is forced now;
+               otherwise this is the plain LEVEL_LOADED it skips when it already has the level. */
+            string requested = _viewerLoadRequested;
+            _viewerLoadRequested = null;
+            string loaded = content?.Level?.Name;
+            bool alreadyRequested = requested != null && loaded != null
+                && string.Equals(requested.Replace('\\', '/').Trim('/'), loaded.Replace('\\', '/').Trim('/'), StringComparison.OrdinalIgnoreCase);
+            SendLevelLoadedPacket(forceReload: !alreadyRequested);
         }
 
-        private static void SendLevelLoadedPacket(string levelNameOverride = null)
+        private static void SendLevelLoadedPacket(string levelNameOverride = null, bool forceReload = true, uint sceneRoot = 0)
         {
+            ViewerResourceSync.NotifyViewerReloading();
+            SendLevelLoadedPacketCore(levelNameOverride, forceReload, sceneRoot);
+        }
+
+        private static void SendLevelLoadedPacketCore(string levelNameOverride, bool forceReload, uint sceneRoot = 0)
+        {
+            //A batch cannot outlive the level it was for; the viewer forgets its side on LEVEL_LOADED too
+            _sceneBatchDepth = 0;
             Packet packet = GeneratePacket(PacketEvent.LEVEL_LOADED);
+            //A real load, so the viewer reads the level again even when it is the one it already has - loading the
+            //same level again is how unsaved changes get thrown away. The LEVEL_LOADED a save sends does not say this.
+            packet.level_reload = forceReload;
             if (!string.IsNullOrEmpty(levelNameOverride))
                 packet.level_name = levelNameOverride;
+            packet.level_scene_root = sceneRoot;
             SendData(packet);
+        }
+
+        /* The composite the editor's hierarchy starts from - the one open, or the one the path stepped into it begins at - as
+           CompositeDisplay noted it once a navigation had settled (0 while nothing is open: a level switch empties the display,
+           so the viewer builds the level's root). Noted on the UI thread and read on the socket's: a step out caught half way
+           (the path emptied, the composite not yet changed) would have named the composite being left. */
+        private static volatile uint _editorSceneRoot;
+        internal static void NoteEditorSceneRoot(uint compositeId) => _editorSceneRoot = compositeId;
+
+        private static uint EditorSceneRoot(string levelName)
+        {
+            try
+            {
+                uint root = _editorSceneRoot;
+                LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
+                string open = content?.Level?.Name;
+                if (root == 0 || open == null || levelName == null
+                    || !string.Equals(open.Replace('\\', '/').Trim('/'), levelName.Replace('\\', '/').Trim('/'), StringComparison.OrdinalIgnoreCase))
+                    return 0;
+                return root;
+            }
+            catch (Exception)
+            {
+                return 0;
+            }
         }
 
         /* The level has been saved -> clear our dirty flag */
         private static void LevelSaved()
         {
             _isDirty = false;
-            SendData(GeneratePacket(PacketEvent.LEVEL_LOADED)); //NEW: Fire another loaded event to reload write indexes on the Unity side.
+            /* A viewer that connected since the last save and is still waiting for the edits made before it (ViewerScriptResync)
+               read the level before this save - and the LEVEL_LOADED a save sends is one it skips, since it has the level. What
+               is on disk now is what is here, so it reads the level again instead. */
+            if (ViewerScriptResync.NotifySaved())
+            {
+                string levelName = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Name;
+                SendLevelLoadedPacket(levelName, sceneRoot: EditorSceneRoot(levelName));
+            }
+            else
+                SendData(GeneratePacket(PacketEvent.LEVEL_LOADED)); //NEW: Fire another loaded event to reload write indexes on the Unity side.
+
+            /* The viewer keeps the level it read from disk, and that LEVEL_LOADED does not make it read
+               it again (it is the same level, already loaded). The generated navigation data has just
+               been rewritten though - regenerated outright by an instanced save - so the state overlays
+               would go on drawing the navmesh and cover from before the build. */
+            SendData(GeneratePacket(PacketEvent.LEVEL_STATE_RESOURCES_MODIFIED));
         }
 
         /* A composite has been loaded -> open it in the Unity scene */
@@ -188,6 +511,22 @@ namespace OpenCAGE.UnityConnection
         {
             Packet p = GeneratePacket(PacketEvent.COMPOSITE_SELECTED);
             p.composite = composite.shortGUID.AsUInt32;
+            p.composite_name = composite.name ?? "";
+            SendData(p);
+        }
+        /* Have the viewer build the composite it is showing again, from the script as it has it now.
+           For after an import: the composite is opened (and so populated in the viewer, empty) before
+           its contents can be sent - those wait on the resource sync - and the entities that then land
+           one at a time do not put a nested instance's contents on screen the way a populate does. Queue
+           this behind the same sync as the contents and the viewer rebuilds once everything is there;
+           the viewer treats a plain re-selection of the composite it already holds as nothing to do. */
+        internal static void RefreshCompositeInViewer(Composite composite)
+        {
+            if (composite == null || !Connected)
+                return;
+            Packet p = GeneratePacket(PacketEvent.COMPOSITE_RELOADED);
+            p.composite = composite.shortGUID.AsUInt32;
+            p.composite_name = composite.name ?? "";
             SendData(p);
         }
         private static void CompositeReloaded(Composite composite)
@@ -202,7 +541,129 @@ namespace OpenCAGE.UnityConnection
         {
             Packet p = GeneratePacket(PacketEvent.COMPOSITE_ADDED);
             p.composite = composite.shortGUID.AsUInt32;
+            p.composite_name = composite.name ?? "";
             SendData(p);
+
+            /* The viewer only ever gets an empty composite from that, and learns of entities one at a
+             * time as they are added to the OPEN composite. A composite that arrives already populated
+             * (an import's placing composite) has to have its contents sent explicitly, addressed to it.
+             * That waits for the resource sync, because the renderables name model and material indexes
+             * the viewer only holds once the snapshot carrying a just-imported model has landed. */
+            if (_addedContentsSuppressed == 0 && composite.functions.Count + composite.variables.Count + composite.aliases.Count + composite.proxies.Count != 0)
+                ViewerResourceSync.AfterNextSync(() => SendCompositeContents(composite));
+        }
+
+        /* For a caller that sends a new composite's contents itself, in an order it controls (a refactor
+           puts a new composite's contents in place before the instance of it that is added alongside). */
+        private static int _addedContentsSuppressed = 0;
+        internal static IDisposable SuppressAddedCompositeContents()
+        {
+            _addedContentsSuppressed++;
+            return new DeletedBatchScope(() => _addedContentsSuppressed--);
+        }
+
+        /* A run of composite changes the viewer should only follow in its script copy, because a
+           rebuild of the scene comes at the end of it (an import). Nested: only the outermost pair is
+           sent. Always paired - a batch left open would leave the viewer never touching its scene. */
+        private static int _sceneBatchDepth;
+        internal static void BeginSceneBatch()
+        {
+            if (_sceneBatchDepth++ == 0)
+                SendData(GeneratePacket(PacketEvent.SCENE_BATCH_BEGIN));
+        }
+        internal static void EndSceneBatch()
+        {
+            if (_sceneBatchDepth <= 0)
+                return;
+            if (--_sceneBatchDepth == 0)
+                SendData(GeneratePacket(PacketEvent.SCENE_BATCH_END));
+        }
+
+        /* Every entity of a composite, in one COMPOSITE_CONTENTS packet addressed to that composite */
+        internal static void SendCompositeContents(Composite composite)
+        {
+            if (composite == null)
+                return;
+            Stopwatch timer = Stopwatch.StartNew();
+            Packet p = GeneratePacket(PacketEvent.COMPOSITE_CONTENTS);
+            p.composite = composite.shortGUID.AsUInt32;
+            p.composite_name = composite.name ?? "";
+            LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
+            foreach (VariableEntity entity in composite.variables) p.composite_entities.Add(EntityRecordOf(entity, content));
+            foreach (FunctionEntity entity in composite.functions) p.composite_entities.Add(EntityRecordOf(entity, content));
+            foreach (AliasEntity entity in composite.aliases) p.composite_entities.Add(EntityRecordOf(entity, content));
+            foreach (ProxyEntity entity in composite.proxies) p.composite_entities.Add(EntityRecordOf(entity, content));
+            long built = timer.ElapsedMilliseconds;
+            SendData(p);
+            Debug.Log("Composite Sync", "Sent the contents of " + composite.name + ": " + p.composite_entities.Count + " entities, built in " + built + " ms, sent in " + (timer.ElapsedMilliseconds - built) + " ms");
+        }
+
+        /* Some of a composite's entities, in one COMPOSITE_CONTENTS addressed to that composite. The viewer
+           adds what it is sent to what it has, so this is how entities arrive in a composite that is not the
+           one open - never send one it already holds, or it spawns twice. */
+        internal static void SendCompositeContents(Composite composite, IEnumerable<Entity> entities)
+        {
+            if (composite == null || entities == null)
+                return;
+            List<Entity> list = entities.Where(o => o != null).Distinct().ToList();
+            if (list.Count == 0)
+                return;
+            _isDirty = true;
+            Packet p = GeneratePacket(PacketEvent.COMPOSITE_CONTENTS);
+            p.composite = composite.shortGUID.AsUInt32;
+            p.composite_name = composite.name ?? "";
+            LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
+            //Targets before what points at them: an alias only finds its target if that is already there
+            foreach (Entity entity in list.Where(o => o.variant == EntityVariant.VARIABLE)) p.composite_entities.Add(EntityRecordOf(entity, content));
+            foreach (Entity entity in list.Where(o => o.variant == EntityVariant.FUNCTION)) p.composite_entities.Add(EntityRecordOf(entity, content));
+            foreach (Entity entity in list.Where(o => o.variant == EntityVariant.ALIAS)) p.composite_entities.Add(EntityRecordOf(entity, content));
+            foreach (Entity entity in list.Where(o => o.variant == EntityVariant.PROXY)) p.composite_entities.Add(EntityRecordOf(entity, content));
+            SendData(p);
+        }
+
+        /* Several entities gone from a composite, in one ENTITY_DELETED addressed to it */
+        internal static void SendEntitiesDeleted(Composite composite, IEnumerable<Entity> entities)
+        {
+            if (composite == null || entities == null)
+                return;
+            List<Entity> list = entities.Where(o => o != null).Distinct().ToList();
+            if (list.Count == 0)
+                return;
+            _isDirty = true;
+            Packet removed = GeneratePacket(PacketEvent.ENTITY_DELETED, list[0]);
+            removed.composite = composite.shortGUID.AsUInt32;
+            foreach (Entity entity in list)
+                removed.batch_entities.Add(entity.shortGUID.AsUInt32);
+            SendData(removed);
+        }
+
+        /* What ENTITY_ADDED says about an entity, as a record */
+        private static EntityRecord EntityRecordOf(Entity entity, LevelContent content)
+        {
+            EntityRecord record = new EntityRecord()
+            {
+                entity = entity.shortGUID.AsUInt32,
+                entity_variant = entity.variant,
+            };
+            switch (entity.variant)
+            {
+                case EntityVariant.FUNCTION:
+                    record.entity_function = ((FunctionEntity)entity).function.AsUInt32;
+                    break;
+                case EntityVariant.PROXY:
+                    record.entity_pointed = ((ProxyEntity)entity).proxy.pathUint;
+                    break;
+                case EntityVariant.ALIAS:
+                    record.entity_pointed = ((AliasEntity)entity).alias.pathUint;
+                    break;
+            }
+            foreach (Parameter parameter in entity.parameters)
+            {
+                SyncedParameter sync = ParameterSync.Pack(parameter, content);
+                if (sync != null)
+                    record.parameters.Add(sync);
+            }
+            return record;
         }
         private static void CompositeDeleted(Composite composite)
         {
@@ -216,33 +677,170 @@ namespace OpenCAGE.UnityConnection
         {
             SendData(GeneratePacket(PacketEvent.ENTITY_SELECTED, entity));
         }
+        /* Several entities selected together. The plain packet already describes the whole selection
+           from the inspector, so there is nothing to add to it here. */
+        private static void EntitiesSelected(List<Entity> entities)
+        {
+            if (entities == null || entities.Count == 0)
+                return;
+
+            SendData(GeneratePacket(PacketEvent.ENTITY_SELECTED));
+        }
+        /// <summary>
+        /// Tell the viewer the editor's selection again: after a pick of its own the editor did not take, because a newer choice was
+        /// made here before it arrived (see ViewerSelectionSync). The viewer shows its pick until told otherwise.
+        /// </summary>
+        public static void ResendSelection()
+        {
+            SendData(GeneratePacket(PacketEvent.ENTITY_SELECTED));
+        }
+        /* The inspector was cleared, so nothing is selected any more. The plain packet carries no entity
+           when nothing is selected, which is exactly the deselect the viewer needs to drop its highlight
+           and gizmo - without this it kept showing the last selection (issue 675). */
+        private static void SelectionCleared()
+        {
+            SendData(GeneratePacket(PacketEvent.ENTITY_SELECTED));
+        }
+        /* The entity clipboard was set or emptied -> tell the viewer whether there is anything to paste; its
+           context menu greys Paste out when there isn't. A full packet, so a viewer that doesn't know this
+           event takes it as nothing more than a re-sync of the selection it already has. */
+        private static bool _clipboardHadContent;
+        private static void EntityClipboardChanged()
+        {
+            //Only when the answer changes: a duplicate or a level load sets and clears it in one go, and the state
+            //rides every packet anyway, so a viewer that connects later still gets it
+            bool hasContent = EntityClipboard.HasContent;
+            if (hasContent == _clipboardHadContent)
+                return;
+            _clipboardHadContent = hasContent;
+            if (!Connected)
+                return;
+            SendData(GeneratePacket(PacketEvent.ENTITY_CLIPBOARD_CHANGED));
+        }
+        /* Deliberately never writes to the entity. This is a notification, and the caller is often
+           part-way through its own edit - resetting an alias override raises it and then removes the
+           parameter. Nulling the live parameter's content behind the caller's back left the grid
+           holding a transform row with nothing in it, which threw on the next repaint. */
         private static void EntityMoved(cTransform transform, Entity entity)
         {
             _isDirty = true;
 
             Parameter position = entity?.GetParameter("position");
-            if (position == null && transform != null)
-                position = new Parameter("position", transform);
-
-            if (position != null)
+            if (transform != null)
             {
-                if (transform != null)
-                    position.content = transform;
-                else
-                    position.content = null;
+                //Send what we were handed, not whatever is stored - callers raise this either side of the write
+                SendParameterPacket(
+                    entity,
+                    position == null
+                        ? new Parameter("position", transform)
+                        : new Parameter(position.name, transform, position.variant),
+                    false);
+                return;
+            }
 
-                SendParameterPacket(entity, position, transform == null);
+            //No transform means the position is going away; Pack keys off the removed flag, not the content
+            if (position != null)
+                SendParameterPacket(entity, position, true);
+        }
+        /* The viewer removes by composite and entity, and a packet names the open composite - which
+           is not always the deleted entity's (the references window deletes in any composite). Only
+           the pending event says which composite it is, so that is kept for the deletion that follows. */
+        private static Entity _pendingDeletion = null;
+        private static Composite _pendingDeletionComposite = null;
+        private static void EntityDeletePending(Entity entity, Composite composite)
+        {
+            _pendingDeletion = entity;
+            _pendingDeletionComposite = composite;
+        }
+
+        /* A run of deletions that goes as one ENTITY_DELETED (batch_entities) rather than one each - a
+           box's worth of deep-select aliases let go of, where a packet per alias was 6 ms to build and
+           send each, and hundreds for the viewer to take one at a time. Sent when the scope ends, with the
+           selection of that moment; the viewer removes every entity it names. */
+        private static List<Entity> _deletedBatch = null;
+        private static Composite _deletedBatchComposite = null;
+        internal static IDisposable BeginDeletedBatch(Composite composite)
+        {
+            //Nested: the outer scope sends
+            if (_deletedBatch != null)
+                return new DeletedBatchScope(null);
+            _deletedBatch = new List<Entity>();
+            _deletedBatchComposite = composite;
+            return new DeletedBatchScope(EndDeletedBatch);
+        }
+        private static void EndDeletedBatch()
+        {
+            List<Entity> batch = _deletedBatch;
+            Composite composite = _deletedBatchComposite;
+            _deletedBatch = null;
+            _deletedBatchComposite = null;
+            if (batch == null || batch.Count == 0)
+                return;
+            Packet removed = GeneratePacket(PacketEvent.ENTITY_DELETED, batch[0]);
+            if (composite != null)
+                removed.composite = composite.shortGUID.AsUInt32;
+            foreach (Entity entity in batch)
+                removed.batch_entities.Add(entity.shortGUID.AsUInt32);
+            SendData(removed);
+        }
+        private sealed class DeletedBatchScope : IDisposable
+        {
+            private Action _end;
+            public DeletedBatchScope(Action end) { _end = end; }
+            public void Dispose()
+            {
+                Action end = _end;
+                _end = null;
+                end?.Invoke();
             }
         }
         private static void EntityDeleted(Entity entity)
         {
             _isDirty = true;
-            SendData(GeneratePacket(PacketEvent.ENTITY_DELETED, entity));
+            if (_deletedBatch != null)
+            {
+                //Goes with the rest when the batch ends
+                _deletedBatch.Add(entity);
+                _pendingDeletion = null;
+                _pendingDeletionComposite = null;
+                return;
+            }
+            Packet removed = GeneratePacket(PacketEvent.ENTITY_DELETED, entity);
+            if (entity != null && entity == _pendingDeletion && _pendingDeletionComposite != null)
+                removed.composite = _pendingDeletionComposite.shortGUID.AsUInt32;
+            _pendingDeletion = null;
+            _pendingDeletionComposite = null;
+            SendData(removed);
         }
         private static void EntityAdded(Entity entity)
         {
             _isDirty = true;
+            SendData(EntityAddedPacket(entity, null));
+        }
+
+        /* A proxy or alias points somewhere else now. The viewer's copy is the path it was added with,
+           so it is removed and added again with the new one - the overrides it carries then land on
+           the new target. */
+        internal static void EntityRetargeted(Entity entity, Composite composite)
+        {
+            if (entity == null || (entity.variant != EntityVariant.PROXY && entity.variant != EntityVariant.ALIAS))
+                return;
+            _isDirty = true;
+            Packet removed = GeneratePacket(PacketEvent.ENTITY_DELETED, entity);
+            if (composite != null)
+                removed.composite = composite.shortGUID.AsUInt32;
+            SendData(removed);
+            SendData(EntityAddedPacket(entity, composite));
+        }
+
+        /* An entity as the viewer needs to add it: its parameters bundled so it spawns with the correct
+           position and renderables (e.g. duplicated entities). The composite is the open one unless the
+           caller names another, which the viewer takes from the packet rather than its own selection. */
+        private static Packet EntityAddedPacket(Entity entity, Composite composite)
+        {
             Packet p = GeneratePacket(PacketEvent.ENTITY_ADDED, entity);
+            if (composite != null)
+                p.composite = composite.shortGUID.AsUInt32;
             switch (entity.variant)
             {
                 case EntityVariant.PROXY:
@@ -252,11 +850,25 @@ namespace OpenCAGE.UnityConnection
                     p.entity_pointed = ((AliasEntity)entity).alias.pathUint;
                     break;
             }
-            SendData(p);
+
+            LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
+            foreach (Parameter parameter in entity.parameters)
+            {
+                SyncedParameter sync = ParameterSync.Pack(parameter, content);
+                if (sync != null)
+                    p.parameters.Add(sync);
+            }
+            return p;
         }
         private static void ResourceModified()
         {
             _isDirty = true;
+            SendSelectedEntityResource();
+        }
+        /* The selected entity's resource as it stands now. What the viewer draws for it comes from the
+           model and material write indexes in here, so it goes again whenever those may have changed. */
+        internal static void SendSelectedEntityResource()
+        {
             Entity entity = Singleton.Editor?.CompositeDisplay?.EntityDisplay?.Entity;
             if (entity == null)
                 return;
@@ -272,6 +884,17 @@ namespace OpenCAGE.UnityConnection
 
             _isDirty = true;
             SendParameterPacket(entity, parameter, removed);
+        }
+
+        /// <summary>
+        /// Show the viewport a value a window is still choosing (the colour picker while it is open): sent as an edit is,
+        /// but nothing is marked as changed. The window sends the value the level holds again when it closes.
+        /// </summary>
+        public static void SendParameterPreview(Entity entity, Parameter parameter)
+        {
+            if (entity == null || parameter == null)
+                return;
+            SendParameterPacket(entity, parameter, false);
         }
 
         private static void SendParameterPacket(Entity entity, Parameter parameter, bool removed)
@@ -316,18 +939,91 @@ namespace OpenCAGE.UnityConnection
         /* Re-sync a new client with all current info */
         private static void SyncClient()
         {
+            //Anything queued before this session was for the last one
+            DropQueuedPackets();
             Debug.Log("Websocket", _server?.WebSocketServices["/commands_editor"].Sessions.Count + " clients connected!");
-
-            if (_isDirty)
-            {
-                //TODO: Warn that there's likely going to be a mismatch between client and server.
-            }
 
             string levelName = _pendingLevelLoadName ?? Singleton.Editor?.CompositeBrowser?.Content?.Level?.Name;
             if (!string.IsNullOrEmpty(levelName))
-                SendLevelLoadedPacket(levelName);
+            {
+                /* The viewer reads the level from disk, and what was sent to the one before it went with that one: it would be
+                   without everything edited since the last save until the next save and load (a restart, Enable Viewport, a
+                   crash). Once it has built its scene it is caught up instead - the resources first (ViewerResourceSync goes back
+                   to the saved level's baseline), then the script (ViewerScriptResync). Neither has anything for a level still
+                   loading, which the viewer reads whole. */
+                ViewerResourceSync.NotifyViewerReadsFromDisk();
+                ViewerScriptResync.NotifyViewerConnected();
+
+                /* The viewer is shown the scene the editor is in, the composite its hierarchy starts from. Its load built the
+                   level's root whatever the editor had open, so a composite opened on its own (an assistant's edit opens the
+                   composite it changes) came back as the whole level, judged by the grey-out as the active composite inside
+                   it: nothing greyed with no path, everything greyed with one. A restart of the viewer goes through
+                   NotifyLevelLoadStarting too, so the pending name says nothing here: only a display showing a composite of
+                   the level being loaded has a scene to give (a real level switch has emptied it). */
+                SendLevelLoadedPacket(levelName, sceneRoot: EditorSceneRoot(levelName));
+                //Connected while a load is under way: this is its request, and the LEVEL_LOADED the load ends with need not repeat it
+                if (_pendingLevelLoadName != null)
+                    _viewerLoadRequested = _pendingLevelLoadName;
+            }
             else
                 SendData(GeneratePacket());
+
+            //A viewer that has just connected has no zone table at all, whether or not one has changed
+            ViewerZoneSync.SendNow();
+        }
+
+        /* The editor's own copy of what ViewerScriptResync noted since the save, for a viewer that read the level from disk.
+           One scene batch, so the viewer follows it in its script only and builds the scene once at the end. A composite
+           added or removed here is dropped there and, while it is still here, sent whole; in any other composite the noted
+           entities are taken out and put back as they stand (the ones still here). The rebuild is asked for by name: a
+           composite made this session and open in the editor was not in the level the viewer read, which built the level's
+           root in its place - and a batch only rebuilds the scene it has on screen. */
+        internal static void ResendScript(Commands commands, List<uint> composites, Dictionary<uint, HashSet<uint>> entities)
+        {
+            if (commands == null)
+                return;
+
+            HashSet<uint> whole = new HashSet<uint>(composites);
+            BeginSceneBatch();
+            try
+            {
+                foreach (uint id in composites)
+                {
+                    Packet removed = GeneratePacket(PacketEvent.COMPOSITE_DELETED);
+                    removed.composite = id;
+                    SendData(removed);
+
+                    Composite composite = commands.GetComposite(new ShortGuid(id));
+                    if (composite == null)
+                        continue;
+                    Packet added = GeneratePacket(PacketEvent.COMPOSITE_ADDED);
+                    added.composite = id;
+                    added.composite_name = composite.name ?? "";
+                    SendData(added);
+                    SendCompositeContents(composite);
+                }
+
+                foreach (KeyValuePair<uint, HashSet<uint>> entry in entities)
+                {
+                    Composite composite = whole.Contains(entry.Key) ? null : commands.GetComposite(new ShortGuid(entry.Key));
+                    if (composite == null || entry.Value.Count == 0)
+                        continue;
+                    //The viewer adds nothing it already holds, so whatever it has under these ids goes first
+                    Packet removed = GeneratePacket(PacketEvent.ENTITY_DELETED);
+                    removed.composite = entry.Key;
+                    removed.entity = entry.Value.First();
+                    removed.batch_entities.AddRange(entry.Value);
+                    SendData(removed);
+                    SendCompositeContents(composite, entry.Value.Select(o => composite.GetEntityByID(new ShortGuid(o))));
+                }
+
+                Composite scene = commands.GetComposite(new ShortGuid(EditorSceneRoot(Singleton.Editor?.CompositeBrowser?.Content?.Level?.Name)));
+                RefreshCompositeInViewer(scene);
+            }
+            finally
+            {
+                EndSceneBatch();
+            }
         }
 
         /* Create a Packet object containing useful metadata */
@@ -357,40 +1053,107 @@ namespace OpenCAGE.UnityConnection
                     }
                 }
             }
-            if (Singleton.Editor?.CompositeDisplay?.EntityDisplay?.Entity != null)
+            //The path down to the open composite, before the selected entity goes on the end of it
+            List<uint> drillPath = new List<uint>(p.path_entities);
+
+            /* Editing several entities at once is still one selection to the viewer: the first is the
+               one it anchors on (inspector, camera, the gizmo's orientation) and the rest ride along
+               in selection_entities so they are marked and moved with it. */
+            List<Entity> multiSelection = Singleton.Editor?.CompositeDisplay?.EntityDisplay?.MultiSelectedEntities;
+            Entity selectedEntity = Singleton.Editor?.CompositeDisplay?.EntityDisplay?.Entity
+                ?? (multiSelection != null && multiSelection.Count > 0 ? multiSelection[0] : null);
+            if (selectedEntity != null)
             {
-                Entity entity = Singleton.Editor.CompositeDisplay.EntityDisplay.Entity;
-                p.path_entities.Add(entity.shortGUID.AsUInt32);
-                p.entity = entity.shortGUID.AsUInt32;
-                p.entity_variant = entity.variant;
-                if (entity.variant == EntityVariant.FUNCTION)
-                    p.entity_function = ((FunctionEntity)entity).function.AsUInt32;
+                p.path_entities.Add(selectedEntity.shortGUID.AsUInt32);
+                p.entity = selectedEntity.shortGUID.AsUInt32;
+                p.entity_variant = selectedEntity.variant;
+                if (selectedEntity.variant == EntityVariant.FUNCTION)
+                    p.entity_function = ((FunctionEntity)selectedEntity).function.AsUInt32;
+
+                if (multiSelection != null && multiSelection.Count > 1)
+                    foreach (Entity entity in multiSelection)
+                        p.selection_entities.Add(entity.shortGUID.AsUInt32);
             }
             if (Singleton.Editor?.CompositeDisplay?.Composite != null)
             {
                 Composite composite = Singleton.Editor.CompositeDisplay.Composite;
                 p.path_composites.Add(composite.shortGUID.AsUInt32);
                 p.composite = composite.shortGUID.AsUInt32;
+
+                /* Selecting a TriggerSequence marks everything it fires at, so the sequence can be
+                   read off the level rather than off its entry list. Its members are named by paths
+                   which can point out of this composite entirely, so they travel as instance paths
+                   rather than as ids in selection_entities. */
+                if (selectedEntity is TriggerSequence sequence)
+                {
+                    p.selection_entity_paths = EntityInstancePath.ResolveTriggerSequenceMembers(
+                        Singleton.Editor?.CompositeBrowser?.Content?.Level?.Commands,
+                        composite,
+                        drillPath,
+                        sequence);
+                }
+                else if (selectedEntity is FunctionEntity zone && zone.function == FunctionType.Zone)
+                {
+                    /* A Zone the same way: it marks everything it claims - what its sequences name, and
+                       everything inside those - which is what the zone overlay draws in its colour. The
+                       paths are written from where the hierarchy starts, the composite the viewer has
+                       populated. */
+                    Composite hierarchyRoot = Singleton.Editor.CompositeDisplay.Path?.AllComposites.FirstOrDefault() ?? composite;
+                    p.selection_entity_paths = ViewerZoneSync.ResolveZoneMembers(
+                        Singleton.Editor?.CompositeBrowser?.Content?.Level,
+                        hierarchyRoot,
+                        drillPath,
+                        composite,
+                        zone);
+                }
             }
             p.dirty = _isDirty; //NOTE: Not using the DirtyTracker here as we only care about changes that will visually affect the Unity editor.
+            p.focus_object = SettingsManager.GetBool(Settings.FocusOnSelected);
+            p.fix_camera_to_selected = SettingsManager.GetBool(Settings.FixCameraToSelected);
             p.show_camera_position = SettingsManager.GetBool(Settings.ShowCameraPosition);
             p.model_reference_wireframe = SettingsManager.GetBool(Settings.RenderWireframe);
             p.hide_nested_script_entities = SettingsManager.GetBool(Settings.HideNestedScriptEntities);
             p.highlight_aliases = SettingsManager.GetBool(Settings.HighlightAliases);
             p.highlight_proxies = SettingsManager.GetBool(Settings.HighlightProxies);
-            p.transform_grid_snap = TransformSnapDefinitions.NormalizeGridSnap(SettingsManager.GetFloat(Settings.TransformGridSnap));
-            p.rotation_snap_degrees = TransformSnapDefinitions.NormalizeRotationSnap(SettingsManager.GetFloat(Settings.RotationSnapDegrees));
+            p.transform_grid_snap = SnapIncrementSettings.NormalizeGrid(SettingsManager.GetFloat(Settings.TransformGridSnap));
+            p.rotation_snap_degrees = SnapIncrementSettings.NormalizeRotation(SettingsManager.GetFloat(Settings.RotationSnapDegrees));
+            p.transform_vertex_snap = SettingsManager.GetBool(Settings.TransformVertexSnap);
             p.deep_select_mode = (int)LevelViewerViewportDefinitions.NormalizeDeepSelectMode(
                 SettingsManager.GetInteger(Settings.LevelViewerDeepSelectMode));
             p.gizmo_mode = (int)LevelViewerViewportDefinitions.NormalizeGizmoMode(
                 SettingsManager.GetInteger(Settings.LevelViewerGizmoMode));
+            p.create_function_type = ViewerCreateMode.ActiveFunctionType;
+            p.measure_mode = ViewerMeasureMode.Active;
             p.box_render_filters = RenderFilters.GetPacketFilters();
+            p.scene_render_filters = RenderFilters.GetScenePacketFilters();
+            p.show_navmesh_state = ViewerStateInfoMode.NavMeshState;
+            p.show_cover_state = ViewerStateInfoMode.CoverState;
+            p.show_zones = SettingsManager.GetBool(Settings.ShowZones);
+            p.selection_highlight_mode = (int)LevelViewerViewportDefinitions.NormalizeHighlightMode(
+                SettingsManager.GetInteger(Settings.LevelViewerHighlightMode));
+            p.render_galaxy = SettingsManager.GetBool(Settings.RenderGalaxy);
+            p.render_fog = SettingsManager.GetBool(Settings.RenderFog);
+            p.render_water = SettingsManager.GetBool(Settings.RenderWater);
+            p.render_planets = SettingsManager.GetBool(Settings.RenderPlanets);
+            p.planar_reflections = SettingsManager.GetBool(Settings.PlanarReflections);
+            p.antialias_mode = (int)LevelViewerViewportDefinitions.NormalizeAntialiasMode(
+                SettingsManager.GetInteger(Settings.LevelViewerAntialiasMode));
+            p.draw_distance = (int)LevelViewerViewportDefinitions.NormalizeDrawDistance(
+                SettingsManager.GetInteger(Settings.LevelViewerDrawDistance));
+            p.entity_clipboard_has_content = EntityClipboard.HasContent;
+            //While the game's camera follows the viewport's: the viewer reports its camera as it moves (VIEWER_CAMERA_POSE)
+            p.stream_camera_pose = RuntimeUtilsConnection.LiveLinkCameraSync.StreamPose;
+            //While the viewport's camera follows the game's: the viewer leaves its camera to VIEWPORT_SET_CAMERA
+            p.camera_follows_game = RuntimeUtilsConnection.LiveLinkCameraSync.CameraFollowsGame;
             return p;
         }
 
         /* Send data to all connected Unity sessions */
-        private static void SendData(Packet content)
+        internal static void SendData(Packet content)
         {
+            //Before the suppression below: what the viewer did itself is not echoed back to it, but a viewer that connects later lacks it too
+            ViewerScriptResync.Note(content);
+
             if (ViewerSelectionSync.SuppressSyncBroadcastDepth > 0
                 && (content.packet_event == PacketEvent.ENTITY_SELECTED
                     || content.packet_event == PacketEvent.ENTITY_ADDED
@@ -404,7 +1167,69 @@ namespace OpenCAGE.UnityConnection
 
             string json = JsonConvert.SerializeObject(content);
             WebSocketPacketLog.LogSent(content, json.Length);
-            _server?.WebSocketServices["/commands_editor"].Sessions.Broadcast(json);
+            if (_server == null)
+                return;
+            ViewerBusy.NotePopulateRequested(content);
+            EnsureSender();
+            _outbox.Add(json);
+        }
+
+        /* Packets go out in order on one background thread. Broadcast is a blocking socket write, and the viewer only
+           reads its socket while its main thread is free: during a populate or a big spawn a large packet (a zone
+           table, a composite's contents) filled the buffers and the write sat there - on whichever thread sent it,
+           usually the UI thread, so OpenCAGE froze until the viewport caught up (the stress run measured 30 s).
+           Sending here keeps the order packets were made in, and nothing waits on the viewer. */
+        private static readonly BlockingCollection<string> _outbox = new BlockingCollection<string>();
+        private static readonly object _senderLock = new object();
+        private static Thread _sender;
+
+        /* The game's camera, followed by the viewport, is only worth sending while it is the newest: a viewer slow to read
+           (a populate) would otherwise be sent every pose it missed, one after another. So a follow pose waits here, and
+           holds one place in the outbox (this string, told apart by reference) where the sender takes whichever is newest. */
+        private static readonly string FollowPoseSlot = new string(new[] { '\0' });
+        private static string _followPoseJson;
+
+        private static void EnsureSender()
+        {
+            if (_sender != null)
+                return;
+            lock (_senderLock)
+            {
+                if (_sender != null)
+                    return;
+                _sender = new Thread(SenderLoop) { IsBackground = true, Name = "Viewport websocket sender" };
+                _sender.Start();
+            }
+        }
+
+        private static void SenderLoop()
+        {
+            foreach (string queued in _outbox.GetConsumingEnumerable())
+            {
+                string json = ReferenceEquals(queued, FollowPoseSlot) ? Interlocked.Exchange(ref _followPoseJson, null) : queued;
+                if (json == null)
+                    continue;
+                try
+                {
+                    _server?.WebSocketServices["/commands_editor"].Sessions.Broadcast(json);
+                }
+                catch (Exception e)
+                {
+                    //The server stopping under a send (a viewer restart) - the next viewer is resynced from scratch
+                    Debug.Log("Websocket", "Send failed: " + e.Message);
+                }
+            }
+        }
+
+        /* Packets still waiting when a viewer goes (or a new one arrives) were for the old session: a broadcast
+           used to reach no one then, and the new viewer is sent the whole state when it connects */
+        private static void DropQueuedPackets()
+        {
+            while (_outbox.TryTake(out string _))
+            {
+            }
+            //Its place in the outbox has gone with the rest
+            Interlocked.Exchange(ref _followPoseJson, null);
         }
     }
 }

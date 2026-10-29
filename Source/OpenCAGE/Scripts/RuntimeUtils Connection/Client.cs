@@ -14,6 +14,7 @@ namespace OpenCAGE.RuntimeUtilsConnection
         public Action OnConnected;
         public Action OnDisconnected;
         public Action<string> OnMessage;
+        public Action<byte[]> OnBinaryMessage;
 
         public Client(string url)
         {
@@ -40,6 +41,11 @@ namespace OpenCAGE.RuntimeUtilsConnection
                 };
                 _ws.OnMessage += (sender, e) =>
                 {
+                    if (e.IsBinary)
+                    {
+                        OnBinaryMessage?.Invoke(e.RawData);
+                        return;
+                    }
                     Debug.Log("RuntimeUtils", "Message received: " + e.Data);
                     OnMessage?.Invoke(e.Data);
                 };
@@ -63,6 +69,26 @@ namespace OpenCAGE.RuntimeUtilsConnection
             {
                 _ws.Close();
                 _ws = null;
+            }
+        }
+
+        public bool Send(byte[] message)
+        {
+            if (!Connected)
+            {
+                Debug.Log("RuntimeUtils", "Cannot send message - not connected");
+                return false;
+            }
+
+            try
+            {
+                _ws.Send(message);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.Log("RuntimeUtils", "Failed to send message: " + ex.Message);
+                return false;
             }
         }
 

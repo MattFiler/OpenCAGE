@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -26,6 +26,7 @@ namespace OpenCAGE
         {
             _commands = editor;
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/scripting-intro/");
 
             _folder = folderPath;
             this.Text = _folder == "" ? "Create New Composite" : "Create New Composite In Folder '" + _folder + "'";
@@ -48,6 +49,20 @@ namespace OpenCAGE
                 }
             }
 
+            //A composite's name is used as a path: a character a path can't hold breaks the editor's handling of it
+            char bad = path.FirstOrDefault(c => System.IO.Path.GetInvalidPathChars().Contains(c));
+            if (bad != default(char))
+            {
+                MessageBox.Show("Failed to create composite: its name can't contain " + (char.IsControl(bad) ? "control characters" : "'" + bad + "'") + ".", "Composite path/name invalid", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            string nameProblem = EditorUtils.UnstorableTextProblem(path, "This composite name");
+            if (nameProblem != null)
+            {
+                MessageBox.Show(nameProblem, "Composite path/name invalid", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             for (int i = 0; i < _commands.Content.Level.Commands.Entries.Count; i++)
             {
                 if (_commands.Content.Level.Commands.Entries[i].name.Replace("\\", "/") == path)
@@ -62,6 +77,8 @@ namespace OpenCAGE
             Composite comp = _commands.Content.Level.Commands.AddComposite(path.Replace("/", "\\"));
 
             Singleton.OnCompositeAdded?.Invoke(comp);
+            OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.CompositeAddEdit(comp, false, "Add composite " + EditorUtils.GetCompositeName(comp)));
+            Steam.CountTowards(Steam.Achievements.ONE_HUNDRED_COMPOSITES);
             OnCompositeAdded?.Invoke(comp);
             this.Close();
         }

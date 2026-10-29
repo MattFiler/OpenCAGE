@@ -33,13 +33,13 @@ namespace OpenCAGE.DockPanels
         {
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(CompositeBrowser));
-            this.imageList = new System.Windows.Forms.ImageList(this.components);
+            //the red X every other search row uses, borrowed the same way EntitySearch borrows it
+            System.ComponentModel.ComponentResourceManager clearBtnResources = new System.ComponentModel.ComponentResourceManager(typeof(OpenCAGE.Popups.UserControls.CompositeEntityList));
             this.entity_search_box = new System.Windows.Forms.TextBox();
             this.entity_search_btn = new System.Windows.Forms.Button();
+            this.entity_search_clear_btn = new System.Windows.Forms.Button();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.listView1 = new System.Windows.Forms.ListView();
-            this.FileBrowserImageListLarge = new System.Windows.Forms.ImageList(this.components);
-            this.FileBrowserImageListSmall = new System.Windows.Forms.ImageList(this.components);
             this.FileBrowserContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.createToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.compositeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -47,6 +47,7 @@ namespace OpenCAGE.DockPanels
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.deleteFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.renameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.duplicateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.findReferencesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
             this.viewModeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -54,7 +55,6 @@ namespace OpenCAGE.DockPanels
             this.listToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.treeView1 = new System.Windows.Forms.TreeView();
             this.FileTreeContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.pathDisplay = new System.Windows.Forms.TextBox();
             this.goBackOnPath = new System.Windows.Forms.Button();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.toolStrip1 = new System.Windows.Forms.ToolStrip();
@@ -67,6 +67,7 @@ namespace OpenCAGE.DockPanels
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.toolStripMenuItem4 = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem5 = new System.Windows.Forms.ToolStripMenuItem();
+            this.duplicateViaTreeView = new System.Windows.Forms.ToolStripMenuItem();
             this.findReferencesViaTreeView = new System.Windows.Forms.ToolStripMenuItem();
             this.FileBrowserContextMenu.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
@@ -77,39 +78,43 @@ namespace OpenCAGE.DockPanels
             this.FileTreeContextMenuNew.SuspendLayout();
             this.SuspendLayout();
             // 
-            // imageList
-            // 
-            this.imageList.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList.ImageStream")));
-            this.imageList.TransparentColor = System.Drawing.Color.Magenta;
-            this.imageList.Images.SetKeyName(0, "Folder Icon.png");
-            this.imageList.Images.SetKeyName(1, "d_Prefab Icon.png");
-            this.imageList.Images.SetKeyName(2, "FolderOpened Icon.png");
-            this.imageList.Images.SetKeyName(3, "globe.png");
-            this.imageList.Images.SetKeyName(4, "cog.png");
-            this.imageList.Images.SetKeyName(5, "Avatar Icon.png");
-            // 
             // entity_search_box
             // 
             this.entity_search_box.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.entity_search_box.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.entity_search_box.Location = new System.Drawing.Point(0, 0);
+            this.entity_search_box.Location = new System.Drawing.Point(0, 1);
             this.entity_search_box.Name = "entity_search_box";
-            this.entity_search_box.Size = new System.Drawing.Size(262, 20);
+            this.entity_search_box.Size = new System.Drawing.Size(237, 20);
             this.entity_search_box.TabIndex = 159;
             this.entity_search_box.KeyDown += new System.Windows.Forms.KeyEventHandler(this.entity_search_box_KeyDown);
+            this.entity_search_box.TextChanged += new System.EventHandler(this.entity_search_box_TextChanged);
             // 
             // entity_search_btn
             // 
             this.entity_search_btn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.entity_search_btn.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-            this.entity_search_btn.Location = new System.Drawing.Point(261, 0);
+            this.entity_search_btn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.entity_search_btn.Location = new System.Drawing.Point(239, 0);
             this.entity_search_btn.Name = "entity_search_btn";
-            this.entity_search_btn.Size = new System.Drawing.Size(63, 20);
-            this.entity_search_btn.TabIndex = 158;
+            this.entity_search_btn.Size = new System.Drawing.Size(60, 23);
+            this.entity_search_btn.TabIndex = 160;
             this.entity_search_btn.Text = "Search";
             this.entity_search_btn.UseVisualStyleBackColor = true;
             this.entity_search_btn.Click += new System.EventHandler(this.entity_search_btn_Click);
+            // 
+            // entity_search_clear_btn
+            // 
+            this.entity_search_clear_btn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.entity_search_clear_btn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.entity_search_clear_btn.Image = ((System.Drawing.Image)(clearBtnResources.GetObject("clearSearchBtn.Image")));
+            this.entity_search_clear_btn.Location = new System.Drawing.Point(301, 0);
+            this.entity_search_clear_btn.Name = "entity_search_clear_btn";
+            this.entity_search_clear_btn.Padding = new System.Windows.Forms.Padding(0, 0, 0, 2);
+            this.entity_search_clear_btn.Size = new System.Drawing.Size(23, 23);
+            this.entity_search_clear_btn.TabIndex = 161;
+            this.entity_search_clear_btn.UseVisualStyleBackColor = true;
+            this.entity_search_clear_btn.Visible = false;
+            this.entity_search_clear_btn.Click += new System.EventHandler(this.entity_search_clear_btn_Click);
             // 
             // listView1
             // 
@@ -118,36 +123,15 @@ namespace OpenCAGE.DockPanels
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.listView1.HideSelection = false;
-            this.listView1.LargeImageList = this.FileBrowserImageListLarge;
             this.listView1.Location = new System.Drawing.Point(0, 19);
             this.listView1.MultiSelect = false;
             this.listView1.Name = "listView1";
+            this.listView1.ShowItemToolTips = true;
             this.listView1.Size = new System.Drawing.Size(1175, 687);
-            this.listView1.SmallImageList = this.FileBrowserImageListSmall;
             this.listView1.TabIndex = 179;
             this.listView1.UseCompatibleStateImageBehavior = false;
             this.listView1.ItemActivate += new System.EventHandler(this.listView1_SelectedIndexChanged);
             this.listView1.MouseDown += new System.Windows.Forms.MouseEventHandler(this.FooListView_MouseDown);
-            // 
-            // FileBrowserImageListLarge
-            // 
-            this.FileBrowserImageListLarge.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("FileBrowserImageListLarge.ImageStream")));
-            this.FileBrowserImageListLarge.TransparentColor = System.Drawing.Color.Transparent;
-            this.FileBrowserImageListLarge.Images.SetKeyName(0, "temp_prefab.png");
-            this.FileBrowserImageListLarge.Images.SetKeyName(1, "temp_folder.png");
-            this.FileBrowserImageListLarge.Images.SetKeyName(2, "temp_globe.png");
-            this.FileBrowserImageListLarge.Images.SetKeyName(3, "temp_gamemanager.png");
-            this.FileBrowserImageListLarge.Images.SetKeyName(4, "temp_displaymodel.png");
-            // 
-            // FileBrowserImageListSmall
-            // 
-            this.FileBrowserImageListSmall.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("FileBrowserImageListSmall.ImageStream")));
-            this.FileBrowserImageListSmall.TransparentColor = System.Drawing.Color.Transparent;
-            this.FileBrowserImageListSmall.Images.SetKeyName(0, "temp_prefab.png");
-            this.FileBrowserImageListSmall.Images.SetKeyName(1, "temp_folder.png");
-            this.FileBrowserImageListSmall.Images.SetKeyName(2, "temp_globe.png");
-            this.FileBrowserImageListSmall.Images.SetKeyName(3, "temp_gamemanager.png");
-            this.FileBrowserImageListSmall.Images.SetKeyName(4, "temp_displaymodel.png");
             // 
             // FileBrowserContextMenu
             // 
@@ -156,6 +140,7 @@ namespace OpenCAGE.DockPanels
             this.toolStripSeparator1,
             this.deleteFolderToolStripMenuItem,
             this.renameToolStripMenuItem,
+            this.duplicateToolStripMenuItem,
             this.findReferencesToolStripMenuItem,
             this.toolStripSeparator2,
             this.viewModeToolStripMenuItem});
@@ -207,7 +192,15 @@ namespace OpenCAGE.DockPanels
             this.renameToolStripMenuItem.Size = new System.Drawing.Size(128, 22);
             this.renameToolStripMenuItem.Text = "Rename";
             this.renameToolStripMenuItem.Click += new System.EventHandler(this.renameToolStripMenuItem_Click);
-            // 
+            //
+            // duplicateToolStripMenuItem
+            //
+            this.duplicateToolStripMenuItem.Name = "duplicateToolStripMenuItem";
+            this.duplicateToolStripMenuItem.Size = new System.Drawing.Size(128, 22);
+            this.duplicateToolStripMenuItem.Text = "Duplicate";
+            this.duplicateToolStripMenuItem.ToolTipText = "Makes a copy of this composite under a new name: the same entities, links, parameters and flowgraph pages.";
+            this.duplicateToolStripMenuItem.Click += new System.EventHandler(this.duplicateToolStripMenuItem_Click);
+            //
             // findReferencesToolStripMenuItem
             // 
             this.findReferencesToolStripMenuItem.Name = "findReferencesToolStripMenuItem";
@@ -244,7 +237,7 @@ namespace OpenCAGE.DockPanels
             this.listToolStripMenuItem.Size = new System.Drawing.Size(134, 22);
             this.listToolStripMenuItem.Text = "List";
             this.listToolStripMenuItem.Click += new System.EventHandler(this.listToolStripMenuItem_Click);
-            // 
+            //
             // treeView1
             // 
             this.treeView1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -254,11 +247,10 @@ namespace OpenCAGE.DockPanels
             this.treeView1.FullRowSelect = true;
             this.treeView1.HideSelection = false;
             this.treeView1.ImageIndex = 0;
-            this.treeView1.ImageList = this.imageList;
-            this.treeView1.Location = new System.Drawing.Point(0, 19);
+            this.treeView1.Location = new System.Drawing.Point(0, 24);
             this.treeView1.Name = "treeView1";
             this.treeView1.SelectedImageIndex = 0;
-            this.treeView1.Size = new System.Drawing.Size(324, 687);
+            this.treeView1.Size = new System.Drawing.Size(324, 682);
             this.treeView1.TabIndex = 180;
             this.treeView1.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.treeView1_AfterSelect);
             this.treeView1.MouseDown += new System.Windows.Forms.MouseEventHandler(this.FileTree_MouseDown);
@@ -268,20 +260,7 @@ namespace OpenCAGE.DockPanels
             // 
             this.FileTreeContextMenu.Name = "FileTreeContextMenu";
             this.FileTreeContextMenu.Size = new System.Drawing.Size(61, 4);
-            // 
-            // pathDisplay
-            // 
-            this.pathDisplay.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.pathDisplay.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pathDisplay.Enabled = false;
-            this.pathDisplay.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.pathDisplay.Location = new System.Drawing.Point(62, 0);
-            this.pathDisplay.Name = "pathDisplay";
-            this.pathDisplay.ReadOnly = true;
-            this.pathDisplay.Size = new System.Drawing.Size(1113, 20);
-            this.pathDisplay.TabIndex = 181;
-            // 
+            //
             // goBackOnPath
             // 
             this.goBackOnPath.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
@@ -304,11 +283,11 @@ namespace OpenCAGE.DockPanels
             this.splitContainer1.Panel1.Controls.Add(this.treeView1);
             this.splitContainer1.Panel1.Controls.Add(this.entity_search_box);
             this.splitContainer1.Panel1.Controls.Add(this.entity_search_btn);
+            this.splitContainer1.Panel1.Controls.Add(this.entity_search_clear_btn);
             // 
             // splitContainer1.Panel2
             // 
             this.splitContainer1.Panel2.Controls.Add(this.goBackOnPath);
-            this.splitContainer1.Panel2.Controls.Add(this.pathDisplay);
             this.splitContainer1.Panel2.Controls.Add(this.listView1);
             this.splitContainer1.Size = new System.Drawing.Size(1504, 706);
             this.splitContainer1.SplitterDistance = 324;
@@ -350,9 +329,10 @@ namespace OpenCAGE.DockPanels
             this.toolStripSeparator3,
             this.toolStripMenuItem4,
             this.toolStripMenuItem5,
+            this.duplicateViaTreeView,
             this.findReferencesViaTreeView});
             this.FileTreeContextMenuNew.Name = "FileBrowserContextMenu";
-            this.FileTreeContextMenuNew.Size = new System.Drawing.Size(118, 76);
+            this.FileTreeContextMenuNew.Size = new System.Drawing.Size(118, 98);
             // 
             // toolStripMenuItem1
             // 
@@ -399,7 +379,15 @@ namespace OpenCAGE.DockPanels
             this.toolStripMenuItem5.Size = new System.Drawing.Size(117, 22);
             this.toolStripMenuItem5.Text = "Rename";
             this.toolStripMenuItem5.Click += new System.EventHandler(this.renameViaTreeView_Click);
-            // 
+            //
+            // duplicateViaTreeView
+            //
+            this.duplicateViaTreeView.Name = "duplicateViaTreeView";
+            this.duplicateViaTreeView.Size = new System.Drawing.Size(117, 22);
+            this.duplicateViaTreeView.Text = "Duplicate";
+            this.duplicateViaTreeView.ToolTipText = "Makes a copy of this composite under a new name: the same entities, links, parameters and flowgraph pages.";
+            this.duplicateViaTreeView.Click += new System.EventHandler(this.duplicateViaTreeView_Click);
+            //
             // findReferencesViaTreeView
             // 
             this.findReferencesViaTreeView.Name = "findReferencesViaTreeView";
@@ -438,14 +426,12 @@ namespace OpenCAGE.DockPanels
         }
 
         #endregion
-        private System.Windows.Forms.ImageList imageList;
         private System.Windows.Forms.TextBox entity_search_box;
         private System.Windows.Forms.Button entity_search_btn;
+        private System.Windows.Forms.Button entity_search_clear_btn;
         private System.Windows.Forms.ToolTip toolTip1;
         private System.Windows.Forms.ListView listView1;
         private System.Windows.Forms.TreeView treeView1;
-        private System.Windows.Forms.ImageList FileBrowserImageListLarge;
-        private System.Windows.Forms.TextBox pathDisplay;
         private System.Windows.Forms.Button goBackOnPath;
         private System.Windows.Forms.SplitContainer splitContainer1;
         private System.Windows.Forms.ContextMenuStrip FileBrowserContextMenu;
@@ -457,9 +443,10 @@ namespace OpenCAGE.DockPanels
         private System.Windows.Forms.ToolStripMenuItem deleteFolderToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem renameToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem findReferencesToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem duplicateToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem duplicateViaTreeView;
         private ToolStripSeparator toolStripSeparator2;
         private ToolStripMenuItem viewModeToolStripMenuItem;
-        private ImageList FileBrowserImageListSmall;
         private ToolStripMenuItem largeIconsToolStripMenuItem;
         private ToolStripMenuItem listToolStripMenuItem;
         private ToolStrip toolStrip1;

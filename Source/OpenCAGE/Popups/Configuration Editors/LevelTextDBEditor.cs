@@ -5,218 +5,635 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using System.Xml.Linq;
-using System.Xml.XPath;
-using WeifenLuo.WinFormsUI.Docking;
+using System.Xml;
 
 namespace OpenCAGE.ConfigEditors
 {
+    /// <summary>
+    /// DATA/LEVEL_TEXT_DATABASES.XML and each level's own TEXT/TEXT_DB_LIST.TXT - which text databases a
+    /// level loads, and so which localised strings its script can display.
+    ///
+    /// The two sources are ADDITIVE, not alternatives: the engine reads
+    /// <c>data/level_text_databases.xml</c> for the shared databases under DATA/TEXT (the level's own
+    /// block plus the "globals" block every level gets), and <c>data/env/&lt;level&gt;/text/text_db_list.txt</c>
+    /// for databases shipped inside the level folder. A level ends up with the union, which is what
+    /// <see cref="Level.Load"/> resolves.
+    ///
+    /// The XML keys a level by its folder name only ("BSP_Torrens"), not its path, so two levels with the
+    /// same folder name in different subfolders would share an entry.
+    /// </summary>
     public partial class LevelTextDBEditor : BaseWindow
     {
-        //todo - this is OLD and needs updating!!!
+        private const string GlobalsEntry = "globals";
+        private const string GlobalsDisplay = "(globals - every level)";
+        private const string DbListFile = "/TEXT/TEXT_DB_LIST.TXT";
+        private const string MissingSuffix = "   (file missing)";
 
-        HashSet<string> _availableGlobalDBs = new HashSet<string>();
-        List<Level> _levels = new List<Level>();
-        Level _selectedLevel = null;
+        private class LevelEntry
+        {
+            public string Display;      //what the list shows
+            public string Path;         //level path under DATA/ENV, or null for the globals block
+            public string XmlName;      //the name the XML keys this level by
+            public bool IsGlobals => Path == null;
+        }
+
+        private readonly List<LevelEntry> _levels = new List<LevelEntry>();
+        private readonly List<string> _sharedDbs = new List<string>();
+        private XmlDocument _config;
+        private string _configPath;
+        private LevelEntry _selected;
+        private bool _populating;
+        private bool _loadFailed;
 
         public LevelTextDBEditor() : base()
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/level-text-dbs/");
 
-            ReadLevelTextDatabasesXML();
-            ReadLocalTextDBs();
+            _configPath = ConfigPath;
+            try
+            {
+                _config = new XmlDocument();
+                //Keep the file's own indentation, so checking one database doesn't rewrite every line
+                _config.PreserveWhitespace = true;
+                _config.Load(_configPath);
+            }
+            catch (Exception e)
+            {
+                Debug.Log("Level Text DBs", "Failed to read " + _configPath + ": " + e.Message);
+                _config = null;
+            }
 
-            _levels = _levels.OrderBy(o => o.name).ToList();
+            if (_config?["level_text_databases"] == null)
+            {
+                MessageBox.Show("Could not read DATA/LEVEL_TEXT_DATABASES.XML.\n\nUse Options -> Manage Game Directories to point OpenCAGE at a valid install.",
+                    "Level text databases missing", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                _loadFailed = true;
+                return;
+            }
 
-            string[] textPaths = Directory.GetFiles(Singleton.PathToAI + "/DATA/TEXT", "*.TXT", SearchOption.AllDirectories);
-            foreach (string path in textPaths)
-                _availableGlobalDBs.Add(Path.GetFileNameWithoutExtension(path));
+            ConfigEditorUtils.ShowAutoSaveTipOnce();
+
+            //Every database name that exists under DATA/TEXT, in any language
+            _sharedDbs.AddRange(SharedDbNames());
+
+            _levels.Add(new LevelEntry() { Display = GlobalsDisplay, Path = null, XmlName = GlobalsEntry });
+            foreach (string level in EditorUtils.GetEditableLevels())
+                _levels.Add(new LevelEntry() { Display = level, Path = level, XmlName = level.Replace('\\', '/').Split('/').Last() });
 
             levelList.BeginUpdate();
-            foreach (Level lvl in _levels)
-                levelList.Items.Add(lvl.name);
+            foreach (LevelEntry level in _levels)
+                levelList.Items.Add(level.Display);
             levelList.EndUpdate();
 
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            //Clicking a row ticks it as well as selecting it, so the edit buttons follow the selection
+            sharedDbList.SelectedIndexChanged += (s, ev) => UpdateButtonStates();
+            localDbList.SelectedIndexChanged += (s, ev) => UpdateButtonStates();
+
+            string current = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Name;
+            int index = current == null ? -1 : _levels.FindIndex(o => string.Equals(o.Path, current, StringComparison.OrdinalIgnoreCase));
+            levelList.SelectedIndex = index >= 0 ? index : 0;
+
+            FormClosed += (s, ev) => DisposeCopyMenu();
+            CloseOnConfigReset();
+        }
+
+        private string SharedTextFolder => Singleton.PathToAI + "/DATA/TEXT";
+
+        private string LocalTextFolder(LevelEntry level)
+        {
+            return Singleton.PathToAI + "/DATA/ENV/" + level.Path + "/TEXT";
+        }
+
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            if (_loadFailed)
+                Close();
         }
 
         private void levelList_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (levelList.SelectedItem == null)
+            if (levelList.SelectedIndex < 0 || levelList.SelectedIndex >= _levels.Count)
                 return;
 
-            if (_selectedLevel != null)
-            {
-                _selectedLevel.text_dbs.Clear();
-                for (int i = 0; i < textDbList.Items.Count; i++)
-                {
-                    if (!textDbList.GetItemChecked(i))
-                        continue;
-                    _selectedLevel.text_dbs.Add(textDbList.Items[i].ToString());
-                }
-            }
+            _selected = _levels[levelList.SelectedIndex];
+            _populating = true;
 
-            _selectedLevel = _levels.FirstOrDefault(o => o.name == levelList.SelectedItem.ToString());
+            //Shared databases: ticked when the level's block in the XML names them
+            List<string> configured = ReadXmlDbs(_selected.XmlName).ToList();
+            HashSet<string> inXml = new HashSet<string>(configured, StringComparer.OrdinalIgnoreCase);
+            sharedDbList.BeginUpdate();
+            sharedDbList.Items.Clear();
+            foreach (string db in _sharedDbs)
+                sharedDbList.Items.Add(db, inXml.Contains(db));
 
-            textDbList.BeginUpdate();
-            textDbList.Items.Clear();
-            if (_selectedLevel.using_local_db)
+            //The config can name a database DATA/TEXT doesn't hold (retail names CV0, which does not exist).
+            //It has to stay in the list, ticked: leaving it out would drop it from the file on the next save.
+            List<string> missing = configured.Where(o => !_sharedDbs.Contains(o, StringComparer.OrdinalIgnoreCase)).ToList();
+            foreach (string db in missing)
+                sharedDbList.Items.Add(db + MissingSuffix, true);
+            sharedDbList.EndUpdate();
+
+            missingLabel.Text = missing.Count == 0
+                ? ""
+                : "Named in the config but not in DATA/TEXT: " + string.Join(", ", missing) + ". Untick to drop.";
+
+            //A level with no subtitle databases from either source - what Create Level made before it wrote a block, and any
+            //level a block was never added for - shows string ids for its subtitles and barks
+            if (!_selected.IsGlobals && missing.Count == 0 &&
+                !configured.Concat(ReadLocalDbList(_selected.Path)).Any(o => StandardDbs.Contains(o, StringComparer.OrdinalIgnoreCase)))
+                missingLabel.Text = "This level names none of the standard subtitle and bark databases, so they show as string ids in game. Add Standard Set lists them.";
+            addStandardDbs.Enabled = !_selected.IsGlobals;
+            copyLevelDbs.Enabled = !_selected.IsGlobals;
+
+            //Level-local databases: the level's own TEXT folder, ticked when TEXT_DB_LIST.TXT names them
+            localDbList.BeginUpdate();
+            localDbList.Items.Clear();
+            if (_selected.IsGlobals)
             {
-                foreach (string db in _selectedLevel.available_local_dbs)
-                    textDbList.Items.Add(db);
+                localGroup.Enabled = false;
+                localHint.Text = "The globals block applies to every level, so it has no level folder of its own.";
             }
             else
             {
-                foreach (string db in _availableGlobalDBs)
-                    textDbList.Items.Add(db);
-            }
-            textDbList.EndUpdate();
+                localGroup.Enabled = true;
+                string textFolder = Singleton.PathToAI + "/DATA/ENV/" + _selected.Path + "/TEXT";
+                if (!Directory.Exists(textFolder))
+                {
+                    localHint.Text = "This level ships no strings of its own yet. Use New Database to add one.";
+                }
+                else
+                {
+                    HashSet<string> listed = new HashSet<string>(ReadLocalDbList(_selected.Path), StringComparer.OrdinalIgnoreCase);
+                    HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    List<string> found = new List<string>();
+                    foreach (string file in Directory.GetFiles(textFolder, "*.TXT", SearchOption.AllDirectories))
+                    {
+                        string db = Path.GetFileNameWithoutExtension(file);
+                        if (string.Equals(db, "TEXT_DB_LIST", StringComparison.OrdinalIgnoreCase))
+                            continue;
+                        if (seen.Add(db))
+                            found.Add(db);
+                    }
+                    found.Sort(StringComparer.OrdinalIgnoreCase);
+                    foreach (string db in found)
+                        localDbList.Items.Add(db, listed.Contains(db));
 
-            for (int i = 0; i < textDbList.Items.Count; i++)
-            {
-                textDbList.SetItemChecked(i, _selectedLevel.text_dbs.Contains(textDbList.Items[i].ToString()));
-            }
+                    //Anything listed but no longer in the folder still belongs in the list box, unticked would lose it silently
+                    foreach (string db in listed.Where(o => !seen.Contains(o)))
+                        localDbList.Items.Add(db + MissingSuffix, true);
 
-            useLocalTextDBs.Checked = _selectedLevel.using_local_db;
+                    localHint.Text = found.Count == 0
+                        ? "The TEXT folder holds no databases yet. Use New Database to add one."
+                        : "Databases in DATA/ENV/" + _selected.Path + "/TEXT. Ticked ones are listed in TEXT_DB_LIST.TXT.";
+                }
+            }
+            localDbList.EndUpdate();
+
+            _populating = false;
+            UpdateButtonStates();
         }
 
-        private void SaveBtn_Click(object sender, EventArgs e)
+        private void UpdateButtonStates()
         {
-            WriteLevelTextDatabasesXML();
-            WriteLocalTextDBs();
+            editSharedDb.Enabled = sharedDbList.SelectedIndex >= 0;
+            editLocalDb.Enabled = localDbList.SelectedIndex >= 0;
+        }
+
+        private IEnumerable<string> ReadXmlDbs(string xmlName) => ReadXmlDbs(_config, xmlName);
+
+        /// <summary>The databases a level's block (or the "globals" block) of LEVEL_TEXT_DATABASES.XML names, as spelt there.</summary>
+        internal static List<string> ReadXmlDbs(XmlDocument config, string xmlName)
+        {
+            XmlElement block = FindLevelBlock(config, xmlName);
+            if (block == null)
+                return new List<string>();
+            return block.ChildNodes.OfType<XmlElement>()
+                .Where(o => o.Name == "text_database" && o.GetAttribute("name").Length != 0)
+                .Select(o => o.GetAttribute("name"))
+                .ToList();
+        }
+
+        private XmlElement FindLevelBlock(string xmlName) => FindLevelBlock(_config, xmlName);
+
+        internal static XmlElement FindLevelBlock(XmlDocument config, string xmlName)
+        {
+            return config["level_text_databases"].ChildNodes.OfType<XmlElement>()
+                .FirstOrDefault(o => o.Name == "level" && string.Equals(o.GetAttribute("name"), xmlName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static IEnumerable<string> ReadLocalDbList(string levelPath)
+        {
+            string path = LocalDbListPath(levelPath);
+            if (!File.Exists(path))
+                return new List<string>();
+            try
+            {
+                return File.ReadAllLines(path).Select(o => o.Trim()).Where(o => o.Length != 0).ToList();
+            }
+            catch (Exception e)
+            {
+                Debug.Log("Level Text DBs", "Failed to read " + path + ": " + e.Message);
+                return new List<string>();
+            }
+        }
+
+        /* ItemCheck runs BEFORE the box updates, so the item being changed reads from the event and the
+         * rest from the box. Saving here rather than posting the save back to the form matters: a tick
+         * followed straight away by closing the window would lose a posted save with the form. */
+        private static List<string> CheckedNames(CheckedListBox list, ItemCheckEventArgs e)
+        {
+            List<string> names = new List<string>();
+            for (int i = 0; i < list.Items.Count; i++)
+            {
+                bool ticked = i == e.Index ? e.NewValue == CheckState.Checked : list.GetItemChecked(i);
+                if (ticked)
+                    names.Add(list.Items[i].ToString());
+            }
+            return names;
+        }
+
+        private void sharedDbList_ItemCheck(object sender, ItemCheckEventArgs e)
+        {
+            if (_populating || _selected == null)
+                return;
+            SaveXml(CheckedNames(sharedDbList, e));
+        }
+
+        private void localDbList_ItemCheck(object sender, ItemCheckEventArgs e)
+        {
+            if (_populating || _selected == null || _selected.IsGlobals)
+                return;
+            SaveLocalDbList(CheckedNames(localDbList, e));
+        }
+
+        private void SaveXml(List<string> databases)
+        {
+            if (_selected == null)
+                return;
+
+            //The list shows names as the files on disk spell them, and marks the ones with no file at all;
+            //the file only wants the name
+            databases = databases.Select(o => o.Split(new[] { MissingSuffix }, StringSplitOptions.None)[0]).ToList();
+            SetXmlDbs(_config, _selected.XmlName, databases);
+
+            try
+            {
+                Modding.ModServices.CaptureBeforeWrite(_configPath);
+                _config.Save(_configPath);
+                ConfigEditorUtils.NotifyAutoSave(true);
+            }
+            catch (Exception ex)
+            {
+                ConfigEditorUtils.NotifyAutoSave(false, ex.Message);
+                return;
+            }
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
         }
 
-        private void ReadLevelTextDatabasesXML()
+        /// <summary>
+        /// Make a level's block (or the "globals" block) name exactly these databases, in memory: the block keeps
+        /// its spelling and order, new names are appended, and a block left empty is dropped.
+        /// </summary>
+        internal static void SetXmlDbs(XmlDocument config, string xmlName, List<string> databases)
         {
-            _levels.Clear();
+            XmlElement root = config["level_text_databases"];
+            XmlElement block = FindLevelBlock(config, xmlName);
 
-            var xml = XDocument.Load(Singleton.PathToAI + "/DATA/level_text_databases.xml");
-            IEnumerable<XElement> levelDBs = xml.XPathSelectElements("//level_text_databases/level");
-            foreach (XElement levelDB in levelDBs)
+            //The config spells several databases differently from their files ("Cutscenes" against
+            //CUTSCENES.TXT). Both work - the engine and the loader match case-insensitively - so keep the
+            //spelling and the order already in the file, and only append what is genuinely new.
+            List<string> configured = ReadXmlDbs(config, xmlName);
+            HashSet<string> wanted = new HashSet<string>(databases, StringComparer.OrdinalIgnoreCase);
+            List<string> ordered = configured.Where(o => wanted.Contains(o)).ToList();
+            HashSet<string> kept = new HashSet<string>(ordered, StringComparer.OrdinalIgnoreCase);
+            ordered.AddRange(databases.Where(o => !kept.Contains(o)));
+            databases = ordered;
+
+            if (databases.Count == 0)
             {
-                string levelName = levelDB.Attribute("name").Value.ToString().ToUpper();
-
-                //Some levels referenced in the vanilla config don't exist in retail - ignore them
-                if (levelName != "globals" && !Directory.Exists(Singleton.PathToAI + "/DATA/ENV/PRODUCTION/" + levelName) && !Directory.Exists(Singleton.PathToAI + "/DATA/ENV/PRODUCTION/DLC/" + levelName))
+                //No databases left: drop the block rather than leave an empty one behind
+                if (block != null)
                 {
-                    Console.WriteLine("Skipping deleted level: " + levelName);
-                    continue;
+                    if (block.PreviousSibling != null && block.PreviousSibling.NodeType == XmlNodeType.Whitespace)
+                        root.RemoveChild(block.PreviousSibling);
+                    root.RemoveChild(block);
+                }
+            }
+            else
+            {
+                //A block already there keeps the name it was written with - the config spells several levels
+                //differently from their folders ("BSP_Torrens"), and both work
+                string blockName = block?.GetAttribute("name") ?? xmlName;
+                if (block == null)
+                {
+                    block = config.CreateElement("level");
+                    block.SetAttribute("name", blockName);
+                    ConfigEditorUtils.AppendIndented(root, block, "\r\n\t");
                 }
 
-                Level level = new Level();
-                level.name = levelName;
-                var databases = levelDB.XPathSelectElements("text_database");
-                foreach (XElement database in databases)
+                //Rewrite this level's entries in place; every other level's block is untouched
+                List<XmlNode> entries = new List<XmlNode>();
+                foreach (string db in databases)
                 {
-                    level.text_dbs.Add(database.Attribute("name").Value.ToString());
+                    XmlElement entry = config.CreateElement("text_database");
+                    entry.SetAttribute("name", db);
+                    entries.Add(entry);
                 }
-                _levels.Add(level);
+                ConfigEditorUtils.ReplaceChildrenIndented(block, entries, "\r\n\t\t", "\r\n\t");
+                block.SetAttribute("name", blockName); //ReplaceChildrenIndented clears attributes
             }
         }
 
-        private void ReadLocalTextDBs()
+        internal static string ConfigPath => Singleton.PathToAI + "/DATA/LEVEL_TEXT_DATABASES.XML";
+
+        /// <summary>
+        /// The shared databases every playable retail level's block names: subtitles (SS), conversations (CV) and barks (G).
+        /// No language has a CV0 file, but retail names it in every block, so this does too.
+        /// </summary>
+        internal static readonly string[] StandardDbs = { "SS1", "SS2", "SS3", "CV0", "CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "G0000", "G0001", "G0002", "G0003" };
+
+        /// <summary>Every database name DATA/TEXT holds a file for, in any language, sorted.</summary>
+        internal static List<string> SharedDbNames()
         {
-            List<string> levelFolders = new List<string>();
+            List<string> names = new List<string>();
+            string sharedText = Singleton.PathToAI + "/DATA/TEXT";
+            if (!Directory.Exists(sharedText))
+                return names;
+            HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string file in Directory.GetFiles(sharedText, "*.TXT", SearchOption.AllDirectories))
+                if (seen.Add(Path.GetFileNameWithoutExtension(file)))
+                    names.Add(Path.GetFileNameWithoutExtension(file));
+            names.Sort(StringComparer.OrdinalIgnoreCase);
+            return names;
+        }
+
+        /// <summary>
+        /// The shared databases a level needs to show the strings of composites taken from other levels: the standard set, and
+        /// each source level's own beyond it and the globals block - its block's mission databases and, where its own
+        /// TEXT/TEXT_DB_LIST.TXT lists databases (the DLC levels), those DATA/TEXT holds too. A source's names are only taken
+        /// where DATA/TEXT has a file for them: its own TEXT folder is not copied. Mission databases come first, as retail orders them.
+        /// </summary>
+        internal static List<string> DatabasesFor(XmlDocument config, IEnumerable<string> sourceLevels) => DatabasesFor(config, sourceLevels, SharedDbNames());
+
+        private static List<string> DatabasesFor(XmlDocument config, IEnumerable<string> sourceLevels, IEnumerable<string> sharedDbs)
+        {
+            HashSet<string> shared = new HashSet<string>(sharedDbs, StringComparer.OrdinalIgnoreCase);
+            HashSet<string> taken = new HashSet<string>(StandardDbs.Concat(ReadXmlDbs(config, GlobalsEntry)), StringComparer.OrdinalIgnoreCase);
+            List<string> databases = new List<string>();
+            foreach (string level in sourceLevels)
             {
-                string[] levels = Directory.GetDirectories(Singleton.PathToAI + "/DATA/ENV/PRODUCTION/");
-                for (int i = 0; i < levels.Length; i++)
+                string xmlName = level.Replace('\\', '/').Split('/').Last();
+                foreach (string db in ReadXmlDbs(config, xmlName).Concat(ReadLocalDbList(level)))
+                    if (shared.Contains(db) && taken.Add(db))
+                        databases.Add(db);
+            }
+            databases.AddRange(StandardDbs);
+            return databases;
+        }
+
+        /// <summary>
+        /// Give a level File -> Create Level made its block of LEVEL_TEXT_DATABASES.XML, naming what <see cref="DatabasesFor"/>
+        /// gives for the levels its composites came from. New levels are made from FRONTEND, whose block is empty, so without
+        /// one the level loads only the globals databases and its subtitles and barks show as string ids. An open editor is
+        /// closed first: it holds its own copy of the file and would save it over the new block (it saves as it goes, so
+        /// nothing is lost). Returns the databases named; throws if the file cannot be read or written. UI thread.
+        /// </summary>
+        internal static List<string> WriteNewLevelBlock(string levelId, IEnumerable<string> sourceLevels)
+        {
+            foreach (LevelTextDBEditor open in Application.OpenForms.OfType<LevelTextDBEditor>().ToList())
+                open.Close();
+
+            XmlDocument config = new XmlDocument() { PreserveWhitespace = true };
+            config.Load(ConfigPath);
+            if (config["level_text_databases"] == null)
+                throw new InvalidDataException("DATA/LEVEL_TEXT_DATABASES.XML has no level_text_databases list.");
+            List<string> databases = DatabasesFor(config, sourceLevels);
+            SetXmlDbs(config, levelId, databases);
+            Modding.ModServices.CaptureBeforeWrite(ConfigPath);
+            config.Save(ConfigPath);
+            return databases;
+        }
+
+        /// <summary>Add these to the selected level's block, keeping what it names already, and show the result.</summary>
+        private void AddXmlDbs(IEnumerable<string> databases, string what)
+        {
+            if (_selected == null || _selected.IsGlobals)
+                return;
+            List<string> configured = ReadXmlDbs(_selected.XmlName).ToList();
+            List<string> added = databases.Where(o => !configured.Contains(o, StringComparer.OrdinalIgnoreCase)).ToList();
+            if (added.Count == 0)
+            {
+                MessageBox.Show(this, _selected.Display + " already names every database in " + what + ".", "Nothing to add", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            SaveXml(configured.Concat(added).ToList());
+            levelList_SelectedIndexChanged(levelList, EventArgs.Empty);
+        }
+
+        private void addStandardDbs_Click(object sender, EventArgs e)
+        {
+            AddXmlDbs(StandardDbs, "the standard set");
+        }
+
+        /* Another level's databases, from a menu under the button: what a level needs to show the strings of composites
+         * imported from it, as Create Level works it out. Disposed by the next one rather than from its own Closed
+         * handler, which runs while the close is still unwinding. */
+        private ContextMenuStrip _copyMenu = null;
+
+        private void DisposeCopyMenu()
+        {
+            ContextMenuStrip menu = _copyMenu;
+            _copyMenu = null;
+            if (menu != null && !menu.IsDisposed)
+                menu.Dispose();
+        }
+
+        private void copyLevelDbs_Click(object sender, EventArgs e)
+        {
+            if (_selected == null || _selected.IsGlobals)
+                return;
+
+            DisposeCopyMenu();
+            ContextMenuStrip menu = new ContextMenuStrip();
+            ToolStripMenuItem campaign = new ToolStripMenuItem("Campaign");
+            ToolStripMenuItem dlc = new ToolStripMenuItem("DLC");
+            ToolStripMenuItem custom = new ToolStripMenuItem("Custom");
+            foreach (LevelEntry level in _levels.Where(o => !o.IsGlobals && o != _selected))
+            {
+                string[] parts = level.Path.Replace('\\', '/').Split('/');
+                ToolStripMenuItem group = parts.Length == 1 ? custom : parts.Length > 2 && string.Equals(parts[1], "DLC", StringComparison.OrdinalIgnoreCase) ? dlc : campaign;
+                List<string> databases = DatabasesFor(_config, new[] { level.Path }, _sharedDbs);
+                List<string> own = databases.Take(databases.Count - StandardDbs.Length).ToList();
+                ToolStripMenuItem item = new ToolStripMenuItem(parts.Last() + (own.Count == 0 ? "" : "   (" + string.Join(", ", own) + ")"));
+                item.ToolTipText = "Add the standard subtitle and bark databases" + (own.Count == 0 ? "" : ", and " + level.Display + "'s own in DATA/TEXT");
+                item.Click += (s, args) => AddXmlDbs(databases, level.Display + "'s set");
+                group.DropDownItems.Add(item);
+            }
+            foreach (ToolStripMenuItem group in new[] { campaign, dlc, custom })
+                if (group.DropDownItems.Count != 0)
+                    menu.Items.Add(group);
+            _copyMenu = menu;
+            menu.Show(copyLevelDbs, new System.Drawing.Point(0, copyLevelDbs.Height));
+        }
+
+        private void SaveLocalDbList(List<string> checkedNames)
+        {
+            if (_selected == null || _selected.IsGlobals)
+                return;
+
+            //The display carries a "(file missing)" note for databases the folder no longer holds - the file only wants names
+            List<string> databases = checkedNames
+                .Select(o => o.Split(new[] { MissingSuffix }, StringSplitOptions.None)[0])
+                .ToList();
+
+            try
+            {
+                WriteLocalDbList(_selected.Path, databases);
+                ConfigEditorUtils.NotifyAutoSave(true);
+            }
+            catch (Exception ex)
+            {
+                ConfigEditorUtils.NotifyAutoSave(false, ex.Message);
+                return;
+            }
+
+            Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
+        }
+
+        /// <summary>The level's TEXT/TEXT_DB_LIST.TXT path (level as under DATA/ENV).</summary>
+        internal static string LocalDbListPath(string levelPath)
+        {
+            return Singleton.PathToAI + "/DATA/ENV/" + levelPath + DbListFile;
+        }
+
+        /// <summary>Write a level's TEXT/TEXT_DB_LIST.TXT naming these databases, deleting it when there are none.</summary>
+        internal static void WriteLocalDbList(string levelPath, List<string> databases)
+        {
+            string path = LocalDbListPath(levelPath);
+            if (databases.Count == 0)
+            {
+                if (File.Exists(path))
                 {
-                    string dirName = Path.GetFileName(levels[i]);
-                    if (dirName == "DLC")
-                        continue;
-                    levelFolders.Add(dirName.ToUpper());
+                    Modding.ModServices.CaptureBeforeWrite(path);
+                    File.Delete(path);
                 }
             }
+            else
             {
-                string[] levels = Directory.GetDirectories(Singleton.PathToAI + "/DATA/ENV/PRODUCTION/DLC/");
-                for (int i = 0; i < levels.Length; i++)
-                {
-                    string dirName = Path.GetFileName(levels[i]);
-                    if (dirName == "BSPNostromo_Ripley_PATCH" ||
-                        dirName == "BSPNostromo_TwoTeams_PATCH")
-                        continue;
-                    levelFolders.Add("DLC/" + dirName.ToUpper());
-                }
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                Modding.ModServices.CaptureBeforeWrite(path);
+                File.WriteAllLines(path, databases);
+            }
+        }
+
+        private static string StripMissing(string display)
+        {
+            return display.Split(new[] { MissingSuffix }, StringSplitOptions.None)[0];
+        }
+
+        private void newLocalDb_Click(object sender, EventArgs e)
+        {
+            if (_selected == null || _selected.IsGlobals)
+                return;
+
+            string name = null;
+            using (RenameGeneric prompt = new RenameGeneric("", new RenameGeneric.RenameGenericContent()
+            {
+                Title = "New Text Database",
+                Description = "Name for the new database in " + _selected.Path + " - it is created in all nine languages:",
+                ButtonText = "Create"
+            }))
+            {
+                prompt.OnRenamed += (n) => name = n;
+                prompt.ShowDialog(this);
             }
 
-            for (int i = 0; i < levelFolders.Count; i++)
+            if (string.IsNullOrWhiteSpace(name))
+                return;
+            name = name.Trim();
+
+            //The level's own files are read after the shared ones and win, so a level database named after a
+            //shared one replaces it for this level. That is a legitimate way to override a shared bank, but
+            //it is rarely what someone reaching for "new database" means to do.
+            if (_sharedDbs.Contains(name, StringComparer.OrdinalIgnoreCase) &&
+                MessageBox.Show(this,
+                    "DATA/TEXT already has a database called \"" + name + "\".\n\n" +
+                    "A database of that name inside the level replaces the shared one for this level. Create it anyway?",
+                    "Name already used", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                return;
+
+            if (!LocalisationHandler.TryCreateDatabase(LocalTextFolder(_selected), name, out string error))
             {
-                //TODO: need to check if the TEXT folder overwrites the use of the text db xml. if it doesn't, we should do this logic the other way around
+                MessageBox.Show(this, error, "Could not create database", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
 
-                bool dlcMap = levelFolders[i].Length > 4 && levelFolders[i].Substring(0, 4) == "DLC/";
-                string levelName = dlcMap ? levelFolders[i].Substring(4) : levelFolders[i];
+            //List it straight away - a database the level does not list is one the game never reads
+            List<string> listed = new List<string>();
+            foreach (object item in localDbList.CheckedItems)
+                listed.Add(StripMissing(item.ToString()));
+            listed.Add(name);
+            SaveLocalDbList(listed);
 
-                Level level = _levels.FirstOrDefault(o => o.name == levelName);
-                if (level == null)
+            levelList_SelectedIndexChanged(levelList, EventArgs.Empty);
+            for (int i = 0; i < localDbList.Items.Count; i++)
+            {
+                if (string.Equals(StripMissing(localDbList.Items[i].ToString()), name, StringComparison.OrdinalIgnoreCase))
                 {
-                    level = new Level();
-                    level.name = levelName;
-                    _levels.Add(level);
-                }
-
-                level.using_local_db = Directory.Exists(Singleton.PathToAI + "/DATA/ENV/PRODUCTION/" + levelFolders[i] + "/TEXT/");
-                level.is_dlc_map = dlcMap;
-
-                if (level.using_local_db)
-                {
-                    level.text_dbs = File.ReadAllLines(Singleton.PathToAI + "/DATA/ENV/PRODUCTION/" + levelFolders[i] + "/TEXT/text_db_list.txt").ToList();
-
-                    string textPath = Singleton.PathToAI + "/DATA/ENV/PRODUCTION/" + (_levels[i].is_dlc_map ? "DLC/" : "") + _levels[i].name + "/TEXT";
-                    if (Directory.Exists(textPath))
-                    {
-                        string[] textPaths = Directory.GetFiles(textPath, "*.TXT", SearchOption.AllDirectories);
-                        foreach (string path in textPaths)
-                        {
-                            string dbName = Path.GetFileNameWithoutExtension(path);
-                            if (dbName == "text_db_list")
-                                continue;
-                            _levels[i].available_local_dbs.Add(dbName);
-                        }
-                    }
+                    localDbList.SelectedIndex = i;
+                    break;
                 }
             }
         }
 
-        private void WriteLevelTextDatabasesXML()
-        {
-            List<string> output = new List<string>();
-            output.Add("<level_text_databases>");
-            for (int i = 0; i < _levels.Count; i++)
-            {
-                if (_levels[i].using_local_db)
-                    continue;
+        /* One contents editor at a time: the button is easy to hit twice, and two editors over the same files
+         * would each write over the other's work. */
+        private LocalisationEditor _contentsEditor = null;
 
-                output.Add("\t<level name=\"" + _levels[i].name + "\">");
-                for (int x = 0; x < _levels[i].text_dbs.Count; x++)
-                {
-                    output.Add("\t\t<text_database name=\"" + _levels[i].text_dbs[x] + "\">");
-                }
+        private void OpenContentsEditor(CheckedListBox list, string textFolder, string scope)
+        {
+            if (list.SelectedIndex < 0)
+                return;
+
+            string display = list.Items[list.SelectedIndex].ToString();
+            string db = StripMissing(display);
+            if (display.Length != db.Length)
+            {
+                MessageBox.Show(this, "\"" + db + "\" is listed but has no file to edit.",
+                    "Nothing to edit", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
             }
-            File.WriteAllLines(Singleton.PathToAI + "/DATA/level_text_databases.xml", output);
+
+            if (_contentsEditor != null)
+            {
+                _contentsEditor.FormClosed -= ContentsEditorClosed;
+                _contentsEditor.Close();
+                _contentsEditor = null;
+            }
+
+            _contentsEditor = new LocalisationEditor(textFolder, db, scope + " / " + db);
+            _contentsEditor.FormClosed += ContentsEditorClosed;
+            _contentsEditor.Show();
         }
 
-        private void WriteLocalTextDBs()
+        private void ContentsEditorClosed(object sender, FormClosedEventArgs e)
         {
-            for (int i = 0; i < _levels.Count; i++)
-            {
-                if (!_levels[i].using_local_db)
-                    continue;
-
-                //Manage the TEXT directory in the level
-            }
+            _contentsEditor = null;
         }
 
-        class Level
+        private void editSharedDb_Click(object sender, EventArgs e)
         {
-            public bool using_local_db = false; //If this is true, we should write to text_db_list.txt instead of the XML
-            public bool is_dlc_map = false;
+            OpenContentsEditor(sharedDbList, SharedTextFolder, "DATA/TEXT");
+        }
 
-            public string name;
-            public List<string> text_dbs = new List<string>();
-
-            public HashSet<string> available_local_dbs = new HashSet<string>();
+        private void editLocalDb_Click(object sender, EventArgs e)
+        {
+            if (_selected == null || _selected.IsGlobals)
+                return;
+            OpenContentsEditor(localDbList, LocalTextFolder(_selected), _selected.Path);
         }
     }
 }

@@ -1,4 +1,4 @@
-namespace OpenCAGE.ConfigEditors
+﻿namespace OpenCAGE.ConfigEditors
 {
     partial class InventoryItemEditor
     {
@@ -86,7 +86,6 @@ namespace OpenCAGE.ConfigEditors
             this.label18 = new System.Windows.Forms.Label();
             this.health_increase_percentage = new System.Windows.Forms.NumericUpDown();
             this.addItemBtn = new System.Windows.Forms.Button();
-            this.helpBtn = new System.Windows.Forms.Button();
             this.baseObject.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.radial_menu_order_index)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.stack_limit)).BeginInit();
@@ -245,7 +244,7 @@ namespace OpenCAGE.ConfigEditors
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(123, 13);
             this.label2.TabIndex = 3;
-            this.label2.Text = "Pickup Composite Name";
+            this.label2.Text = "Pickup Composite Name (in Required_Assets/Pickups/)";
             // 
             // label6
             // 
@@ -540,7 +539,7 @@ namespace OpenCAGE.ConfigEditors
             this.label17.Name = "label17";
             this.label17.Size = new System.Drawing.Size(126, 13);
             this.label17.TabIndex = 8;
-            this.label17.Text = "Thrown Composite Name";
+            this.label17.Text = "Thrown Composite Name (in Required_Assets/Thrown/)";
             // 
             // thrown_object_name
             // 
@@ -556,7 +555,7 @@ namespace OpenCAGE.ConfigEditors
             this.label19.Name = "label19";
             this.label19.Size = new System.Drawing.Size(112, 13);
             this.label19.TabIndex = 1;
-            this.label19.Text = "Held Composite Name";
+            this.label19.Text = "Held Composite Name (in Required_Assets/Archetypes/Equipment/)";
             // 
             // held_object_name
             // 
@@ -628,26 +627,12 @@ namespace OpenCAGE.ConfigEditors
             this.addItemBtn.TabIndex = 355;
             this.addItemBtn.Text = "Add New Item";
             this.addItemBtn.UseVisualStyleBackColor = true;
-            this.addItemBtn.Click += new System.EventHandler(this.addItemBtn_Click);
-            // 
-            // helpBtn
-            // 
-            this.helpBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.helpBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.helpBtn.Image = ((System.Drawing.Image)(resources.GetObject("helpBtn.Image")));
-            this.helpBtn.Location = new System.Drawing.Point(734, 0);
-            this.helpBtn.Name = "helpBtn";
-            this.helpBtn.Size = new System.Drawing.Size(20, 20);
-            this.helpBtn.TabIndex = 373;
-            this.helpBtn.UseVisualStyleBackColor = true;
-            this.helpBtn.Click += new System.EventHandler(this.helpBtn_Click);
-            // 
+            this.addItemBtn.Click += new System.EventHandler(this.addItemBtn_Click);            // 
             // InventoryItemEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(754, 739);
-            this.Controls.Add(this.helpBtn);
             this.Controls.Add(this.addItemBtn);
             this.Controls.Add(this.medikit);
             this.Controls.Add(this.held);
@@ -732,6 +717,5 @@ namespace OpenCAGE.ConfigEditors
         private System.Windows.Forms.Label label18;
         private System.Windows.Forms.NumericUpDown health_increase_percentage;
         private System.Windows.Forms.Button addItemBtn;
-        private System.Windows.Forms.Button helpBtn;
     }
 }

@@ -1,4 +1,4 @@
-using CATHODE;
+﻿using CATHODE;
 using CATHODE.Scripting;
 using CathodeLib;
 using OpenCAGE.Popups.Base;
@@ -20,9 +20,10 @@ namespace OpenCAGE
         private Dictionary<int, MaterialMappings.MaterialMapping> _indexToMapping = new Dictionary<int, MaterialMappings.MaterialMapping>();
         private Dictionary<ListViewItem, MaterialMappings.MaterialMapping.Mapping> _listItemToMapping = new Dictionary<ListViewItem, MaterialMappings.MaterialMapping.Mapping>();
 
-        public EditMaterialMapping(MaterialMappings.MaterialMapping currentMapping = null, bool showSelectBtn = true) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
+        public EditMaterialMapping(MaterialMappings.MaterialMapping currentMapping = null, bool showSelectBtn = true) : base(EditorOrPicker(showSelectBtn))
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/material-mapping-editor/");
             _currentMapping = currentMapping;
 
             selectButton.Visible = showSelectBtn;
@@ -290,6 +291,7 @@ namespace OpenCAGE
             if (mappingSet == null)
                 return;
 
+            EditHistory.AssetChanged(Content?.Level, AssetModificationInfoTable.AssetKind.MATERIAL_MAPPING, mappingSet.Name);
             Singleton.OnResourceModified?.Invoke();
             Send.NotifyMaterialMappingModified(mappingSet);
         }
@@ -413,6 +415,7 @@ namespace OpenCAGE
             {
                 void OnPick(Materials.Material m) { chosen = m; }
                 editor.OnMaterialSelected += OnPick;
+                editor.CloseWith(this);
                 editor.ShowDialog(owner);
                 editor.OnMaterialSelected -= OnPick;
             }

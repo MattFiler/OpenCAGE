@@ -1,3 +1,4 @@
+using AlienPAK;
 using CATHODE;
 using CATHODE.EXPERIMENTAL;
 using CATHODE.Scripting;
@@ -30,8 +31,6 @@ namespace OpenCAGE
 
         public bool IsVanilla = false; //The user has not yet saved this level using OpenCAGE
 
-        private Thread _globalUpdateThread = null;
-
         public LevelContent(string levelName)
         {
             Level = new Level(Singleton.PathToAI + "/DATA/ENV/" + levelName + "/", Singleton.Global, false);
@@ -47,20 +46,9 @@ namespace OpenCAGE
             }
             Level.Commands.Entries = Level.Commands.Entries.OrderBy(o => o.name).ToList();
 
-            //Import Global stuff, if required
-#if IMPORT_GLOBAL_ASSETS
-            _globalUpdateThread = new Thread(() => {
-                Level.ImportFromGlobal();
-
-                //TODO: should ensure AI is closed before doing this!
-                Singleton.Global.Textures.Entries.Clear();
-                Singleton.Global.Textures.Save();
-            });
-            _globalUpdateThread.Start();
-#endif
-
             //Link up commands to utils and cache some things
             FlowgraphLayoutManager.LinkCommands(this);
+            CompositePreviewManager.LinkCommands(this);
             ParameterModificationTracker.LinkCommands(Level.Commands);
 
             //Correct all Entity names that are actually pointers to resources
@@ -89,6 +77,9 @@ namespace OpenCAGE
 
             EnsureEditorUtils();
 
+            //What the level places as it is opened, to tell later whether it needs a Save & Build
+            BuildTracker.LevelLoaded(this);
+
             Singleton.OnLevelLoaded?.Invoke(this);
         }
 
@@ -108,14 +99,190 @@ namespace OpenCAGE
                 EditorUtils.GenerateCompositeInstances(Level.Commands, false);
         }
 
-        public void Save()
+        /// <summary>
+        /// Bakers that failed on the last instanced save. A baker that throws is caught so one bad
+        /// system cannot cost the user the whole save, which means the level silently keeps whatever
+        /// that system had on disk - so the failure has to be reported rather than only logged.
+        /// </summary>
+        public IReadOnlyList<string> LastBakeWarnings { get; private set; }
+
+        /// <summary>
+        /// Everything else the last instanced save could not do as asked - a missing model, an
+        /// unpacked texture, a shader that would not compile. Each is an edit that never reached
+        /// the screen, and the console is not where a user will find out.
+        /// </summary>
+        public IReadOnlyList<string> LastWarnings { get; private set; }
+
+        /// <summary>
+        /// Which bakers an instanced save runs. One left out keeps what that system already has on disk
+        /// (which may no longer match the geometry) - except radiosity, whose files are cleared, since
+        /// they would light the wrong movers.
+        /// </summary>
+        public class BakeSelection
         {
-            Level.Save();
-#if !IMPORT_GLOBAL_ASSETS
-            //TODO - we can't actually save the global textures without re-saving every other level as it'll screw with indexes - need to make a utility to make this simpler.
-            //Singleton.Global?.Textures?.Save();
-#endif
+            public bool NavMesh = true, Cover = true, Radiosity = true, JobPositions = true, Alphalight = true, SoundNetworks = true;
+            public bool All => NavMesh && Cover && Radiosity && JobPositions && Alphalight && SoundNetworks;
+        }
+
+        /// <summary>The bakers the next instanced save runs (null: all of them). That save takes it and clears it.</summary>
+        public BakeSelection NextSaveBakers;
+
+        /// <summary>
+        /// The files the last save could not write. The level's files are swapped in all together once every one of them is
+        /// written, so when this has any, none of them were and what was on disk is as it was.
+        /// </summary>
+        public IReadOnlyList<CathodeFile.SaveFailure> LastSaveFailures { get; private set; } = new CathodeFile.SaveFailure[0];
+
+        /// <summary>Whether the last save got as far as swapping its files in (a save that throws after that is on disk all the same).</summary>
+        public bool LastSaveWritten { get; private set; }
+
+        public void Save(bool doInstancing)
+        {
+            BakeSelection bakers = NextSaveBakers;
+            NextSaveBakers = null;
+            Save(doInstancing, bakers);
+        }
+
+        /// <summary>
+        /// Radiosity settings for a save, honouring the Options > Save/Build radiosity options. Always Fully Rebuild Radiosity
+        /// regenerates the whole level's radiosity from scratch instead of keeping the shipped lighting and baking only what
+        /// changed. Don't Rebuild Radiosity (when <paramref name="allowSkippingTheBake"/>) bakes nothing: the level keeps the
+        /// radiosity it has, re-bound to the rebuilt models so the game can still read it - moved models keep the lighting of
+        /// where they were, added ones are drawn without any until a build with it off. It wins over Always Fully Rebuild.
+        /// </summary>
+        /// <param name="allowSkippingTheBake">False for a build whose result is shipped rather than edited further (the Mod
+        /// Manager's), which always bakes.</param>
+        public static CathodeLib.Radiosity.RadiosityBakeSettings RadiositySettingsFromOptions(bool allowSkippingTheBake = true)
+        {
+            return new CathodeLib.Radiosity.RadiosityBakeSettings()
+            {
+                PatchRetailRuntime = !SettingsManager.GetBool(Settings.AlwaysFullyRebuildRadiosity),
+                KeepExisting = allowSkippingTheBake && SettingsManager.GetBool(Settings.SkipRadiosityRebuild),
+            };
+        }
+
+        /// <summary>
+        /// An instanced save with every baker, as <see cref="Level.SaveInstanced()"/>, but with radiosity settings from the options
+        /// (see <see cref="RadiositySettingsFromOptions"/>).
+        /// </summary>
+        public static Instancing SaveInstancedWithOptions(Level level, bool allowSkippingTheBake = true)
+        {
+            return level.SaveInstanced(new CathodeLib.NavMesh.NavMeshBakeSettings(), new CathodeLib.NavMesh.CoverBakeSettings(), RadiositySettingsFromOptions(allowSkippingTheBake),
+                new CathodeLib.NavMesh.JobPositionBakeSettings(), new CathodeLib.Alphalight.AlphalightBakeSettings(), new CathodeLib.Sound.SoundNetworkBakeSettings());
+        }
+
+        /// <summary>What the last instanced save's radiosity pass did (null when it ran none): see <see cref="Instancing.RadiosityResult"/>.</summary>
+        public CathodeLib.Radiosity.RadiosityBaker.BakeResult LastRadiosityResult { get; private set; }
+
+        public void Save(bool doInstancing, BakeSelection bakers)
+        {
+            //Pristine copies of every still-vanilla file in the level, before the save rewrites them
+            Modding.ModServices.CaptureLevelBeforeSave(Level.Name);
+            //Skinned models imported before their bounds were kept the game's way drew nothing in game
+            ModelIO.RepairSkinnedBounds(Level, Singleton.AnimationsLoaded ? Singleton.Animations : null);
+            //Materials whose samplers were cleared or features changed are laid out as the game reads them (texture slots in sampler order)
+            Level.Materials?.NormaliseSamplerSlots();
+            LastBakeWarnings = null;
+            LastWarnings = null;
+            LastRadiosityResult = null;
+            LastSaveFailures = new CathodeFile.SaveFailure[0];
+            LastSaveWritten = false;
+
+            /* Every file the save writes is written beside where it belongs, and swapped in with the rest only once all of them
+               are: a file that fails (read-only, open in another program, a full drive, a writer that throws) leaves the whole
+               level on disk as it was, rather than half of it new. The exclusive master index is the one file the save writes
+               straight to disk, so it is put back by hand. */
+            string masterIndicesPath = Level.Filepath + (Level.Patched ? "_PATCH" : "") + "/WORLD/EXCLUSIVE_MASTER_RESOURCE_INDICES";
+            byte[] masterIndices = File.Exists(masterIndicesPath) ? File.ReadAllBytes(masterIndicesPath) : null;
+            bool committed = false;
+            using (CathodeFile.SaveTransaction transaction = CathodeFile.BeginSaveTransaction())
+            {
+                try
+                {
+                    if (doInstancing)
+                    {
+                        Instancing pass;
+                        if (bakers == null || bakers.All)
+                        {
+                            pass = SaveInstancedWithOptions(Level);
+                        }
+                        else
+                        {
+                            //A baker is skipped by passing null for its settings - alphalight bakes regardless, so it has its own switch
+                            bool skippedAlphalight = Instancing.SkipAlphalightBake;
+                            Instancing.SkipAlphalightBake = skippedAlphalight || !bakers.Alphalight;
+                            try
+                            {
+                                pass = Level.SaveInstanced(
+                                    bakers.NavMesh ? new CathodeLib.NavMesh.NavMeshBakeSettings() : null,
+                                    bakers.Cover ? new CathodeLib.NavMesh.CoverBakeSettings() : null,
+                                    bakers.Radiosity ? RadiositySettingsFromOptions() : null,
+                                    bakers.JobPositions ? new CathodeLib.NavMesh.JobPositionBakeSettings() : null,
+                                    bakers.Alphalight ? new CathodeLib.Alphalight.AlphalightBakeSettings() : null,
+                                    bakers.SoundNetworks ? new CathodeLib.Sound.SoundNetworkBakeSettings() : null);
+                            }
+                            finally
+                            {
+                                Instancing.SkipAlphalightBake = skippedAlphalight;
+                            }
+                        }
+                        LastBakeWarnings = pass?.BakeWarnings;
+                        LastWarnings = pass?.Warnings;
+                        LastRadiosityResult = pass?.RadiosityResult;
+                    }
+                    else
+                    {
+                        Level.Save();
+                    }
+                    committed = transaction.Commit();
+                }
+                finally
+                {
+                    LastSaveFailures = transaction.Failures;
+                    LastSaveWritten = committed;
+                    if (!committed)
+                        RestoreFile(masterIndicesPath, masterIndices);
+                }
+            }
+            //Not saved: what the save would have settled (a build done, the level saved by OpenCAGE) stays as it was
+            if (!committed)
+                return;
+
+            //The save generated the level's behaviour tree list from the character configs (the files were read just now, so
+            //this is cached): a class whose tree can't be listed crashes the game when one of its characters spawns
+            List<string> treeProblems = BehaviorTreeDB.ReadRequirements(Level.PathToData).Problems;
+            if (treeProblems.Count != 0)
+                LastWarnings = (LastWarnings ?? new List<string>()).Concat(treeProblems).ToList();
+
+            //A build regenerates what the game derives from the script: from here it matches the script again
+            List<string> skipped = new List<string>();
+            if (doInstancing && bakers != null)
+            {
+                if (!bakers.NavMesh) skipped.Add("navmesh");
+                if (!bakers.Cover) skipped.Add("cover");
+                if (!bakers.Radiosity) skipped.Add("radiosity");
+                if (!bakers.JobPositions) skipped.Add("job_positions");
+                if (!bakers.Alphalight) skipped.Add("alphalight");
+                if (!bakers.SoundNetworks) skipped.Add("sound");
+            }
+            BuildTracker.Saved(this, doInstancing, skipped);
+
             IsVanilla = false;
+        }
+
+        /* A file the save wrote straight to disk, put back as it was before it: the save was not swapped in */
+        private static void RestoreFile(string path, byte[] content)
+        {
+            if (content == null)
+                return;
+            try
+            {
+                File.WriteAllBytes(path, content);
+            }
+            catch (Exception e)
+            {
+                Debug.Log("LevelContent", "Could not put back " + path + " after a save that failed: " + e.Message);
+            }
         }
 
         public void Dispose()
@@ -131,17 +298,18 @@ namespace OpenCAGE
 
             if (disposing)
             {
-                if (_globalUpdateThread != null)
-                {
-                    _globalUpdateThread.Abort();
-                    _globalUpdateThread = null;
-                }
+                //Before anything is taken apart, so the listeners can still tell what was this level's
+                Singleton.OnLevelClosing?.Invoke(this);
 
                 if (Level?.Commands != null)
                 {
                     if (FlowgraphLayoutManager.LinkedCommands == Level.Commands)
                     {
                         FlowgraphLayoutManager.LinkCommands(null);
+                    }
+                    if (CompositePreviewManager.LinkedCommands == Level.Commands)
+                    {
+                        CompositePreviewManager.LinkCommands(null);
                     }
                     if (ParameterModificationTracker.LinkedCommands == Level.Commands)
                     {
@@ -170,6 +338,12 @@ namespace OpenCAGE
 
                 EditorUtils = null;
 
+                //Static caches outlive the level: what they hold of it (texture data, the scripts) would stay in memory until
+                //they are next filled
+                MaterialApplier.ClearTextureCache();
+                CageAnimationDrivers.Invalidate();
+                Audio.SoundEventMetadata.Invalidate();
+
                 if (Level != null)
                 {
                     Level.OnLoadTick = null;
@@ -184,11 +358,6 @@ namespace OpenCAGE
             }
 
             _disposed = true;
-        }
-
-        ~LevelContent()
-        {
-            Dispose(false);
         }
 
         //FOR TESTING ONLY!! Loads a LevelContent object for the given level on the current thread, and generates ShortGuids for every string.
@@ -278,18 +447,19 @@ namespace OpenCAGE
                     item.SubItems.Add(variableInfo != null ? ((CompositePinType)variableInfo.PinTypeGUID.AsUInt32).ToUIString() : ((VariableEntity)entity).type.ToUIString());
                     break;
                 case EntityVariant.FUNCTION:
-                    item.Text = Level.Commands.Utils.GetEntityName(composite.shortGUID, entity.shortGUID);
+                    item.Text = Level.Commands.Utils.GetEntityName(composite, entity);
                     Composite funcComposite = Level.Commands.GetComposite(((FunctionEntity)entity).function);
                     if (funcComposite != null) item.SubItems.Add(EditorUtils.GetCompositeName(funcComposite));
                     else item.SubItems.Add(((FunctionType)(((FunctionEntity)entity).function.AsUInt32)).ToString());
                     break;
                 case EntityVariant.ALIAS:
-                    item.Text = Level.Commands.Utils.GetResolvedAsString(Level.Commands.Utils.ResolveAlias((AliasEntity)entity, composite), SettingsManager.GetBool(Settings.ShowShortGuids));
-                    item.SubItems.Add("");
+                    //Show the alias's name (its own, or the name of the entity it points at), with the path alongside
+                    item.Text = Level.Commands.Utils.GetEntityName(composite, entity);
+                    item.SubItems.Add(Level.Commands.Utils.GetResolvedAsString(Level.Commands.Utils.ResolveAlias((AliasEntity)entity, composite), SettingsManager.GetBool(Settings.ShowShortGuids)));
                     break;
                 case EntityVariant.PROXY:
-                    item.Text = Level.Commands.Utils.GetEntityName(composite.shortGUID, entity.shortGUID); 
-                    item.SubItems.Add(Level.Commands.Utils.GetResolvedAsString(Level.Commands.Utils.ResolveProxy((ProxyEntity)entity), SettingsManager.GetBool(Settings.ShowShortGuids)));
+                    item.Text = Level.Commands.Utils.GetEntityName(composite, entity);
+                    item.SubItems.Add(EditorUtils.DescribeProxyTarget(Level.Commands, (ProxyEntity)entity));
                     break;
             }
             item.SubItems.Add(entity.shortGUID.ToByteString());

@@ -13,17 +13,21 @@ namespace OpenCAGE
     public partial class EditPAK2 : BaseWindow
     {
         PAK2 _archive;
+        bool _hideOwned; //UI.PAK: OpenCAGE's own movies for the launch options (UiMovieOverrides) aren't the game's UI, so aren't listed
 
         public EditPAK2() : base()
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/ui-editor/");
         }
 
         public void LoadPAK2(string pak, string title)
         {
             this.Text = "Edit " + title;
             _archive = new PAK2(Singleton.PathToAI + "/DATA/" + pak);
+            _hideOwned = string.Equals(pak, "UI.PAK", StringComparison.OrdinalIgnoreCase);
             FillListFromArchive();
+            OpenCAGE.ConfigEditors.ConfigEditorUtils.ShowAutoSaveTipOnce();
         }
 
         private void FillListFromArchive()
@@ -32,6 +36,8 @@ namespace OpenCAGE
             listEntries.Items.Clear();
             foreach (PAK2.File entry in _archive.Entries.OrderBy(e => e.Filename, StringComparer.OrdinalIgnoreCase))
             {
+                if (_hideOwned && UiMovieOverrides.IsOwnedEntry(entry.Filename))
+                    continue;
                 if (searchTxt.Text != "" && NormalisePath(entry.Filename.ToUpper().Replace(" ", "")).Contains(NormalisePath(searchTxt.Text.Replace(" ", "").ToUpper())) == false)
                     continue;
 
@@ -183,6 +189,11 @@ namespace OpenCAGE
             }
 
             if (string.IsNullOrEmpty(pakPath)) return;
+            if (_hideOwned && UiMovieOverrides.IsOwnedEntry(pakPath))
+            {
+                MessageBox.Show(pakPath + " is the name OpenCAGE uses for one of its own Launch Game options. Choose another path.", "Import", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
 
             var existing = FindEntry(pakPath);
             if (existing != null)
@@ -220,24 +231,36 @@ namespace OpenCAGE
                 if (fbd.ShowDialog() != DialogResult.OK) return;
 
                 string root = fbd.SelectedPath;
+                int exported = 0;
                 foreach (var entry in _archive.Entries)
                 {
-                    if (entry.Content == null) continue;
+                    if (entry.Content == null || (_hideOwned && UiMovieOverrides.IsOwnedEntry(entry.Filename))) continue;
                     string rel = NormalisePath(entry.Filename);
                     string outPath = Path.Combine(root, rel.Replace('/', Path.DirectorySeparatorChar));
                     string dir = Path.GetDirectoryName(outPath);
                     if (!string.IsNullOrEmpty(dir))
                         Directory.CreateDirectory(dir);
                     File.WriteAllBytes(outPath, entry.Content);
+                    exported++;
                 }
-                MessageBox.Show("Exported " + _archive.Entries.Count + " entries.", "Export all", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                //Only what was written: entries with no content, and OpenCAGE's own (while hidden), are skipped above
+                MessageBox.Show("Exported " + exported + (exported == 1 ? " entry." : " entries."), "Export all", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
         private void Save()
         {
-            EditorUtils.CloseAI();
-            _archive.Save();
+            EditorUtils.CloseAI(null, thisInstallOnly: true);
+            try
+            {
+                Modding.ModServices.CaptureBeforeWrite(_archive.Filepath);
+                bool ok = _archive.Save();
+                OpenCAGE.ConfigEditors.ConfigEditorUtils.NotifyAutoSave(ok, ok ? null : "The PAK archive could not be written.");
+            }
+            catch (Exception ex)
+            {
+                OpenCAGE.ConfigEditors.ConfigEditorUtils.NotifyAutoSave(false, ex.Message);
+            }
         }
     }
 }

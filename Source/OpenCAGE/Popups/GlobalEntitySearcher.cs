@@ -30,6 +30,7 @@ namespace OpenCAGE
         public GlobalEntitySearcher(SearchMode mode, Composite composite = null) : base(composite == null ? WindowClosesOn.COMMANDS_RELOAD : WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
             InitializeComponent();
+            EditorIcons.ShowIn(entityList, EditorIcons.EntityList, EditorIcons.EntityList);
 
             this.FormClosing += ShowCompositeUses_FormClosing;
 
@@ -195,8 +196,7 @@ namespace OpenCAGE
             _entityComposites.Clear();
 
             entityList.BeginUpdate();
-            entityList.Items.Clear();
-            entityList.Groups.Clear();
+            GlobalEntitySearchHelper.ClearResultList(entityList);
             foreach (Composite comp in Content.Level.Commands.Entries)
             {
                 List<FunctionEntity> funcs = comp.functions.FindAll(o => o.function == compositeGuid);
@@ -207,7 +207,7 @@ namespace OpenCAGE
                 {
                     ListViewItem item = (ListViewItem)Content.GenerateListViewItem(ent, comp).Clone();
                     item.Group = entityList.Groups[entityList.Groups.Count - 1];
-                    item.ImageIndex = ent.function.IsFunctionType ? 1 : 2;
+                    item.ImageIndex = ent.function.IsFunctionType ? EditorIcons.EntityIndex(ent.function.AsFunctionType) : 2;
                     entityList.Items.Add(item);
                     _entityComposites.Add(ent, comp);
                 }

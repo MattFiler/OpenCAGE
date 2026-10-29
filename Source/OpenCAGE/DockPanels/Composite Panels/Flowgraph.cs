@@ -7,6 +7,7 @@ using OpenCAGE.Popups;
 using OpenCAGE.Popups.Base;
 using OpenCAGE.Popups.UserControls;
 using OpenCAGE;
+using OpenCAGE.Undo;
 using ST.Library.UI.NodeEditor;
 using System;
 using System.Collections.Generic;
@@ -52,14 +53,32 @@ namespace OpenCAGE
             _commands = commands;
 
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
+            EditorIcons.Bind(arrangePageToolStripMenuItem, EditorIcon.ArrangePage);
+            EditorIcons.Bind(arrangeSelectedToolStripMenuItem, EditorIcon.ArrangeSelected);
+            EditorIcons.Bind(arrangeFGToolStripMenuItem, EditorIcon.ArrangePage);
+            EditorIcons.Bind(createParameterToolStripMenuItem, EditorIcon.Parameter);
+            EditorIcons.Bind(createFunctionToolStripMenuItem, EditorIcon.Function);
+            EditorIcons.Bind(createInstanceOfCompositeToolStripMenuItem, EditorIcon.CompositeInstance);
+            EditorIcons.Bind(createProxyToolStripMenuItem, EditorIcon.Proxy);
+            EditorIcons.Bind(createAliasToolStripMenuItem1, EditorIcon.Alias);
+            EditorIcons.Bind(showConnectedLinksToolStripMenuItem, EditorIcon.ConnectedLinks);
+            EditorIcons.Bind(addReroutePointToolStripMenuItem, EditorIcon.AddReroutePoint);
+            EditorIcons.Bind(removeReroutePointToolStripMenuItem, EditorIcon.RemoveReroutePoint);
+            EditorIcons.Bind(removeAllReroutePointsToolStripMenuItem, EditorIcon.RemoveAllReroutePoints);
             this.VisibleChanged += Flowgraph_VisibleChanged;
             this.FormClosed += Flowgraph_FormClosed;
 
             stNodeEditor1.LoadAssembly(Application.ExecutablePath);
             stNodeEditor1.AllowSameOwnerConnections = true;
             stNodeEditor1.SelectedChanged += Owner_SelectedChanged;
+            stNodeEditor1.MultiSelectionChanged += Owner_SelectedChanged; //rubber-band/ctrl-click selection raises this, not SelectedChanged
+            stNodeEditor1.OptionConnected += StNodeEditor1_OptionConnectionChanged;
+            stNodeEditor1.OptionDisconnected += StNodeEditor1_OptionConnectionChanged;
             stNodeEditor1.PinToNodeConnected += StNodeEditor1_PinToNodeConnected;
             stNodeEditor1.NodeCtrlMiddleMouseDown += StNodeEditor1_NodeCtrlMiddleMouseDown;
+            stNodeEditor1.NodesMoved += StNodeEditor1_NodesMoved;
+            stNodeEditor1.RerouteChanged += StNodeEditor1_RerouteChanged;
             // STNodeEditor rejects non-STNodeType drags in its own OnDragEnter; handle drops on this form instead.
             stNodeEditor1.AllowDrop = false;
 
@@ -67,11 +86,41 @@ namespace OpenCAGE
             DragEnter += Flowgraph_DragEnter;
             DragOver += Flowgraph_DragOver;
             DragDrop += Flowgraph_DragDrop;
+            //Package files dropped on the flowgraph open like anywhere else - attached after the handlers
+            //above so it has the last word on a package drag, which those leave alone
+            PackageDropTarget.Attach(this);
 
             //todo: i feel like these events should come from the compositedisplay?
             Singleton.OnEntityDeleted += OnEntityDeletedGlobally;
+            Singleton.OnEntityAdded += OnEntityAddedGlobally;
             Singleton.OnEntityRenamed += OnEntityRenamedGlobally;
-            Singleton.OnNodeStyleChanged += OnNodeStyleChanged;
+            Singleton.OnPinDelayModified += RefreshPinDelayTexts;
+            SubscribePinValueEvents();
+
+            _deadLinkColour = Color.FromArgb(170, 20, 30);
+            stNodeEditor1.ConnectionColorOverride = ConnectionColour;
+            //The hovered link, and a link being drawn: green, so it can't be mistaken for a data link (blue)
+            stNodeEditor1.HighLineColor = Color.FromArgb(60, 210, 90);
+            //Zoomed out past where a node's text can be read, each node is its colour with its icon on it
+            //(the IconId set with its colour in RegenerateNodeStyle) - unless Show Node Icons When Zoomed Out is off
+            EditorIcons.ApplyNodeIconZoom(stNodeEditor1);
+            stNodeEditor1.NodeIconProvider = EditorIcons.ForZoomedOutNode;
+            EditorIcons.NodeIconsWhenZoomedOutChanged += OnNodeIconsWhenZoomedOutChanged;
+            //A page disposed without closing must not be kept alive by the static event
+            this.Disposed += (s, e) => EditorIcons.NodeIconsWhenZoomedOutChanged -= OnNodeIconsWhenZoomedOutChanged;
+        }
+
+        private void OnNodeIconsWhenZoomedOutChanged()
+        {
+            EditorIcons.ApplyNodeIconZoom(stNodeEditor1);
+        }
+
+        /* What a node shows zoomed out: the icon its entity has in the entity lists - its category's for a function, its
+           pin type's for a variable - except that a proxy or alias shows what it points at (it is coloured as that is, and
+           outlined as what it is). -1 (drawn in full) for one that points at nothing: its warning should stay readable. */
+        private EditorIcon? NodeIconFor(Entity entity, Composite composite)
+        {
+            return EditorIcons.ForEntity(entity, composite, _commands);
         }
 
         private void Flowgraph_VisibleChanged(object sender, EventArgs e)
@@ -97,64 +146,282 @@ namespace OpenCAGE
         {
             Debug.Log("Flowgraph", this.Text + " -> CLOSING!");
 
+            ForgetAsActiveControl();
+
             this.VisibleChanged -= Flowgraph_VisibleChanged;
             this.FormClosed -= Flowgraph_FormClosed;
 
             stNodeEditor1.SelectedChanged -= Owner_SelectedChanged;
+            stNodeEditor1.MultiSelectionChanged -= Owner_SelectedChanged;
+            stNodeEditor1.OptionConnected -= StNodeEditor1_OptionConnectionChanged;
+            stNodeEditor1.OptionDisconnected -= StNodeEditor1_OptionConnectionChanged;
             stNodeEditor1.NodeCtrlMiddleMouseDown -= StNodeEditor1_NodeCtrlMiddleMouseDown;
+            stNodeEditor1.NodesMoved -= StNodeEditor1_NodesMoved;
+            stNodeEditor1.RerouteChanged -= StNodeEditor1_RerouteChanged;
             DragEnter -= Flowgraph_DragEnter;
             DragOver -= Flowgraph_DragOver;
             DragDrop -= Flowgraph_DragDrop;
             Singleton.OnEntitySelected -= OnEntitySelectedGlobally;
             Singleton.OnEntityDeleted -= OnEntityDeletedGlobally;
+            Singleton.OnEntityAdded -= OnEntityAddedGlobally;
             Singleton.OnEntityRenamed -= OnEntityRenamedGlobally;
             Singleton.OnEntityAdded -= OnEntityAddedViaPopup;
-            Singleton.OnNodeStyleChanged -= OnNodeStyleChanged;
+            Singleton.OnPinDelayModified -= RefreshPinDelayTexts;
+            UnsubscribePinValueEvents();
+            stNodeEditor1.ConnectionColorOverride = null;
+            stNodeEditor1.NodeIconProvider = null;
+            EditorIcons.NodeIconsWhenZoomedOutChanged -= OnNodeIconsWhenZoomedOutChanged;
 
             if (_renameFlowgraphPopup != null)
                 _renameFlowgraphPopup.FormClosed -= _renameFlowgraphPopup_FormClosed;
         }
 
+        /* A container remembers its last active control after the focus has gone elsewhere, and removing that control (the
+           Dispose after this) makes WinForms select the next one and SetFocus it - taking the focus from wherever it really
+           is. With it in the viewer's window that SetFocus waits on the viewer's thread: reloading a composite's pages
+           (opening one from the viewport, a rename) froze OpenCAGE for 16-20 s behind a busy viewer in the stress run.
+           When this page does not hold the focus: WinForms is told where the focus is when that is the viewer's window
+           (see EmbeddedWindowHost.AdoptViewerFocus - which puts right every container above the viewer), and the
+           containers of this page's own branch, which that does not reach, forget it. */
+        private static readonly System.Reflection.FieldInfo[] _containerControlFields = new[] { "activeControl", "focusedControl", "unvalidatedControl" }
+            .Select(name => typeof(ContainerControl).GetField(name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic))
+            .ToArray();
+
+        private void ForgetAsActiveControl()
+        {
+            if (ContainsFocus)
+                return;
+
+            Singleton.Editor?.LevelViewerPanel?.AdoptViewerFocus();
+
+            /* The active control, and the focused and unvalidated ones WinForms keeps beside it, when they are this page or
+               inside it. The last two have to go too: left naming a disposed control they fail validation from then on
+               (ValidateThroughAncestor: not a descendant), and a form that validates on close would not close. */
+            if (_containerControlFields.Any(field => field == null))
+                return;
+            for (System.Windows.Forms.Control parent = Parent; parent != null; parent = parent.Parent)
+            {
+                if (!(parent is ContainerControl container))
+                    continue;
+                foreach (System.Reflection.FieldInfo field in _containerControlFields)
+                {
+                    if (field.GetValue(container) is System.Windows.Forms.Control remembered && (remembered == this || Contains(remembered)))
+                        field.SetValue(container, null);
+                }
+            }
+        }
+
         private void OnEntitySelectedGlobally(Entity entity)
         {
-            if (entity == _previouslySelectedEntity)
+            if (entity == null)
                 return;
-            SelectAllNodesForEntity(entity);
+
+            //Skip only when this entity's nodes are already exactly the selection. Comparing against a
+            //remembered entity instead meant any stale value suppressed the highlight - clicking empty
+            //canvas drops the selection without clearing it, so re-picking the same entity in the list
+            //or the viewport did nothing at all.
+            if (IsSelectionExactlyEntity(entity))
+                return;
+
+            SelectAllNodesForEntity(entity, centerCanvas: true);
+        }
+
+        /// <summary>True when every node for this entity is selected, and nothing else is.</summary>
+        private bool IsSelectionExactlyEntity(Entity entity)
+        {
+            STNode[] selected = stNodeEditor1.GetSelectedNode();
+            if (selected.Length == 0)
+                return false;
+
+            for (int i = 0; i < selected.Length; i++)
+            {
+                if (selected[i].ShortGUID != entity.shortGUID)
+                    return false;
+            }
+
+            int total = 0;
+            foreach (STNode node in stNodeEditor1.Nodes)
+            {
+                if (node.ShortGUID == entity.shortGUID)
+                    total++;
+            }
+
+            return total != 0 && total == selected.Length;
         }
 
         private void OnEntityRenamedGlobally(Entity entity, string newNew)
         {
             foreach (STNode node in stNodeEditor1.Nodes)
             {
-                if (node.Entity.shortGUID != entity.shortGUID)
+                if (node.Entity == null)
                     continue;
-                RegenerateNodeStyle(node);
+
+                //The renamed entity itself, plus any alias/proxy node that shows its name as a fallback
+                bool affected = node.Entity.shortGUID == entity.shortGUID;
+                if (!affected)
+                {
+                    switch (node.Entity.variant)
+                    {
+                        case EntityVariant.ALIAS:
+                            affected = ((AliasEntity)node.Entity).alias.path.Contains(entity.shortGUID);
+                            break;
+                        case EntityVariant.PROXY:
+                            affected = ((ProxyEntity)node.Entity).proxy.path.Contains(entity.shortGUID);
+                            break;
+                    }
+                }
+
+                if (affected)
+                    RegenerateNodeStyle(node);
             }
         }
 
-        private void OnNodeStyleChanged()
+        //An entity arriving anywhere in the level (an undo of its deletion, say) may bring a dead proxy back to life
+        private void OnEntityAddedGlobally(Entity entity)
+        {
+            if (entity != null)
+                RestyleProxiesThrough(entity.shortGUID);
+        }
+
+        /* Restyle every proxy and alias node on this page whose path passes through the entity - the one thing that
+           changes whether it resolves (see CommandsUtils.IsDeadProxy). */
+        private void RestyleProxiesThrough(ShortGuid entityId)
         {
             foreach (STNode node in stNodeEditor1.Nodes)
             {
-                RegenerateNodeStyle(node);
+                if ((node.Entity is ProxyEntity proxy && proxy.proxy?.path != null && proxy.proxy.path.Contains(entityId)) ||
+                    (node.Entity is AliasEntity alias && alias.alias?.path != null && alias.alias.path.Contains(entityId)))
+                    RegenerateNodeStyle(node);
             }
         }
 
-        private Entity _previouslySelectedEntity = null;
+        /// <summary>
+        /// Redraw every proxy and alias node on this page: after a composite came or went with all its instances,
+        /// which can change what any of them resolves to without naming the entity.
+        /// </summary>
+        public void RestyleProxies()
+        {
+            foreach (STNode node in stNodeEditor1.Nodes)
+            {
+                if (node.Entity is ProxyEntity || node.Entity is AliasEntity)
+                    RegenerateNodeStyle(node);
+            }
+        }
+
+        /// <summary>
+        /// Redraw the entity's nodes on this page after a change to what they show - a proxy re-pointed, say.
+        /// </summary>
+        public void RestyleEntity(Entity entity)
+        {
+            if (entity == null)
+                return;
+            foreach (STNode node in stNodeEditor1.Nodes)
+            {
+                if (node.Entity == entity)
+                    RegenerateNodeStyle(node);
+            }
+        }
+
+        //The dead proxies on this page (see CommandsUtils.IsDeadProxy), kept by RegenerateNodeStyle so the
+        //line painter, which runs every frame, never has to resolve a path - or read a setting
+        private readonly HashSet<ShortGuid> _deadProxies = new HashSet<ShortGuid>();
+        private Color _deadLinkColour;
+
+        //A link into or out of a dead proxy is drawn in the dead colour, whichever pin it leaves from
+        private Color ConnectionColour(STNodeOption from, STNodeOption to)
+        {
+            if (_deadProxies.Count > 0)
+            {
+                if ((from?.Owner != null && _deadProxies.Contains(from.Owner.ShortGUID)) || (to?.Owner != null && _deadProxies.Contains(to.Owner.ShortGUID)))
+                    return _deadLinkColour;
+            }
+            if (from != null && from.Owner != null)
+            {
+                if (from.Owner.GetTopOptions().Contains(from) || from.Owner.GetBottomOptions().Contains(from))
+                    return Color.DodgerBlue; // Data links
+            }
+            return Color.Empty;
+        }
+
+        private Entity _previouslySelectedEntity = null; //the last entity selected on this page: what Focus falls back on
         private bool _selectedNodeChanged = false;
         private void Owner_SelectedChanged(object sender, EventArgs e)
         {
-            STNode[] nodes = stNodeEditor1.GetSelectedNode();
-            if (nodes.Length != 1) return;
+            //Mid-rebuild states aren't real selections - see SelectAllNodesForEntity
+            if (_applyingEntitySelection)
+                return;
 
-            Entity ent = _composite.GetEntityByID(nodes[0].ShortGUID);
-            if (ent == _previouslySelectedEntity) return;
+            STNode[] nodes = stNodeEditor1.GetSelectedNode();
+
+            //Multiple nodes for the same entity still count as a single selection
+            List<Entity> selectedEntities = new List<Entity>();
+            foreach (STNode node in nodes)
+            {
+                Entity nodeEntity = _composite.GetEntityByID(node.ShortGUID);
+                if (nodeEntity == null) continue;
+                if (!selectedEntities.Contains(nodeEntity))
+                    selectedEntities.Add(nodeEntity);
+            }
+
+            if (selectedEntities.Count == 0)
+            {
+                //Deselecting from a multi-selection should clear the inspector's multi state
+                //(deselecting a single entity keeps it shown, matching previous behaviour)
+                if (Singleton.Editor?.CompositeDisplay?.EntityDisplay?.IsMultiEditing == true)
+                {
+                    _previouslySelectedEntity = null;
+                    _selectedNodeChanged = true;
+                    Singleton.Editor?.CompositeDisplay?.ClearEntitySelection();
+                    _selectedNodeChanged = false;
+                }
+                return;
+            }
+
+            /* Rubber-band drags and ctrl-clicks fire selection events repeatedly - only act when the selection changes. Whether it
+               does is what the editor has selected (or is loading), never a remembered copy of what this page last announced: that
+               went stale whenever the selection moved on elsewhere (the viewport, the entity list, another page, a deselection),
+               and the next click on the node it named did nothing. A click is still the user's latest choice, though, even when it
+               changes nothing - a viewport pick made before it must not win when it arrives after (ViewerSelectionSync). */
+            CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
+            if (display == null)
+                return;
+            ViewerSelectionSync.NoteLocalSelectionInput();
+            if (display.IsSelectionOf(selectedEntities))
+                return;
+
+            if (selectedEntities.Count > 1)
+            {
+                _previouslySelectedEntity = null;
+                _selectedNodeChanged = true;
+                display.LoadEntities(selectedEntities);
+                _selectedNodeChanged = false;
+                return;
+            }
+
+            Entity ent = selectedEntities[0];
             _previouslySelectedEntity = ent;
 
             _selectedNodeChanged = true;
-            Singleton.Editor?.CompositeDisplay?.LoadEntity(ent, false);
+            display.LoadEntity(ent, false);
             Singleton.OnEntitySelected?.Invoke(ent); //need to call this again b/c the activation event doesn't fire here
             _selectedNodeChanged = false;
+        }
+
+        /// <summary>Drop this page's highlight without announcing anything: the editor's selection was cleared elsewhere.</summary>
+        public void ClearNodeSelection()
+        {
+            if (stNodeEditor1.GetSelectedNode().Length == 0)
+                return;
+            _applyingEntitySelection = true;
+            try
+            {
+                DeselectAllNodes();
+            }
+            finally
+            {
+                _applyingEntitySelection = false;
+            }
+            stNodeEditor1.Invalidate();
         }
 
         private void StNodeEditor1_NodeCtrlMiddleMouseDown(object sender, STNodeEditorEventArgs e)
@@ -166,26 +433,115 @@ namespace OpenCAGE
             BeginInvoke(new Action(() => Singleton.Editor?.CompositeDisplay?.StepIntoEntity(entity)));
         }
 
-        public void SelectAllNodesForEntity(Entity entity)
+        public void SelectAllNodesForEntity(Entity entity, bool centerCanvas = true)
         {
             if (_selectedNodeChanged) //TEMPORARY HACK FIX FOR DE-SELECTION RACE CONDITION BUG
                 return;
 
-            DeselectAllNodes();
-
-            if (entity == null)
-                return;
-
-            STNode[] nodes = stNodeEditor1.Nodes.ToArray();
-            foreach (STNode node in nodes)
+            //Clearing and re-selecting raises a SelectedChanged per node, so the handler would see the
+            //empty gap in the middle and push that back out as a real deselection - which clears the
+            //inspector and, when multi-editing, resets the very state we're rebuilding. The whole
+            //rebuild is one selection change as far as the rest of the UI is concerned.
+            _applyingEntitySelection = true;
+            try
             {
-                if (node.ShortGUID != entity.shortGUID)
+                DeselectAllNodes();
+
+                if (entity == null)
+                    return;
+
+                STNode firstMatch = null;
+                STNode[] nodes = stNodeEditor1.Nodes.ToArray();
+                foreach (STNode node in nodes)
+                {
+                    if (node.ShortGUID != entity.shortGUID)
+                        continue;
+                    if (firstMatch == null)
+                        firstMatch = node;
+                    SelectNode(node, centerCanvas: false);
+                }
+
+                if (centerCanvas && firstMatch != null)
+                    FocusCanvasOnNodes(stNodeEditor1.GetSelectedNode());
+            }
+            finally
+            {
+                _applyingEntitySelection = false;
+            }
+
+            //The canvas needs repainting for the new highlight (and its off-screen arrows)
+            stNodeEditor1.Invalidate();
+        }
+
+        //Set while rebuilding the selection to match an entity picked somewhere else in the editor
+        private bool _applyingEntitySelection = false;
+
+        //Building a page connects pins and can add pins, which looks identical to the user doing it. Suppress
+        //dirty marking while populating, otherwise merely opening a composite would report unsaved changes.
+        private int _populatingDepth = 0;
+        private bool IsPopulating => _populatingDepth > 0;
+        private void MarkFlowgraphEdit()
+        {
+            if (IsPopulating)
+                return;
+            DirtyTracker.MarkLevelDataModified();
+        }
+
+        /* Node positions are stored in the composite's saved flowgraph layout, so moving one is a change */
+        private void StNodeEditor1_NodesMoved(object sender, STNodesMovedEventArgs e)
+        {
+            MarkFlowgraphEdit();
+            RecordNodesMoved(e);
+        }
+
+        /* A line's reroute points are stored with its connection in the layout too */
+        private void StNodeEditor1_RerouteChanged(object sender, STNodeEditorRerouteEventArgs e)
+        {
+            MarkFlowgraphEdit();
+            RecordRerouteChanged(e);
+        }
+
+        /* Keep the inspector's "fed by flowgraph" parameter highlights live as connections change */
+        private void StNodeEditor1_OptionConnectionChanged(object sender, STNodeEditorOptionEventArgs e)
+        {
+            //Links are compiled back into the Commands data on save, so this is an unsaved change
+            MarkFlowgraphEdit();
+            RecordConnectionChanged(e);
+
+            Singleton.Editor?.CompositeDisplay?.EntityDisplay?.RefreshParameterHighlights();
+            QueuePinValueRefreshAllPages(); //a pin a link comes in to shows no value, on any page with its entity
+        }
+
+        /// <summary>Collect the pin IDs of this entity's input pins that have live UI connections.</summary>
+        public void CollectConnectedInputPins(Entity entity, HashSet<ShortGuid> results)
+        {
+            if (entity == null || stNodeEditor1 == null)
+                return;
+            foreach (STNode node in stNodeEditor1.Nodes)
+            {
+                if (node?.Entity == null || node.Entity.shortGUID != entity.shortGUID)
                     continue;
-                SelectNode(node);
+                foreach (ShortGuid pinId in node.GetConnectedInputOptionIds())
+                    results.Add(pinId);
             }
         }
 
-        private void SelectNode(STNode node)
+        /// <summary>True if any graph node for this entity has live UI connections on the given pin.</summary>
+        public bool HasPinConnections(Entity entity, ShortGuid pinId)
+        {
+            if (entity == null || stNodeEditor1 == null) return false;
+            foreach (STNode node in stNodeEditor1.Nodes)
+            {
+                if (node?.Entity == null || node.Entity.shortGUID != entity.shortGUID)
+                    continue;
+                STNodeOption pin = node.GetOption(pinId);
+                if (pin != null && pin.ConnectionCount > 0)
+                    return true;
+            }
+            return false;
+        }
+
+        private void SelectNode(STNode node, bool centerCanvas = true)
         {
             _previouslySelectedEntity = node.Entity;
             Debug.Log("Flowgraph", "Select node: " + node.Title + " - " + node.Guid);
@@ -194,7 +550,15 @@ namespace OpenCAGE
             node.SetSelected(true, true);
             stNodeEditor1.SetActiveNode(node);
 
-            stNodeEditor1.CenterCanvasOn(node.Location.X + (node.Width / 2), node.Location.Y + (node.Height / 2), true);
+            if (centerCanvas)
+                stNodeEditor1.CenterCanvasOn(node.Location.X + (node.Width / 2), node.Location.Y + (node.Height / 2), true);
+        }
+
+        //A node the user just created is placed where they asked for it, so moving the canvas onto it
+        //is opt-in (Options > Entity Display > Focus Canvas On Newly Created Node)
+        private void SelectNewNode(STNode node)
+        {
+            SelectNode(node, centerCanvas: SettingsManager.GetBool(Settings.FocusCanvasOnNewNode));
         }
 
         private void DeselectAllNodes()
@@ -226,7 +590,7 @@ namespace OpenCAGE
                 entity = _previouslySelectedEntity;
 
             if (entity != null)
-                SelectAllNodesForEntity(entity);
+                SelectAllNodesForEntity(entity, centerCanvas: true);
         }
 
         private void FocusCanvasOnNodes(STNode[] nodes)
@@ -261,13 +625,14 @@ namespace OpenCAGE
                 _destPinSelector.Close();
 
             _destPinSelector = new SelectDestinationPin();
+            _destPinSelector.PinChosen = (node, pin, side) => ConnectToChosenPin(e.FromPin, node, pin, side);
             _destPinSelector.Show();
             _destPinSelector.PopulateOptions(e.ToNode, e.FromPin);
         }
 
-        private STNode AddNodeForEntity(Entity entity)
+        private STNode AddNodeForEntity(Entity entity, Point at)
         {
-            STNode node = EntityToNode(entity);
+            STNode node = EntityToNode(entity, at);
             if (SettingsManager.GetBool(Settings.PopulateAllPinsOnCreateNode))
                 AddAllPins(node);
             return node;
@@ -275,10 +640,16 @@ namespace OpenCAGE
 
         public STNode PlaceEntityAt(Entity entity, PointF canvasPosition)
         {
-            STNode node = AddNodeForEntity(entity);
-            node.SetPosition(new Point((int)canvasPosition.X, (int)canvasPosition.Y));
-            SelectNode(node);
+            STNode node = AddNodeForEntity(entity, new Point((int)canvasPosition.X, (int)canvasPosition.Y));
+            SelectNewNode(node);
+            RefreshNodeMarkers();
             return node;
+        }
+
+        //Recalculate the multi-node/proxy markers across all pages after nodes are added/removed
+        private void RefreshNodeMarkers()
+        {
+            Singleton.Editor?.CompositeDisplay?.RefreshNodeMarkers();
         }
 
         private void Flowgraph_DragEnter(object sender, DragEventArgs e)
@@ -396,21 +767,36 @@ namespace OpenCAGE
 
         private void OnEntityDeletedGlobally(Entity entity)
         {
-            List<STNode> nodes = new List<STNode>();
-
-            STNode[] allNodes = stNodeEditor1.Nodes.ToArray();
-            foreach (STNode node in allNodes)
+            /* Ids are per composite: one of ours still under that id means the deletion was elsewhere
+               (the references window deletes in any composite), and its nodes here are not the
+               deleted entity's */
+            if (_composite?.GetEntityByID(entity.shortGUID) == null)
             {
-                if (node.ShortGUID != entity.shortGUID)
-                    continue;
+                List<STNode> nodes = new List<STNode>();
 
-                nodes.Add(node);
+                STNode[] allNodes = stNodeEditor1.Nodes.ToArray();
+                foreach (STNode node in allNodes)
+                {
+                    if (node.ShortGUID != entity.shortGUID)
+                        continue;
+
+                    nodes.Add(node);
+                }
+
+                //The entity's removal is the edit; its nodes going is a consequence, not a change of its own
+                using (SuppressRecording())
+                {
+                    for (int i = 0; i < nodes.Count; i++)
+                        stNodeEditor1.Nodes.Remove(nodes[i]);
+                }
+                _deadProxies.Remove(entity.shortGUID);
+
+                if (nodes.Count != 0)
+                    RefreshNodeMarkers();
             }
 
-            for (int i = 0; i < nodes.Count; i++)
-            {
-                stNodeEditor1.Nodes.Remove(nodes[i]);
-            }
+            //Any proxy that reached its target through the deleted entity is dead now
+            RestyleProxiesThrough(entity.shortGUID);
         }
 
         private int CountNodesForEntity(Entity entity)
@@ -453,8 +839,13 @@ namespace OpenCAGE
             this.Text = flowgraphMeta.Name;
             _flowgraphName = flowgraphMeta.Name;
 
+            _populatingDepth++; //rebuilding the page isn't a user edit - see MarkFlowgraphEdit
+            try
+            {
+
             stNodeEditor1.SuspendLayout();
             stNodeEditor1.Nodes.Clear();
+            _deadProxies.Clear(); //refilled as the nodes are styled
             _spawnOffset = 0;
 
             //Populate nodes for entities
@@ -482,12 +873,19 @@ namespace OpenCAGE
                     entities[i].Item2.UnlinkedPins);
             }
 
-            //Populate connections
+            //Populate connections - each to the first node with its node id and entity, found by those rather than by walking
+            //every node on the page for every link
+            Dictionary<(int, ShortGuid), STNode> nodesById = new Dictionary<(int, ShortGuid), STNode>(nodes.Length);
+            foreach (STNode node in nodes)
+            {
+                if (node.Entity != null && !nodesById.ContainsKey((node.NodeID, node.ShortGUID)))
+                    nodesById.Add((node.NodeID, node.ShortGUID), node);
+            }
             for (int i = 0; i < entities.Count; i++)
             {
                 foreach (FlowgraphMeta.NodeMeta.ConnectionMeta connectionMeta in entities[i].Item2.ConnectionsOut)
                 {
-                    STNode connectedNode = nodes.FirstOrDefault(o => o.NodeID == connectionMeta.ConnectedNodeID && o.ShortGUID == connectionMeta.ConnectedEntityGUID);
+                    nodesById.TryGetValue((connectionMeta.ConnectedNodeID, connectionMeta.ConnectedEntityGUID), out STNode connectedNode);
 
                     EntityConnector connector = nodes[i].Entity.childLinks.FirstOrDefault(o => o.thisParamID == connectionMeta.ParameterGUID && o.linkedParamID == connectionMeta.ConnectedParameterGUID && o.linkedEntityID == connectedNode?.ShortGUID);
                     if (!connector.ID.IsInvalid) //NOTE: This condition should never fail if the layout has been checked by FlowgraphLayoutManager!
@@ -515,19 +913,24 @@ namespace OpenCAGE
                             //NOTE: We hit this for some in the base game, but it SHOULDN'T be a problem -> links that can't connect won't logically work.
                             Debug.Log("Flowgraph", "WARNING: Could not create the following connection...\n\t" + nodes[i].Title + " [" + pinOut.Text + "] " + pinOut.Location + " -> " + connectedNode.Title + " [" + pinIn.Text + "] " + pinIn.Location);
                         }
+                        else if (connectionMeta.RoutePoints != null && connectionMeta.RoutePoints.Count != 0)
+                        {
+                            //Drawn through the reroute points it was saved with
+                            stNodeEditor1.SetReroutePoints(pinOut, pinIn, connectionMeta.RoutePoints.Select(o => (PointF)o));
+                        }
                     }
-#if DEBUG
                     else
                     {
-                        throw new Exception("Invalid flowgraph layout loaded!!");
+                        //A page drawn against links the composite does not have: the page was not checked, or the links moved under a verdict already given
+                        Debug.Log("Flowgraph", "WARNING: Page '" + flowgraphMeta.Name + "' of " + composite.name + " connects " + nodes[i].Title + " -> " + (connectedNode?.Title ?? connectionMeta.ConnectedEntityGUID.ToByteString()) + " but the composite has no such link; skipped");
                     }
-#endif
                 }
             }
 
             foreach (STNode node in stNodeEditor1.Nodes)
             {
-                UpdatePinDelayTexts(node);
+                node.AlignRelayRows(composite, _commands); //catches the fallback pins added above
+                UpdatePinTexts(node);
                 node.EnsureProperNodeSizing();
             }
             stNodeEditor1.ResumeLayout();
@@ -543,6 +946,13 @@ namespace OpenCAGE
 #if DEBUG
             Debug.Log("Flowgraph", "" + flowgraphMeta.Name + " loaded in " + timer.ElapsedMilliseconds + "ms with " + stNodeEditor1.Nodes.Count + " nodes on graph, of " + flowgraphMeta.Nodes.Count + " in layout (" + (flowgraphMeta.Nodes.Count - stNodeEditor1.Nodes.Count) + " missing)");
 #endif
+
+            }
+            finally
+            {
+                _populatingDepth--;
+            }
+            RefreshActivityBadgesForNewNodes(); //Live Link Show Activity
         }
 
         protected override void OnLoad(EventArgs e)
@@ -553,19 +963,42 @@ namespace OpenCAGE
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
+            if (UndoKeys.TryHandle(keyData))
+                return true;
+            if (UnityConnection.ViewerCreateModeKeys.TryHandle(keyData))
+                return true;
+
             if (this.Visible)
             {
+                //Live Link script debugger: F9 breakpoint, F8 continue, F10 step (Flowgraph.Debugger.cs)
+                if (TryHandleDebuggerKey(keyData))
+                    return true;
+
                 Keys keyCode = keyData & Keys.KeyCode;
 
                 if (keyCode == Keys.Delete)
                 {
+                    //A link's reroute point - the one under the mouse, else the one selected - goes on its own
+                    if (stNodeEditor1.RemoveReroutePoint())
+                        return true;
                     deleteToolStripMenuItem_Click(null, null);
                     deleteLinkToolStripMenuItem_Click(null, null);
                     return true;
                 }
+                else if (keyCode == Keys.C && (keyData & Keys.Modifiers) == Keys.Control)
+                {
+                    //The selection wins for the shortcut (the cursor could be anywhere) - the node
+                    //under the cursor is only used when nothing is selected
+                    CopyNodes(stNodeEditor1.GetSelectedNode().Length == 0 ? stNodeEditor1.GetHoveredNode() : null);
+                    return true;
+                }
+                else if (keyCode == Keys.V && (keyData & Keys.Modifiers) == Keys.Control)
+                {
+                    PasteClipboardClones(stNodeEditor1.MousePositionInCanvas);
+                    return true;
+                }
                 else if (keyCode == Keys.F1)
                 {
-                    duplicateToolStripMenuItem_Click(null, null);
                     setDelayToolStripMenuItem_Click(null, null);
                     return true;
                 }
@@ -610,7 +1043,11 @@ namespace OpenCAGE
             return base.ProcessCmdKey(ref msg, keyData);
         }
 
-        private STNode EntityToNode(Entity entity)
+        /* A node for the entity, at the given point or else the next spot down the left edge. It is recorded
+           as added where it sits, so a node the user places must be given its place here rather than moved
+           there afterwards: once the page has been rebuilt, undo finds the node again by that position, and
+           a node recorded at the spawn point was not found - undo took the entity's other node, links and all */
+        private STNode EntityToNode(Entity entity, Point? at = null)
         {
             if (entity == null)
                 return null;
@@ -619,8 +1056,16 @@ namespace OpenCAGE
             node.Entity = entity;
             RegenerateNodeStyle(node);
             stNodeEditor1.Nodes.Add(node);
-            node.SetPosition(new Point(0, _spawnOffset));
-            _spawnOffset += node.Height + 10;
+            if (at.HasValue)
+            {
+                node.SetPosition(at.Value);
+            }
+            else
+            {
+                node.SetPosition(new Point(0, _spawnOffset));
+                _spawnOffset += node.Height + 10;
+            }
+            RecordNodeAdded(node);
 
             return node;
         }
@@ -636,24 +1081,28 @@ namespace OpenCAGE
                 case EntityVariant.PROXY:
                 case EntityVariant.ALIAS:
                     (Composite comp, Entity ent) = _commands.Utils.GetResolvedTarget(_commands.Utils.ResolveAliasOrProxy(node.Entity, _composite));
-                    node.SetColour(
-                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_ProxyNode)) : 
-                                                                     Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_AliasNode)), 
-                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_ProxyNodeBottom)) : 
-                                                                     Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_AliasNodeBottom)),
-                        node.Entity.variant == EntityVariant.PROXY ? Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_ProxyText)) : 
-                                                                     Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_AliasText))); 
+                    if (ent == null)
+                    {
+                        //A dead proxy (see CommandsUtils.IsDeadProxy): kept, coloured apart, and named by what it
+                        //pointed at so the user knows what to re-point it to
+                        _deadProxies.Add(node.ShortGUID);
+                        node.ShowDeadMarker = true;
+                        string target = DeadTargetLabel(node.Entity);
+                        node.SetName(_commands.Utils.GetEntityName(_composite, node.Entity), "UNRESOLVABLE " + node.Entity.variant + (target == null ? "" : " TO: " + target));
+                        break;
+                    }
+                    _deadProxies.Remove(node.ShortGUID);
+                    node.ShowDeadMarker = false;
                     switch (ent.variant)
                     {
                         case EntityVariant.FUNCTION:
                             FunctionEntity function = (FunctionEntity)ent;
-                            string entName = _commands.Utils.GetEntityName(node.Entity.variant == EntityVariant.PROXY ? _composite : comp, node.Entity.variant == EntityVariant.PROXY ? node.Entity : ent); //proxies have custom names, aliases don't
+                            //Both proxies and aliases can carry their own name, and fall back to the target's
+                            string entName = _commands.Utils.GetEntityName(_composite, node.Entity);
                             if (function.function.IsFunctionType)
-                            {
                                 node.SetName(entName, node.Entity.variant + " TO: " + function.function.AsFunctionType.ToString());
-                            }
                             else
-                                node.SetName(entName, node.Entity.variant + " TO: " + Path.GetFileName(_commands.GetComposite(function.function).name));
+                                node.SetName(entName, node.Entity.variant + " TO: " + (_commands.GetComposite(function.function) is Composite proxied ? EditorUtils.GetCompositeName(proxied) : function.function.ToByteString()));
                             break;
                         case EntityVariant.VARIABLE:
                             node.SetName(node.Entity.variant + " TO: " + ((VariableEntity)ent).name.ToString());
@@ -663,33 +1112,34 @@ namespace OpenCAGE
                 case EntityVariant.FUNCTION:
                     FunctionEntity funcEnt = (FunctionEntity)node.Entity;
                     if (funcEnt.function.IsFunctionType)
-                    {
-                        node.SetColour(
-                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_FunctionNode)), 
-                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_FunctionNodeBottom)),
-                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_FunctionText)));
                         node.SetName(_commands.Utils.GetEntityName(_composite, node.Entity), funcEnt.function.AsFunctionType.ToString());
-                    }
                     else
-                    {
-                        node.SetColour(
-                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_InstanceNode)),
-                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_InstanceNodeBottom)),
-                            Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_InstanceText)));
-                        node.SetName(_commands.Utils.GetEntityName(_composite, node.Entity), Path.GetFileName(_commands.GetComposite(funcEnt.function).name));
-                    }
+                        node.SetName(_commands.Utils.GetEntityName(_composite, node.Entity), EditorUtils.GetCompositeName(_commands.GetComposite(funcEnt.function)));
                     break;
                 case EntityVariant.VARIABLE:
                     VariableEntity varEnt = (VariableEntity)node.Entity;
-                    node.SetColour(
-                        Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_VariableNode)),
-                        Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_VariableNode)),
-                        Color.FromArgb(SettingsManager.GetInteger(Settings.NodeColour_VariableText)));
                     node.SetName(varEnt.name.ToString());
                     AddAllPins(node);
                     break;
             }
+
+            node.SetOpenCAGEColour(FlowgraphLayoutManager.GetColourForEntity(node.Entity, _composite));
+            node.IconId = (int?)NodeIconFor(node.Entity, _composite) ?? -1;
             node.Recompute();
+        }
+
+        /* What a dead proxy pointed at: the function type or composite its target had (ProxyEntity.function),
+           which is all it still knows - null when that is a composite this level has no name for (a guid
+           tells the user nothing). An alias carries no such record. Nodes are not widened for their
+           subtitle, so this stays as short as a live proxy's. */
+        private string DeadTargetLabel(Entity entity)
+        {
+            if (!(entity is ProxyEntity proxy))
+                return null;
+            if (proxy.function.IsFunctionType)
+                return proxy.function.AsFunctionType.ToString();
+            Composite composite = _commands.GetComposite(proxy.function);
+            return composite != null ? EditorUtils.GetCompositeName(composite) : null;
         }
 
         //Saves the Flowgraph's layout, and compiles the links back to commands
@@ -707,6 +1157,9 @@ namespace OpenCAGE
                 options.AddRange(node.GetTopOptions());
                 for (int y = 0; y < options.Count; y++)
                 {
+                    if (options[y] == STNodeOption.Empty)
+                        continue; //a blank row holding a relay pair aligned, not a pin
+
                     List<STNodeOption> connections = options[y].GetConnectedOption();
                     for (int z = 0; z < connections.Count; z++)
                     {
@@ -721,29 +1174,68 @@ namespace OpenCAGE
         }
 
         //disable entity-related actions on the context menu if no entity is selected
+        PointF _pasteCanvasPos = new PointF();
         private void ContextMenu_Opening(object sender, System.ComponentModel.CancelEventArgs e)
         {
             STNode node = stNodeEditor1.GetHoveredNode();
             (STNodeOption linkIn, STNodeOption linkOut) = stNodeEditor1.GetHoveredLink();
             STNodeOption hoveredPin = stNodeEditor1.GetHoveredPin();
 
+            //A link's reroute point counts as its link (its dot reaches a little past the line), over a node too (it is drawn
+            //over the nodes)
+            _menuReroutePoint = stNodeEditor1.GetReroutePointUnderMouse();
+            if (_menuReroutePoint != null)
+            {
+                node = null;
+                hoveredPin = null;
+                (linkIn, linkOut) = (_menuReroutePoint.From, _menuReroutePoint.To);
+            }
+            _menuLink = (linkIn, linkOut);
+
             if (hoveredPin?.Location == PinLocation.Top || hoveredPin?.Location == PinLocation.Bottom)
                 hoveredPin = null; //Only allow right click on in/out pins
 
+            _pasteCanvasPos = stNodeEditor1.MousePositionInCanvas;
+
+            STNode[] selectedNodes = stNodeEditor1.GetSelectedNode();
+            bool multipleNodes = selectedNodes != null && selectedNodes.Length > 1;
+
+            if (multipleNodes)
+            {
+                deleteToolStripMenuItem.Text = "Delete nodes";
+                managePinsToolStripMenuItem.Enabled = false;
+                deleteEntityToolStripMenuItem.Enabled = false;
+                changeProxyTargetToolStripMenuItem.Enabled = false;
+                findReferencesToolStripMenuItem.Enabled = false;
+                goToNextNodeInFlowgraphToolStripMenuItem.Enabled = false;
+            }
+            else
+            {
+                deleteToolStripMenuItem.Text = "Delete node";
+                managePinsToolStripMenuItem.Enabled = true;
+                deleteEntityToolStripMenuItem.Enabled = true;
+                changeProxyTargetToolStripMenuItem.Enabled = true;
+                findReferencesToolStripMenuItem.Enabled = true;
+                goToNextNodeInFlowgraphToolStripMenuItem.Enabled = true;
+            }
+
             deleteToolStripMenuItem.Visible = node != null && hoveredPin == null;
-            duplicateToolStripMenuItem.Visible = node != null && hoveredPin == null;
+            copyNodesToolStripMenuItem.Visible = node != null && hoveredPin == null;
             toolStripSeparator1.Visible = node != null && hoveredPin == null;
             addAllPinsToolStripMenuItem.Visible = node != null && hoveredPin == null;
             removeUnusedPinsToolStripMenuItem.Visible = node != null && hoveredPin == null;
             managePinsToolStripMenuItem.Visible = node != null && hoveredPin == null;
             toolStripSeparator4.Visible = node != null && hoveredPin == null;
             deleteEntityToolStripMenuItem.Visible = node != null && hoveredPin == null;
-            duplicateEntityToolStripMenuItem.Visible = node != null && hoveredPin == null;
+            changeProxyTargetToolStripMenuItem.Visible = node != null && hoveredPin == null && node.Entity?.variant == EntityVariant.PROXY;
+            _colourMenuEntities = node != null && hoveredPin == null ? ColourMenuEntities(node, selectedNodes) : new List<Entity>();
+            ColourParameters.ConfigureMenuItem(treatAsColourToolStripMenuItem, _commands, _composite, _colourMenuEntities);
             toolStripSeparator5.Visible = node != null && hoveredPin == null;
             findReferencesToolStripMenuItem.Visible = node != null && hoveredPin == null;
             goToNextNodeInFlowgraphToolStripMenuItem.Visible = node != null && hoveredPin == null;
+            showConnectedLinksToolStripMenuItem.Visible = node != null && hoveredPin == null;
 
-            if (node != null && hoveredPin == null)
+            if (node != null && hoveredPin == null && !multipleNodes)
                 goToNextNodeInFlowgraphToolStripMenuItem.Enabled = HasMultipleNodesForEntity(node.Entity);
 
             addNodeToolStripMenuItem.Visible = node == null && linkIn == null && hoveredPin == null;
@@ -751,11 +1243,84 @@ namespace OpenCAGE
             addNodeForSelectedEntityToolStripMenuItem.Visible = node == null && linkIn == null && hoveredPin == null;
             addNodeForSelectedEntityToolStripMenuItem.Enabled = Singleton.Editor?.CompositeDisplay?.EntityDisplay?.Entity != null;
 
+            toolStripSeparator6.Visible = node == null && linkIn == null && hoveredPin == null;
+            pasteToolStripMenuItem.Visible = node == null && linkIn == null && hoveredPin == null;
+            pasteToolStripMenuItem.Enabled = EntityClipboard.HasContent;
+            pasteReferenceToolStripMenuItem.Visible = node == null && linkIn == null && hoveredPin == null;
+            pasteReferenceToolStripMenuItem.Enabled = EntityClipboard.HasContent
+                && _composite != null
+                && (EntityClipboard.SourceCompositeId == _composite.shortGUID.AsUInt32
+                    || GetAliasChainToClipboardSource() != null);
+
+            //Arrange: the whole page from the empty canvas, the selection wherever two or more nodes are selected
+            bool onCanvas = node == null && linkIn == null && hoveredPin == null;
+            bool arrangeSelection = multipleNodes && linkIn == null && hoveredPin == null && (node == null || Array.IndexOf(selectedNodes, node) >= 0);
+            arrangePageToolStripMenuItem.Visible = onCanvas;
+            arrangePageToolStripMenuItem.Enabled = stNodeEditor1.Nodes.Count > 1;
+            arrangeSelectedToolStripMenuItem.Visible = arrangeSelection;
+            arrangeSeparator.Visible = onCanvas || arrangeSelection;
+
             deleteLinkToolStripMenuItem.Visible = linkIn != null;
+            addReroutePointToolStripMenuItem.Visible = linkIn != null && _menuReroutePoint == null;
+            removeReroutePointToolStripMenuItem.Visible = _menuReroutePoint != null;
+            removeAllReroutePointsToolStripMenuItem.Visible = linkIn != null && stNodeEditor1.HasReroutePoints(linkIn, linkOut);
 
             setDelayToolStripMenuItem.Visible = hoveredPin != null;
             clearDelayToolStripMenuItem.Visible = hoveredPin != null;
             clearDelayToolStripMenuItem.Enabled = hoveredPin != null && (hoveredPin.LeftText != "" || hoveredPin.RightText != "");
+            ConfigureTriggerInGameItem(hoveredPin);
+
+            ConfigureTriggerSequenceItems(node != null && hoveredPin == null ? node : null);
+        }
+
+        //What the node menu's TriggerSequence actions act on, settled as it opened
+        private TriggerSequenceMembers.MenuChoice _menuSequence = null;
+
+        /* Right-clicking a TriggerSequence node offers to put the selected nodes' entities in it or take
+           them out, without going through its editor: a right-click leaves the selection alone, so it can
+           be the nodes to add while the sequence is the node clicked (never one of them itself). While a
+           sequence is taking new entities, right-clicking any other node offers the same for that one, by
+           the rule Delete and Copy go by - the node clicked, or the selection when it is part of it. */
+        private void ConfigureTriggerSequenceItems(STNode clicked)
+        {
+            CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
+            _menuSequence = null;
+            if (display?.Composite == _composite && clicked?.Entity != null)
+            {
+                List<STNode> selected = new List<STNode>(stNodeEditor1.GetSelectedNode());
+                bool clickedSequence = TriggerSequenceMembers.At(display, clicked.Entity) != null;
+                List<Entity> entities = NodeEntities(clickedSequence || selected.Contains(clicked) ? selected : new List<STNode>() { clicked });
+                _menuSequence = TriggerSequenceMembers.ChooseForMenu(display, clicked.Entity, entities);
+            }
+
+            TriggerSequenceMembers.ConfigureMenuItems(_menuSequence, display, triggerSequenceSeparator,
+                addSelectedToTriggerSequenceToolStripMenuItem, removeSelectedFromTriggerSequenceToolStripMenuItem, autoAddToTriggerSequenceToolStripMenuItem);
+        }
+
+        private static List<Entity> NodeEntities(IEnumerable<STNode> nodes)
+        {
+            List<Entity> entities = new List<Entity>();
+            foreach (STNode node in nodes)
+            {
+                if (node?.Entity != null && !entities.Contains(node.Entity))
+                    entities.Add(node.Entity);
+            }
+            return entities;
+        }
+
+        private void addSelectedToTriggerSequenceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            TriggerSequenceMembers.Add(_menuSequence?.Target, Singleton.Editor?.CompositeDisplay, _menuSequence?.Entities);
+        }
+
+        private void removeSelectedFromTriggerSequenceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            TriggerSequenceMembers.Remove(_menuSequence?.Target, Singleton.Editor?.CompositeDisplay, _menuSequence?.Entities);
+        }
+
+        private void autoAddToTriggerSequenceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            TriggerSequenceMembers.ToggleAutoAdd(_menuSequence);
         }
 
         //Add new nodes batch select
@@ -778,12 +1343,10 @@ namespace OpenCAGE
         {
             for (int i = 0; i < ent.Count; i++)
             {
-                STNode node = EntityToNode(ent[i]);
                 Point offsetSpawnPos = new Point(_nodeSpawnPosition.X + (i * 20), _nodeSpawnPosition.Y + (i * 20));
-                node.SetPosition(offsetSpawnPos);
-                if (SettingsManager.GetBool(Settings.PopulateAllPinsOnCreateNode))
-                    AddAllPins(node);
+                AddNodeForEntity(ent[i], offsetSpawnPos);
             }
+            RefreshNodeMarkers();
         }
 
         //add new node for the selected entity, if one's selected
@@ -791,57 +1354,91 @@ namespace OpenCAGE
         {
             Entity selectedEntity = Singleton.Editor?.CompositeDisplay?.EntityDisplay?.Entity;
             if (selectedEntity == null) return;
-            STNode node = AddNodeForEntity(selectedEntity);
-            node.SetPosition(new Point((int)stNodeEditor1.MousePositionInCanvas.X, (int)stNodeEditor1.MousePositionInCanvas.Y));
-            SelectNode(node);
+            STNode node = AddNodeForEntity(selectedEntity, new Point((int)stNodeEditor1.MousePositionInCanvas.X, (int)stNodeEditor1.MousePositionInCanvas.Y));
+            SelectNewNode(node);
+            RefreshNodeMarkers();
         }
 
         //delete the whole entity and associated nodes
         private void deleteEntityToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            STNode node = stNodeEditor1.GetHoveredNode();
-            if (node == null) return;
-            Entity entity = _composite.GetEntityByID(node.ShortGUID);
-            if (entity == null) return;
-            Singleton.Editor.CompositeDisplay.DeleteEntity(entity);
+            /* Same rule as Copy and Delete Node: the right-clicked node is the target unless it sits
+               inside the selection, in which case the whole selection goes. This deletes the entities
+               outright - nodes elsewhere, and anything else pointing at them, go with them. */
+            STNode hovered = stNodeEditor1.GetHoveredNode();
+            List<STNode> nodes = new List<STNode>(stNodeEditor1.GetSelectedNode());
+            if (hovered != null && !nodes.Contains(hovered))
+                nodes = new List<STNode>() { hovered };
+
+            List<Entity> entities = new List<Entity>();
+            foreach (STNode node in nodes)
+            {
+                Entity entity = _composite.GetEntityByID(node.ShortGUID);
+                if (entity != null && !entities.Contains(entity))
+                    entities.Add(entity);
+            }
+
+            if (entities.Count == 0) return;
+            Singleton.Editor.CompositeDisplay.DeleteEntities(entities);
         }
 
         //Add/remove batch pins in/out
         private void addAllPinsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            STNode node = stNodeEditor1.GetHoveredNode();
-            if (node == null) return;
-            
-            Point currentCenter = node.Location;
-            currentCenter.X += node.Width / 2;
-            currentCenter.Y += node.Height / 2;
+            STNode hovered = stNodeEditor1.GetHoveredNode();
+            List<STNode> nodes = new List<STNode>(stNodeEditor1.GetSelectedNode());
+            if (hovered != null && !nodes.Contains(hovered))
+                nodes = new List<STNode>() { hovered };
+            if (nodes.Count == 0) return;
 
-            AddAllPins(node);
+            using (UndoStack.Current.BeginGroup("Add pins to " + UndoLabels.Count(nodes.Count, "node", "nodes")))
+            {
+                foreach (STNode node in nodes)
+                {
+                    Point currentCenter = node.Location;
+                    currentCenter.X += node.Width / 2;
+                    currentCenter.Y += node.Height / 2;
 
-            Point newCenter = node.Location;
-            newCenter.X += node.Width / 2;
-            newCenter.Y += node.Height / 2;
+                    PinSet pinsBefore = SnapshotPins(node);
+                    AddAllPins(node);
 
-            node.SetPosition(new Point(node.Location.X + (currentCenter.X - newCenter.X), node.Location.Y + (currentCenter.Y - newCenter.Y)));
+                    Point newCenter = node.Location;
+                    newCenter.X += node.Width / 2;
+                    newCenter.Y += node.Height / 2;
+
+                    node.SetPosition(new Point(node.Location.X + (currentCenter.X - newCenter.X), node.Location.Y + (currentCenter.Y - newCenter.Y)));
+                    RecordPinChange(node, pinsBefore, "Add all pins to " + UndoLabels.Entity(_composite, node.Entity));
+                }
+            }
         }
 
         //add all possible pins to a given node
         private void AddAllPins(STNode node)
         {
             node.AddAllPins(_composite, _commands);
-            UpdatePinDelayTexts(node);
+            UpdatePinTexts(node);
+            MarkFlowgraphEdit(); //the pin layout is saved with the composite
         }
 
-        //set all delay texts on a node
+        //set all delay texts on a node, and the values over its top pins
+        private void UpdatePinTexts(STNode node)
+        {
+            UpdatePinDelayTexts(node);
+            UpdatePinValueTexts(node);
+        }
         private void UpdatePinDelayTexts(STNode node)
         {
             foreach (STNodeOption inputPin in node.GetInputOptions())
             {
+                if (inputPin == STNodeOption.Empty)
+                    continue;
                 float delay = GetDelayForParameter(node.Entity, inputPin.Text);
                 inputPin.LeftText = delay == 0.0f ? "" : delay.ToString();
             }
             foreach (STNodeOption outputPin in node.GetOutputOptions())
             {
+                if (outputPin == STNodeOption.Empty)
+                    continue;
                 float delay = GetDelayForParameter(node.Entity, outputPin.Text);
                 outputPin.RightText = delay == 0.0f ? "" : delay.ToString();
             }
@@ -849,14 +1446,26 @@ namespace OpenCAGE
 
         private void removeUnusedPinsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            STNode node = GetContextNode();
-            if (node == null) return;
+            STNode hovered = stNodeEditor1.GetHoveredNode();
+            List<STNode> nodes = new List<STNode>(stNodeEditor1.GetSelectedNode());
+            if (hovered != null && !nodes.Contains(hovered))
+                nodes = new List<STNode>() { hovered };
+            if (nodes.Count == 0) return;
 
-            Point newPos = node.Location;
-            newPos.X += node.Width / 2;
-            newPos.Y += node.Height / 2;
-            node.RemoveUnusedPins();
-            node.SetPosition(newPos);
+            using (UndoStack.Current.BeginGroup("Remove unused pins from " + UndoLabels.Count(nodes.Count, "node", "nodes")))
+            {
+                foreach (STNode node in nodes)
+                {
+                    Point newPos = node.Location;
+                    newPos.X += node.Width / 2;
+                    newPos.Y += node.Height / 2;
+                    PinSet pinsBefore = SnapshotPins(node);
+                    node.RemoveUnusedPins(_composite, _commands);
+                    node.SetPosition(newPos);
+                    MarkFlowgraphEdit(); //the pin layout is saved with the composite
+                    RecordPinChange(node, pinsBefore, "Remove unused pins from " + UndoLabels.Entity(_composite, node.Entity));
+                }
+            }
         }
 
         private void managePinsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -890,10 +1499,12 @@ namespace OpenCAGE
             currentCenter.X += node.Width / 2;
             currentCenter.Y += node.Height / 2;
 
+            PinSet pinsBefore = SnapshotPins(node);
             _managePinsDialog = new Popups.ManageEntityPins();
             _managePinsDialog.PinsSaved += savedNode =>
             {
-                UpdatePinDelayTexts(savedNode);
+                UpdatePinTexts(savedNode);
+                MarkFlowgraphEdit(); //the pin layout is saved with the composite
 
                 Point newCenter = savedNode.Location;
                 newCenter.X += savedNode.Width / 2;
@@ -901,6 +1512,7 @@ namespace OpenCAGE
                 savedNode.SetPosition(new Point(
                     savedNode.Location.X + (currentCenter.X - newCenter.X),
                     savedNode.Location.Y + (currentCenter.Y - newCenter.Y)));
+                RecordPinChange(savedNode, pinsBefore, "Change pins of " + UndoLabels.Entity(_composite, savedNode.Entity));
             };
             _managePinsDialog.PopulateOptions(node, _composite, _commands);
             _managePinsDialog.Show();
@@ -908,144 +1520,540 @@ namespace OpenCAGE
 
         private void deleteLinkToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            stNodeEditor1.RemoveHoveredLink();
+            //From the menu opened on a reroute point: that point's link (the mouse may have been just off its line)
+            if (sender != null && _menuReroutePoint != null && _menuLink.Item1?.GetConnectedOption()?.Contains(_menuLink.Item2) == true)
+            {
+                _menuLink.Item1.DisconnectOption(_menuLink.Item2);
+                stNodeEditor1.Invalidate();
+                return;
+            }
+            stNodeEditor1.RemoveHoveredLink(); //raises OptionDisconnected, which marks the level as modified
         }
 
-        //Delete right clicked node
+        //The link and the reroute point the menu was opened on (by the time an item is clicked the mouse is on the menu)
+        private (STNodeOption, STNodeOption) _menuLink;
+        private ReroutePoint _menuReroutePoint;
+
+        //Reroute points: dots a link's line is drawn through, to lead it round other nodes (STNodeEditor.Reroutes.cs); each
+        //change is recorded for undo by StNodeEditor1_RerouteChanged
+        private void addReroutePointToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            stNodeEditor1.AddReroutePoint(_menuLink.Item1, _menuLink.Item2, _pasteCanvasPos);
+        }
+
+        private void removeReroutePointToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            stNodeEditor1.RemoveReroutePoint(_menuReroutePoint);
+        }
+
+        private void removeAllReroutePointsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            stNodeEditor1.ClearReroutePoints(_menuLink.Item1, _menuLink.Item2);
+        }
+
+        //Delete the selected nodes - or the right-clicked one, when it isn't part of the selection
         private void deleteToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            STNode node = stNodeEditor1.GetHoveredNode();
-            if (node == null) return;
+            /* Same rule as copying: from the context menu the right-clicked node is the target unless it
+             * sits inside the selection; from the Delete key (no sender) the selection is, and only when
+             * nothing is selected does whatever is under the cursor stand in. */
+            STNode hovered = stNodeEditor1.GetHoveredNode();
+            List<STNode> nodes = new List<STNode>(stNodeEditor1.GetSelectedNode());
+            if (hovered != null && (sender != null || nodes.Count == 0) && !nodes.Contains(hovered))
+                nodes = new List<STNode>() { hovered };
+            if (nodes.Count == 0) return;
 
             if (SettingsManager.GetBool(Settings.AskBeforeDeletingNode))
             {
-                if (MessageBox.Show("Are you sure you want to remove this node?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) 
+                string what = nodes.Count == 1 ? "this node" : "these " + nodes.Count + " nodes";
+                if (MessageBox.Show("Are you sure you want to remove " + what + "?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                     return;
             }
 
-            Entity ent = node.Entity;
-            stNodeEditor1.Nodes.Remove(node);
-
-            if (SettingsManager.GetBool(Settings.OptionToDeleteEntityWithNode))
+            bool shiftHeld = (System.Windows.Forms.Control.ModifierKeys & Keys.Shift) != 0;
+            if (shiftHeld)
             {
-                if (Singleton.Editor.CompositeDisplay != null && !Singleton.Editor.CompositeDisplay.AnyFlowgraphsContainEntity(ent))
+                List<Entity> allEntities = new List<Entity>();
+                foreach (STNode node in nodes)
                 {
-                    if (MessageBox.Show("All nodes have been removed for this entity, would you like to delete the entity too?", "No nodes for entity", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                    {
-                        Singleton.Editor.CompositeDisplay.DeleteEntity(ent, false);
-                    }
+                    if (node.Entity != null && !allEntities.Contains(node.Entity))
+                        allEntities.Add(node.Entity);
                 }
+                if (allEntities.Count > 0)
+                {
+                    Singleton.Editor.CompositeDisplay.DeleteEntities(allEntities);
+                }
+                return;
+            }
+
+            //The nodes and any entities deleted with them undo as one step
+            using (UndoStack.Current.BeginGroup("Remove " + UndoLabels.Count(nodes.Count, "node", "nodes")))
+            {
+                List<Entity> entities = new List<Entity>();
+                foreach (STNode node in nodes)
+                {
+                    if (node.Entity != null && !entities.Contains(node.Entity))
+                        entities.Add(node.Entity);
+                }
+                RemoveNodesRecorded(nodes);
+                RefreshNodeMarkers();
+
+                CompositeDisplay display = Singleton.Editor.CompositeDisplay;
+                if (display == null)
+                    return;
+
+                /* Whichever of the entities has just lost its last node, isn't in the world in its own
+                   right, and isn't wanted by anything else: a trigger sequence or CAGEAnimation naming
+                   it, or a proxy or alias somewhere in the level. */
+                HashSet<ShortGuid> pointerTargets = display.CollectPointerTargets();
+                List<Entity> orphaned = entities
+                    .Where(o => !CompositeDisplay.IsInSceneEntity(o)
+                        && !display.IsEntityStillReferenced(o, pointerTargets))
+                    .ToList();
+
+                foreach (Entity entity in orphaned)
+                    display.DeleteEntity(entity, false);
             }
         }
 
-        //Duplicate the right clicked node
-        private void duplicateToolStripMenuItem_Click(object sender, EventArgs e)
+        //Copy the selected node(s) to the entity clipboard. A right-clicked node outside the
+        //selection copies just that node.
+        private void CopyNodes(STNode contextNode = null)
         {
-            STNode node = stNodeEditor1.GetHoveredNode();
-            if (node == null) return;
-            DuplicateNode(node);
-        }
+            List<STNode> nodes = new List<STNode>(stNodeEditor1.GetSelectedNode());
+            if (contextNode != null && !nodes.Contains(contextNode))
+                nodes = new List<STNode>() { contextNode };
+            if (nodes.Count == 0)
+                return;
 
-        private void DuplicateNode(STNode node)
-        {
-            STNode duplicated = EntityToNode(node.Entity);
-            SetSameOptions(node, duplicated);
-            duplicated.SetPosition(new Point(node.Location.X + 15, node.Location.Y + 15));
-            SelectNode(duplicated);
-        }
-
-        private void SetSameOptions(STNode toCopyFrom, STNode toApplyTo, bool alsoKeepConnections = true)
-        {
+            int minX = int.MaxValue, minY = int.MaxValue;
+            foreach (STNode node in nodes)
             {
-                STNodeOption[] ins = toApplyTo.GetInputOptions();
-                for (int i = 0; i < ins.Length; i++)
-                    toApplyTo.RemoveInputOption(ins[i].ShortGUID);
-                STNodeOption[] outs = toApplyTo.GetOutputOptions();
-                for (int i = 0; i < outs.Length; i++)
-                    toApplyTo.RemoveOutputOption(outs[i].ShortGUID);
-                STNodeOption[] ups = toApplyTo.GetTopOptions();
-                for (int i = 0; i < ups.Length; i++)
-                    toApplyTo.RemoveTopOption(ups[i].ShortGUID);
-                STNodeOption[] downs = toApplyTo.GetBottomOptions();
-                for (int i = 0; i < downs.Length; i++)
-                    toApplyTo.RemoveBottomOption(downs[i].ShortGUID);
-            }
-            {
-                STNodeOption[] ins = toCopyFrom.GetInputOptions();
-                for (int i = 0; i < ins.Length; i++)
-                {
-                    STNodeOption newOpt = toApplyTo.AddInputOption(ins[i].ShortGUID);
-                    if (alsoKeepConnections)
-                    {
-                        List<STNodeOption> connections = ins[i].GetConnectedOption();
-                        for (int x = 0; x < connections.Count; x++)
-                            newOpt.ConnectOption(connections[x]);
-                    }
-                }
-                STNodeOption[] outs = toCopyFrom.GetOutputOptions();
-                for (int i = 0; i < outs.Length; i++)
-                {
-                    STNodeOption newOpt = toApplyTo.AddOutputOption(outs[i].ShortGUID);
-                    if (alsoKeepConnections)
-                    {
-                        List<STNodeOption> connections = outs[i].GetConnectedOption();
-                        for (int x = 0; x < connections.Count; x++)
-                            newOpt.ConnectOption(connections[x]);
-                    }
-                }
-                STNodeOption[] ups = toCopyFrom.GetTopOptions();
-                for (int i = 0; i < ups.Length; i++)
-                {
-                    STNodeOption newOpt = toApplyTo.AddTopOption(ups[i].ShortGUID, ups[i].Style);
-                    if (alsoKeepConnections)
-                    {
-                        List<STNodeOption> connections = ups[i].GetConnectedOption();
-                        for (int x = 0; x < connections.Count; x++)
-                            newOpt.ConnectOption(connections[x]);
-                    }
-                }
-                STNodeOption[] downs = toCopyFrom.GetBottomOptions();
-                for (int i = 0; i < downs.Length; i++)
-                {
-                    STNodeOption newOpt = toApplyTo.AddBottomOption(downs[i].ShortGUID);
-                    if (alsoKeepConnections)
-                    {
-                        List<STNodeOption> connections = downs[i].GetConnectedOption();
-                        for (int x = 0; x < connections.Count; x++)
-                            newOpt.ConnectOption(connections[x]);
-                    }
-                }
+                minX = Math.Min(minX, node.Location.X);
+                minY = Math.Min(minY, node.Location.Y);
             }
 
-            UpdatePinDelayTexts(toApplyTo);
+            List<EntityClipboard.Entry> entries = new List<EntityClipboard.Entry>();
+            foreach (STNode node in nodes)
+            {
+                if (node.Entity == null)
+                    continue;
+                entries.Add(new EntityClipboard.Entry()
+                {
+                    EntityId = node.ShortGUID.AsUInt32,
+                    Offset = new Point(node.Location.X - minX, node.Location.Y - minY),
+                    Pins = CapturePins(node),
+                });
+            }
+            if (entries.Count == 0)
+                return;
+
+            Singleton.Editor?.CompositeDisplay?.CopyEntitiesToClipboard(entries);
         }
 
-        private void duplicateEntityToolStripMenuItem_Click(object sender, EventArgs e)
+        private static List<EntityClipboard.PinMeta> CapturePins(STNode node)
         {
-            STNode node = stNodeEditor1.GetHoveredNode();
-            Entity ent = node?.Entity;
-            if (ent == null) return;
+            List<EntityClipboard.PinMeta> pins = new List<EntityClipboard.PinMeta>();
+            void Capture(STNodeOption[] options)
+            {
+                foreach (STNodeOption option in options)
+                {
+                    if (option == null || option == STNodeOption.Empty)
+                        continue;
+                    pins.Add(new EntityClipboard.PinMeta()
+                    {
+                        ParameterId = option.ShortGUID.AsUInt32,
+                        Location = (byte)option.Location,
+                        Style = (byte)option.Style,
+                    });
+                }
+            }
+            Capture(node.GetInputOptions());
+            Capture(node.GetOutputOptions());
+            Capture(node.GetTopOptions());
+            Capture(node.GetBottomOptions());
+            return pins;
+        }
 
-            Entity newEnt = Singleton.Editor.CompositeDisplay.AddCopyOfEntity(ent);
-            STNode newNode = AddNodeForEntity(newEnt);
-            SetSameOptions(node, newNode);
-            newNode.SetPosition(new Point((int)stNodeEditor1.MousePositionInCanvas.X, (int)stNodeEditor1.MousePositionInCanvas.Y));
-            SelectNode(newNode);
+        /* The pins to give a pasted node. A copy taken off a node carries that node's pins; one taken in
+           the viewport or the entity list has no node to carry, and falling straight through to the
+           "populate all pins" setting gave the copy every pin the entity has where the original node
+           showed eight. The entity that was copied does have nodes here, so read the layout off one of
+           those: a pasted copy should look like what it was copied from. */
+        private List<EntityClipboard.PinMeta> PinsForClipboardEntry(EntityClipboard.Entry entry)
+        {
+            if (entry.Pins != null)
+                return entry.Pins;
 
-            //note to self: this is wrong. we need to maske sure we duplicate all the nodes and connections across all flowgraphs
+            //Copied from another composite: nothing here is a node of it
+            if (EntityClipboard.SourceCompositeId != _composite.shortGUID.AsUInt32)
+                return null;
+
+            STNode source = FindNodeForEntity(entry.EntityId);
+            return source == null ? null : CapturePins(source);
+        }
+
+        /* A node to read this entity's pins off: this page first, since it is the one being pasted into,
+           then any other open page. An entity can have several nodes with different pins on each, and a
+           copy made away from the flowgraph says nothing about which was meant - the fullest one is taken,
+           as the one that shows the most of what the entity does. */
+        private STNode FindNodeForEntity(uint entityId)
+        {
+            STNode best = FullestNodeForEntity(stNodeEditor1, entityId);
+            if (best != null)
+                return best;
+
+            List<Flowgraph> pages = Singleton.Editor?.CompositeDisplay?.Flowgraphs;
+            if (pages == null)
+                return null;
+
+            foreach (Flowgraph page in pages)
+            {
+                if (page == null || page == this || page.IsDisposed)
+                    continue;
+
+                STNode candidate = FullestNodeForEntity(page.Nodegraph, entityId);
+                if (candidate != null && (best == null || PinCount(candidate) > PinCount(best)))
+                    best = candidate;
+            }
+            return best;
+        }
+
+        private static STNode FullestNodeForEntity(STNodeEditor editor, uint entityId)
+        {
+            STNode best = null;
+            foreach (STNode node in editor.Nodes)
+            {
+                if (node.ShortGUID.AsUInt32 != entityId)
+                    continue;
+                if (best == null || PinCount(node) > PinCount(best))
+                    best = node;
+            }
+            return best;
+        }
+
+        private static int PinCount(STNode node)
+        {
+            return node.GetInputOptions().Length + node.GetOutputOptions().Length
+                + node.GetTopOptions().Length + node.GetBottomOptions().Length;
+        }
+
+        //Recreate the captured pin layout on a pasted node. Falls back to the "populate all pins"
+        //setting for clipboard entries that didn't come from a flowgraph node.
+        private void ApplyCopiedPins(STNode node, List<EntityClipboard.PinMeta> pins)
+        {
+            if (pins == null)
+            {
+                if (SettingsManager.GetBool(Settings.PopulateAllPinsOnCreateNode))
+                    AddAllPins(node);
+                return;
+            }
+
+            foreach (EntityClipboard.PinMeta pin in pins)
+            {
+                ShortGuid parameterId = new ShortGuid(pin.ParameterId);
+                switch ((PinLocation)pin.Location)
+                {
+                    case PinLocation.Left:
+                        node.AddInputOption(parameterId);
+                        break;
+                    case PinLocation.Right:
+                        node.AddOutputOption(parameterId);
+                        break;
+                    case PinLocation.Top:
+                        node.AddTopOption(parameterId, (PinStyle)pin.Style);
+                        break;
+                    case PinLocation.Bottom:
+                        node.AddBottomOption(parameterId);
+                        break;
+                }
+            }
+            node.AlignRelayRows(_composite, _commands);
+            UpdatePinTexts(node);
+            node.Recompute();
+        }
+
+        //Paste the clipboard as brand new entities (clones), restoring the links between them
+        private void PasteClipboardClones(PointF canvasPos)
+        {
+            //The clones, their nodes and the links between them: one step, named by the clone pass
+            using (UndoStack.Current.BeginGroup(null))
+                PasteClipboardClonesCore(canvasPos);
+        }
+        /* A copy taken on the flowgraph carries each node's offset from the top-left of the selection,
+           so a paste rebuilds the layout. A copy taken anywhere else - the viewport, the entity list -
+           has no layout to carry and leaves every offset empty, which used to drop the whole paste on
+           one point: the nodes stacked, only the last one drawn was visible, and pasting several
+           composites looked like only the last-selected one had been copied (issue 668). Cascade those
+           the way adding nodes for several selected entities already does. */
+        private static bool ClipboardNeedsCascade(IEnumerable<EntityClipboard.Entry> entries)
+        {
+            int count = 0;
+            foreach (EntityClipboard.Entry entry in entries)
+            {
+                if (!entry.Offset.IsEmpty)
+                    return false;
+                count++;
+            }
+            return count > 1;
+        }
+
+        private const int PasteCascadeStep = 20;
+
+        private static Point PastePosition(PointF canvasPos, EntityClipboard.Entry entry, int placed, bool cascade)
+        {
+            int x = (int)canvasPos.X + entry.Offset.X;
+            int y = (int)canvasPos.Y + entry.Offset.Y;
+            if (cascade)
+            {
+                x += placed * PasteCascadeStep;
+                y += placed * PasteCascadeStep;
+            }
+            return new Point(x, y);
+        }
+
+        private void PasteClipboardClonesCore(PointF canvasPos)
+        {
+            List<Tuple<EntityClipboard.Entry, Entity>> pasted = Singleton.Editor?.CompositeDisplay?.CloneClipboardEntities();
+            if (pasted == null || pasted.Count == 0)
+                return;
+
+            DeselectAllNodes();
+
+            Dictionary<uint, STNode> firstNodeByEntity = new Dictionary<uint, STNode>();
+            List<STNode> newNodes = new List<STNode>();
+            bool cascade = ClipboardNeedsCascade(pasted.Select(o => o.Item1));
+            foreach (Tuple<EntityClipboard.Entry, Entity> pair in pasted)
+            {
+                /* There's a clipboard entry per copied NODE, and picking an entity selects every node it
+                   has on the page - so a copy of one entity can carry several entries naming it. They all
+                   share a single clone, and giving each one a node left that one pasted entity sitting on
+                   the page two or three times over (issue 674). One clone, one node; repeating an entity
+                   is what the reference paste below is for. */
+                if (firstNodeByEntity.ContainsKey(pair.Item2.shortGUID.AsUInt32))
+                    continue;
+
+                STNode node = EntityToNode(pair.Item2, PastePosition(canvasPos, pair.Item1, newNodes.Count, cascade));
+                ApplyCopiedPins(node, PinsForClipboardEntry(pair.Item1));
+                newNodes.Add(node);
+                firstNodeByEntity.Add(pair.Item2.shortGUID.AsUInt32, node);
+            }
+
+            //Recreate the restored links between the pasted entities on their new nodes
+            foreach (STNode node in firstNodeByEntity.Values)
+            {
+                foreach (EntityConnector link in node.Entity.childLinks)
+                {
+                    if (!firstNodeByEntity.TryGetValue(link.linkedEntityID.AsUInt32, out STNode linkedNode))
+                        continue;
+
+                    node.AddPinsForConnection(linkedNode, link.thisParamID, link.linkedParamID, _composite, _commands);
+                    STNodeOption pinOut = node.GetOption(link.thisParamID) ?? node.AddOutputOption(link.thisParamID);
+                    STNodeOption pinIn = linkedNode.GetOption(link.linkedParamID) ?? linkedNode.AddInputOption(link.linkedParamID);
+                    ConnectionStatus status = pinOut.ConnectOption(pinIn);
+                    if (status != ConnectionStatus.Connected)
+                        Debug.Log("Flowgraph", "WARNING: Could not recreate pasted connection...\n\t" + node.Title + " [" + pinOut.Text + "] " + pinOut.Location + " -> " + linkedNode.Title + " [" + pinIn.Text + "] " + pinIn.Location);
+                }
+            }
+
+            foreach (STNode node in newNodes)
+            {
+                node.AlignRelayRows(_composite, _commands); //catches pins added while re-linking above
+                UpdatePinTexts(node);
+                node.EnsureProperNodeSizing();
+                SelectNode(node, centerCanvas: false);
+            }
+            RefreshNodeMarkers();
+            AnnounceSelection(newNodes);
+        }
+
+        /* Nodes selected from code raise nothing, so the rest of the editor is left showing whatever
+           last spoke for the selection - for a paste, the single entity ReloadUIForNewEntity loaded as
+           each clone was added, which is the last one of them. Say what was actually selected, so the
+           entity list, the inspector and the viewport all mark the whole paste rather than one of it
+           (issue 672): moving the pasted entities in the viewport was moving the originals. */
+        private void AnnounceSelection(List<STNode> nodes)
+        {
+            List<Entity> entities = new List<Entity>();
+            foreach (STNode node in nodes)
+            {
+                if (node?.Entity != null && !entities.Contains(node.Entity))
+                    entities.Add(node.Entity);
+            }
+            if (entities.Count == 0)
+                return;
+
+            _previouslySelectedEntity = entities.Count == 1 ? entities[0] : null;
+            _selectedNodeChanged = true;
+            try
+            {
+                if (entities.Count == 1)
+                {
+                    Singleton.Editor?.CompositeDisplay?.LoadEntity(entities[0], false);
+                    Singleton.OnEntitySelected?.Invoke(entities[0]);
+                }
+                else
+                {
+                    Singleton.Editor?.CompositeDisplay?.ApplyMultiSelection(entities);
+                }
+            }
+            finally
+            {
+                _selectedNodeChanged = false;
+            }
+        }
+
+        /* Paste the clipboard into the middle of this page. Used when the paste came from outside the
+           flowgraph UI (entity list, viewport), where there's no cursor position on the canvas: links
+           between the copied entities are only kept by the composite if they exist on a page, so those
+           pastes have to come through here rather than cloning the data on its own. */
+        public void PasteClipboardAtCanvasCentre()
+        {
+            PasteClipboardClones(stNodeEditor1.ControlToCanvas(new PointF(stNodeEditor1.Width / 2f, stNodeEditor1.Height / 2f)));
+        }
+
+        //Paste the clipboard as extra nodes for the original entities (no new entities created).
+        //When pasting into an ancestor composite on the drill path the copy was taken from,
+        //aliases are created pointing down to the copied entities.
+        private void PasteClipboardReferences(PointF canvasPos)
+        {
+            using (UndoStack.Current.BeginGroup("Paste references"))
+                PasteClipboardReferencesCore(canvasPos);
+        }
+        private void PasteClipboardReferencesCore(PointF canvasPos)
+        {
+            if (!EntityClipboard.HasContent || _composite == null)
+                return;
+
+            //Same composite: plain extra nodes for the entities themselves
+            if (EntityClipboard.SourceCompositeId == _composite.shortGUID.AsUInt32)
+            {
+                DeselectAllNodes();
+
+                bool cascadeHere = ClipboardNeedsCascade(EntityClipboard.Entries);
+                int placedHere = 0;
+                List<STNode> pastedHere = new List<STNode>();
+                foreach (EntityClipboard.Entry entry in EntityClipboard.Entries)
+                {
+                    Entity entity = _composite.GetEntityByID(new ShortGuid(entry.EntityId));
+                    if (entity == null)
+                        continue;
+
+                    STNode node = EntityToNode(entity, PastePosition(canvasPos, entry, placedHere++, cascadeHere));
+                    ApplyCopiedPins(node, PinsForClipboardEntry(entry));
+                    SelectNode(node, centerCanvas: false);
+                    pastedHere.Add(node);
+                }
+                bool anyAdded = placedHere != 0;
+                if (anyAdded)
+                {
+                    RefreshNodeMarkers();
+                    AnnounceSelection(pastedHere);
+                }
+                return;
+            }
+
+            //Ancestor composite: build aliases down to the copied entities via the captured drill path
+            List<uint> instanceChain = GetAliasChainToClipboardSource();
+            if (instanceChain == null)
+                return;
+
+            Composite sourceComposite = _commands.GetComposite(new ShortGuid(EntityClipboard.SourceCompositeId));
+            if (sourceComposite == null)
+                return;
+
+            DeselectAllNodes();
+
+            bool cascadeAliases = ClipboardNeedsCascade(EntityClipboard.Entries);
+            int placedAliases = 0;
+            List<STNode> pastedAliases = new List<STNode>();
+            foreach (EntityClipboard.Entry entry in EntityClipboard.Entries)
+            {
+                if (sourceComposite.GetEntityByID(new ShortGuid(entry.EntityId)) == null)
+                    continue;
+
+                ShortGuid[] hierarchy = new ShortGuid[instanceChain.Count + 1];
+                for (int i = 0; i < instanceChain.Count; i++)
+                    hierarchy[i] = new ShortGuid(instanceChain[i]);
+                hierarchy[instanceChain.Count] = new ShortGuid(entry.EntityId);
+
+                //Reuse an existing alias with the same path (or one we just made for a duplicate entry)
+                AliasEntity alias = _composite.aliases.FirstOrDefault(o => o.alias == new EntityPath(hierarchy));
+                if (alias == null)
+                {
+                    Singleton.OnEntityAddPending?.Invoke();
+                    alias = _composite.AddAlias(hierarchy);
+                    UndoStack.Current.Record(new EntityAddEdit(_composite, alias, "Add alias " + UndoLabels.Entity(_composite, alias)));
+                    Singleton.OnEntityAdded?.Invoke(alias);
+                }
+
+                STNode node = EntityToNode(alias, PastePosition(canvasPos, entry, placedAliases++, cascadeAliases));
+                ApplyCopiedPins(node, PinsForClipboardEntry(entry));
+                SelectNode(node, centerCanvas: false);
+                pastedAliases.Add(node);
+            }
+
+            if (placedAliases != 0)
+            {
+                RefreshNodeMarkers();
+                AnnounceSelection(pastedAliases);
+            }
+        }
+
+        //If the current composite sits on the drill path the clipboard was copied from, returns the
+        //chain of instance entity ids leading from here down to the source composite. Null otherwise.
+        private List<uint> GetAliasChainToClipboardSource()
+        {
+            List<EntityClipboard.PathStep> steps = EntityClipboard.SourcePath;
+            if (steps == null || steps.Count == 0 || _composite == null)
+                return null;
+
+            for (int i = 0; i < steps.Count; i++)
+            {
+                if (steps[i].CompositeId != _composite.shortGUID.AsUInt32)
+                    continue;
+
+                List<uint> chain = new List<uint>();
+                for (int x = i; x < steps.Count; x++)
+                    chain.Add(steps[x].InstanceEntityId);
+
+                //The first step must still exist here for the alias to resolve
+                if (chain.Count == 0 || _composite.GetEntityByID(new ShortGuid(chain[0])) == null)
+                    return null;
+
+                return chain;
+            }
+            return null;
+        }
+
+        private void copyNodesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            CopyNodes(stNodeEditor1.GetHoveredNode());
+        }
+
+        private void pasteToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            PasteClipboardClones(_pasteCanvasPos);
+        }
+
+        private void pasteReferenceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            PasteClipboardReferences(_pasteCanvasPos);
         }
 
         private void TabStripContextMenu_Opening(object sender, System.ComponentModel.CancelEventArgs e)
         {
             deleteFGToolstripMenuItem.Text = "Delete flowgraph '" + _flowgraphName + "'";
             renameFGToolStripMenuItem.Text = "Rename flowgraph '" + _flowgraphName + "'";
+            arrangeFGToolStripMenuItem.Text = "Arrange flowgraph '" + _flowgraphName + "'";
+            arrangeFGToolStripMenuItem.Enabled = stNodeEditor1.Nodes.Count > 1;
         }
 
         private void deleteFGToolstripMenuItem_Click(object sender, EventArgs e)
         {
             if (MessageBox.Show("Are you sure you want to delete the flowgraph '" + _flowgraphName + "'?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
-            FlowgraphLayoutManager.RemoveLayout(_composite, _flowgraphName);
-            this.Close();
+            //The removal is the edit: it keeps the page as it stands, so undo can bring it back
+            UndoStack.Current.Apply(new PagePresenceEdit(_composite, CaptureLayout(), false, "Delete page " + _flowgraphName));
         }
         RenameGeneric _renameFlowgraphPopup;
         private void renameFGToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1078,9 +2086,12 @@ namespace OpenCAGE
                     return;
                 }
             }
+            string previousName = _flowgraphName;
             layouts.FirstOrDefault(o => o.Name == _flowgraphName).Name = name;
             this.Text = name;
             _flowgraphName = name;
+            DirtyTracker.MarkLevelDataModified();
+            UndoStack.Current.Record(new PageRenameEdit(_composite, previousName, name));
         }
         private void _renameFlowgraphPopup_FormClosed(object sender, FormClosedEventArgs e)
         {
@@ -1110,6 +2121,29 @@ namespace OpenCAGE
         {
             ListenForEntCreatePopup(Singleton.Editor.CompositeDisplay.CreateEntity(EntityVariant.PROXY));
         }
+        private void changeProxyTargetToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            STNode node = GetContextNode();
+            if (node?.Entity is ProxyEntity proxy)
+                Singleton.Editor?.CompositeDisplay?.ChangeProxyTarget(proxy);
+        }
+
+        //What Treat As Colour / Treat As Vector acts on, settled as the node menu opened
+        private List<Entity> _colourMenuEntities = new List<Entity>();
+
+        /* The node right-clicked, or every selected node's entity when it is one of a selection */
+        private static List<Entity> ColourMenuEntities(STNode node, STNode[] selectedNodes)
+        {
+            if (selectedNodes != null && selectedNodes.Length > 1 && Array.IndexOf(selectedNodes, node) >= 0)
+                return selectedNodes.Select(o => o.Entity).Where(o => o != null).Distinct().ToList();
+            return node.Entity != null ? new List<Entity>() { node.Entity } : new List<Entity>();
+        }
+
+        /* Show the parameter entities' values as colours, or as vectors again */
+        private void treatAsColourToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ColourParameters.MenuItemClicked(_commands, _composite, _colourMenuEntities, _colourMenuEntities.Count == 1 ? _colourMenuEntities[0] : null);
+        }
         private void createAliasToolStripMenuItem1_Click(object sender, EventArgs e)
         {
             ListenForEntCreatePopup(Singleton.Editor.CompositeDisplay.CreateEntity(EntityVariant.ALIAS));
@@ -1127,9 +2161,9 @@ namespace OpenCAGE
         private void OnEntityAddedViaPopup(Entity entity)
         {
             EntityCreationPopupClosed(null, null);
-            STNode node = AddNodeForEntity(entity);
-            node.SetPosition(new Point((int)_createEntViaPopupPos.X, (int)_createEntViaPopupPos.Y));
-            SelectNode(node);
+            STNode node = AddNodeForEntity(entity, new Point((int)_createEntViaPopupPos.X, (int)_createEntViaPopupPos.Y));
+            SelectNewNode(node);
+            RefreshNodeMarkers();
         }
         private void EntityCreationPopupClosed(object sender, FormClosedEventArgs e)
         {
@@ -1193,6 +2227,48 @@ namespace OpenCAGE
             }
         }
 
+        /* Show Connected Links: a window listing the clicked node's links, kept up to date as links are made and broken,
+           whose Go To brings this page forward and selects the node at the other end of one. One at a time: showing another
+           node's replaces it. It goes with this page (see ShowConnectedLinks.CloseWith) */
+        ShowConnectedLinks _connectedLinksDialog = null;
+        private void showConnectedLinksToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            STNode node = stNodeEditor1.GetHoveredNode();
+            if (node == null || node.Entity == null)
+                return;
+
+            if (_connectedLinksDialog != null && !_connectedLinksDialog.IsDisposed)
+                _connectedLinksDialog.Close();
+
+            _connectedLinksDialog = new ShowConnectedLinks(this, node);
+            _connectedLinksDialog.Show();
+        }
+
+        /// <summary>Bring this page forward with just the given node of it selected, and the canvas moved onto it - its entity
+        /// shown in the inspector, as clicking on it would.</summary>
+        public void GoToNode(STNode node)
+        {
+            if (node == null || node.Owner != stNodeEditor1)
+                return;
+
+            Show();
+            _applyingEntitySelection = true;
+            try
+            {
+                DeselectAllNodes();
+            }
+            finally
+            {
+                _applyingEntitySelection = false;
+            }
+            SelectNode(node);
+
+            //Selecting a node from code raises nothing, so it is announced here as a click on it is: the inspector loads its
+            //entity, without the rest of that entity's nodes on this page being selected along with it
+            Owner_SelectedChanged(stNodeEditor1, EventArgs.Empty);
+            stNodeEditor1.Invalidate();
+        }
+
         SetPinDelay _pinDelayDialog = null;
         private void setDelayToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -1212,15 +2288,16 @@ namespace OpenCAGE
         }
         private void OnPinDelaySet(Entity entity, string parameter, float delay, PinLocation location)
         {
+            Parameter previous = entity.GetParameter(parameter);
+            ParameterData before = ParameterValues.Clone(previous?.content);
+            bool wasModified = previous != null && _composite != null && ParameterModificationTracker.IsParameterModified(_composite.shortGUID, entity.shortGUID, previous.name);
             entity.RemoveParameter(parameter);
-            entity.AddParameter(parameter, new cFloat(delay), location == PinLocation.Left ? ParameterVariant.METHOD_PIN : ParameterVariant.TARGET_PIN);
+            Parameter current = entity.AddParameter(parameter, new cFloat(delay), location == PinLocation.Left ? ParameterVariant.METHOD_PIN : ParameterVariant.TARGET_PIN);
+            Singleton.OnParameterModified?.Invoke(); //pin delays are stored as entity parameters
+            RecordPinDelay(entity, previous, before, wasModified, current);
 
-            foreach (STNode node in stNodeEditor1.Nodes)
-            {
-                if (node.Entity != entity)
-                    continue;
-                UpdatePinDelayTexts(node);
-            }
+            //The entity can be on other pages too, and they draw the delay on their own copy of the pin
+            Singleton.OnPinDelayModified?.Invoke(entity);
         }
 
         private float GetDelayForParameter(Entity entity, string parameter)
@@ -1248,8 +2325,58 @@ namespace OpenCAGE
             if (pin == null || pin?.Owner?.Entity == null)
                 return;
 
-            pin.Owner.Entity.RemoveParameter(pin.Text);
-            UpdatePinDelayTexts(pin.Owner);
+            Entity delayEntity = pin.Owner.Entity;
+            Parameter delayParameter = delayEntity.GetParameter(pin.Text);
+            if (delayParameter == null)
+                return;
+
+            int delayIndex = delayEntity.parameters.IndexOf(delayParameter);
+            bool delayWasModified = _composite != null && ParameterModificationTracker.IsParameterModified(_composite.shortGUID, delayEntity.shortGUID, delayParameter.name);
+            delayEntity.RemoveParameter(pin.Text);
+            Singleton.OnParameterModified?.Invoke(); //pin delays are stored as entity parameters
+
+            //As above: the cleared delay has to come off this entity's pins on every page, not just here
+            Singleton.OnPinDelayModified?.Invoke(delayEntity);
+
+            if (_composite == null)
+                return;
+            UndoStack.Current.Record(new ParameterPresenceEdit(_composite, delayEntity, delayParameter, delayIndex, false, delayWasModified,
+                "Clear delay on " + pin.Text + " of " + UndoLabels.Entity(_composite, delayEntity)));
+        }
+
+        /* Live Link: a method pin's menu triggers that method in the running game, as the Entity Inspector's Trigger
+           Method does - there only while the game is connected, and only on the pins the entity can be sent (its method
+           pins, by the rule the inspector's list goes by). The pin is settled as the menu opens. */
+        private Entity _triggerInGameEntity = null;
+        private ShortGuid _triggerInGameMethod;
+
+        private void ConfigureTriggerInGameItem(STNodeOption pin)
+        {
+            _triggerInGameEntity = null;
+            Entity entity = pin?.Owner?.Entity;
+            bool method = pin != null && pin.Location == PinLocation.Left && entity != null && _composite != null
+                && RuntimeUtilsConnection.LiveLink.Connected
+                && RuntimeUtilsConnection.LiveLink.Methods(_commands, entity, _composite).Contains(pin.ShortGUID);
+            triggerInGameSeparator.Visible = method;
+            triggerInGameToolStripMenuItem.Visible = method;
+            if (!method)
+                return;
+            _triggerInGameEntity = entity;
+            _triggerInGameMethod = pin.ShortGUID;
+            triggerInGameToolStripMenuItem.Text = "Trigger '" + pin.ShortGUID.ToString() + "' in Game";
+        }
+
+        private void triggerInGameToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (_triggerInGameEntity == null || _composite == null)
+                return;
+            //The instance the open composite was reached through from the level's root, as the inspector calls
+            CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
+            List<ShortGuid> path = display?.Composite == _composite ? RuntimeUtilsConnection.LiveLink.InstancePath(display, _commands) : null;
+            EntityInspector.TriggerInGame(_commands, _composite, _triggerInGameEntity, _triggerInGameMethod, path);
         }
     }
 }
+
+
+

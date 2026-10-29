@@ -22,20 +22,69 @@ namespace OpenCAGE
 
         private static string _loadedLevel = "";
 
+        /* The global lists are filled once on a background thread (the composite browser starts it); an animation import
+         * afterwards rebuilds the animation ones, which must neither race that first fill nor run before it */
+        private static readonly object _globalLock = new object();
+        private static bool _globalPopulated = false;
+
+        static EnumStringListViewItems()
+        {
+            Singleton.OnAnimationsModified += RefreshAnimationEntries;
+        }
+
         /* Populate all enum strings for the global game */
         public static void PopulateGlobalEntries()
         {
-            //Only populate global entries once
-            if (_globalEntries.Count > 0)
-                return;
-
-            Debug.Log("Asset Loader - Global", "Starting to populate");
-            foreach (EnumStringType type in Enum.GetValues(typeof(EnumStringType)))
+            lock (_globalLock)
             {
-                if (!IsTypeGlobal(type)) continue;
-                AddItems(type, _globalEntries);
+                //Only populate global entries once
+                if (_globalEntries.Count > 0)
+                    return;
+
+                Debug.Log("Asset Loader - Global", "Starting to populate");
+                foreach (EnumStringType type in Enum.GetValues(typeof(EnumStringType)))
+                {
+                    if (type == EnumStringType.MATERIAL) continue;
+                    if (type == EnumStringType.LEVEL_NAME) continue; //never cached: GetItems reads it from disk every time
+                    if (!IsTypeGlobal(type)) continue;
+                    AddItems(type, _globalEntries);
+                }
+                _globalPopulated = true;
+                Debug.Log("Asset Loader - Global", "Finished populating");
             }
-            Debug.Log("Asset Loader - Global", "Finished populating");
+        }
+
+        /* Rebuild the animation lists from Singleton.AllAnimations, after a clip was imported or removed: they are otherwise
+         * built once at startup, so the inspector's picker and the MCP checks would not know a new clip until a restart.
+         * Each list is replaced whole rather than changed, so a reader holding the old one is never handed a half-built list. */
+        public static void RefreshAnimationEntries()
+        {
+            lock (_globalLock)
+            {
+                if (!_globalPopulated)
+                    return;
+                AddItems(EnumStringType.ANIMATION, _globalEntries);
+                AddItems(EnumStringType.ANIMATION_SET, _globalEntries);
+                AddItems(EnumStringType.ANIMATION_TREE_SET, _globalEntries);
+                AddItems(EnumStringType.SKELETON_SET, _globalEntries);
+            }
+        }
+
+        /* Rebuild every list of the game's own things (not a level's) from the game's files, after they changed under OpenCAGE
+         * (mods applied): items, characters, awards, animations... Each list is replaced whole, as above. */
+        public static void RefreshGlobalEntries()
+        {
+            lock (_globalLock)
+            {
+                if (!_globalPopulated)
+                    return;
+                foreach (EnumStringType type in Enum.GetValues(typeof(EnumStringType)))
+                {
+                    if (type == EnumStringType.MATERIAL || type == EnumStringType.LEVEL_NAME || !IsTypeGlobal(type))
+                        continue;
+                    AddItems(type, _globalEntries);
+                }
+            }
         }
 
         /* Populate all enum strings for the loaded level */
@@ -51,22 +100,66 @@ namespace OpenCAGE
             AddItems(EnumStringType.DISPLAY_MODEL, _levelSpecificEntries);
 
             //Only populate other entries if this is a new level
-            if (_loadedLevel == content.Level.Name)
+            string levelName = content.Level?.Name;
+            if (levelName == null || _loadedLevel == levelName)
                 return;
-            _loadedLevel = content.Level.Name;
 
             _levelSpecificEntries.Clear();
             foreach (EnumStringType type in Enum.GetValues(typeof(EnumStringType)))
             {
+                if (type == EnumStringType.MATERIAL) continue;
                 if (IsTypeGlobal(type)) continue;
+                //Stopped once the level is closed: the lists are read from whichever level is open now
+                if (!ReferenceEquals(Singleton.Editor?.CompositeBrowser?.Content, content)) return;
                 AddItems(type, _levelSpecificEntries);
             }
+
+            //Noted as done only once every list is filled, and only for the level still open: a fill cut short (another
+            //level loaded part way through) is done again for whichever level asks next
+            if (ReferenceEquals(Singleton.Editor?.CompositeBrowser?.Content, content))
+                _loadedLevel = levelName;
             Debug.Log("Asset Loader - Level", "Finished populating");
+        }
+
+        /* Re-populate every cache that bakes in localised text (call after localisation edits, since these otherwise only refresh on level change) */
+        public static void RefreshLocalisedStringEntries()
+        {
+            //Global entries with localised desc columns
+            if (_globalEntries.Count > 0)
+            {
+                AddItems(EnumStringType.NOSTROMO_LOG_ID, _globalEntries);
+                AddItems(EnumStringType.SEVASTOPOL_LOG_ID, _globalEntries);
+            }
+
+            //Level entries built from the string DBs (or with localised desc columns)
+            LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
+            if (content == null || !content.IsLevelDataLoaded)
+                return;
+            AddItems(EnumStringType.STRING_OBJECTIVES, _levelSpecificEntries);
+            AddItems(EnumStringType.STRING_TERMINAL, _levelSpecificEntries);
+            AddItems(EnumStringType.STRING_UI, _levelSpecificEntries);
+            AddItems(EnumStringType.SOUND_EVENT, _levelSpecificEntries);
+        }
+
+        /* Re-populate the sound event and soundbank lists from the level's sound data, after a soundbank of the level's own changed
+         * the events it lists (the Level Sound Override window's New Soundbank) - they are otherwise only filled once per level */
+        public static void RefreshSoundEntries()
+        {
+            LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
+            if (content == null || !content.IsLevelDataLoaded)
+                return;
+            AddItems(EnumStringType.SOUND_EVENT, _levelSpecificEntries);
+            AddItems(EnumStringType.SOUND_BANK, _levelSpecificEntries);
         }
 
         /* Get the items for a given type (the bool is if the desc column should show) */
         public static Tuple<ListViewItem[], bool> GetItems(EnumStringType type)
         {
+            //Levels can be created or removed while OpenCAGE is open, so that list is read from disk every time
+            //(fresh, not cached: the cached lists are filled on a background thread)
+            if (type == EnumStringType.LEVEL_NAME)
+                return new Tuple<ListViewItem[], bool>(LevelNameItems().ToArray(), false);
+
             if (_levelSpecificEntries.TryGetValue(type, out Tuple<ListViewItem[], bool> fromLevel))
                 return fromLevel;
             if (_globalEntries.TryGetValue(type, out Tuple<ListViewItem[], bool> fromGlobal))
@@ -80,7 +173,6 @@ namespace OpenCAGE
             switch (type)
             {
                 case EnumStringType.DISPLAY_MODEL:
-                case EnumStringType.MATERIAL:
                 case EnumStringType.SOUND_BANK:
                 case EnumStringType.SOUND_EVENT:
                 case EnumStringType.SOUND_REVERB:
@@ -106,6 +198,10 @@ namespace OpenCAGE
                     break;
                 case EnumStringType.ACHIEVEMENT_STAT_ID:
                     foreach (string str in ParseXML("AWARDS/MAIN_AWARD_LIST.BML", "awards/stat", "stat_id"))
+                        items.Add(new ListViewItem() { Text = str });
+                    break;
+                case EnumStringType.ALIEN_CONFIG:
+                    foreach (string str in ParseXML("ALIENCONFIGS/ALIENCONFIGS.BML", "AlienConfigs/AlienConfig", "Name", true))
                         items.Add(new ListViewItem() { Text = str });
                     break;
                 case EnumStringType.ANIMATION:
@@ -166,12 +262,9 @@ namespace OpenCAGE
                     foreach (string str in ParseXML("GBL_ITEM.BML", "item_database/map_available_keyframes/map_keyframe", "name"))
                         items.Add(new ListViewItem() { Text = str });
                     break;
-                case EnumStringType.MATERIAL:
-                    foreach (Materials.Material entry in Singleton.Editor.CompositeBrowser.Content.Level.Materials.Entries)
-                    {
-                        if (items.FirstOrDefault(o => o.Text == entry.Name) == null)
-                            items.Add(new ListViewItem() { Text = entry.Name });
-                    }
+                case EnumStringType.MAP_ELEMENT_ID:
+                    foreach (string str in ParseXML("GBL_ITEM.BML", "item_database/map_elements/map_element", "name"))
+                        items.Add(new ListViewItem() { Text = str });
                     break;
                 case EnumStringType.NOSTROMO_LOG_ID:
                     {
@@ -241,7 +334,7 @@ namespace OpenCAGE
                         items.Add(new ListViewItem() { Text = str });
                     break;
                 case EnumStringType.SOUND_REVERB:
-                    foreach (string entry in Singleton.Editor.CompositeBrowser.Content.Level.SoundEnvironmentData.Entries)
+                    foreach (string entry in Singleton.Editor.CompositeBrowser.Content.Level.SoundEnvironmentData.PossibleEntries)
                         if (items.FirstOrDefault(o => o.Text == entry) == null)
                             items.Add(new ListViewItem() { Text = entry });
                     break;
@@ -397,6 +490,24 @@ namespace OpenCAGE
                 dictionary[type] = output;
             else
                 dictionary.Add(type, output);
+        }
+
+        /* The levels a SwitchLevel can load: every level in this install (Frontend left out, custom levels under DATA/ENV
+         * included), read from disk each time. Spelled "Production\" and the folder path, the way the game's scripts and
+         * MAIN.PKG name a level (Level.GetLevels gives PRODUCTION/SCI_HUB) - case and slashes don't matter to the game, so
+         * no table of spellings is kept and a level added on disk is offered the same way as a shipped one. */
+        private static List<ListViewItem> LevelNameItems()
+        {
+            List<string> levels = new List<string>();
+            foreach (string level in EditorUtils.GetEditableLevels())
+            {
+                string name = level.Trim().Replace('/', '\\').Trim('\\');
+                if (name.StartsWith("PRODUCTION\\", StringComparison.OrdinalIgnoreCase))
+                    name = "Production" + name.Substring("PRODUCTION".Length);
+                if (name.Length != 0 && !levels.Contains(name, StringComparer.OrdinalIgnoreCase))
+                    levels.Add(name);
+            }
+            return levels.OrderBy(o => o, StringComparer.OrdinalIgnoreCase).Select(o => new ListViewItem() { Text = o }).ToList();
         }
 
         /* Parse an XML to retrieve the enum string values */

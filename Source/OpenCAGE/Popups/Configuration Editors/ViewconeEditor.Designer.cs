@@ -35,7 +35,7 @@
             this.tabPage1 = new System.Windows.Forms.TabPage();
             this.viewCone1 = new ViewCone();
             this.tabPage2 = new System.Windows.Forms.TabPage();
-            this.helpBtn = new System.Windows.Forms.Button();
+            this.liveStatus = new System.Windows.Forms.Label();
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
             this.SuspendLayout();
@@ -94,26 +94,20 @@
             this.tabPage2.Size = new System.Drawing.Size(441, 354);
             this.tabPage2.TabIndex = 1;
             this.tabPage2.Text = "tabPage2";
-            this.tabPage2.UseVisualStyleBackColor = true;
+            this.tabPage2.UseVisualStyleBackColor = true;            // 
+            // liveStatus
             // 
-            // helpBtn
-            // 
-            this.helpBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.helpBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.helpBtn.Image = ((System.Drawing.Image)(resources.GetObject("helpBtn.Image")));
-            this.helpBtn.Location = new System.Drawing.Point(448, 0);
-            this.helpBtn.Name = "helpBtn";
-            this.helpBtn.Size = new System.Drawing.Size(20, 20);
-            this.helpBtn.TabIndex = 477;
-            this.helpBtn.UseVisualStyleBackColor = true;
-            this.helpBtn.Click += new System.EventHandler(this.helpBtn_Click);
+            this.liveStatus.Location = new System.Drawing.Point(12, 424);
+            this.liveStatus.Name = "liveStatus";
+            this.liveStatus.Size = new System.Drawing.Size(446, 39);
+            this.liveStatus.TabIndex = 467;
             // 
             // ViewconeEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(468, 427);
-            this.Controls.Add(this.helpBtn);
+            this.ClientSize = new System.Drawing.Size(468, 467);
+            this.Controls.Add(this.liveStatus);
             this.Controls.Add(this.tabControl1);
             this.Controls.Add(this.label22);
             this.Controls.Add(this.viewconeSets);
@@ -137,7 +131,7 @@
         private System.Windows.Forms.TabControl tabControl1;
         private System.Windows.Forms.TabPage tabPage1;
         private System.Windows.Forms.TabPage tabPage2;
+        private System.Windows.Forms.Label liveStatus;
         private ViewCone viewCone1;
-        private System.Windows.Forms.Button helpBtn;
     }
 }

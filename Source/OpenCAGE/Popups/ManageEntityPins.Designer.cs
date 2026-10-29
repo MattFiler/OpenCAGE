@@ -25,7 +25,6 @@ namespace OpenCAGE.Popups
             this.listView1 = new System.Windows.Forms.ListView();
             this.pinColumn = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.linksColumn = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.SuspendLayout();
             // 
             // saveBtn
@@ -75,7 +74,6 @@ namespace OpenCAGE.Popups
             this.listView1.Location = new System.Drawing.Point(12, 12);
             this.listView1.Name = "listView1";
             this.listView1.Size = new System.Drawing.Size(365, 526);
-            this.listView1.SmallImageList = this.imageList1;
             this.listView1.TabIndex = 2;
             this.listView1.UseCompatibleStateImageBehavior = false;
             this.listView1.View = System.Windows.Forms.View.Details;
@@ -89,16 +87,6 @@ namespace OpenCAGE.Popups
             // 
             this.linksColumn.Text = "Links";
             this.linksColumn.Width = 120;
-            // 
-            // imageList1
-            // 
-            this.imageList1.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList1.ImageStream")));
-            this.imageList1.TransparentColor = System.Drawing.Color.Transparent;
-            this.imageList1.Images.SetKeyName(0, "pin_bottom_out.png");
-            this.imageList1.Images.SetKeyName(1, "pin_left_in.png");
-            this.imageList1.Images.SetKeyName(2, "pin_right_out.png");
-            this.imageList1.Images.SetKeyName(3, "pin_top_in.png");
-            this.imageList1.Images.SetKeyName(4, "pin_top_out.png");
             // 
             // ManageEntityPins
             // 
@@ -126,6 +114,5 @@ namespace OpenCAGE.Popups
         private System.Windows.Forms.ListView listView1;
         private System.Windows.Forms.ColumnHeader pinColumn;
         private System.Windows.Forms.ColumnHeader linksColumn;
-        private System.Windows.Forms.ImageList imageList1;
     }
 }

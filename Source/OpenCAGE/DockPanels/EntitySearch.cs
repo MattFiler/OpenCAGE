@@ -34,11 +34,19 @@ namespace OpenCAGE.DockPanels
         private SearchMode _currentMode = SearchMode.ByName;
         private bool _initializing = false;
 
+        //Listening for what changes the results (only while the panel is showing), and a search again already asked for
+        private bool _watching = false;
+        private bool _refreshQueued = false;
+        private bool _rerunQueued = false;
+        private int _searchAsks = 0, _searchedAtAsk = 0;
+
         protected LevelContent Content => Singleton.Editor?.CompositeBrowser?.Content;
 
         public EntitySearch()
         {
             InitializeComponent();
+            EditorIcons.ShowIn(entityList, EditorIcons.EntityList); //results get their icon from EditorUtils.GetIndexesForListViewItem, which indexes the entity lists' set
+            Theming.ThemeManager.ApplyToForm(this);
 
             CloseButton = false;
             CloseButtonVisible = false;
@@ -57,32 +65,63 @@ namespace OpenCAGE.DockPanels
 
             functionTypeCombo.SelectedIndexChanged += FunctionTypeCombo_SelectedIndexChanged;
             browseFunctionButton.Click += BrowseFunctionButton_Click;
-            GlobalEntitySearchScopeSettings.SetIconButtonImage(
-                browseFunctionButton,
-                OpenCAGE.Properties.Resources.d_ScriptableObject_Icon_braces_only);
+            EditorIcons.Bind(browseFunctionButton, EditorIcon.Function);
 
             browseCompositeButton.Click += BrowseCompositeButton_Click;
-            GlobalEntitySearchScopeSettings.SetIconButtonImage(
-                browseCompositeButton,
-                OpenCAGE.Properties.Resources.d_PrefabVariant_Icon);
+            EditorIcons.Bind(browseCompositeButton, EditorIcon.CompositeInstance);
 
             GlobalEntitySearchScopeSettings.BindSettingsButton(scopeSettingsBtn);
-            GlobalEntitySearchScopeSettings.AddScopeChangedHandler(OnSearchScopeChanged);
 
             SettingsManager.SettingsChanged += OnSettingsChanged;
 
-            Singleton.OnLevelLoaded += OnLevelLoaded;
-            Singleton.OnEntityDeleted += OnEntityDeleted;
-            Singleton.OnCompositeSelected += OnCompositeSelected;
+            VisibleChanged += EntitySearch_VisibleChanged;
         }
 
-        protected override string GetPersistString()
+        /* The results follow the level while they are on screen: entities added or deleted (one at a time, or a whole
+           edit's worth - a refactor, an MCP edit, an undo of one), renamed, and the composite on screen or the scope
+           changing what is searched. Hidden (another tab in front, closed, auto-hidden away) the panel stops listening,
+           and shown again it searches again, for whatever changed in the meantime. */
+        private void EntitySearch_VisibleChanged(object sender, EventArgs e)
         {
-            return "EntitySearch";
+            if (IsDisposed)
+                return;
+
+            Watch(Visible);
+            if (Visible && HasActiveQuery())
+                QueueRefresh();
+        }
+
+        private void Watch(bool watch)
+        {
+            if (watch == _watching)
+                return;
+            _watching = watch;
+
+            if (watch)
+            {
+                Singleton.OnEntityAdded += OnEntityAdded;
+                Singleton.OnEntityDeleted += OnEntityDeleted;
+                Singleton.OnEntityRenamed += OnEntityRenamed;
+                Singleton.OnCompositesModified += OnCompositesModified;
+                Singleton.OnCompositeSelected += OnCompositeSelected;
+                GlobalEntitySearchScopeSettings.AddScopeChangedHandler(OnSearchScopeChanged);
+            }
+            else
+            {
+                Singleton.OnEntityAdded -= OnEntityAdded;
+                Singleton.OnEntityDeleted -= OnEntityDeleted;
+                Singleton.OnEntityRenamed -= OnEntityRenamed;
+                Singleton.OnCompositesModified -= OnCompositesModified;
+                Singleton.OnCompositeSelected -= OnCompositeSelected;
+                GlobalEntitySearchScopeSettings.RemoveScopeChangedHandler(OnSearchScopeChanged);
+            }
         }
 
         private void EntitySearch_FormClosing(object sender, FormClosingEventArgs e)
         {
+            //An application exit goes through as it is: its walk of the open forms must not have the pickers closed under it
+            if (CloseReasons.IsApplicationShutdown(e))
+                return;
             e.Cancel = true;
             CloseFunctionTypeSelector();
             CloseCompositeSelector();
@@ -91,12 +130,18 @@ namespace OpenCAGE.DockPanels
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
-            SettingsManager.SettingsChanged -= OnSettingsChanged;
-            GlobalEntitySearchScopeSettings.RemoveScopeChangedHandler(OnSearchScopeChanged);
-            Singleton.OnEntityDeleted -= OnEntityDeleted;
-            Singleton.OnCompositeSelected -= OnCompositeSelected;
+            Unsubscribe();
 
             base.OnFormClosed(e);
+        }
+
+        //Also from Dispose: a level change disposes the panel without it closing (the close is cancelled above), and the
+        //static events kept each old panel alive with the previous level's composites and search results
+        private void Unsubscribe()
+        {
+            SettingsManager.SettingsChanged -= OnSettingsChanged;
+            VisibleChanged -= EntitySearch_VisibleChanged;
+            Watch(false);
         }
 
         public void InitializeFromLevel()
@@ -117,7 +162,21 @@ namespace OpenCAGE.DockPanels
 
             _initializing = false;
 
-            ApplyMode(_currentMode, runSearch: true);
+            /* The search runs once the rest of the level's panels are up, not here: a level's panels are set up before it
+               opens its first composite, so a search now (for a scope that follows the open composite) went through the
+               whole level, only to be refilled straight away for that composite - each a full refill of the list, the
+               biggest part of a level load with a broad search showing. Hidden, it searches when it is next shown; until
+               then it holds nothing of the level before. */
+            ApplyMode(_currentMode, runSearch: false);
+            if (IsDisposed || !IsHandleCreated)
+            {
+                if (Visible)
+                    RunSearch();
+                else
+                    ClearResults();
+                return;
+            }
+            QueueSearchPass(rerun: true);
         }
 
         private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
@@ -284,44 +343,117 @@ namespace OpenCAGE.DockPanels
                 RunSearch();
         }
 
-        private void OnLevelLoaded(LevelContent content)
-        {
-            if (IsDisposed)
-                return;
-
-            BeginInvoke(new Action(InitializeFromLevel));
-        }
-
         private void OnCompositeSelected(Composite composite)
         {
             if (IsDisposed
                 || Content == null
                 || !HasActiveQuery()
+                || _currentMode == SearchMode.ByComposite //searches every composite, whichever is open
                 || !GlobalEntitySearchHelper.ShouldRefreshSearchForCompositeChange(GlobalEntitySearchScopeSettings.Scope))
             {
                 return;
             }
 
-            BeginInvoke(new Action(RunSearch));
+            QueueRefresh();
         }
 
-        private void OnEntityDeleted(Entity entity)
-        {
-            if (IsDisposed || entity == null || entityList.Items.Count == 0)
-                return;
-
-            if (!GlobalEntitySearchHelper.RemoveDeletedEntityFromResults(entity, entityList, _entityComposites))
-                return;
-
-            UpdateResultTitle(entityList.Items.Count);
-        }
+        //Whether the entity matches can't be told from it alone - an added or deleted composite instance brings or takes
+        //everything nested in it for a scope that looks inside instances - so any of these searches again
+        private void OnEntityAdded(Entity entity) => QueueRefresh();
+        private void OnEntityDeleted(Entity entity) => QueueRefresh();
+        private void OnEntityRenamed(Entity entity, string name) => QueueRefresh();
+        private void OnCompositesModified(IReadOnlyList<Composite> composites) => QueueRefresh();
 
         private void OnSearchScopeChanged()
         {
-            if (IsDisposed || Content == null || !HasActiveQuery())
+            if (IsDisposed || Content == null || !HasActiveQuery() || _currentMode == SearchMode.ByComposite)
                 return;
 
-            BeginInvoke(new Action(RunSearch));
+            QueueRefresh();
+        }
+
+        /* Search again once whatever raised this has finished: a paste or an undo raises an event per entity, and the
+           composite has to be through the change before it is searched. Any number of asks before then is one search. */
+        private void QueueRefresh() => QueueSearchPass(rerun: false);
+
+        /* The one queued search. Each ask is counted, and a search that fills the list notes the count it saw: one that
+           ran after the last ask (the level's first search, or the user's own) already shows what the ask was for, so
+           the queued one isn't run again on top of it. A rerun (the level's panels set up) is a search afresh, as from
+           the search box; otherwise the search showing is refreshed, keeping its selected row and scroll. */
+        private void QueueSearchPass(bool rerun)
+        {
+            _searchAsks++;
+            if (rerun)
+                _rerunQueued = true;
+            if (_refreshQueued || IsDisposed || !IsHandleCreated)
+                return;
+
+            _refreshQueued = true;
+            BeginInvoke(new Action(() =>
+            {
+                _refreshQueued = false;
+                bool rerunNow = _rerunQueued;
+                _rerunQueued = false;
+                if (IsDisposed || _searchedAtAsk == _searchAsks)
+                    return;
+                if (rerunNow)
+                {
+                    if (Visible)
+                        RunSearch();
+                    else
+                        ClearResults();
+                    return;
+                }
+                if (!Visible || Content == null || !HasActiveQuery())
+                    return;
+                RefreshResults();
+            }));
+        }
+
+        /* The search that is showing, run again: the name searched for last (not whatever is half-typed in the box), with
+           the selected row selected again and the list scrolled to where it was. */
+        private void RefreshResults()
+        {
+            Entity selected = entityList.SelectedItems.Count != 0 ? ResultEntity(entityList.SelectedItems[0]) : null;
+            Entity top = entityList.TopItem != null ? ResultEntity(entityList.TopItem) : null;
+
+            if (_currentMode == SearchMode.ByName)
+            {
+                GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Settings.ShowShortGuids));
+                _searchedAtAsk = _searchAsks;
+                UpdateResultTitle(GlobalEntitySearchHelper.SearchByName(Content, _currentNameSearch, entityList, _entityComposites));
+            }
+            else
+            {
+                RunSearch();
+            }
+
+            ListViewItem selectedItem = null, topItem = null;
+            foreach (ListViewItem item in entityList.Items)
+            {
+                Entity entity = ResultEntity(item);
+                if (entity == null)
+                    continue;
+                if (entity == selected)
+                    selectedItem = item;
+                if (entity == top)
+                    topItem = item;
+            }
+            if (topItem != null)
+            {
+                try { entityList.TopItem = topItem; }
+                catch (InvalidOperationException) { topItem.EnsureVisible(); }
+            }
+            if (selectedItem != null)
+            {
+                selectedItem.Selected = true;
+                selectedItem.Focused = true;
+            }
+        }
+
+        private static Entity ResultEntity(ListViewItem item)
+        {
+            return item?.Tag is SearchResultTag result ? result.Entity : item?.Tag as Entity;
         }
 
         private bool HasActiveQuery()
@@ -399,6 +531,7 @@ namespace OpenCAGE.DockPanels
 
             CloseCompositeSelector();
             _compositeSelector = new SelectComposite(_selectedComposite?.name);
+            _compositeSelector.CloseWith(this);
             _compositeSelector.OnCompositeGenerated += OnCompositePicked;
             _compositeSelector.Show();
         }
@@ -469,6 +602,7 @@ namespace OpenCAGE.DockPanels
             clearSearchBtn.Visible = _currentMode == SearchMode.ByName;
             SettingsManager.SetString(Settings.PrevEntNameSearch, name);
             GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Settings.ShowShortGuids));
+            _searchedAtAsk = _searchAsks;
             int count = GlobalEntitySearchHelper.SearchByName(Content, name, entityList, _entityComposites);
             UpdateResultTitle(count);
         }
@@ -483,6 +617,7 @@ namespace OpenCAGE.DockPanels
 
             FunctionType functionType = (FunctionType)Enum.Parse(typeof(FunctionType), functionTypeCombo.Text);
             GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Settings.ShowShortGuids));
+            _searchedAtAsk = _searchAsks;
             int count = GlobalEntitySearchHelper.SearchByFunction(Content, functionType, entityList, _entityComposites);
             UpdateResultTitle(count);
         }
@@ -496,13 +631,20 @@ namespace OpenCAGE.DockPanels
             }
 
             GlobalEntitySearchHelper.SetupEntityListColumns(entityList, SettingsManager.GetBool(Settings.ShowShortGuids));
-            int count = GlobalEntitySearchHelper.SearchByComposite(Content, _selectedComposite.shortGUID, entityList, _entityComposites);
+            _searchedAtAsk = _searchAsks;
+            int count = GlobalEntitySearchHelper.SearchByComposite(Content, _selectedComposite.shortGUID, entityList, _entityComposites, CompositeSearchScope);
             UpdateResultTitle(count);
         }
 
+        /* The instances of a composite are looked for in every composite, whatever the panel's scope: Find Uses and Find
+           References search for the composite that is open, and its instances are never inside it - a scope rooted at the
+           open composite listed none of them. The scope still applies to the name and function searches. */
+        private const GlobalEntitySearchScope CompositeSearchScope = GlobalEntitySearchScope.AllComposites;
+
         private void UpdateResultTitle(int count)
         {
-            string scopeSuffix = " [In " + GlobalEntitySearchScopeSettings.Scope.ToDisplayName() + "]";
+            GlobalEntitySearchScope scope = _currentMode == SearchMode.ByComposite ? CompositeSearchScope : GlobalEntitySearchScopeSettings.Scope;
+            string scopeSuffix = " [In " + scope.ToDisplayName() + "]";
             switch (_currentMode)
             {
                 case SearchMode.ByName:
@@ -523,8 +665,7 @@ namespace OpenCAGE.DockPanels
         private void ClearResults()
         {
             _entityComposites.Clear();
-            entityList.Items.Clear();
-            entityList.Groups.Clear();
+            GlobalEntitySearchHelper.ClearResultList(entityList);
             Text = "Search";
         }
 

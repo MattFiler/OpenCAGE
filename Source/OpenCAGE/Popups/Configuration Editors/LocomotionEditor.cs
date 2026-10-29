@@ -1,4 +1,4 @@
-using CATHODE;
+﻿using CATHODE;
 using CATHODE.Enums;
 using OpenCAGE.Popups.Base;
 using System;
@@ -19,6 +19,7 @@ namespace OpenCAGE.ConfigEditors
         public LocomotionEditor() : base()
         {
             InitializeComponent();
+            BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/locomotion/");
             ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
             BML attributeTypes = new BML(Singleton.PathToAI + "\\DATA\\CHR_INFO\\ATTRIBUTES\\ATTRIBUTES.BML");
@@ -31,7 +32,7 @@ namespace OpenCAGE.ConfigEditors
             characters.EndUpdate();
 
             this.FormClosing += LocomotionEditor_FormClosing;
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
         }
 
         private void LocomotionEditor_Load(object sender, EventArgs e)
@@ -83,9 +84,9 @@ namespace OpenCAGE.ConfigEditors
         {
             var doc = _selectedCharacter[0].Content;
 
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Locomotion", "capsuleRadius").InnerText = capsuleRadius.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Locomotion", "capsuleHeight").InnerText = capsuleHeight.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Locomotion", "permittedLocomotionModulation").InnerText = permittedLocomotionModulation.Text;
+            if (capsuleRadius.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Locomotion", "capsuleRadius").InnerText = ConfigEditorUtils.NumberText(capsuleRadius);
+            if (capsuleHeight.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Locomotion", "capsuleHeight").InnerText = ConfigEditorUtils.NumberText(capsuleHeight);
+            if (permittedLocomotionModulation.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Locomotion", "permittedLocomotionModulation").InnerText = ConfigEditorUtils.NumberText(permittedLocomotionModulation);
 
             foreach (TabPage page in tabControl1.TabPages)
             {
@@ -96,12 +97,6 @@ namespace OpenCAGE.ConfigEditors
             _selectedCharacter[0].Save();
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
-        }
-
-        private void helpBtn_Click(object sender, EventArgs e)
-        {
-            Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
-            Process.Start("https://opencage.co.uk/docs/configs/locomotion");
         }
     }
 }

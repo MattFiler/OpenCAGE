@@ -1,4 +1,4 @@
-using CATHODE;
+﻿using CATHODE;
 using OpenCAGE.Popups.Base;
 using System;
 using System.Collections.Generic;
@@ -23,29 +23,10 @@ namespace OpenCAGE.ConfigEditors
         public AttributesEditor() : base()
         {
             InitializeComponent();
+            BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/attributes/");
             ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
-            BML behaviourTrees = new BML(Singleton.PathToAI + "\\DATA\\BINARY_BEHAVIOR\\_DIRECTORY_CONTENTS.BML");
-            Behavior_Tree.BeginUpdate();
-            try
-            {
-                var behaviours = behaviourTrees.Loaded ? behaviourTrees.Content?["DIR"] : null;
-                if (behaviours != null)
-                {
-                    foreach (XmlElement behaviour in behaviours)
-                    {
-                        if (behaviour.Name != "File")
-                            continue;
-
-                        Behavior_Tree.Items.Add(Path.GetFileNameWithoutExtension(behaviour.GetAttribute("name")));
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.Log("AttributesEditor", "Failed to enumerate behaviour trees: " + ex.Message);
-            }
-            Behavior_Tree.EndUpdate();
+            LoadBehaviourTrees();
 
             Character_Sound.BeginUpdate();
             Character_Sound.Items.Add("PLAYER1");
@@ -105,7 +86,64 @@ namespace OpenCAGE.ConfigEditors
             }
 
             this.FormClosing += AttributesEditor_FormClosing;
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            this.Activated += AttributesEditor_Activated;
+            CloseOnConfigReset();
+        }
+
+        private static string BehaviourTreesPath => Singleton.PathToAI + "\\DATA\\BINARY_BEHAVIOR\\_DIRECTORY_CONTENTS.BML";
+        private DateTime _behaviourTreesWritten = DateTime.MinValue;
+        private string _missingBehaviourTree = null;
+        private string _loadedBehaviourTree = null;
+        private bool _behaviourTreeChanged = false;
+        private bool _closingForReset = false;
+
+        protected override void OnConfigsReset()
+        {
+            _closingForReset = true;
+            base.OnConfigsReset();
+        }
+
+        /* The trees a class can use: every tree in the directory, which the Behaviour Tree Editor adds new ones to */
+        private void LoadBehaviourTrees()
+        {
+            _behaviourTreesWritten = File.Exists(BehaviourTreesPath) ? File.GetLastWriteTimeUtc(BehaviourTreesPath) : DateTime.MinValue;
+            BML behaviourTrees = new BML(BehaviourTreesPath);
+            Behavior_Tree.BeginUpdate();
+            Behavior_Tree.Items.Clear();
+            _missingBehaviourTree = null;
+            try
+            {
+                var behaviours = behaviourTrees.Loaded ? behaviourTrees.Content?["DIR"] : null;
+                if (behaviours != null)
+                {
+                    foreach (XmlElement behaviour in behaviours)
+                    {
+                        if (behaviour.Name != "File")
+                            continue;
+
+                        Behavior_Tree.Items.Add(Path.GetFileNameWithoutExtension(behaviour.GetAttribute("name")));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.Log("AttributesEditor", "Failed to enumerate behaviour trees: " + ex.Message);
+            }
+            Behavior_Tree.EndUpdate();
+        }
+
+        /* A tree made in the Behaviour Tree Editor while this was open is offered as soon as the user comes back */
+        private void AttributesEditor_Activated(object sender, EventArgs e)
+        {
+            DateTime written = File.Exists(BehaviourTreesPath) ? File.GetLastWriteTimeUtc(BehaviourTreesPath) : DateTime.MinValue;
+            if (written == _behaviourTreesWritten)
+                return;
+
+            //Reloading the list clears the selection: show the class again rather than saving a blank tree into it
+            ConfigEditorUtils.Unsubscribe(this.Controls, Save);
+            LoadBehaviourTrees();
+            if (characters.SelectedIndex >= 0)
+                characters_SelectedIndexChanged(characters, EventArgs.Empty);
         }
 
         private void AttributesEditor_Load(object sender, EventArgs e)
@@ -143,6 +181,16 @@ namespace OpenCAGE.ConfigEditors
         {
             ConfigEditorUtils.Unsubscribe(this.Controls, Save);
             this.FormClosing -= AttributesEditor_FormClosing;
+
+            //Each level lists the trees its characters can run, and only saving a level brings its list up to date: a
+            //class moved onto a tree a level doesn't list crashes the game there. Revert Configs says this itself, and an AI
+            //assistant's write that closes this window hears it in the tool's result.
+            if (_behaviourTreeChanged && !_closingForReset && System.Threading.Volatile.Read(ref OpenCAGE.MCP.McpDialogs.UiDepth) == 0)
+            {
+                string behaviourTrees = BehaviourTreeLevels.Describe();
+                if (behaviourTrees != null)
+                    MessageBox.Show(behaviourTrees, "Behaviour trees changed", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
         }
 
         private void characters_SelectedIndexChanged(object sender, EventArgs e)
@@ -189,11 +237,32 @@ namespace OpenCAGE.ConfigEditors
                 Debug.Log("AttributesEditor", "Template chain failed: " + ex.Message);
             }
 
+            //Each file in the template chain is read once for all the fields, not once per field
+            using (ConfigEditorUtils.ReadOnce())
+                ShowCharacterFields();
+
+            ConfigEditorUtils.Subscribe(this.Controls, Save);
+        }
+
+        /* Fill every field from the selected character, falling back through its templates */
+        private void ShowCharacterFields()
+        {
             ConfigEditorUtils.SetNumber(_selectedCharacter, Max_Health, "Attribute", "Health", "Max_Health");
             ConfigEditorUtils.SetNumber(_selectedCharacter, Injured_State_1, "Attribute", "Health", "Injured_State_1");
             ConfigEditorUtils.SetNumber(_selectedCharacter, Injured_State_2, "Attribute", "Health", "Injured_State_2");
             ConfigEditorUtils.SetNumber(_selectedCharacter, Injured_State_3, "Attribute", "Health", "Injured_State_3");
             ConfigEditorUtils.SetNumber(_selectedCharacter, Health_Regeneration_Rate, "Attribute", "Health", "Health_Regeneration_Rate");
+            //A class can name a tree the directory no longer has (deleted, or lost to Revert Configs). The list can only show
+            //what it holds, and saving writes what it shows, so keep the name in it rather than save another class's tree
+            if (_missingBehaviourTree != null)
+                Behavior_Tree.Items.Remove(_missingBehaviourTree);
+            _missingBehaviourTree = null;
+            _loadedBehaviourTree = _selectedCharacter.Select(c => ConfigEditorUtils.ContentOf(c)?["Attribute"]?["Behavior"]?["Behavior_Tree"]?.InnerText).FirstOrDefault(t => t != null);
+            if (_loadedBehaviourTree != null && !Behavior_Tree.Items.Contains(_loadedBehaviourTree))
+            {
+                Behavior_Tree.Items.Add(_loadedBehaviourTree);
+                _missingBehaviourTree = _loadedBehaviourTree;
+            }
             ConfigEditorUtils.SetCombo(_selectedCharacter, Behavior_Tree, "Attribute", "Behavior", "Behavior_Tree");
             ConfigEditorUtils.SetCombo(_selectedCharacter, ATTACK_GROUP, "Attribute", "Behavior", "ATTACK_GROUP");
             ConfigEditorUtils.SetCombo(_selectedCharacter, TargetingSystem, "Attribute", "Behavior", "TargetingSystem");
@@ -241,8 +310,6 @@ namespace OpenCAGE.ConfigEditors
             ConfigEditorUtils.SetCombo(_selectedCharacter, Character_Sound, "Attribute", "Sound_Attributes", "Character_Sound");
             ConfigEditorUtils.SetNumber(_selectedCharacter, max_range_to_search_for_IDLE_job, "Attribute", "Job_Behaviour", "max_range_to_search_for_IDLE_job");
             ConfigEditorUtils.SetNumber(_selectedCharacter, min_time_between_idles_for_stalk, "Attribute", "Job_Behaviour", "min_time_between_idles_for_stalk");
-
-            ConfigEditorUtils.Subscribe(this.Controls, Save);
         }
 
         private void Save(object sender, EventArgs e)
@@ -254,69 +321,68 @@ namespace OpenCAGE.ConfigEditors
             if (doc == null)
                 return;
 
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Health", "Max_Health").InnerText = Max_Health.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Health", "Injured_State_1").InnerText = Injured_State_1.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Health", "Injured_State_2").InnerText = Injured_State_2.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Health", "Injured_State_3").InnerText = Injured_State_3.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Health", "Health_Regeneration_Rate").InnerText = Health_Regeneration_Rate.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Behavior", "Behavior_Tree").InnerText = Behavior_Tree.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Behavior", "ATTACK_GROUP").InnerText = ATTACK_GROUP.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Behavior", "TargetingSystem").InnerText = TargetingSystem.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Defence", "alien_stun_damage_guage_decrease_per_sec").InnerText = alien_stun_damage_guage_decrease_per_sec.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Defence", "EMP_Stunned_Damage_Taken_Multiplier").InnerText = EMP_Stunned_Damage_Taken_Multiplier.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Putting_weapons_away", "put_melee_weapon_away_time").InnerText = put_melee_weapon_away_time.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Cover", "percentage_chance_of_shooting_over_cover_vs_side").InnerText = percentage_chance_of_shooting_over_cover_vs_side.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Cover", "Min_Non_Shooting_In_Cover_Interval_Time").InnerText = Min_Non_Shooting_In_Cover_Interval_Time.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Cover", "Max_Non_Shooting_In_Cover_Interval_Time").InnerText = Max_Non_Shooting_In_Cover_Interval_Time.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Cover", "Min_Shooting_In_Cover_Interval_Time").InnerText = Min_Shooting_In_Cover_Interval_Time.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Cover", "Max_Shooting_In_Cover_Interval_Time").InnerText = Max_Shooting_In_Cover_Interval_Time.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "Melee_Damage", "Damage_From_Hit").InnerText = Damage_From_Hit.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "Melee_Damage", "Damage_From_Grapple_Break").InnerText = Damage_From_Grapple_Break.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "Melee_Damage", "Grapple_Damage_Per_Tick").InnerText = Grapple_Damage_Per_Tick.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "Melee_Damage", "Grapple_Attack_Interval").InnerText = Grapple_Attack_Interval.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "Melee_Damage", "Grapple_Attack_Interval_After_Block").InnerText = Grapple_Attack_Interval_After_Block.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "Melee_Damage", "Grapple_Gauge_Decay_Rate").InnerText = Grapple_Gauge_Decay_Rate.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "Melee_Damage", "Grapple_Gauge_Presses_Required").InnerText = Grapple_Gauge_Presses_Required.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Rate_of_Fire", "min_time_between_shots").InnerText = min_time_between_shots.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Rate_of_Fire", "max_time_between_shots").InnerText = max_time_between_shots.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Rate_of_Fire", "min_time_between_shots_for_shotgun").InnerText = min_time_between_shots_for_shotgun.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Rate_of_Fire", "max_time_between_shots_for_shotgun").InnerText = max_time_between_shots_for_shotgun.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Aiming", "Max_Aiming_Accuracy_Normalised_Value").InnerText = Max_Aiming_Accuracy_Normalised_Value.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Aiming", "Min_Aiming_Accuracy_Normalised_Value").InnerText = Min_Aiming_Accuracy_Normalised_Value.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Interval", "Min_Shooting_Interval_Time").InnerText = Min_Shooting_Interval_Time.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Interval", "Max_Shooting_Interval_Time").InnerText = Max_Shooting_Interval_Time.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Interval", "Max_Non_Shooting_Interval_Time").InnerText = Max_Non_Shooting_Interval_Time.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Interval", "Min_Non_Shooting_Interval_Time").InnerText = Min_Non_Shooting_Interval_Time.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "stop_shooting_if_no_visual_after_time").InnerText = stop_shooting_if_no_visual_after_time.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "min_delay_before_shooting").InnerText = min_delay_before_shooting.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "max_delay_before_shooting").InnerText = max_delay_before_shooting.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Cover", "cover_job_minimum_distance_to_player").InnerText = cover_job_minimum_distance_to_player.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Footsteps_sense_generation", "footstep_loudness_maxed_out_speed").InnerText = footstep_loudness_maxed_out_speed.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Footsteps_sense_generation", "footstep_loudness_min_speed_considered").InnerText = footstep_loudness_min_speed_considered.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Footsteps_sense_generation", "footstep_loudness_min_clamped_input_loudness").InnerText = footstep_loudness_min_clamped_input_loudness.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Footsteps_sense_generation", "footstep_loudness_max_clamped_input_loudness").InnerText = footstep_loudness_max_clamped_input_loudness.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Footsteps_sense_generation", "footstep_loudness_min_scaled_output_loudness").InnerText = footstep_loudness_min_scaled_output_loudness.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Footsteps_sense_generation", "footstep_loudness_max_scaled_output_loudness").InnerText = footstep_loudness_max_scaled_output_loudness.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Footsteps_sense_generation", "footstep_loudness_crouch_multiplier").InnerText = footstep_loudness_crouch_multiplier.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Hiding", "hiding_max_search_time").InnerText = hiding_max_search_time.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Hiding", "hiding_search_radius").InnerText = hiding_search_radius.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Hiding", "hiding_post_search_exclusion_radius").InnerText = hiding_post_search_exclusion_radius.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Hiding", "hiding_max_QTE_selection_weighting").InnerText = hiding_max_QTE_selection_weighting.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Hiding", "hiding_hearing_range").InnerText = hiding_hearing_range.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Sound_Attributes", "Character_Sound").InnerText = Character_Sound.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Job_Behaviour", "max_range_to_search_for_IDLE_job").InnerText = max_range_to_search_for_IDLE_job.Text;
-            ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Job_Behaviour", "min_time_between_idles_for_stalk").InnerText = min_time_between_idles_for_stalk.Text;
+            if (Max_Health.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Health", "Max_Health").InnerText = ConfigEditorUtils.NumberText(Max_Health);
+            if (Injured_State_1.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Health", "Injured_State_1").InnerText = ConfigEditorUtils.NumberText(Injured_State_1);
+            if (Injured_State_2.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Health", "Injured_State_2").InnerText = ConfigEditorUtils.NumberText(Injured_State_2);
+            if (Injured_State_3.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Health", "Injured_State_3").InnerText = ConfigEditorUtils.NumberText(Injured_State_3);
+            if (Health_Regeneration_Rate.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Health", "Health_Regeneration_Rate").InnerText = ConfigEditorUtils.NumberText(Health_Regeneration_Rate);
+            if (Behavior_Tree.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Behavior", "Behavior_Tree").InnerText = Behavior_Tree.Text;
+            if (Behavior_Tree.Enabled && Behavior_Tree.Text != _loadedBehaviourTree)
+            {
+                _behaviourTreeChanged = true;
+                _loadedBehaviourTree = Behavior_Tree.Text;
+            }
+            if (ATTACK_GROUP.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Behavior", "ATTACK_GROUP").InnerText = ATTACK_GROUP.Text;
+            if (TargetingSystem.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Behavior", "TargetingSystem").InnerText = TargetingSystem.Text;
+            if (alien_stun_damage_guage_decrease_per_sec.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Defence", "alien_stun_damage_guage_decrease_per_sec").InnerText = ConfigEditorUtils.NumberText(alien_stun_damage_guage_decrease_per_sec);
+            if (EMP_Stunned_Damage_Taken_Multiplier.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Defence", "EMP_Stunned_Damage_Taken_Multiplier").InnerText = ConfigEditorUtils.NumberText(EMP_Stunned_Damage_Taken_Multiplier);
+            if (put_melee_weapon_away_time.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Putting_weapons_away", "put_melee_weapon_away_time").InnerText = ConfigEditorUtils.NumberText(put_melee_weapon_away_time);
+            if (percentage_chance_of_shooting_over_cover_vs_side.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Cover", "percentage_chance_of_shooting_over_cover_vs_side").InnerText = ConfigEditorUtils.NumberText(percentage_chance_of_shooting_over_cover_vs_side);
+            if (Min_Non_Shooting_In_Cover_Interval_Time.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Cover", "Min_Non_Shooting_In_Cover_Interval_Time").InnerText = ConfigEditorUtils.NumberText(Min_Non_Shooting_In_Cover_Interval_Time);
+            if (Max_Non_Shooting_In_Cover_Interval_Time.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Cover", "Max_Non_Shooting_In_Cover_Interval_Time").InnerText = ConfigEditorUtils.NumberText(Max_Non_Shooting_In_Cover_Interval_Time);
+            if (Min_Shooting_In_Cover_Interval_Time.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Cover", "Min_Shooting_In_Cover_Interval_Time").InnerText = ConfigEditorUtils.NumberText(Min_Shooting_In_Cover_Interval_Time);
+            if (Max_Shooting_In_Cover_Interval_Time.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Cover", "Max_Shooting_In_Cover_Interval_Time").InnerText = ConfigEditorUtils.NumberText(Max_Shooting_In_Cover_Interval_Time);
+            if (Damage_From_Hit.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "Melee_Damage", "Damage_From_Hit").InnerText = ConfigEditorUtils.NumberText(Damage_From_Hit);
+            if (Damage_From_Grapple_Break.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "Melee_Damage", "Damage_From_Grapple_Break").InnerText = ConfigEditorUtils.NumberText(Damage_From_Grapple_Break);
+            if (Grapple_Damage_Per_Tick.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "Melee_Damage", "Grapple_Damage_Per_Tick").InnerText = ConfigEditorUtils.NumberText(Grapple_Damage_Per_Tick);
+            if (Grapple_Attack_Interval.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "Melee_Damage", "Grapple_Attack_Interval").InnerText = ConfigEditorUtils.NumberText(Grapple_Attack_Interval);
+            if (Grapple_Attack_Interval_After_Block.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "Melee_Damage", "Grapple_Attack_Interval_After_Block").InnerText = ConfigEditorUtils.NumberText(Grapple_Attack_Interval_After_Block);
+            if (Grapple_Gauge_Decay_Rate.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "Melee_Damage", "Grapple_Gauge_Decay_Rate").InnerText = ConfigEditorUtils.NumberText(Grapple_Gauge_Decay_Rate);
+            if (Grapple_Gauge_Presses_Required.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "Melee_Damage", "Grapple_Gauge_Presses_Required").InnerText = ConfigEditorUtils.NumberText(Grapple_Gauge_Presses_Required);
+            if (min_time_between_shots.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Rate_of_Fire", "min_time_between_shots").InnerText = ConfigEditorUtils.NumberText(min_time_between_shots);
+            if (max_time_between_shots.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Rate_of_Fire", "max_time_between_shots").InnerText = ConfigEditorUtils.NumberText(max_time_between_shots);
+            if (min_time_between_shots_for_shotgun.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Rate_of_Fire", "min_time_between_shots_for_shotgun").InnerText = ConfigEditorUtils.NumberText(min_time_between_shots_for_shotgun);
+            if (max_time_between_shots_for_shotgun.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Rate_of_Fire", "max_time_between_shots_for_shotgun").InnerText = ConfigEditorUtils.NumberText(max_time_between_shots_for_shotgun);
+            if (Max_Aiming_Accuracy_Normalised_Value.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Aiming", "Max_Aiming_Accuracy_Normalised_Value").InnerText = ConfigEditorUtils.NumberText(Max_Aiming_Accuracy_Normalised_Value);
+            if (Min_Aiming_Accuracy_Normalised_Value.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Aiming", "Min_Aiming_Accuracy_Normalised_Value").InnerText = ConfigEditorUtils.NumberText(Min_Aiming_Accuracy_Normalised_Value);
+            if (Min_Shooting_Interval_Time.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Interval", "Min_Shooting_Interval_Time").InnerText = ConfigEditorUtils.NumberText(Min_Shooting_Interval_Time);
+            if (Max_Shooting_Interval_Time.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Interval", "Max_Shooting_Interval_Time").InnerText = ConfigEditorUtils.NumberText(Max_Shooting_Interval_Time);
+            if (Max_Non_Shooting_Interval_Time.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Interval", "Max_Non_Shooting_Interval_Time").InnerText = ConfigEditorUtils.NumberText(Max_Non_Shooting_Interval_Time);
+            if (Min_Non_Shooting_Interval_Time.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "Interval", "Min_Non_Shooting_Interval_Time").InnerText = ConfigEditorUtils.NumberText(Min_Non_Shooting_Interval_Time);
+            if (stop_shooting_if_no_visual_after_time.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "NPC_Shooting", "stop_shooting_if_no_visual_after_time").InnerText = ConfigEditorUtils.NumberText(stop_shooting_if_no_visual_after_time);
+            if (min_delay_before_shooting.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "min_delay_before_shooting").InnerText = ConfigEditorUtils.NumberText(min_delay_before_shooting);
+            if (max_delay_before_shooting.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Attack", "max_delay_before_shooting").InnerText = ConfigEditorUtils.NumberText(max_delay_before_shooting);
+            if (cover_job_minimum_distance_to_player.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Cover", "cover_job_minimum_distance_to_player").InnerText = ConfigEditorUtils.NumberText(cover_job_minimum_distance_to_player);
+            if (footstep_loudness_maxed_out_speed.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Footsteps_sense_generation", "footstep_loudness_maxed_out_speed").InnerText = ConfigEditorUtils.NumberText(footstep_loudness_maxed_out_speed);
+            if (footstep_loudness_min_speed_considered.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Footsteps_sense_generation", "footstep_loudness_min_speed_considered").InnerText = ConfigEditorUtils.NumberText(footstep_loudness_min_speed_considered);
+            if (footstep_loudness_min_clamped_input_loudness.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Footsteps_sense_generation", "footstep_loudness_min_clamped_input_loudness").InnerText = ConfigEditorUtils.NumberText(footstep_loudness_min_clamped_input_loudness);
+            if (footstep_loudness_max_clamped_input_loudness.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Footsteps_sense_generation", "footstep_loudness_max_clamped_input_loudness").InnerText = ConfigEditorUtils.NumberText(footstep_loudness_max_clamped_input_loudness);
+            if (footstep_loudness_min_scaled_output_loudness.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Footsteps_sense_generation", "footstep_loudness_min_scaled_output_loudness").InnerText = ConfigEditorUtils.NumberText(footstep_loudness_min_scaled_output_loudness);
+            if (footstep_loudness_max_scaled_output_loudness.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Footsteps_sense_generation", "footstep_loudness_max_scaled_output_loudness").InnerText = ConfigEditorUtils.NumberText(footstep_loudness_max_scaled_output_loudness);
+            if (footstep_loudness_crouch_multiplier.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Footsteps_sense_generation", "footstep_loudness_crouch_multiplier").InnerText = ConfigEditorUtils.NumberText(footstep_loudness_crouch_multiplier);
+            if (hiding_max_search_time.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Hiding", "hiding_max_search_time").InnerText = ConfigEditorUtils.NumberText(hiding_max_search_time);
+            if (hiding_search_radius.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Hiding", "hiding_search_radius").InnerText = ConfigEditorUtils.NumberText(hiding_search_radius);
+            if (hiding_post_search_exclusion_radius.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Hiding", "hiding_post_search_exclusion_radius").InnerText = ConfigEditorUtils.NumberText(hiding_post_search_exclusion_radius);
+            if (hiding_max_QTE_selection_weighting.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Hiding", "hiding_max_QTE_selection_weighting").InnerText = ConfigEditorUtils.NumberText(hiding_max_QTE_selection_weighting);
+            if (hiding_hearing_range.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Hiding", "hiding_hearing_range").InnerText = ConfigEditorUtils.NumberText(hiding_hearing_range);
+            if (Character_Sound.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Sound_Attributes", "Character_Sound").InnerText = Character_Sound.Text;
+            if (max_range_to_search_for_IDLE_job.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Job_Behaviour", "max_range_to_search_for_IDLE_job").InnerText = ConfigEditorUtils.NumberText(max_range_to_search_for_IDLE_job);
+            if (min_time_between_idles_for_stalk.Enabled) ConfigEditorUtils.EnsureChildElements(doc, "Attribute", "Job_Behaviour", "min_time_between_idles_for_stalk").InnerText = ConfigEditorUtils.NumberText(min_time_between_idles_for_stalk);
 
             _selectedCharacter[0].Content = doc;
             _selectedCharacter[0].Save();
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
-        }
-
-        private void helpBtn_Click(object sender, EventArgs e)
-        {
-            Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
-            Process.Start("https://opencage.co.uk/docs/configs/attributes");
         }
     }
 }

@@ -10,6 +10,7 @@ using Newtonsoft.Json;
 using ST.Library.UI.NodeEditor;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -30,24 +31,85 @@ namespace OpenCAGE
         private static CompositeFlowgraphCompatibilityTable _compatibility = new CompositeFlowgraphCompatibilityTable();
         private static CompositePageHistoryTable _history = new CompositePageHistoryTable();
 
+        private static EntityCategoryTable _categories = new EntityCategoryTable();
+
         public static Commands LinkedCommands => _commands;
         private static Commands _commands;
         private static LevelContent _content;
 
+        /// <summary>
+        /// The tables OpenCAGE ships - predefined flowgraph layouts, entity categories and the baked composite previews -
+        /// gzipped: flowgraphs.dat beside the exe (not embedded, so the exe stays small), or the local info.dat override
+        /// when there is one. Null when neither is there.
+        /// </summary>
+        public static byte[] ReadShippedTables()
+        {
+            if (File.Exists(Paths.CustomInfoDat))
+                return File.ReadAllBytes(Paths.CustomInfoDat);
+            //Beside the exe itself, not the working directory or the host of an assembly loaded for tooling (an assembly
+            //loaded from bytes has no location: then the app's own folder)
+            string location = typeof(FlowgraphLayoutManager).Assembly.Location;
+            string folder = string.IsNullOrEmpty(location) ? AppDomain.CurrentDomain.BaseDirectory : Path.GetDirectoryName(location);
+            string shipped = Path.Combine(folder, "flowgraphs.dat");
+            return File.Exists(shipped) ? File.ReadAllBytes(shipped) : null;
+        }
+
+        /// <summary>
+        /// True when the shipped tables could not be read (flowgraphs.dat missing or damaged). Composites then open without
+        /// predefined pages, and no verdict that rests on their absence is recorded - it would be saved into the level and
+        /// outlive the file coming back.
+        /// </summary>
+        public static bool ShippedTablesMissing { get; private set; } = false;
+
         static FlowgraphLayoutManager()
         {
-            byte[] contentCompressed = Properties.Resources.flowgraphs;
-            if (File.Exists("data/info.dat"))
-                contentCompressed = File.ReadAllBytes("data/info.dat");
-            byte[] content = null;
-
-            using (MemoryStream stream = new MemoryStream())
-            using (GZipStream compressedStream = new GZipStream(new MemoryStream(contentCompressed), CompressionMode.Decompress))
+            string problem = null;
+            try
             {
-                compressedStream.CopyTo(stream);
-                content = stream.ToArray();
+                byte[] contentCompressed = ReadShippedTables();
+                if (contentCompressed == null)
+                {
+                    problem = "flowgraphs.dat was not found beside OpenCAGE.exe.";
+                }
+                else
+                {
+                    byte[] content = null;
+                    using (MemoryStream stream = new MemoryStream())
+                    using (GZipStream compressedStream = new GZipStream(new MemoryStream(contentCompressed), CompressionMode.Decompress))
+                    {
+                        compressedStream.CopyTo(stream);
+                        content = stream.ToArray();
+                    }
+                    CompositeFlowgraphTable layouts = (CompositeFlowgraphTable)CustomTable.ReadTable(content, CustomTableType.COMPOSITE_FLOWGRAPHS);
+                    EntityCategoryTable categories = (EntityCategoryTable)CustomTable.ReadTable(content, CustomTableType.ENTITY_CATEGORIES);
+                    if (layouts == null || categories == null)
+                    {
+                        problem = "flowgraphs.dat beside OpenCAGE.exe does not contain the flowgraph tables.";
+                    }
+                    else
+                    {
+                        _preDefinedLayouts = layouts;
+                        _categories = categories;
+                    }
+                }
             }
-            _preDefinedLayouts = (CompositeFlowgraphTable)CustomTable.ReadTable(content, CustomTableType.COMPOSITE_FLOWGRAPHS);
+            catch (Exception ex)
+            {
+                problem = "flowgraphs.dat beside OpenCAGE.exe could not be read (" + ex.Message + ").";
+            }
+            if (problem != null)
+            {
+                //The fields keep their empty tables: composites open without flowgraph pages rather than the editor failing.
+                //Said out loud in every build - the release log is compiled out, and the file is part of the install. This
+                //runs on whatever thread touches the class first (usually the level loader): the warning goes to the
+                //editor's own thread, owned by it, so nothing waits on it.
+                ShippedTablesMissing = true;
+                Debug.Log("Flowgraph Manager", problem + " No predefined flowgraph layouts or entity categories");
+                string message = problem + "\n\nFlowgraph pages and composite previews will not be available until it is restored. Please verify the OpenCAGE files through Steam.";
+                CommandsEditor editor = Singleton.Editor;
+                if (editor != null && !editor.IsDisposed && editor.IsHandleCreated)
+                    editor.BeginInvoke(new Action(() => System.Windows.Forms.MessageBox.Show(editor, message, "OpenCAGE", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning)));
+            }
 
 #if DEBUG && DO_DUMP
             foreach (FlowgraphMeta layout in _preDefinedLayouts.flowgraphs)
@@ -73,54 +135,298 @@ namespace OpenCAGE
         }
         private static void AddToCompatibilityTable(Composite composite)
         {
-            SaveLayout(null, composite, Path.GetFileName(composite.name)); //Add in a default empty flowgraph
+            //A composite brought back by undo already has its pages and its row; a second default page would replace one of them
+            if (HasCompatibilityInfo(composite))
+                return;
+            //Pages but no verdict yet (an import, awaiting its first open): the pages stand and the open decides
+            if (HasLayout(composite))
+                return;
+            //Links but no pages (a copy of a composite shown as a list of links): judged on them, as an open would. An
+            //empty default page draws none of them, and the next compile of it would take them all out
+            if (_commands != null && _commands.Utils.CountLinks(composite) != 0)
+            {
+                EvaluateCompatibility(composite);
+                return;
+            }
+            SaveLayout(null, composite, EditorUtils.GetCompositeName(composite)); //Add in a default empty flowgraph
             _compatibility.compatibility_info.Add(new CompositeFlowgraphCompatibilityTable.CompatibilityInfo()
             {
                 composite_id = composite.shortGUID,
                 flowgraphs_supported = true
             });
         }
+        /// <summary>
+        /// What one entity's deletion took out of the saved layouts, so an undo can put it back. Only
+        /// layouts that changed are kept: the list objects they had, which go straight back while the
+        /// trimmed layout is still the one in the table, and what exactly went, which can be fitted
+        /// into whatever the table holds for that page once it has been saved again in between.
+        /// </summary>
+        public sealed class LayoutTrim
+        {
+            private sealed class Entry
+            {
+                public FlowgraphMeta Layout;
+                public List<FlowgraphMeta.NodeMeta> Nodes;
+                public List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>> Connections;
+                public List<FlowgraphMeta.NodeMeta> RemovedNodes;
+                public List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>> RemovedConnections;
+            }
+            private readonly List<Entry> _entries = new List<Entry>();
+
+            internal void Add(FlowgraphMeta layout, List<FlowgraphMeta.NodeMeta> nodes, List<FlowgraphMeta.NodeMeta> removedNodes,
+                List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>> connections,
+                List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>> removedConnections)
+            {
+                _entries.Add(new Entry() { Layout = layout, Nodes = nodes, RemovedNodes = removedNodes, Connections = connections, RemovedConnections = removedConnections });
+            }
+
+            /// <summary>
+            /// Put the trimmed nodes and connections back; returns the layouts that took them. A layout
+            /// still in the table gets its old lists back as they were. One replaced since (the page was
+            /// saved from a live editor, which also renumbers its nodes) has nothing of ours in it any
+            /// more: with <paramref name="intoCurrentLayouts"/> the nodes that went are added to the
+            /// current layout of that name under fresh ids, and the connections re-pointed by entity.
+            /// Without it such a layout is left alone - a live page is then the truth about its nodes.
+            /// </summary>
+            public List<FlowgraphMeta> Restore(bool intoCurrentLayouts = false)
+            {
+                List<FlowgraphMeta> restored = new List<FlowgraphMeta>();
+                foreach (Entry entry in _entries)
+                {
+                    if (_userDefinedLayouts.flowgraphs.Any(o => ReferenceEquals(o, entry.Layout)))
+                    {
+                        if (entry.Nodes != null)
+                            entry.Layout.Nodes = entry.Nodes;
+                        foreach (KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>> pair in entry.Connections)
+                            pair.Key.ConnectionsOut = pair.Value;
+                        restored.Add(entry.Layout);
+                        continue;
+                    }
+
+                    if (!intoCurrentLayouts)
+                        continue;
+                    FlowgraphMeta current = _userDefinedLayouts.flowgraphs.FirstOrDefault(o => o.CompositeGUID == entry.Layout.CompositeGUID && o.Name == entry.Layout.Name);
+                    if (current == null)
+                        continue;
+                    if (RestoreInto(current, entry))
+                        restored.Add(current);
+                }
+                return restored;
+            }
+
+            private static bool RestoreInto(FlowgraphMeta current, Entry entry)
+            {
+                bool changed = false;
+                int nextId = current.Nodes.Count == 0 ? 0 : current.Nodes.Max(o => o.NodeID) + 1;
+                Dictionary<int, int> newIds = new Dictionary<int, int>(); //the id a node had -> the id it has now
+
+                //The nodes that went, under ids the renumbered page cannot already be using
+                List<FlowgraphMeta.NodeMeta> added = new List<FlowgraphMeta.NodeMeta>();
+                foreach (FlowgraphMeta.NodeMeta removed in entry.RemovedNodes ?? new List<FlowgraphMeta.NodeMeta>())
+                {
+                    FlowgraphMeta.NodeMeta node = new FlowgraphMeta.NodeMeta()
+                    {
+                        EntityGUID = removed.EntityGUID,
+                        NodeID = nextId++,
+                        Position = removed.Position,
+                        ConnectionsOut = new List<FlowgraphMeta.NodeMeta.ConnectionMeta>(removed.ConnectionsOut ?? new List<FlowgraphMeta.NodeMeta.ConnectionMeta>()),
+                        UnlinkedPins = new List<FlowgraphMeta.NodeMeta.UnlinkedPinMeta>(removed.UnlinkedPins ?? new List<FlowgraphMeta.NodeMeta.UnlinkedPinMeta>()),
+                    };
+                    newIds[removed.NodeID] = node.NodeID;
+                    current.Nodes.Add(node);
+                    added.Add(node);
+                    changed = true;
+                }
+
+                //A connection names its other end by node id and entity: a restored end by its new id,
+                //any other by whichever node of that entity the page has now (the one that kept the id,
+                //if any, else the first) - or not at all, if the entity has no node here any more
+                FlowgraphMeta.NodeMeta.ConnectionMeta Repoint(FlowgraphMeta.NodeMeta.ConnectionMeta connection)
+                {
+                    int id = -1, restoredId;
+                    if (newIds.TryGetValue(connection.ConnectedNodeID, out restoredId) && added.Any(o => o.NodeID == restoredId && o.EntityGUID == connection.ConnectedEntityGUID))
+                        id = restoredId;
+                    if (id < 0)
+                    {
+                        FlowgraphMeta.NodeMeta end = current.Nodes.FirstOrDefault(o => !added.Contains(o) && o.EntityGUID == connection.ConnectedEntityGUID && o.NodeID == connection.ConnectedNodeID)
+                            ?? current.Nodes.FirstOrDefault(o => o.EntityGUID == connection.ConnectedEntityGUID);
+                        if (end == null)
+                            return null;
+                        id = end.NodeID;
+                    }
+                    return new FlowgraphMeta.NodeMeta.ConnectionMeta()
+                    {
+                        ParameterGUID = connection.ParameterGUID,
+                        ConnectedEntityGUID = connection.ConnectedEntityGUID,
+                        ConnectedParameterGUID = connection.ConnectedParameterGUID,
+                        ConnectedNodeID = id,
+                        RoutePoints = connection.RoutePoints == null ? null : new List<Point>(connection.RoutePoints),
+                    };
+                }
+
+                foreach (FlowgraphMeta.NodeMeta node in added)
+                    node.ConnectionsOut = node.ConnectionsOut.Select(Repoint).Where(o => o != null).ToList();
+
+                //What other nodes lost: connections into the nodes that went
+                foreach (KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>> lost in entry.RemovedConnections ?? new List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>>())
+                {
+                    FlowgraphMeta.NodeMeta owner = current.Nodes.FirstOrDefault(o => o.EntityGUID == lost.Key.EntityGUID && o.NodeID == lost.Key.NodeID && !added.Contains(o))
+                        ?? current.Nodes.FirstOrDefault(o => o.EntityGUID == lost.Key.EntityGUID);
+                    if (owner == null)
+                        continue;
+                    foreach (FlowgraphMeta.NodeMeta.ConnectionMeta connection in lost.Value)
+                    {
+                        FlowgraphMeta.NodeMeta.ConnectionMeta repointed = Repoint(connection);
+                        if (repointed == null || owner.ConnectionsOut.Contains(repointed))
+                            continue;
+                        owner.ConnectionsOut.Add(repointed);
+                        changed = true;
+                    }
+                }
+                return changed;
+            }
+        }
+
+        private static LayoutTrim _trimCapture = null;
+
+        /// <summary>Start keeping what the next entity deletion trims; EndTrimCapture hands it over.</summary>
+        public static void BeginTrimCapture()
+        {
+            _trimCapture = new LayoutTrim();
+        }
+        public static LayoutTrim EndTrimCapture()
+        {
+            LayoutTrim trim = _trimCapture;
+            _trimCapture = null;
+            return trim;
+        }
+
+        /* Entities leaving one composite as a set (BeginDeletingTogether): the saved layouts were trimmed of
+           all of them at once, and the pending event each one's deletion still raises has nothing left to do */
+        private static HashSet<Entity> _deletingTogether = null;
+
+        /// <summary>
+        /// Several entities are about to leave one composite together - a box's worth of deep-select aliases
+        /// the viewer let go of. The saved layouts are trimmed of the whole set here, in one pass, and the
+        /// OnEntityDeletePending each deletion raises inside the scope finds its entity already dealt with.
+        /// One pass rather than one per entity because a pass visits every saved page in the level (about
+        /// 50 ms on a full one, which a box of 300 aliases paid 300 times). For unrecorded deletions only:
+        /// the trim capture an EntityDeleteEdit takes is per entity, and this pass is not captured.
+        /// </summary>
+        public static IDisposable BeginDeletingTogether(IEnumerable<Entity> entities, Composite composite)
+        {
+            HashSet<Entity> set = new HashSet<Entity>(entities);
+            HashSet<Entity> previous = _deletingTogether;
+            TrimLayoutsForDeletion(set);
+            _deletingTogether = set;
+            return new DeletingTogetherScope(() => _deletingTogether = previous);
+        }
+
+        private sealed class DeletingTogetherScope : IDisposable
+        {
+            private Action _end;
+            public DeletingTogetherScope(Action end) { _end = end; }
+            public void Dispose()
+            {
+                Action end = _end;
+                _end = null;
+                end?.Invoke();
+            }
+        }
+
         private static void OnEntityDeletePending(Entity entity, Composite composite)
         {
+            if (_deletingTogether != null && _deletingTogether.Contains(entity))
+                return;
+            TrimLayoutsForDeletion(new HashSet<Entity>() { entity });
+        }
+
+        /* Take the entities' nodes off every saved page, and the connections into those nodes; what went is
+           handed to the trim capture, when one is open */
+        private static void TrimLayoutsForDeletion(HashSet<Entity> entities)
+        {
+            /* Looked up by id, once: GetComposite is a search through every composite in the level, and there
+               is a lookup per saved page. And an alias can only resolve to one of the entities if its path ends
+               on that entity's id, which spares every other alias node the resolve (a GetComposite per hop). */
+            Dictionary<ShortGuid, Composite> compositesById = new Dictionary<ShortGuid, Composite>();
+            foreach (Composite entry in _commands.Entries)
+            {
+                if (entry != null && !compositesById.ContainsKey(entry.shortGUID))
+                    compositesById.Add(entry.shortGUID, entry);
+            }
+            HashSet<ShortGuid> entityIds = new HashSet<ShortGuid>();
+            foreach (Entity entity in entities)
+                entityIds.Add(entity.shortGUID);
+
             foreach (FlowgraphMeta flowgraphMeta in _userDefinedLayouts.flowgraphs)
             {
-                Composite comp = _commands.GetComposite(flowgraphMeta.CompositeGUID);
-                if (comp == null) continue;
+                if (!compositesById.TryGetValue(flowgraphMeta.CompositeGUID, out Composite comp)) continue;
 
-                //Remove any nodes that are for the deleted entity, or point to the deleted entity
+                //Remove any nodes that are for the deleted entity, or are aliases of it. A proxy of it stays:
+                //the proxy and its links survive the deletion as a dead proxy (see CommandsUtils.IsDeadProxy),
+                //and its node is where the flowgraph shows that.
+                List<FlowgraphMeta.NodeMeta> originalNodes = flowgraphMeta.Nodes;
                 List<FlowgraphMeta.NodeMeta> trimmedNodes = new List<FlowgraphMeta.NodeMeta>();
+                List<FlowgraphMeta.NodeMeta> removedNodes = new List<FlowgraphMeta.NodeMeta>();
                 foreach (FlowgraphMeta.NodeMeta node in flowgraphMeta.Nodes)
                 {
                     Entity ent = comp.GetEntityByID(node.EntityGUID);
-                    if (ent == null || ent == entity) continue;
-                    switch (ent.variant)
+                    if (ent == null || entities.Contains(ent)) { removedNodes.Add(node); continue; }
+                    if (ent.variant == EntityVariant.ALIAS && AliasPathEndsOn((AliasEntity)ent, entityIds)
+                        && entities.Contains(_commands.Utils.GetResolvedTarget(_commands.Utils.ResolveAlias((AliasEntity)ent, comp)).Item2))
                     {
-                        case EntityVariant.ALIAS:
-                            if (_commands.Utils.GetResolvedTarget(_commands.Utils.ResolveAlias((AliasEntity)ent, comp)).Item2 == entity)
-                                continue;
-                            break;
-                        case EntityVariant.PROXY:
-                            if (_commands.Utils.GetResolvedTarget(_commands.Utils.ResolveProxy((ProxyEntity)ent)).Item2 == entity)
-                                continue;
-                            break;
+                        removedNodes.Add(node);
+                        continue;
                     }
                     trimmedNodes.Add(node);
                 }
-                flowgraphMeta.Nodes = trimmedNodes;
+                bool nodesChanged = trimmedNodes.Count != originalNodes.Count;
+                if (nodesChanged)
+                    flowgraphMeta.Nodes = trimmedNodes;
 
-                //Remove any connections that pointed to now removed nodes
+                //Remove any connections that pointed to now removed nodes (the ids still on the page, once,
+                //rather than a search of its nodes per connection)
+                HashSet<int> nodeIds = new HashSet<int>();
+                foreach (FlowgraphMeta.NodeMeta node in flowgraphMeta.Nodes)
+                    nodeIds.Add(node.NodeID);
+                List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>> originalConnections = new List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>>();
+                List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>> removedConnections = new List<KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>>();
                 foreach (FlowgraphMeta.NodeMeta node in flowgraphMeta.Nodes)
                 {
                     List<FlowgraphMeta.NodeMeta.ConnectionMeta> trimmedConnections = new List<FlowgraphMeta.NodeMeta.ConnectionMeta>();
+                    List<FlowgraphMeta.NodeMeta.ConnectionMeta> lostConnections = new List<FlowgraphMeta.NodeMeta.ConnectionMeta>();
                     foreach (FlowgraphMeta.NodeMeta.ConnectionMeta connection in node.ConnectionsOut)
                     {
-                        if (flowgraphMeta.Nodes.FirstOrDefault(o => o.NodeID == connection.ConnectedNodeID) == null)
+                        if (!nodeIds.Contains(connection.ConnectedNodeID))
+                        {
+                            lostConnections.Add(connection);
                             continue;
+                        }
                         trimmedConnections.Add(connection);
                     }
+                    if (trimmedConnections.Count == node.ConnectionsOut.Count)
+                        continue;
+                    originalConnections.Add(new KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>(node, node.ConnectionsOut));
+                    removedConnections.Add(new KeyValuePair<FlowgraphMeta.NodeMeta, List<FlowgraphMeta.NodeMeta.ConnectionMeta>>(node, lostConnections));
                     node.ConnectionsOut = trimmedConnections;
                 }
+
+                if (nodesChanged || originalConnections.Count != 0)
+                    _trimCapture?.Add(flowgraphMeta, nodesChanged ? originalNodes : null, removedNodes, originalConnections, removedConnections);
             }
+        }
+
+        /* Whether the alias's path ends on one of the ids: what it resolves to, when it resolves at all */
+        private static bool AliasPathEndsOn(AliasEntity alias, HashSet<ShortGuid> entityIds)
+        {
+            ShortGuid[] path = alias.alias?.path;
+            if (path == null || path.Length == 0)
+                return false;
+            //ResolveAlias reads a trailing Invalid as a terminator
+            int last = path.Length - 1;
+            if (path[last] == ShortGuid.Invalid)
+                last--;
+            return last >= 0 && entityIds.Contains(path[last]);
         }
 
         //Sets if the given composite supports flowgraphs: a composite wouldn't support flowgraphs if it diverges from the saved layout, or has no layout defined
@@ -156,16 +462,36 @@ namespace OpenCAGE
             if (hasLayout)
             {
                 Debug.Log("Flowgraph Manager", "Page(s) exist, checking to see if links match");
-                SetCompatibilityInfo(composite, GetLayouts(composite).LinksMatch(composite));
+                /* Whatever a page shows that the composite no longer has cannot be drawn anyway: entities
+                   that went (the open-time purge takes out aliases that resolve to nothing - proxies it
+                   keeps, dead or not, see CommandsUtils.IsDeadProxy) and links that went with them. The verdict is given on copies with those dropped, so a page
+                   that lost a handful of links is kept as it stands, minus them - the check still refuses
+                   a page that would hide a link the composite does have. The stored pages are not touched:
+                   the flowgraph skips what it cannot draw, an undo may bring an entity and its links back,
+                   and the next save of the page writes what is actually shown. */
+                List<FlowgraphMeta> judged = GetLayouts(composite).Select(o => o.Copy()).ToList();
+                int trimmedNodes, trimmedConnections;
+                TrimToComposite(judged, composite, out trimmedNodes, out trimmedConnections);
+                if (trimmedNodes != 0 || trimmedConnections != 0)
+                    Debug.Log("Flowgraph Manager", "The page(s) for " + composite.name + " show " + trimmedNodes + " node(s) and " + trimmedConnections + " connection(s) the composite no longer has; judged without them");
+                SetCompatibilityInfo(composite, judged.LinksMatch(composite));
             }
             else
             {
+                //Without the shipped pages there is nothing to judge against: the composite stays unevaluated (so unsupported,
+                //for this session only) rather than carrying a verdict or an empty page into the level
+                if (ShippedTablesMissing)
+                {
+                    Debug.Log("Flowgraph Manager", "No page exists, but the shipped flowgraph pages are unavailable - not judging " + composite.name);
+                    return;
+                }
+
                 int links = _commands.Utils.CountLinks(composite);
                 if (links == 0)
                 {
                     Debug.Log("Flowgraph Manager", "No page exists, but composite has no links, so adding default page - supported!");
                     RemoveAllLayouts(composite);
-                    SaveLayout(null, composite, Path.GetFileName(composite.name));
+                    SaveLayout(null, composite, EditorUtils.GetCompositeName(composite));
                     SetCompatibilityInfo(composite, true);
                 }
                 else
@@ -200,6 +526,213 @@ namespace OpenCAGE
             return _userDefinedLayouts.flowgraphs.FindAll(o => o.CompositeGUID == composite.shortGUID);
         }
 
+        // Layouts to copy when porting a composite: prefer the source level's user layouts,
+        // otherwise fall back to bundled predefined layouts (vanilla pages never promoted into user DB).
+        public static List<FlowgraphMeta> GetLayoutsForPort(Composite composite)
+        {
+            return GetLayoutsForPort(composite, _userDefinedLayouts, BundledLevelName(_commands, _content?.Level?.Name), _commands);
+        }
+
+        // A composite ported INTO the loaded level brings its pages with it: they replace whatever the
+        // level held for that composite ID (a default empty page from OnCompositeAdded, or the copy being
+        // overwritten) and are saved with the level like any user layout.
+        public static void ImportLayouts(Composite composite, List<FlowgraphMeta> layouts)
+        {
+            if (composite == null)
+                return;
+            _userDefinedLayouts.flowgraphs.RemoveAll(o => o.CompositeGUID == composite.shortGUID);
+            if (layouts != null && layouts.Count > 0)
+            {
+                _userDefinedLayouts.flowgraphs.AddRange(layouts);
+                EnsureUniquePageNames(layouts);
+            }
+            //No pages at all: the first open gives it a default page if it has no links, or says unsupported
+            /* Whether the pages fit is decided when the composite is first opened here, after the purge
+               has had its say on the links (a mission script's door proxies resolve in the level it came
+               from, not necessarily in this one) - not asserted now against links that may yet change. */
+            ClearCompatibilityInfo(composite);
+        }
+
+        /// <summary>
+        /// Forget the compatibility verdict, so the composite is evaluated afresh when it is next opened.
+        /// </summary>
+        public static void ClearCompatibilityInfo(Composite composite)
+        {
+            if (composite == null)
+                return;
+            _compatibility.compatibility_info.RemoveAll(o => o.composite_id == composite.shortGUID);
+        }
+
+        /// <summary>
+        /// Drop from the pages every node whose entity the composite no longer has, and every connection
+        /// whose other end went or whose link the entity no longer carries - the same shape as the trim an
+        /// entity deletion does, but against the composite as it stands.
+        /// </summary>
+        public static void TrimToComposite(List<FlowgraphMeta> layouts, Composite composite, out int trimmedNodes, out int trimmedConnections)
+        {
+            trimmedNodes = 0;
+            trimmedConnections = 0;
+            if (layouts == null || composite == null)
+                return;
+
+            foreach (FlowgraphMeta layout in layouts)
+            {
+                List<FlowgraphMeta.NodeMeta> nodes = layout.Nodes.Where(o => composite.GetEntityByID(o.EntityGUID) != null).ToList();
+                if (nodes.Count != layout.Nodes.Count)
+                {
+                    trimmedNodes += layout.Nodes.Count - nodes.Count;
+                    layout.Nodes = nodes;
+                }
+
+                foreach (FlowgraphMeta.NodeMeta node in layout.Nodes)
+                {
+                    Entity entity = composite.GetEntityByID(node.EntityGUID);
+                    List<FlowgraphMeta.NodeMeta.ConnectionMeta> kept = new List<FlowgraphMeta.NodeMeta.ConnectionMeta>(node.ConnectionsOut.Count);
+                    foreach (FlowgraphMeta.NodeMeta.ConnectionMeta connection in node.ConnectionsOut)
+                    {
+                        FlowgraphMeta.NodeMeta target = layout.Nodes.FirstOrDefault(o => o.NodeID == connection.ConnectedNodeID && o.EntityGUID == connection.ConnectedEntityGUID);
+                        bool linked = target != null && entity.childLinks.Any(o => o.thisParamID == connection.ParameterGUID && o.linkedParamID == connection.ConnectedParameterGUID && o.linkedEntityID == target.EntityGUID);
+                        if (linked)
+                            kept.Add(connection);
+                    }
+                    if (kept.Count != node.ConnectionsOut.Count)
+                    {
+                        trimmedConnections += node.ConnectionsOut.Count - kept.Count;
+                        node.ConnectionsOut = kept;
+                    }
+                }
+            }
+        }
+
+        // The same, for a composite whose source level is not the one loaded in the editor: pass that
+        // level's own flowgraph table (read from its COMMANDS custom tables), or null for predefined only,
+        // along with the name the level is known by to the bundled pages (BundledLevelName) - and its
+        // script, if it is to hand, so that pages can be judged against the composite as it will open.
+        public static List<FlowgraphMeta> GetLayoutsForPort(Composite composite, CompositeFlowgraphTable sourceLayouts, string sourceLevelName, Commands sourceCommands = null)
+        {
+            List<FlowgraphMeta> layouts = sourceLayouts == null
+                ? new List<FlowgraphMeta>()
+                : sourceLayouts.flowgraphs.FindAll(o => o.CompositeGUID == composite.shortGUID);
+            if (layouts.Count == 0)
+                layouts = PredefinedLayoutsFor(composite, sourceLevelName);
+            layouts = OneLevelsPages(layouts, composite, sourceLevelName, sourceCommands);
+
+            List<FlowgraphMeta> copies = new List<FlowgraphMeta>(layouts.Count);
+            for (int i = 0; i < layouts.Count; i++)
+                copies.Add(layouts[i].Copy());
+            return copies;
+        }
+
+        /// <summary>
+        /// The level the bundled pages know a script as, if they know it at all.
+        /// </summary>
+        public static bool TryGetBundledLevel(Commands commands, string levelName, out FlowgraphMeta.SupportedLevel level)
+        {
+            Composite root = commands?.EntryPoints != null && commands.EntryPoints.Length != 0 ? commands.EntryPoints[0] : null;
+            return TryParseBundledLevel(root?.name, out level) || TryParseBundledLevel(levelName, out level);
+        }
+
+        /// <summary>
+        /// The name to pass for a level whose pages are being ported (see <see cref="TryGetBundledLevel"/>).
+        /// </summary>
+        public static string BundledLevelName(Commands commands, string levelName)
+        {
+            return TryGetBundledLevel(commands, levelName, out FlowgraphMeta.SupportedLevel level) ? level.ToString() : levelName;
+        }
+
+        /* The last segment of a root composite's name or a level's path, when it is one level of the flags (not a number, nor a list of them) */
+        private static bool TryParseBundledLevel(string name, out FlowgraphMeta.SupportedLevel level)
+        {
+            level = 0;
+            if (string.IsNullOrWhiteSpace(name))
+                return false;
+            string last = name.Replace('\\', '/').Split('/').Last().Trim().ToUpperInvariant();
+            return Enum.TryParse(last, out level) && Enum.IsDefined(typeof(FlowgraphMeta.SupportedLevel), level);
+        }
+
+        /// <summary>
+        /// The predefined pages to hand a composite being ported out of a level that has none saved of
+        /// its own.
+        /// </summary>
+        private static List<FlowgraphMeta> PredefinedLayoutsFor(Composite composite, string sourceLevelName)
+        {
+            List<FlowgraphMeta> layouts = _preDefinedLayouts.flowgraphs.FindAll(o => o.CompositeGUID == composite.shortGUID);
+
+            if (!TryParseBundledLevel(sourceLevelName, out FlowgraphMeta.SupportedLevel levelID))
+                return layouts;
+
+            List<FlowgraphMeta> forLevel = layouts.FindAll(o => o.AlwaysUse || o.SupportedLevels.HasFlag(levelID));
+            return forLevel.Count == 0 ? layouts : forLevel;
+        }
+
+        /* A bundled page laid out for particular levels. Pages saved from the editor carry no level flags. */
+        private static bool IsLevelSpecific(FlowgraphMeta page)
+        {
+            return !page.AlwaysUse && page.SupportedLevels != 0;
+        }
+
+        /// <summary>
+        /// A composite's pages as one level has them.
+        /// </summary>
+        private static List<FlowgraphMeta> OneLevelsPages(List<FlowgraphMeta> pages, Composite composite, string levelName, Commands commands)
+        {
+            List<FlowgraphMeta> bundled = pages.FindAll(IsLevelSpecific);
+            if (bundled.Count < 2)
+                return pages;
+            FlowgraphMeta.SupportedLevel shared = bundled[0].SupportedLevels;
+            for (int i = 1; i < bundled.Count; i++)
+                shared &= bundled[i].SupportedLevels;
+            if (shared != 0)
+                return pages;
+
+            if (TryParseBundledLevel(levelName, out FlowgraphMeta.SupportedLevel known))
+            {
+                List<FlowgraphMeta> own = pages.FindAll(o => !IsLevelSpecific(o) || o.SupportedLevels.HasFlag(known));
+                if (own.Exists(IsLevelSpecific))
+                    return own;
+            }
+
+            if (composite != null)
+            {
+                Composite judging = AsFirstOpenSees(composite, commands);
+                HashSet<string> tried = new HashSet<string>();
+                foreach (FlowgraphMeta.SupportedLevel level in Enum.GetValues(typeof(FlowgraphMeta.SupportedLevel)))
+                {
+                    List<FlowgraphMeta> set = pages.FindAll(o => !IsLevelSpecific(o) || o.SupportedLevels.HasFlag(level));
+                    //Many levels share a set: each one is judged once
+                    if (!set.Exists(IsLevelSpecific) || !tried.Add(string.Join(",", set.Select(o => pages.IndexOf(o)))))
+                        continue;
+                    if (PagesMatchLinks(set, judging))
+                    {
+                        Debug.Log("Flowgraph Manager", "Kept the " + level + " version of the pages for " + composite.name + " (" + set.Count + " of the " + pages.Count + " that came with it)");
+                        return set;
+                    }
+                }
+            }
+            Debug.Log("Flowgraph Manager", "No one level's version of the pages for " + composite?.name + " matches it: keeping only pages saved from the editor");
+            return pages.FindAll(o => !IsLevelSpecific(o));
+        }
+
+        /* The composite as its first open judges it: after the purge of what resolves to nothing - dead aliases above all,
+           which retail leaves in places (Hiding_Cupboard carries one, with a link) - done on a copy, so the source is not
+           touched. Without the script it came from there is nothing to resolve against, and it is judged as it stands. */
+        private static Composite AsFirstOpenSees(Composite composite, Commands commands)
+        {
+            if (commands?.Utils == null)
+                return composite;
+            Composite copy = composite.Copy();
+            commands.Utils.PurgeDeadLinks(copy, force: true);
+            return copy;
+        }
+
+        /* The verdict EvaluateCompatibility gives, on copies trimmed to the composite the same way */
+        private static bool PagesMatchLinks(List<FlowgraphMeta> pages, Composite composite)
+        {
+            List<FlowgraphMeta> judged = pages.Select(o => o.Copy()).ToList();
+            TrimToComposite(judged, composite, out int trimmedNodes, out int trimmedConnections);
+            return judged.LinksMatch(composite, writeDiff: false);
+        }
+
         //Save/add layout to db
         public static FlowgraphMeta SaveLayout(STNodeEditor editor, Composite composite, string name) //NOTE: passing no editor here will produce an empty layout, which could be destructive!
         {
@@ -210,6 +743,71 @@ namespace OpenCAGE
             else
                 _userDefinedLayouts.flowgraphs.Add(flowgraphMeta);
             return flowgraphMeta;
+        }
+
+        /// <summary>
+        /// Give every one of a composite's pages a name of its own.
+        /// </summary>
+        private static void EnsureUniquePageNames(List<FlowgraphMeta> pages)
+        {
+            HashSet<string> taken = new HashSet<string>();
+            foreach (FlowgraphMeta page in pages)
+            {
+                if (taken.Add(page.Name))
+                    continue;
+
+                int suffix = 2;
+                string name;
+                do
+                {
+                    name = page.Name + " (" + suffix + ")";
+                    suffix++;
+                }
+                while (!taken.Add(name));
+
+                Debug.Log("Flowgraph Manager", "Renamed a second page called '" + page.Name + "' to '" + name + "'");
+                page.Name = name;
+            }
+        }
+
+        /// <summary>Put a layout back as it was kept, unless one of that name has appeared since.</summary>
+        public static void AddLayout(FlowgraphMeta layout)
+        {
+            if (layout == null)
+                return;
+            if (_userDefinedLayouts.flowgraphs.Any(o => o.CompositeGUID == layout.CompositeGUID && o.Name == layout.Name))
+                return;
+            _userDefinedLayouts.flowgraphs.Add(layout);
+        }
+
+        /// <summary>A composite's pages and compatibility row, taken out when the composite is removed and put back when it returns.</summary>
+        public sealed class CompositeLayoutState
+        {
+            public List<FlowgraphMeta> Layouts = new List<FlowgraphMeta>();
+            public CompositeFlowgraphCompatibilityTable.CompatibilityInfo Compatibility = null;
+        }
+
+        public static CompositeLayoutState RemoveCompositeState(Composite composite)
+        {
+            CompositeLayoutState state = new CompositeLayoutState();
+            if (composite == null)
+                return state;
+            state.Layouts = GetLayouts(composite);
+            _userDefinedLayouts.flowgraphs.RemoveAll(o => o.CompositeGUID == composite.shortGUID);
+            state.Compatibility = _compatibility.compatibility_info.FirstOrDefault(o => o.composite_id == composite.shortGUID);
+            if (state.Compatibility != null)
+                _compatibility.compatibility_info.Remove(state.Compatibility);
+            return state;
+        }
+
+        public static void RestoreCompositeState(CompositeLayoutState state)
+        {
+            if (state == null)
+                return;
+            foreach (FlowgraphMeta layout in state.Layouts)
+                AddLayout(layout);
+            if (state.Compatibility != null && _compatibility.compatibility_info.FirstOrDefault(o => o.composite_id == state.Compatibility.composite_id) == null)
+                _compatibility.compatibility_info.Add(state.Compatibility);
         }
 
         //Remove a layout from the DB
@@ -277,25 +875,38 @@ namespace OpenCAGE
 
             //Copy the default layouts over for composites in this Commands if they don't already exist
             FlowgraphMeta.SupportedLevel levelID;
-            bool hasLevelID = Enum.TryParse(Path.GetFileName(_content.Level.Name).ToUpper(), out levelID);
+            bool hasLevelID = TryGetBundledLevel(_commands, _content.Level.Name, out levelID);
             List<FlowgraphMeta> newFlowgraphs = new List<FlowgraphMeta>();
 #if DEBUG
             HashSet<ShortGuid> mappedComps = new HashSet<ShortGuid>();
 #endif
+            HashSet<ShortGuid> levelComposites = new HashSet<ShortGuid>(_commands.Entries.Select(o => o.shortGUID));
+            HashSet<ShortGuid> laidOutComposites = new HashSet<ShortGuid>(_userDefinedLayouts.flowgraphs.Select(o => o.CompositeGUID));
             for (int i = 0; i < _preDefinedLayouts.flowgraphs.Count; i++)
             {
                 if (!_preDefinedLayouts.flowgraphs[i].AlwaysUse && (!hasLevelID || !_preDefinedLayouts.flowgraphs[i].SupportedLevels.HasFlag(levelID)))
                     continue;
-                if (_commands.Entries.FirstOrDefault(o => o.shortGUID == _preDefinedLayouts.flowgraphs[i].CompositeGUID) == null)
+                if (!levelComposites.Contains(_preDefinedLayouts.flowgraphs[i].CompositeGUID))
                     continue;
-                if (_userDefinedLayouts.flowgraphs.FirstOrDefault(o => o.CompositeGUID == _preDefinedLayouts.flowgraphs[i].CompositeGUID) != null)
+                if (laidOutComposites.Contains(_preDefinedLayouts.flowgraphs[i].CompositeGUID))
                     continue;
-                newFlowgraphs.Add(_preDefinedLayouts.flowgraphs[i].Copy());
+                newFlowgraphs.Add(_preDefinedLayouts.flowgraphs[i].Clone());
 #if DEBUG
                 mappedComps.Add(_preDefinedLayouts.flowgraphs[i].CompositeGUID);
 #endif
             }
             _userDefinedLayouts.flowgraphs.AddRange(newFlowgraphs);
+
+            /* A composite had no pages to get these: any verdict it carries was given on nothing - "unsupported", for one
+               with links. A copy of a level under a new folder name, saved before levels were known by their root, kept
+               that verdict for every such composite it opened. Judged again at its next open, with the pages. */
+            HashSet<ShortGuid> received = new HashSet<ShortGuid>(newFlowgraphs.Select(o => o.CompositeGUID));
+            _compatibility.compatibility_info.RemoveAll(o => received.Contains(o.composite_id));
+
+            //Pages arrive from two places - the level's own table and the predefined set - and neither
+            //knows what the other named things, so names are settled once both are in.
+            foreach (IGrouping<ShortGuid, FlowgraphMeta> composite in _userDefinedLayouts.flowgraphs.GroupBy(o => o.CompositeGUID))
+                EnsureUniquePageNames(composite.ToList());
 #if DEBUG
             Debug.Log("Flowgraph Manager", "Applied " + newFlowgraphs.Count + " suitable new flowgraph layouts, of the " + _preDefinedLayouts.flowgraphs.Count + " available.");
             Debug.Log("Flowgraph Manager", (((float)mappedComps.Count / (float)_commands.Entries.Count) * 100.0f) + "% of the composites in this level have layouts!");
@@ -319,6 +930,104 @@ namespace OpenCAGE
 
             CustomTable.WriteTable(filepath, CustomTableType.COMPOSITE_PAGE_HISTORY, _history);
             Debug.Log("Flowgraph Manager", "Saved " + _history.last_composite_page.Count + " previously opened pages!");
+        }
+
+        /// <summary>
+        /// A function type's category - its own, else the nearest it inherits from - or null when it has none (what the
+        /// palette files under "Misc"). Needs no level: the base classes are the game's, read with CathodeLib.
+        /// </summary>
+        public static string TryGetCategoryForFunctionType(FunctionType functionType)
+        {
+            for (int depth = 0; depth < 32; depth++)
+            {
+                if (_categories.ScriptEntityCategories.TryGetValue(functionType, out string category))
+                    return category;
+                FunctionType? inherited = null;
+                try
+                {
+                    if (!CustomTable.Vanilla.CathodeEntities.FunctionBaseClasses.TryGetValue(functionType, out inherited))
+                        return null;
+                }
+                catch (Exception)
+                {
+                    return null;
+                }
+                if (!inherited.HasValue)
+                    return null;
+                functionType = inherited.Value;
+            }
+            return null;
+        }
+
+        /* Get the category for a given function entity type */
+        public static string GetCategoryForFunctionType(FunctionType functionType)
+        {
+            if (_categories.ScriptEntityCategories.TryGetValue(functionType, out string category))
+                return category;
+            FunctionType? inherited = Singleton.Editor.CompositeBrowser.Content.Level.Commands.Utils.GetInheritedFunction(functionType);
+            if (inherited.HasValue)
+                return GetCategoryForFunctionType(inherited.Value);
+            return "Misc";
+        }
+
+        /* Get the category for a given animation entity type */
+        public static string GetCategoryForAnimEntityType(string animEntityType)
+        {
+            _categories.AnimationEntityCategories.TryGetValue(animEntityType, out string category);
+            return category;
+        }
+
+        /* Get the colour for a function type node */
+        public static Color GetColourForFunctionType(FunctionType functionType)
+        {
+            if (_categories.CategoryColours.TryGetValue(functionType.ToString(), out Color classColour))
+                return classColour;
+            string category = GetCategoryForFunctionType(functionType);
+            if (_categories.CategoryColours.TryGetValue(category, out Color categoryColour))
+                return categoryColour;
+            FunctionType? inherited = Singleton.Editor.CompositeBrowser.Content.Level.Commands.Utils.GetInheritedFunction(functionType);
+            if (inherited.HasValue)
+                return GetColourForFunctionType(inherited.Value);
+            return _categories.BaseColour;
+        }
+        public static Color BaseFunctionTypeColour => _categories.BaseColour;
+
+        /* Get the colour for the entity */
+        public static Color GetColourForEntity(Entity entity, Composite composite)
+        {
+            if (entity == null)
+                return _categories.BaseColour;
+
+            switch (entity.variant)
+            {
+                case EntityVariant.FUNCTION:
+                    FunctionEntity func = (FunctionEntity)entity;
+                    if (func.function.IsFunctionType)
+                        return GetColourForFunctionType(func.function.AsFunctionType);
+                    else
+                        return Color.FromArgb(10, 109, 157);
+                case EntityVariant.PROXY:
+                    return GetColourForEntity(_commands.Utils.GetResolvedTarget(_commands.Utils.ResolveProxy((ProxyEntity)entity)).Item2, null);
+                case EntityVariant.ALIAS:
+                    return GetColourForEntity(_commands.Utils.GetResolvedTarget(_commands.Utils.ResolveAlias((AliasEntity)entity, composite)).Item2, null);
+                case EntityVariant.VARIABLE:
+                    return Color.Purple;
+            }
+
+            return _categories.BaseColour;
+        }
+
+        /* Get the colour for the anim node */
+        public static Color GetColourForAnimEntity(string animEntityType)
+        {
+            if (string.IsNullOrEmpty(animEntityType))
+                return _categories.BaseColour;
+            if (_categories.CategoryColours.TryGetValue(animEntityType, out Color classColour))
+                return classColour;
+            string category = GetCategoryForAnimEntityType(animEntityType);
+            if (!string.IsNullOrEmpty(category) && _categories.CategoryColours.TryGetValue(category, out Color categoryColour))
+                return categoryColour;
+            return _categories.BaseColour;
         }
     }
 
@@ -348,17 +1057,23 @@ namespace OpenCAGE
                 options.AddRange(node.GetTopOptions());
                 for (int y = 0; y < options.Count; y++)
                 {
+                    if (options[y] == STNodeOption.Empty)
+                        continue; //a blank row keeping a relay pair aligned, not a pin
+
                     List<STNodeOption> connections = options[y].GetConnectedOption();
                     //Store the links (ones that go out)
                     for (int z = 0; z < connections.Count; z++)
                     {
                         STNode connectedNode = connections[z].Owner;
+                        //The reroute points its line is drawn through, if any (an output or top pin is the feeding end)
+                        PointF[] route = editor.GetReroutePoints(options[y], connections[z]);
                         nodeMeta.ConnectionsOut.Add(new FlowgraphMeta.NodeMeta.ConnectionMeta()
                         {
                             ParameterGUID = options[y].ShortGUID,
                             ConnectedEntityGUID = connectedNode.ShortGUID,
                             ConnectedNodeID = editor.Nodes.IndexOf(connectedNode),
                             ConnectedParameterGUID = connections[z].ShortGUID,
+                            RoutePoints = route.Length == 0 ? null : route.Select(o => Point.Round(o)).ToList(),
                         });
                     }
                     //If there were no links, remember the pin anyway
@@ -378,6 +1093,9 @@ namespace OpenCAGE
                 options.AddRange(node.GetBottomOptions());
                 for (int y = 0; y < options.Count; y++)
                 {
+                    if (options[y] == STNodeOption.Empty)
+                        continue;
+
                     List<STNodeOption> connections = options[y].GetConnectedOption();
                     //If there were no links, remember the pin
                     if (connections.Count == 0)
@@ -397,8 +1115,8 @@ namespace OpenCAGE
             return flowgraphMeta;
         }
 
-        /* Check a Composite against a set of FlowgraphMetas to see if the links are the same */
-        public static bool LinksMatch(this List<FlowgraphMeta> metas, Composite composite)
+        /* Check a Composite against a set of FlowgraphMetas to see if the links are the same (writeDiff: in debug builds, dump both link lists on a mismatch) */
+        public static bool LinksMatch(this List<FlowgraphMeta> metas, Composite composite, bool writeDiff = true)
         {
             List<LinkData> flowgraphLinks = new List<LinkData>();
             for (int i = 0; i < metas.Count; i++)
@@ -446,13 +1164,16 @@ namespace OpenCAGE
             {
                 Debug.Log("Flowgraph Manager", "Link count mismatch in page(s) for " + composite.name);
 #if DEBUG
-                // If in debug mode, output both lists of links so I can easily diff them if needed.
-                string dirName = "FGLayoutCheck/" + Path.GetFileName(composite.name.Replace(":", "_"));
-                Directory.CreateDirectory(dirName);
-                flowgraphLinks = flowgraphLinks.OrderBy(o => o.In.ParameterID.ToString()).ThenBy(o => o.Out.ParameterID.ToString()).ThenBy(o => o.In.EntityID.ToByteString()).ThenBy(o => o.Out.EntityID.ToByteString()).ToList();
-                compositeLinks = compositeLinks.OrderBy(o => o.In.ParameterID.ToString()).ThenBy(o => o.Out.ParameterID.ToString()).ThenBy(o => o.In.EntityID.ToByteString()).ThenBy(o => o.Out.EntityID.ToByteString()).ToList();
-                File.WriteAllText(dirName + "/FLOWGRAPH LINKS.json", JsonConvert.SerializeObject(flowgraphLinks, Newtonsoft.Json.Formatting.Indented, new ShortGuidConverter()));
-                File.WriteAllText(dirName + "/COMPOSITE LINKS.json", JsonConvert.SerializeObject(compositeLinks, Newtonsoft.Json.Formatting.Indented, new ShortGuidConverter()));
+                if (writeDiff)
+                {
+                    // If in debug mode, output both lists of links so I can easily diff them if needed.
+                    string dirName = "FGLayoutCheck/" + Path.GetFileName(composite.name.Replace(":", "_"));
+                    Directory.CreateDirectory(dirName);
+                    flowgraphLinks = flowgraphLinks.OrderBy(o => o.In.ParameterID.ToString()).ThenBy(o => o.Out.ParameterID.ToString()).ThenBy(o => o.In.EntityID.ToByteString()).ThenBy(o => o.Out.EntityID.ToByteString()).ToList();
+                    compositeLinks = compositeLinks.OrderBy(o => o.In.ParameterID.ToString()).ThenBy(o => o.Out.ParameterID.ToString()).ThenBy(o => o.In.EntityID.ToByteString()).ThenBy(o => o.Out.EntityID.ToByteString()).ToList();
+                    File.WriteAllText(dirName + "/FLOWGRAPH LINKS.json", JsonConvert.SerializeObject(flowgraphLinks, Newtonsoft.Json.Formatting.Indented, new ShortGuidConverter()));
+                    File.WriteAllText(dirName + "/COMPOSITE LINKS.json", JsonConvert.SerializeObject(compositeLinks, Newtonsoft.Json.Formatting.Indented, new ShortGuidConverter()));
+                }
 #endif
                 return false;
             }
@@ -466,11 +1187,14 @@ namespace OpenCAGE
                 {
                     Debug.Log("Flowgraph Manager", "Link mismatch at index " + i + " in page(s) for " + composite.name);
 #if DEBUG
-                    // If in debug mode, output both lists of links so I can easily diff them if needed.
-                    string dirName = "FGLayoutCheck/" + Path.GetFileName(composite.name.Replace(":", "_"));
-                    Directory.CreateDirectory(dirName);
-                    File.WriteAllText(dirName + "/FLOWGRAPH LINKS.json", JsonConvert.SerializeObject(flowgraphLinks, Newtonsoft.Json.Formatting.Indented, new ShortGuidConverter()));
-                    File.WriteAllText(dirName + "/COMPOSITE LINKS.json", JsonConvert.SerializeObject(compositeLinks, Newtonsoft.Json.Formatting.Indented, new ShortGuidConverter()));
+                    if (writeDiff)
+                    {
+                        // If in debug mode, output both lists of links so I can easily diff them if needed.
+                        string dirName = "FGLayoutCheck/" + Path.GetFileName(composite.name.Replace(":", "_"));
+                        Directory.CreateDirectory(dirName);
+                        File.WriteAllText(dirName + "/FLOWGRAPH LINKS.json", JsonConvert.SerializeObject(flowgraphLinks, Newtonsoft.Json.Formatting.Indented, new ShortGuidConverter()));
+                        File.WriteAllText(dirName + "/COMPOSITE LINKS.json", JsonConvert.SerializeObject(compositeLinks, Newtonsoft.Json.Formatting.Indented, new ShortGuidConverter()));
+                    }
 #endif
                     return false;
                 }

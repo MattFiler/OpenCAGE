@@ -22,26 +22,26 @@ namespace OpenCAGE
         public Action<Entity> OnFinalEntitySelected;
         public Action<List<Entity>> OnFinalEntitiesSelected;
         public Action<ShortGuid[]> OnHierarchyGenerated;
+        public Action<List<ShortGuid[]>> OnHierarchiesGenerated;
 
         private Entity selectedEntity = null;
         private Composite selectedComposite = null;
 
         private bool _multiselect = false;
+        private bool _allowFollowThrough = true;
         private CompositePath _path = new CompositePath();
 
-        public bool ApplyDefaultParams => applyDefaultParams.Visible && applyDefaultParams.Checked;
+        public ShortGuid[] CurrentPathEntities => _path.GetPath().ToArray();
+        public string CurrentEntitySearch => compositeEntityList1.SearchText;
 
         //PROXIES can only point to FunctionEntities - ALIASES can point to FunctionEntities, ProxyEntities, VariableEntities
+        // ShowCheckboxes enables multi-select. With follow-through, checked entities at the current path depth
+        // each get a hierarchy of (path + entity + Invalid).
         public SelectHierarchy(Composite startingComposite, CompositeEntityList.DisplayOptions displayOptions, bool allowFollowThrough = true) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
             InitializeComponent();
+            StayAboveEditor = true; //picker dialog
 
-            if (allowFollowThrough && displayOptions.ShowCheckboxes)
-            {
-                //TODO: the multiselect functionality has expanded this modal past the point it was designed for - needs refactoring
-                Debug.Log("Select Hierarchy", "WARNING: Does not support following through and checkboxes! Checkboxes are only intended for multiselect entity selection (aka node creation)");
-                displayOptions.ShowCheckboxes = false;
-            }
             _multiselect = displayOptions.ShowCheckboxes;
             if (_multiselect)
             {
@@ -51,38 +51,39 @@ namespace OpenCAGE
 
             compositeEntityList1.Setup(startingComposite, displayOptions);
             compositeEntityList1.SelectedEntityChanged += OnSelectedEntityChanged;
+            compositeEntityList1.StepIntoCompositeInstance = StepIntoCompositeInstance;
+            pathBreadcrumb.SegmentClicked += PathSegmentClicked;
 
             LoadComposite(startingComposite);
+            _allowFollowThrough = allowFollowThrough;
             FollowEntityThrough.Visible = allowFollowThrough;
-
-            if (displayOptions.ShowApplyDefaults)
-            {
-                applyDefaultParams.Checked = SettingsManager.GetBool(Settings.PreviouslySearchedParamPopulationProxyOrAlias);
-            }
-            else
-            {
-                applyDefaultParams.Visible = false;
-            }
-
-            SettingsManager.SettingsChanged += OnSettingsChanged;
-            FormClosed += (s, e) => SettingsManager.SettingsChanged -= OnSettingsChanged;
         }
 
-        private void OnSettingsChanged(object sender, SettingsChangedEventArgs e)
+        /* Drill into saved instance path (e.g. last proxy create location). Stops early if a hop is invalid. */
+        public void TryRestoreNavigation(ShortGuid[] pathEntities, string entitySearch = null)
         {
-            if (!e.ExternalChange || IsDisposed || !applyDefaultParams.Visible)
-                return;
-
-            if (!SettingsChangedEventArgs.ContainsKey(e.ChangedKeys, Settings.PreviouslySearchedParamPopulationProxyOrAlias))
-                return;
-
-            if (InvokeRequired)
+            if (pathEntities != null)
             {
-                BeginInvoke(new Action(() => OnSettingsChanged(sender, e)));
-                return;
+                for (int i = 0; i < pathEntities.Length; i++)
+                {
+                    if (selectedComposite == null)
+                        break;
+
+                    Entity entity = selectedComposite.GetEntityByID(pathEntities[i]);
+                    if (entity == null || entity.variant != EntityVariant.FUNCTION)
+                        break;
+
+                    Composite child = Content?.Level?.Commands?.GetComposite(((FunctionEntity)entity).function);
+                    if (child == null)
+                        break;
+
+                    _path.StepForwards(selectedComposite, entity);
+                    LoadComposite(child);
+                }
             }
 
-            applyDefaultParams.Checked = SettingsManager.GetBool(Settings.PreviouslySearchedParamPopulationProxyOrAlias);
+            if (!string.IsNullOrEmpty(entitySearch))
+                compositeEntityList1.ApplySearch(entitySearch);
         }
 
         /* Select a new entity from the composite, show fall through option if available */
@@ -101,27 +102,38 @@ namespace OpenCAGE
         /* Load a composite into the UI */
         private void LoadComposite(Composite composite)
         {
+            selectedComposite = composite;
+            pathBreadcrumb.SetPath(_path, composite);
+
+            compositeEntityList1.LoadComposite(selectedComposite);
+
+            //After the reload, not before it: while the list empties it reports the row it is throwing
+            //away as selected, which handed Select and Follow an entity from the composite just left -
+            //and a hierarchy built through the wrong one.
             selectedEntity = null;
             if (!_multiselect)
                 SelectEntity.Enabled = false;
             FollowEntityThrough.Enabled = false;
-
-            selectedComposite = composite;
-            pathDisplay.Text = _path.GetPath(composite);
-
-            compositeEntityList1.LoadComposite(selectedComposite);
         }
 
         /* If selected entity is a composite instance, allow jump to it */
         private void FollowEntityThrough_Click(object sender, EventArgs e)
         {
-            if (selectedEntity == null) return;
-            if (selectedEntity.variant != EntityVariant.FUNCTION) return;
+            StepIntoCompositeInstance(selectedEntity);
+        }
 
-            Composite composite = Content.Level.Commands.GetComposite(((FunctionEntity)selectedEntity).function);
+        /// <summary>
+        /// Ctrl + middle click on a composite instance, which here means what the Follow Entity Through
+        /// button means: walk this window's own path into it.
+        /// </summary>
+        private void StepIntoCompositeInstance(Entity entity)
+        {
+            if (!_allowFollowThrough || entity == null || entity.variant != EntityVariant.FUNCTION) return;
+
+            Composite composite = Content?.Level?.Commands?.GetComposite(((FunctionEntity)entity).function);
             if (composite == null) return;
 
-            _path.StepForwards(selectedComposite, selectedEntity);
+            _path.StepForwards(selectedComposite, entity);
             LoadComposite(composite);
         }
 
@@ -133,30 +145,85 @@ namespace OpenCAGE
                 List<Entity> entities = compositeEntityList1.CheckedEntities;
                 if (entities.Count == 0 && compositeEntityList1.SelectedEntity != null)
                     entities.Add(compositeEntityList1.SelectedEntity);
+                if (entities.Count == 0)
+                    return;
+
+                List<ShortGuid[]> hierarchies = new List<ShortGuid[]>(entities.Count);
+                for (int i = 0; i < entities.Count; i++)
+                    hierarchies.Add(BuildHierarchy(entities[i].shortGUID));
+
+                OnHierarchiesGenerated?.Invoke(hierarchies);
                 OnFinalEntitiesSelected?.Invoke(entities);
             }
             else
             {
-                if (applyDefaultParams.Visible)
-                    SettingsManager.SetBool(Settings.PreviouslySearchedParamPopulationProxyOrAlias, applyDefaultParams.Checked);
-
-                //TODO: should use the proper hierarchy class here
-                List<ShortGuid> hierarchy = new List<ShortGuid>();
-                hierarchy.AddRange(_path.GetPath());
-                hierarchy.Add(selectedEntity.shortGUID);
-                hierarchy.Add(ShortGuid.Invalid);
-                OnHierarchyGenerated?.Invoke(hierarchy.ToArray());
+                OnHierarchyGenerated?.Invoke(BuildHierarchy(selectedEntity.shortGUID));
                 OnFinalEntitySelected?.Invoke(selectedEntity);
             }
             this.Close();
         }
 
+        private ShortGuid[] BuildHierarchy(ShortGuid entityId)
+        {
+            //TODO: should use the proper hierarchy class here
+            List<ShortGuid> hierarchy = new List<ShortGuid>();
+            hierarchy.AddRange(_path.GetPath());
+            hierarchy.Add(entityId);
+            hierarchy.Add(ShortGuid.Invalid);
+            return hierarchy.ToArray();
+        }
+
         private void goBackOnPath_Click(object sender, EventArgs e)
         {
-            if (_path.StepBackwards(out Composite composite, out Entity entity))
+            LoadPathSegment(_path.AllComposites.Count - 1);
+        }
+
+        /// <summary>
+        /// Jump back up to a composite on the path - a click on the breadcrumb, or Back for the one above.
+        /// </summary>
+        private void LoadPathSegment(int segmentIndex)
+        {
+            if (!_path.TryNavigateToCompositeIndex(selectedComposite, segmentIndex, out Composite composite, out Entity entity))
+                return;
+
+            LoadComposite(composite);
+            compositeEntityList1.SelectEntity(entity);
+        }
+
+        /* The link that was clicked goes with the old path, and keyboard focus with it: hand focus to the
+           list, where the instance the path went through is now selected */
+        private void PathSegmentClicked(int segmentIndex)
+        {
+            LoadPathSegment(segmentIndex);
+            compositeEntityList1.FocusOnList();
+        }
+
+        /// <summary>
+        /// Offer "browse from level root", which lets the user build a path to an entity in another
+        /// branch of the tree rather than only below the composite they started in.
+        /// </summary>
+        public bool AllowRootBrowsing
+        {
+            get { return browseFromRoot.Visible; }
+            set
             {
-                LoadComposite(composite);
+                if (browseFromRoot.Visible == value) return;
+                browseFromRoot.Visible = value;
+
+                //The button and the path share a row, so hand it the space rather than letting the
+                //path draw over the top of it - pathBreadcrumb is added first and so wins the z-order.
+                int left = value ? browseFromRoot.Right + 4 : goBackOnPath.Right + 4;
+                pathBreadcrumb.SetBounds(left, pathBreadcrumb.Top, pathBreadcrumb.Right - left, pathBreadcrumb.Height);
             }
+        }
+
+        private void browseFromRoot_Click(object sender, EventArgs e)
+        {
+            Composite root = Content.Level?.Commands?.EntryPoints?[0];
+            if (root == null) return;
+
+            while (_path.StepBackwards()) { }
+            LoadComposite(root);
         }
     }
 }

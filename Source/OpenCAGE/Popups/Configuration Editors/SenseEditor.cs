@@ -1,4 +1,4 @@
-using CATHODE;
+﻿using CATHODE;
 using OpenCAGE.Popups.Base;
 using System;
 using System.Collections.Generic;
@@ -20,6 +20,7 @@ namespace OpenCAGE.ConfigEditors
         public SenseEditor() : base()
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/senses/");
             ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
             BML attributeTypes = new BML(Singleton.PathToAI + "\\DATA\\CHR_INFO\\ATTRIBUTES\\ATTRIBUTES.BML");
@@ -32,7 +33,7 @@ namespace OpenCAGE.ConfigEditors
             characters.EndUpdate();
 
             this.FormClosing += SenseEditor_FormClosing;
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
         }
 
         private void SenseEditor_Load(object sender, EventArgs e)
@@ -64,10 +65,14 @@ namespace OpenCAGE.ConfigEditors
                 _selectedCharacter.Add(new BML(Singleton.PathToAI + "\\DATA\\CHR_INFO\\ATTRIBUTES\\" + template + ".BML"));
             }
 
-            set1Normal.Populate(_selectedCharacter, "set_1_normal", "Attribute", "Senses", "Sensing_Set_1_Normal");
-            set1Heightened.Populate(_selectedCharacter, "set_1_heightened", "Attribute", "Senses", "Sensing_Set_1_Heightened");
-            set2.Populate(_selectedCharacter, "set_2", "Attribute", "Senses", "Sensing_Set_2");
-            set3.Populate(_selectedCharacter, "set_3", "Attribute", "Senses", "Sensing_Set_3");
+            //Each file in the template chain is read once for all the fields, not once per field
+            using (ConfigEditorUtils.ReadOnce())
+            {
+                set1Normal.Populate(_selectedCharacter, "set_1_normal", "Attribute", "Senses", "Sensing_Set_1_Normal");
+                set1Heightened.Populate(_selectedCharacter, "set_1_heightened", "Attribute", "Senses", "Sensing_Set_1_Heightened");
+                set2.Populate(_selectedCharacter, "set_2", "Attribute", "Senses", "Sensing_Set_2");
+                set3.Populate(_selectedCharacter, "set_3", "Attribute", "Senses", "Sensing_Set_3");
+            }
 
             ConfigEditorUtils.Subscribe(this.Controls, Save);
         }

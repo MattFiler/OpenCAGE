@@ -33,7 +33,6 @@
             this.addNew = new System.Windows.Forms.Button();
             this.permaSoundbanks = new System.Windows.Forms.ListBox();
             this.label1 = new System.Windows.Forms.Label();
-            this.helpBtn = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // removeSelected
@@ -71,26 +70,12 @@
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(170, 13);
             this.label1.TabIndex = 0;
-            this.label1.Text = "Permanently Loaded Soundbanks:";
-            // 
-            // helpBtn
-            // 
-            this.helpBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.helpBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.helpBtn.Image = ((System.Drawing.Image)(resources.GetObject("helpBtn.Image")));
-            this.helpBtn.Location = new System.Drawing.Point(578, 0);
-            this.helpBtn.Name = "helpBtn";
-            this.helpBtn.Size = new System.Drawing.Size(20, 20);
-            this.helpBtn.TabIndex = 477;
-            this.helpBtn.UseVisualStyleBackColor = true;
-            this.helpBtn.Click += new System.EventHandler(this.helpBtn_Click);
-            // 
+            this.label1.Text = "Permanently Loaded Soundbanks:";            // 
             // PermanentSoundbankEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(598, 420);
-            this.Controls.Add(this.helpBtn);
             this.Controls.Add(this.removeSelected);
             this.Controls.Add(this.addNew);
             this.Controls.Add(this.permaSoundbanks);
@@ -112,6 +97,5 @@
         private System.Windows.Forms.ListBox permaSoundbanks;
         private System.Windows.Forms.Button addNew;
         private System.Windows.Forms.Button removeSelected;
-        private System.Windows.Forms.Button helpBtn;
     }
 }

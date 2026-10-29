@@ -1,0 +1,344 @@
+using CATHODE.Scripting;
+using CATHODE.Scripting.Internal;
+using CathodeLib;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.Windows.Forms;
+
+namespace OpenCAGE.UnityConnection
+{
+    /// <summary>
+    /// Keeps the Level Viewer's copy of the zone table up to date. What a zone covers is worked out by
+    /// <see cref="ZoneMembership"/>; this decides when that is worth doing and sends the answer.
+    /// </summary>
+    public static class ViewerZoneSync
+    {
+        //Edits arrive in bursts (a paste, an undo of a group), so a recalculation waits for the burst to end
+        private const int CoalesceMilliseconds = 300;
+
+        private static Timer _coalesce;
+        private static bool _initialised;
+
+        //A table written from wherever the selection's hierarchy starts, for marking a selected Zone's
+        //contents - kept until an edit could have changed it (see ResolveZoneMembers)
+        private static readonly object _selectionTableLock = new object();
+        private static Composite _selectionTableFrom;
+        private static List<SyncedZone> _selectionTable;
+        private static int _generation;
+
+        /// <summary>
+        /// Whether the viewport is highlighting zones: Highlight Zones is on, and there is a viewport to
+        /// draw them. The editor shows zone colours of its own (flowgraph nodes, the inspector) only then,
+        /// since they are there to be matched against the level on screen.
+        /// </summary>
+        public static bool Showing => Singleton.ViewportEnabled && SettingsManager.GetBool(Settings.ShowZones);
+
+        /// <summary>
+        /// The table last worked out for the viewport, written from the level root - exactly what it was
+        /// sent, colours and all. Null while zones are not <see cref="Showing"/>.
+        /// </summary>
+        public static List<SyncedZone> Current { get; private set; }
+
+        /// <summary><see cref="Current"/> was replaced. Always raised on the UI thread.</summary>
+        public static event Action CurrentChanged;
+
+        public static void Initialise()
+        {
+            if (_initialised)
+                return;
+            _initialised = true;
+
+            /* Anything that can move an entity in or out of a zone. There is no event for a link being
+               made or broken on a flowgraph page, nor for most other page edits (deleting a node with its
+               links, a page, pins, and the undo of any of them) - but every edit ends in DirtyTracker, the
+               flowgraph's included, so that stands in for them, as it does for Live Link. The events below
+               it raises anyway; they are kept for edits made while the level is not marked (a save's own). */
+            DirtyTracker.OnDirty += MarkDirty;
+            Singleton.OnLevelLoaded += content =>
+            {
+                //The old level's table names nothing in the new one - drop it rather than colour by it
+                //until the recalculation lands
+                _lastSentTable = null;
+                SetCurrent(null);
+                MarkDirty();
+            };
+            //The selected Zone's table holds one of the closing level's composites: drop it, and the rest with it
+            Singleton.OnLevelClosing += content =>
+            {
+                _coalesce?.Stop();
+                _lastSentTable = null;
+                _calculatedFor = null;
+                SetCurrent(null);
+                DropSelectionTable();
+            };
+            Singleton.OnEntityAdded += entity => MarkDirty();
+            Singleton.OnEntityDeleted += entity => MarkDirty();
+            Singleton.OnEntityReloaded += entity => MarkDirty();
+            Singleton.OnCompositeReloaded += composite => MarkDirty();
+            Singleton.OnCompositeDeleted += composite => MarkDirty();
+            Singleton.OnEntityRenamed += (entity, name) => MarkDirty();
+            Singleton.OnParameterModified += MarkDirty;
+        }
+
+        /// <summary>
+        /// The zone table has (or may have) changed - recalculate and send it once things settle.
+        /// </summary>
+        public static void MarkDirty()
+        {
+            //A selected Zone's contents are worked out whether or not the overlay is on
+            DropSelectionTable();
+
+            if (!SettingsManager.GetBool(Settings.ShowZones))
+                return;
+
+            CommandsEditor editor = Singleton.Editor;
+            if (editor == null || editor.IsDisposed)
+                return;
+
+            if (editor.InvokeRequired)
+            {
+                try
+                {
+                    editor.BeginInvoke(new Action(MarkDirty));
+                }
+                catch (Exception)
+                {
+                }
+                return;
+            }
+
+            if (_coalesce == null)
+            {
+                _coalesce = new Timer() { Interval = CoalesceMilliseconds };
+                _coalesce.Tick += (sender, args) =>
+                {
+                    _coalesce.Stop();
+                    //Save & Build writes the level on a worker while this thread pumps: not now, once it is done
+                    if (ViewerInboundDispatcher.IsHeldForSave)
+                    {
+                        _coalesce.Start();
+                        return;
+                    }
+                    SendNow(skipIfUnchanged: true);
+                };
+            }
+
+            //Restarting it is what coalesces the burst: only the last edit of a run actually fires
+            _coalesce.Stop();
+            _coalesce.Start();
+        }
+
+        /// <summary>Recalculate and send the zone table straight away.</summary>
+        public static void SendNow() => SendNow(skipIfUnchanged: false);
+
+        /* MarkDirty stands in for link edits with every entity reload, and an entity reload is every selection: with
+           the overlay on, each click recalculated the table and broadcast all of it (205 KB on SCI_Hub) although it
+           had not changed. A broadcast the viewer is too busy to read (a populate, a big spawn) blocks the editor's
+           UI thread until it is read, so those clicks froze OpenCAGE while the viewport was working. The recalculation
+           stays - it is what notices a real change - but a table identical to the one the viewer has is not sent
+           again. The explicit callers (overlay switched on, viewer connected or repopulated) always send: the viewer
+           may have nothing. */
+        private static string _lastSentTable;
+
+        /* And what that table was worked out from: the level, as it stood at that count of edits (every edit ends in
+           DirtyTracker - see Initialise). A selection with nothing edited since would work the level's zones out again
+           (around 200 ms on the larger levels) and serialise them, only to find the table the same: it isn't redone. */
+        private static LevelContent _calculatedFor;
+        private static int _calculatedAtEdit;
+
+        private static void SendNow(bool skipIfUnchanged)
+        {
+            if (!Showing)
+            {
+                _lastSentTable = null;
+                SetCurrent(null);
+                return;
+            }
+
+            LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
+            if (content == null || !content.IsLevelDataLoaded)
+                return;
+
+            if (skipIfUnchanged && Current != null && _lastSentTable != null && _calculatedFor == content && _calculatedAtEdit == DirtyTracker.Modifications)
+                return;
+
+            bool compiled = CompileShownFlowgraphs();
+
+            List<SyncedZone> zones;
+            try
+            {
+                zones = ZoneMembership.Calculate(content.Level);
+            }
+            catch (Exception ex)
+            {
+                Debug.Log("Websocket", "Failed to calculate zones for the viewport: " + ex.Message);
+                return;
+            }
+
+            //Only a table worked out from compiled pages stands for the level as it is: one read while they couldn't be (mid-undo,
+            //a save holding the viewer) is worked out again next time, as it always was
+            _calculatedFor = compiled ? content : null;
+            _calculatedAtEdit = DirtyTracker.Modifications;
+
+            string table = JsonConvert.SerializeObject(zones);
+            if (skipIfUnchanged && Current != null && table == _lastSentTable)
+                return;
+
+            SetCurrent(zones);
+            if (Send.Connected)
+            {
+                Send.SendZonesPacket(zones);
+                _lastSentTable = table;
+            }
+            else
+            {
+                _lastSentTable = null;
+            }
+        }
+
+        /* Zones are made of links, and a link made or broken on a flowgraph page lives in the page until the composite's
+           links are compiled from its pages - on leaving the composite, or on a save. Read before then, a Zone wired to a
+           sequence on screen was not in the table until the level was saved. So the composite on screen is compiled first,
+           as Live Link and the MCP tools do before they read a composite's scripting. Compiling is on the UI thread only, and
+           not mid-undo; a table worked out off it (a viewer connecting) uses the links as they stand. */
+        //True when the links are all the pages hold: the composite on screen was compiled from its pages, or none is on screen
+        private static bool CompileShownFlowgraphs()
+        {
+            CommandsEditor editor = Singleton.Editor;
+            if (editor == null || editor.IsDisposed || editor.InvokeRequired || ViewerInboundDispatcher.IsHeldForSave)
+                return false;
+
+            CATHODE.Scripting.Composite shown = editor.CompositeDisplay?.Composite;
+            if (shown == null)
+                return true;
+
+            RuntimeUtilsConnection.LiveLink.CompileIfShown(shown);
+            //A selected Zone's contents may have been worked out from the page's old links
+            DropSelectionTable();
+            return !Undo.UndoStack.Current.Blocked; //which CompileIfShown doesn't compile under
+        }
+
+        private static void SetCurrent(List<SyncedZone> zones)
+        {
+            if (Current == null && zones == null)
+                return;
+            Current = zones;
+
+            CommandsEditor editor = Singleton.Editor;
+            if (editor == null || editor.IsDisposed)
+                return;
+
+            if (editor.InvokeRequired)
+            {
+                try
+                {
+                    editor.BeginInvoke(new Action(() => CurrentChanged?.Invoke()));
+                }
+                catch (Exception)
+                {
+                }
+                return;
+            }
+
+            CurrentChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Where a Zone entity's contents are, for marking them when it is selected - the same roots the
+        /// overlay colours from, so selecting a zone marks exactly what it is drawn over.
+        /// </summary>
+        /// <param name="from">
+        /// The composite the hierarchy starts at, which is what the viewer's scene is built from: the
+        /// paths returned are written from there.
+        /// </param>
+        /// <param name="drillPath">The entity ids stepped through from <paramref name="from"/> to the zone's composite.</param>
+        internal static List<List<uint>> ResolveZoneMembers(
+            Level level,
+            Composite from,
+            IReadOnlyList<uint> drillPath,
+            Composite composite,
+            FunctionEntity zone)
+        {
+            if (level?.Commands == null || from == null || composite == null || zone == null)
+                return null;
+
+            List<SyncedZone> table = SelectionTableFrom(level, from);
+            if (table == null)
+                return null;
+
+            uint zoneId = zone.shortGUID.AsUInt32;
+            uint compositeId = composite.shortGUID.AsUInt32;
+            foreach (SyncedZone candidate in table)
+            {
+                if (candidate.zone_entity != zoneId || candidate.zone_composite != compositeId)
+                    continue;
+                if (!EntityInstancePath.Equal(candidate.zone_path, drillPath))
+                    continue;
+
+                //Two sequences can name the same entity; it is one thing to mark
+                List<List<uint>> roots = new List<List<uint>>(candidate.roots.Count);
+                foreach (List<uint> root in candidate.roots)
+                {
+                    bool seen = false;
+                    foreach (List<uint> kept in roots)
+                    {
+                        if (EntityInstancePath.Equal(kept, root))
+                        {
+                            seen = true;
+                            break;
+                        }
+                    }
+                    if (!seen)
+                        roots.Add(root);
+                }
+                return roots.Count == 0 ? null : roots;
+            }
+
+            return null;
+        }
+
+        private static List<SyncedZone> SelectionTableFrom(Level level, Composite from)
+        {
+            int generation;
+            lock (_selectionTableLock)
+            {
+                if (_selectionTable != null && _selectionTableFrom == from)
+                    return _selectionTable;
+                generation = _generation;
+            }
+
+            List<SyncedZone> table;
+            try
+            {
+                table = ZoneMembership.CalculateFrom(level, from);
+            }
+            catch (Exception ex)
+            {
+                Debug.Log("Websocket", "Failed to calculate zones for the selection: " + ex.Message);
+                return null;
+            }
+
+            lock (_selectionTableLock)
+            {
+                //An edit landed while this was being worked out: use it this once, but don't keep it
+                if (generation == _generation)
+                {
+                    _selectionTableFrom = from;
+                    _selectionTable = table;
+                }
+            }
+            return table;
+        }
+
+        private static void DropSelectionTable()
+        {
+            lock (_selectionTableLock)
+            {
+                _generation++;
+                _selectionTable = null;
+                _selectionTableFrom = null;
+            }
+        }
+    }
+}

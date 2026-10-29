@@ -147,7 +147,6 @@
             this.label54 = new System.Windows.Forms.Label();
             this.hiding_max_search_time = new System.Windows.Forms.NumericUpDown();
             this.label55 = new System.Windows.Forms.Label();
-            this.helpBtn = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.Health_Regeneration_Rate)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.Injured_State_3)).BeginInit();
@@ -1577,26 +1576,12 @@
             this.label55.Name = "label55";
             this.label55.Size = new System.Drawing.Size(90, 13);
             this.label55.TabIndex = 481;
-            this.label55.Text = "Max Search Time";
-            // 
-            // helpBtn
-            // 
-            this.helpBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.helpBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.helpBtn.Image = ((System.Drawing.Image)(resources.GetObject("helpBtn.Image")));
-            this.helpBtn.Location = new System.Drawing.Point(915, 0);
-            this.helpBtn.Name = "helpBtn";
-            this.helpBtn.Size = new System.Drawing.Size(20, 20);
-            this.helpBtn.TabIndex = 539;
-            this.helpBtn.UseVisualStyleBackColor = true;
-            this.helpBtn.Click += new System.EventHandler(this.helpBtn_Click);
-            // 
+            this.label55.Text = "Max Search Time";            // 
             // AttributesEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(935, 633);
-            this.Controls.Add(this.helpBtn);
             this.Controls.Add(this.groupBox13);
             this.Controls.Add(this.groupBox12);
             this.Controls.Add(this.groupBox11);
@@ -1811,6 +1796,5 @@
         private System.Windows.Forms.Label label54;
         private System.Windows.Forms.NumericUpDown hiding_max_search_time;
         private System.Windows.Forms.Label label55;
-        private System.Windows.Forms.Button helpBtn;
     }
 }

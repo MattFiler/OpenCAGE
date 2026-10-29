@@ -41,20 +41,20 @@ namespace OpenCAGE.ConfigEditors
 
         public void Save(XmlElement sense, string setName, string typeName)
         {
-            if (min_raw_activation.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_min_raw_activation_" + setName).InnerText = min_raw_activation.Text;
-            if (max_raw_activation.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_max_raw_activation_" + setName).InnerText = max_raw_activation.Text;
-            if (combined_sense_min_raw_activation.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_combined_sense_min_raw_activation_" + setName).InnerText = combined_sense_min_raw_activation.Text;
-            if (combined_sense_max_raw_activation.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_combined_sense_max_raw_activation_" + setName).InnerText = combined_sense_max_raw_activation.Text;
-            if (lower_threshold.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_lower_threshold_" + setName).InnerText = lower_threshold.Text;
-            if (upper_threshold.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_upper_threshold_" + setName).InnerText = upper_threshold.Text;
-            if (decay_per_second.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_decay_per_second_" + setName).InnerText = decay_per_second.Text;
-            if (min_activated_time.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_min_activated_time_" + setName).InnerText = min_activated_time.Text;
-            if (positional_accuracy_scalar.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_positional_accuracy_scalar_" + setName).InnerText = positional_accuracy_scalar.Text;
-            if (activation_scalar.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_activation_scalar_" + setName).InnerText = activation_scalar.Text;
-            if (combined_sense_activation_scalar.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_combined_sense_activation_scalar_" + setName).InnerText = combined_sense_activation_scalar.Text;
-            if (activation_threshold.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_activation_threshold_" + setName).InnerText = activation_threshold.Text;
-            if (trace_threshold.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_trace_threshold_" + setName).InnerText = trace_threshold.Text;
-            if (last_sensed_expire_time.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_last_sensed_expire_time_" + setName).InnerText = last_sensed_expire_time.Text;
+            if (min_raw_activation.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_min_raw_activation_" + setName).InnerText = ConfigEditorUtils.NumberText(min_raw_activation);
+            if (max_raw_activation.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_max_raw_activation_" + setName).InnerText = ConfigEditorUtils.NumberText(max_raw_activation);
+            if (combined_sense_min_raw_activation.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_combined_sense_min_raw_activation_" + setName).InnerText = ConfigEditorUtils.NumberText(combined_sense_min_raw_activation);
+            if (combined_sense_max_raw_activation.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_combined_sense_max_raw_activation_" + setName).InnerText = ConfigEditorUtils.NumberText(combined_sense_max_raw_activation);
+            if (lower_threshold.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_lower_threshold_" + setName).InnerText = ConfigEditorUtils.NumberText(lower_threshold);
+            if (upper_threshold.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_upper_threshold_" + setName).InnerText = ConfigEditorUtils.NumberText(upper_threshold);
+            if (decay_per_second.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_decay_per_second_" + setName).InnerText = ConfigEditorUtils.NumberText(decay_per_second);
+            if (min_activated_time.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_min_activated_time_" + setName).InnerText = ConfigEditorUtils.NumberText(min_activated_time);
+            if (positional_accuracy_scalar.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_positional_accuracy_scalar_" + setName).InnerText = ConfigEditorUtils.NumberText(positional_accuracy_scalar);
+            if (activation_scalar.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_activation_scalar_" + setName).InnerText = ConfigEditorUtils.NumberText(activation_scalar);
+            if (combined_sense_activation_scalar.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_combined_sense_activation_scalar_" + setName).InnerText = ConfigEditorUtils.NumberText(combined_sense_activation_scalar);
+            if (activation_threshold.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_activation_threshold_" + setName).InnerText = ConfigEditorUtils.NumberText(activation_threshold);
+            if (trace_threshold.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_trace_threshold_" + setName).InnerText = ConfigEditorUtils.NumberText(trace_threshold);
+            if (last_sensed_expire_time.Enabled) ConfigEditorUtils.EnsureChildElements(sense, typeName + "_last_sensed_expire_time_" + setName).InnerText = ConfigEditorUtils.NumberText(last_sensed_expire_time);
         }
     }
 }

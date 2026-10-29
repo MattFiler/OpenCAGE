@@ -18,13 +18,21 @@ namespace Packager
         {
             _outputPath = AppDomain.CurrentDomain.BaseDirectory + _outputPath;
 
+            /* Everything under here is written by this tool, so it starts empty. Now that the app
+             * ships as an exe beside its libraries rather than as one bundled exe, a DLL left behind
+             * by an earlier build would otherwise be uploaded alongside the one that replaced it. */
+            if (Directory.Exists(_outputPath)) Directory.Delete(_outputPath, true);
+            Directory.CreateDirectory(_outputPath);
+
             CopyProjectToBuild("Source/Dependencies/BehaviourTreeEditor/Build/", "legendplugin");
-            CopyProjectToBuild("Source/Dependencies/CinematicTools/Build/", "cinematictools");
-            CopyProjectToBuild("Source/Dependencies/RuntimeUtils/build/", "runtimeutils");
+            /* Cinematic Tools (cinematictools: their injector and DLL) are no longer shipped: the Debug Menu in the runtime
+             * utils has their camera now. Steam removes the files an earlier build shipped from installs as they update. */
+            CopyProjectToBuild("Build/runtimeutils", "runtimeutils");
             CopyProjectToBuild("Source/Dependencies/LevelViewer/Build/", "levelviewer"); //requires manual local build in godot
 
-            File.Copy(AppDomain.CurrentDomain.BaseDirectory + "../../Build/OpenCAGE.exe", _outputPath + "OpenCAGE.exe", true);
+            CopyBuildOutput("Build/");
             File.Copy(AppDomain.CurrentDomain.BaseDirectory + "../steam_api64.dll", _outputPath + "steam_api64.dll", true);
+            File.Copy(AppDomain.CurrentDomain.BaseDirectory + "../../THIRD-PARTY-NOTICES.md", _outputPath + "THIRD-PARTY-NOTICES.md", true);
 
             string version = "";
             {
@@ -52,15 +60,21 @@ namespace Packager
             string exclusionsFile = "OPENCAGE_EXCEPTIONS";
             string folderPath = AppDomain.CurrentDomain.BaseDirectory + "../../" + originalPath;
 
+            /* Debug symbols stay behind from every project, in any folder, whatever its exclusions file
+             * lists - as they do for the app's own files (CopyBuildOutput). A list naming them one by one
+             * let through the ones it didn't name. */
             Dictionary<string, int> exclusions = new Dictionary<string, int>();
+            exclusions[".pdb"] = 0;
+            exclusions["OpenCAGE.RuntimeUtils.exp"] = 0;
+            exclusions["OpenCAGE.RuntimeUtils.lib"] = 0;
             if (File.Exists(folderPath + exclusionsFile))
             {
                 string[] exclusionsFileContent = File.ReadAllLines(folderPath + exclusionsFile);
                 foreach (string exclusion in exclusionsFileContent)
                 {
-                    exclusions.Add(exclusion, 0);
+                    exclusions[exclusion] = 0;
                 }
-                exclusions.Add(exclusionsFile, 0);
+                exclusions[exclusionsFile] = 0;
             }
 
             string[] files = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories);
@@ -95,6 +109,59 @@ namespace Packager
             }
             Console.WriteLine("\tCopied " + copyCount + " files to build.");
 
+        }
+
+        /* What the program is made of: its code, and the data files it reads from beside itself
+         * (flowgraphs.dat - the predefined flowgraph layouts, entity categories and composite previews -
+         * which ships as a file rather than inside the exe to keep the exe small). Anything else MSBuild
+         * leaves in the build folder - debug symbols, the API documentation that comes with a NuGet
+         * package, the settings file the app writes beside itself - is a developer's business and not a
+         * user's. */
+        private static readonly string[] _shippedExtensions = new string[] { ".exe", ".dll", ".config", ".dat" };
+
+        /* Subfolders of the build output that are part of the program: the native binaries the app
+         * ships beside itself, and the one MSBuild makes - runtimes\<rid>\native, where AssimpNet
+         * looks for its native library. The list is opt-in so that a folder someone left behind while
+         * working, a test harness or a scratch build, stays behind rather than being uploaded because
+         * it happened to contain a DLL. */
+        private static readonly string[] _shippedFolders = new string[] { "Native", "runtimes" };
+
+        /// <summary>
+        /// Copy the built application into the root of the build, by rule rather than by name, so a
+        /// library added to the project from now on travels without this tool having to be touched.
+        /// </summary>
+        static void CopyBuildOutput(string originalPath)
+        {
+            string folderPath = AppDomain.CurrentDomain.BaseDirectory + "../../" + originalPath;
+
+            Console.WriteLine("PACKAGER: Copying files for: OpenCAGE");
+
+            List<string> files = new List<string>(Directory.GetFiles(folderPath, "*.*", SearchOption.TopDirectoryOnly));
+            foreach (string folder in _shippedFolders)
+            {
+                if (Directory.Exists(folderPath + folder))
+                    files.AddRange(Directory.GetFiles(folderPath + folder, "*.*", SearchOption.AllDirectories));
+            }
+
+            int copyCount = 0;
+            int skipCount = 0;
+            foreach (string file in files)
+            {
+                if (!_shippedExtensions.Contains(Path.GetExtension(file).ToLower()))
+                {
+                    skipCount++;
+                    continue;
+                }
+
+                string filepathDestination = _outputPath + "/" + file.Replace(folderPath, "");
+                Directory.CreateDirectory(Path.GetDirectoryName(filepathDestination));
+                File.Copy(file, filepathDestination, true);
+                copyCount++;
+            }
+
+            if (skipCount != 0)
+                Console.WriteLine("\tSkipped " + skipCount + " file(s) that aren't part of the program.");
+            Console.WriteLine("\tCopied " + copyCount + " files to build.");
         }
     }
 }

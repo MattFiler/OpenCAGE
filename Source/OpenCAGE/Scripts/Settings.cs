@@ -8,16 +8,24 @@ namespace OpenCAGE
         public const string ShowShortGuids = "ShowEntityIDs";
         public const string CompNameOnlyOpt = "SearchOnlyCompName";
         public const string ShowSavedMsgOpt = "ShowSavedNotif";
+        public const string CompositeImportOpenAfter = "CompositeImportOpenAfter";
+        public const string DidConfigAutoSaveTip = "DidConfigAutoSaveTip";
+        public const string PromptSaveOnClose = "PromptSaveOnClose";
+        public const string AllowAiAssistants = "AllowAiAssistants";
         public const string ShowTexOpt = "ShowTextures";
         public const string FileBrowserViewOpt = "FileBrowserView";
-        public const string EnableFileBrowser = "FileBrowserEnabled";
+        public const string CompositeBrowserMode = "CompositeBrowserMode";
+        public const string CompositePreviewsInTrees = "CompositePreviewsInTrees";
+        public const string CompositePreviewScale = "CompositePreviewScale";
         public const string KeepUsesWindowOpen = "KeepUsesWindowOpen";
-        public const string CompositeSplitWidth = "CompositeSplitWidth";
+        public const string CompositeBrowserSplitter = "CompositeBrowserSplitter";
         public const string WindowWidth = "WindowWidth";
         public const string WindowHeight = "WindowHeight";
         public const string WindowState = "WindowState";
-        public const string SplitWidthMainRight = "SplitWidthMainRight";
-        public const string SplitWidthMainBottom = "SplitWidthMainBottom";
+        public const string DockSplitterLeft = "DockSplitterLeft";
+        public const string DockSplitterRight = "DockSplitterRight";
+        public const string DockSplitterBottom = "DockSplitterBottom";
+        public const string DockSplitterLevelViewer = "DockSplitterLevelViewer";
         public const string PreviouslySelectedFunctionType = "PreviouslySelectedFunctionType";
         public const string PreviouslySearchedFunctionType = "PreviouslySearchedFunctionType";
         public const string EntityPaletteLastUsed = "EntityPaletteLastUsed";
@@ -25,7 +33,8 @@ namespace OpenCAGE
         public const string PreviouslySelectedCompInstType = "PreviouslySelectedCompInstType";
         public const string PreviouslySearchedCompInstType = "PreviouslySearchedCompInstType";
         public const string PreviouslySearchedParamPopulationComp = "PreviouslySearchedParamPopulationComp";
-        public const string CompileInstances = "CompileInstances";
+        //"Show Preview" in the Create Composite Instance Entity and Select Composite windows: the selected composite's stored preview beside the list
+        public const string CompInstShowPreview = "CompInstShowPreview";
         public const string PrevFuncUsesSearch = "PrevFuncUsesSearch";
         public const string PrevCompositeUsesSearch = "PrevCompositeUsesSearch";
         public const string EntitySearchMode = "EntitySearchMode";
@@ -33,14 +42,11 @@ namespace OpenCAGE
         public const string PrevVariableType_Enum = "PrevVariableTypeEnum";
         public const string PrevVariableType_EnumString = "PrevVariableTypeEnumString";
         public const string CustomColours = "CustomColours";
-        public const string EntityInspectorWidth = "EntityInspectorWidth";
-        public const string MainDockLayout = "MainDockLayout";
-        public const string MainDockLayoutVersion = "MainDockLayoutVersion";
-        public const string CompositeDisplayDockLayoutVersion = "CompositeDisplayDockLayoutVersion";
-        public const string CompositeDisplayDockTopPortion = "CompositeDisplayDockTopPortion";
-        public const string LevelViewerPanelDockState = "LevelViewerPanelDockState";
-        public const string PreviouslySearchedParamPopulationProxyOrAlias = "PreviouslySearchedParamPopulationProxyOrAlias";
+        public const string PreviouslySelectedProxyHierarchy = "PreviouslySelectedProxyHierarchy";
+        public const string PreviouslySearchedProxyEntity = "PreviouslySearchedProxyEntity";
         public const string ShowCameraPosition = "ShowCameraPosition";
+        public const string FocusOnSelected = "FocusOnSelected";
+        public const string FixCameraToSelected = "FixCameraToSelected";
         public const string RenderWireframe = "RenderWireframe";
         public const string HideNestedScriptEntities = "HideNestedScriptEntities";
         public const string HighlightAliases = "HighlightAliases";
@@ -49,60 +55,151 @@ namespace OpenCAGE
         public const string LevelViewerGizmoMode = "LevelViewerGizmoMode";
         public const string TransformGridSnap = "TransformGridSnap";
         public const string RotationSnapDegrees = "RotationSnapDegrees";
+        public const string TransformVertexSnap = "TransformVertexSnap";
+        public const string TransformSnapIncrements = "TransformSnapIncrements";
+        public const string RotationSnapIncrements = "RotationSnapIncrements";
         public const string BoxRenderFilters = "BoxRenderFilters";
         public const string RuntimeUtilsOpt = "ConnectToRuntimeUtils";
+        //The viewport's Live Link Camera menu: 0 off, 1 the game's camera follows the viewport's, 2 the viewport's follows the game's
+        public const string LiveLinkCameraMode = "LiveLinkCameraMode";
+        //The on/off the camera mode replaced (on = mode 1): only read to carry it over
+        public const string LiveLinkSyncCamera = "LiveLinkSyncCamera";
+        //The CAGEAnimation editor's "In game": Animation Mode drives the animation in the running game too (live link)
+        public const string LiveLinkAnimateInGame = "LiveLinkAnimateInGame";
+        //The composite display's "Show Activity": flowgraph links light up as the running game uses them (live link)
+        public const string LiveLinkShowActivity = "LiveLinkShowActivity";
+        //The script debugger turned the game's breakpoints switch off as Live Link went off or OpenCAGE closed: turned on again
+        //at the next connection that has the open level's breakpoints in it (LiveLinkDebugger)
+        public const string LiveLinkDebuggerDisarmed = "LiveLinkDebuggerDisarmed";
         public const string NumericStep = "NumericStep";
         public const string NumericStepRot = "NumericStepRot";
-        public const string SavePakAndBin = "SavePakAndBin";
         public const string PrevEntNameSearch = "PrevEntNameSearch";
         public const string GlobalEntitySearchScope = "GlobalEntitySearchScope";
         public const string CrossRefSearchScope = "CrossRefSearchScope";
+        public const string ControlsWindowRemainOnTop = "ControlsWindowRemainOnTop";
         public const string PopulateAllPinsOnCreateNode = "PopulateAllPinsOnCreateNode";
-        public const string OptionToDeleteEntityWithNode = "OptionToDeleteEntityWithNode";
+        public const string FocusCanvasOnNewNode = "FocusCanvasOnNewNode";
+        //Entity Display's "Show Node Icons When Zoomed Out": script flowgraphs and animation trees draw each node as its icon
+        //below EditorIcons.NodeIconZoom. Off, nodes are drawn in full at every zoom, their text just getting smaller
+        public const string NodeIconsWhenZoomedOut = "NodeIconsWhenZoomedOut";
+        public const string DarkMode = "DarkMode";
+        public const string SoundPreviewAutoPlay = "SoundPreviewAutoPlay";
+
         public const string LaunchGameWhenSaved = "LaunchGameWhenSaved";
-        public const string NodeColour_FunctionNode = "NodeColour_FunctionNode";
-        public const string NodeColour_FunctionNodeBottom = "NodeColour_FunctionNodeBottom";
-        public const string NodeColour_FunctionText = "NodeColour_FunctionText";
-        public const string NodeColour_InstanceNode = "NodeColour_InstanceNode";
-        public const string NodeColour_InstanceNodeBottom = "NodeColour_InstanceNodeBottom";
-        public const string NodeColour_InstanceText = "NodeColour_InstanceText";
-        public const string NodeColour_AliasNode = "NodeColour_AliasNode";
-        public const string NodeColour_AliasNodeBottom = "NodeColour_AliasNodeBottom";
-        public const string NodeColour_AliasText = "NodeColour_AliasText";
-        public const string NodeColour_ProxyNode = "NodeColour_ProxyNode";
-        public const string NodeColour_ProxyNodeBottom = "NodeColour_ProxyNodeBottom";
-        public const string NodeColour_ProxyText = "NodeColour_ProxyText";
-        public const string NodeColour_VariableNode = "NodeColour_VariableNode";
-        public const string NodeColour_VariableText = "NodeColour_VariableText";
+
         public const string AskBeforeDeletingNode = "AskBeforeDeletingNode";
         public const string ShowGamePlatform = "ShowPlatform";
         public const string LastSelectedLevel = "LastSelectedLevel";
         public const string GameDirectories = "GameDirectories";
         public const string SaveCounter = "CS_SaveCounter";
         public const string EntityCounter = "CS_EntityCounter";
+        public const string CompositeCounter = "CS_CompositeCounter";
+        public const string ModInstalledCounter = "CS_ModInstalledCounter";
+        public const string ModCreatedCounter = "CS_ModCreatedCounter";
+        public const string LevelCounter = "CS_LevelCounter";
         public const string DidSteamReviewPrompt = "DidSteamReviewPrompt";
         public const string ResetRenderFilters = "ResetRenderFilters";
+        public const string AlwaysFullyRebuildRadiosity = "AlwaysFullyRebuildRadiosity";
+        //Options > Save/Build > Don't Rebuild Radiosity: a build keeps the level's radiosity as it is, without baking (wins over the above)
+        public const string SkipRadiosityRebuild = "SkipRadiosityRebuild";
+        public const string CubemapCaptureSize = "CubemapCaptureSize";
+        //Options > Misc > Hide Live Link Label In-Game: the game doesn't show "OpenCAGE Live Link" in its top-right corner
+        public const string HideLiveLinkLabel = "HideLiveLinkLabel";
         public const string LaunchChildrenWithoutViewport = "LaunchChildrenWithoutViewport";
+        public const string ViewportEnabled = "ViewportEnabled";
+        public const string LevelViewerHighlightMode = "LevelViewerHighlightMode";
+        public const string ShowZones = "ShowZones";
+        public const string RenderGalaxy = "RenderGalaxy";
+        public const string RenderFog = "RenderFog";
+        public const string RenderWater = "RenderWater";
+        public const string RenderPlanets = "RenderPlanets";
+        public const string PlanarReflections = "PlanarReflections";
+        public const string LevelViewerAntialiasMode = "LevelViewerAntialiasMode";
+        public const string LevelViewerDrawDistance = "LevelViewerDrawDistance";
+        public const string EntityListSortColumn = "EntityListSortColumn";
+        public const string EntityListSortAscending = "EntityListSortAscending";
 
-        public const string CinematicTools = "CinematicTools";
         public const string RuntimeUtils = "Runtime_Utils";
         public const string HudDisabled = "HudDisabled";
-        public const string SkipFrontend = "SkipFE";
-        public const string UiEnabledUiPerf = "cUIEnabled_UIPerf";
-        public const string MemReplayLogs = "Mem_Replay_Logs";
+        //Launch Game's "Load straight into": boot into the chosen level past the title screen, or (off) start at the main menu
+        public const string LaunchToLevel = "LaunchToLevel";
         public const string PatchCurrentGen = "PatchCurrentGen";
         public const string RenderConstantAmbient = "RenderConstantAmbient";
+        public const string ScriptingHelpersHotReload = "ScriptingHelpers_HotReload";
+        public const string ScriptingHelpersHotReloadKey = "ScriptingHelpers_HotReloadKey";
+        public const string ScriptingHelpersUnlockMouse = "ScriptingHelpers_UnlockMouse";
+        public const string ScriptingHelpersUnlockMouseKey = "ScriptingHelpers_UnlockMouseKey";
+        public const string ScriptingHelpersCapFps = "ScriptingHelpers_CapFps";
+        public const string ScriptingHelpersCapFpsRate = "ScriptingHelpers_CapFpsRate";
+        //Launch Game's "Debug entities": the debug script entities work in game (DebugText, DebugTextStacking, the two markers,
+        //DebugGraph, DebugMenuToggle, DebugObjectMarker, DebugCaptureScreenShot) - one switch for the eight runtime utils keys
+        public const string DebugEntities = "ScriptingHelpers_DebugEntities";
+        public const string ScriptingHelpersLiveLink = "ScriptingHelpers_LiveLink";
+        //Launch Game's "Error log" (under Live Link): the game notes its script errors, and the Error Log window opens as it
+        //is launched and lists them as they happen
+        public const string ErrorLog = "ErrorLog";
+        //The Error Log window's own options: start afresh at each launch (on by default), and list the errors under their entities
+        public const string ErrorLogClearOnPlay = "ErrorLogClearOnPlay";
+        public const string ErrorLogGroupByEntity = "ErrorLogGroupByEntity";
+        //Possess Characters (Launch Game > Game options): its key opens an in-game menu to take a character and move it
+        public const string PossessCharacters = "PossessCharacters";
+        public const string PossessCharactersKey = "PossessCharactersKey";
+        public const string DebugMenu = "DebugMenu";
+        public const string DebugMenuKey = "DebugMenuKey";
+        //The Debug Menu's Don't Write Saves as the game starts (Launch Game > Debug tools, only with the Debug Menu on)
+        public const string DontWriteSaves = "DontWriteSaves";
+        //Cinematic Tools, the camera tool OpenCAGE started beside the game until 21 Oct 2026, when the Debug Menu took it over (its
+        //Cinematic group): whoever had it on gets the Debug Menu on, once, and these keys go (SettingsDefaults)
+        public const string LegacyCinematicTools = "CinematicTools";
+        //...and the marker set once whoever had Cinematic Tools and a scripting helper both on had been moved to one or the other
+        public const string LegacyCinematicToolsOrHelpers = "CinematicToolsOrHelpers";
+        //Launch Game options until its redesign on 22 Oct 2026, moved or dropped once (SettingsDefaults): the four debug entity
+        //switches became Debug entities; Skip Frontend is implied by "Load straight into"; the UI memory overlay is the Debug
+        //Menu's (Performance > Memory); memory logging went. Launches write the AI.exe patches the last two left on back off.
+        public const string LegacyDebugText = "ScriptingHelpers_DebugText";
+        public const string LegacyDebugTextStacking = "ScriptingHelpers_DebugTextStacking";
+        public const string LegacyDebugEnvironmentMarker = "ScriptingHelpers_DebugEnvironmentMarker";
+        public const string LegacyDebugPositionMarker = "ScriptingHelpers_DebugPositionMarker";
+        public const string LegacySkipFrontend = "SkipFE";
+        public const string LegacyUiMemoryOverlay = "cUIEnabled_UIPerf";
+        public const string LegacyMemoryLogging = "Mem_Replay_Logs";
 
-        public const string UiModPauseMenu = "PAUSEMENU";
-        public const string UiModLoadingScreen = "LOADINGSCREEN";
-        public const string UiModNewFrontendMenu = "NEWFRONTENDMENU";
-        public const string UiModGameOverMenu = "GAMEOVERMENU";
+        //The Launch Game UI options: OpenCAGE's own menu movies beside the game's in UI.PAK, the game pointed at them (UiMovieOverrides)
+        //(Quicker Loadscreen, Quit Option On Deathscreen, Debug Checkpoints in the pause menu, Level Select in the main menu). The
+        //last two were dropped on 22 Oct 2026 for the Debug Menu's own and brought back on 25 Oct, under the same keys
+        public const string UiModLoadingScreen = "UiOption_LoadingScreen";
+        public const string UiModGameOverMenu = "UiOption_GameOverMenu";
+        public const string UiModPauseMenu = "UiOption_PauseMenu";
+        public const string UiModNewFrontendMenu = "UiOption_NewFrontendMenu";
+        //...named until 17 Oct 2026 after the movies themselves, when ticking one wrote OpenCAGE's movie OVER the game's in UI.PAK.
+        //Moved onto the keys above once (SettingsDefaults), then removed
+        public const string LegacyUiModPauseMenu = "PAUSEMENU";
+        public const string LegacyUiModLoadingScreen = "LOADINGSCREEN";
+        public const string LegacyUiModNewFrontendMenu = "NEWFRONTENDMENU";
+        public const string LegacyUiModGameOverMenu = "GAMEOVERMENU";
+        //The UI.PAK last checked for menus an older OpenCAGE wrote over the game's (path, size and time written)
+        public const string UiOptionsCheckedPak = "UiOption_CheckedPak";
 
-        public static string UiMod(string file) => file;
+        public const string AnimationEditorSplitter = "AnimEditorSplitter";
+        public const string AnimationEditorTab = "AnimEditorTab";
+        public const string AnimationShowBones = "AnimShowBones";
+        public const string AnimationShowMesh = "AnimShowMesh";
+        public const string AnimationShowTextures = "AnimShowTextures";
+        public const string AnimationLoop = "AnimLoop";
+        public const string AnimationRootMotion = "AnimRootMotion";
 
-        public static bool IsNodeColourKey(string key)
-        {
-            return key != null && key.StartsWith("NodeColour_");
-        }
+        //the file format last exported to, so the save dialog opens on it again
+        public const string AnimationExportFormat = "AnimExportFormat";
+        public const string ModelExportFormat = "ModelExportFormat";
+
+        /* The rig and mesh chosen to preview an animation set with. Kept per set rather than derived
+         * from the retail data, so that it still holds once a set's contents can be edited. */
+        private const string AnimationPreviewModelPrefix = "AnimPreviewModel_";
+        private const string AnimationPreviewSkeletonPrefix = "AnimPreviewSkeleton_";
+
+        public static string AnimationPreviewModel(string set) => AnimationPreviewModelPrefix + (set ?? "");
+        public static string AnimationPreviewSkeleton(string set) => AnimationPreviewSkeletonPrefix + (set ?? "");
+
+
     }
 }

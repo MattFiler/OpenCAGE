@@ -44,7 +44,6 @@
             this.removeOutputItem = new System.Windows.Forms.Button();
             this.addNewOutputItem = new System.Windows.Forms.Button();
             this.label5 = new System.Windows.Forms.Label();
-            this.helpBtn = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.groupBox3.SuspendLayout();
             this.SuspendLayout();
@@ -189,26 +188,12 @@
             this.label5.Size = new System.Drawing.Size(299, 26);
             this.label5.TabIndex = 336;
             this.label5.Text = "It\'s recommended to stick to existing item input requirements\r\nas the UI will nee" +
-    "d to be modded to support new components.\r\n";
-            // 
-            // helpBtn
-            // 
-            this.helpBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.helpBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.helpBtn.Image = ((System.Drawing.Image)(resources.GetObject("helpBtn.Image")));
-            this.helpBtn.Location = new System.Drawing.Point(490, 1);
-            this.helpBtn.Name = "helpBtn";
-            this.helpBtn.Size = new System.Drawing.Size(20, 20);
-            this.helpBtn.TabIndex = 373;
-            this.helpBtn.UseVisualStyleBackColor = true;
-            this.helpBtn.Click += new System.EventHandler(this.helpBtn_Click);
-            // 
+    "d to be modded to support new components.\r\n";            // 
             // BlueprintEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(510, 322);
-            this.Controls.Add(this.helpBtn);
             this.Controls.Add(this.label5);
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.groupBox1);
@@ -237,7 +222,6 @@
         private System.Windows.Forms.Button removeOutputItem;
         private System.Windows.Forms.Button addNewOutputItem;
         private System.Windows.Forms.Label label5;
-        private System.Windows.Forms.Button helpBtn;
         private System.Windows.Forms.ListView blueprintInput;
         private System.Windows.Forms.ColumnHeader columnHeader1;
         private System.Windows.Forms.ColumnHeader columnHeader2;

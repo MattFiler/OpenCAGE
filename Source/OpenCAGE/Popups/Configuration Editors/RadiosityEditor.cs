@@ -1,4 +1,5 @@
 ﻿using OpenCAGE.Popups.Base;
+using OpenCAGE.RuntimeUtilsConnection;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -13,6 +14,7 @@ namespace OpenCAGE.ConfigEditors
         public RadiosityEditor() : base()
         {
             InitializeComponent();
+            BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/radiosity/");
             ConfigEditorUtils.ExpandNumericRanges(this.Controls);
         }
 
@@ -30,7 +32,11 @@ namespace OpenCAGE.ConfigEditors
 
             ConfigEditorUtils.Subscribe(this.Controls, Save);
             this.FormClosing += RadiosityEditor_FormClosing;
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
+
+            //The game reads these when a level loads; with Live Link connected each change reaches it at once
+            LiveSettings.Attach(this, liveStatus, (LiveLink.SettingsFile.Radiosity, () => LiveSettings.Values(gRadiosityEmissiveSurfaceScale, gRadiosityFirstBounceScale,
+                gRadiosityMultiBounceScale, gRadiosityAlbedoOverbrightAmount, gRadiosityAlbedoSaturationAmount, gRadiositySpecularGlossScale)));
         }
 
         private void RadiosityEditor_FormClosing(object sender, FormClosingEventArgs e)
@@ -43,22 +49,17 @@ namespace OpenCAGE.ConfigEditors
         {
             File.WriteAllText(Singleton.PathToAI + @"\DATA\RADIOSITY_SETTINGS.TXT", 
                 "settings_file_version=1" + Environment.NewLine +
-                "gRadiosityEmissiveSurfaceScale=" + gRadiosityEmissiveSurfaceScale.Text + Environment.NewLine +
-                "gRadiosityFirstBounceScale=" + gRadiosityFirstBounceScale.Text + Environment.NewLine +
-                "gRadiosityMultiBounceScale=" + gRadiosityMultiBounceScale.Text + Environment.NewLine +
-                "gRadiosityAlbedoOverbrightAmount=" + gRadiosityAlbedoOverbrightAmount.Text + Environment.NewLine +
-                "gRadiosityAlbedoSaturationAmount=" + gRadiosityAlbedoSaturationAmount.Text + Environment.NewLine +
-                "gRadiositySpecularGlossScale=" + gRadiositySpecularGlossScale.Text + Environment.NewLine +
+                "gRadiosityEmissiveSurfaceScale=" + ConfigEditorUtils.NumberText(gRadiosityEmissiveSurfaceScale) + Environment.NewLine +
+                "gRadiosityFirstBounceScale=" + ConfigEditorUtils.NumberText(gRadiosityFirstBounceScale) + Environment.NewLine +
+                "gRadiosityMultiBounceScale=" + ConfigEditorUtils.NumberText(gRadiosityMultiBounceScale) + Environment.NewLine +
+                "gRadiosityAlbedoOverbrightAmount=" + ConfigEditorUtils.NumberText(gRadiosityAlbedoOverbrightAmount) + Environment.NewLine +
+                "gRadiosityAlbedoSaturationAmount=" + ConfigEditorUtils.NumberText(gRadiosityAlbedoSaturationAmount) + Environment.NewLine +
+                "gRadiositySpecularGlossScale=" + ConfigEditorUtils.NumberText(gRadiositySpecularGlossScale) + Environment.NewLine +
                 "gDeferredEmissiveSurfaceScale=1.487500" + Environment.NewLine +
                 "gDeferredEmissiveSurfaceExponent=0.563500");
+            LiveSettings.Changed(LiveLink.SettingsFile.Radiosity);
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
-        }
-
-        private void helpBtn_Click(object sender, EventArgs e)
-        {
-            Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
-            Process.Start("https://opencage.co.uk/docs/configs/radiosity");
         }
     }
 }

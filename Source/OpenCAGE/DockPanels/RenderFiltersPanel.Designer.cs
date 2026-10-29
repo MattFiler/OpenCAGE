@@ -6,6 +6,9 @@ namespace OpenCAGE.DockPanels
 
         protected override void Dispose(bool disposing)
         {
+            //Here rather than on closing: a user close only hides the panel, and a level change disposes it without one
+            if (disposing)
+                SettingsManager.SettingsChanged -= OnSettingsChanged;
             if (disposing && (components != null))
                 components.Dispose();
             base.Dispose(disposing);

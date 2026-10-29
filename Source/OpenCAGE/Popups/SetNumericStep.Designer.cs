@@ -84,6 +84,7 @@
             this.Controls.Add(this.posStep);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
+            this.MaximizeBox = false;
             this.Name = "SetNumericStep";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Set Numeric Step";

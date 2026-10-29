@@ -27,6 +27,64 @@ namespace OpenCAGE
 
         public static bool IsApplyingViewerSelection => ApplyingViewerSelectionDepth > 0;
 
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern int GetMessageTime();
+
+        /// <summary>
+        /// When the user input behind the editor's selection was made: GetTickCount milliseconds (the clock a viewer pick's
+        /// selection_input_tick is on), 0 before any. Only ever moves forward.
+        /// </summary>
+        public static uint SelectionInputTick { get; private set; }
+
+        /// <summary>
+        /// The editor's selection is changing here, as the user asked (a node clicked, a row picked, an undo): its time is the message
+        /// being handled - the click itself, not when the UI thread got round to it. A viewer pick being applied brings its own time.
+        /// UI thread.
+        /// </summary>
+        public static void NoteLocalSelectionInput()
+        {
+            if (IsApplyingViewerSelection)
+                return;
+            NoteSelectionInput(unchecked((uint)GetMessageTime()));
+        }
+
+        private static void NoteSelectionInput(uint tick)
+        {
+            if (tick != 0 && (SelectionInputTick == 0 || unchecked((int)(tick - SelectionInputTick)) > 0))
+                SelectionInputTick = tick;
+        }
+
+        /// <summary>
+        /// Whether a viewer pick was made before the editor's selection was last changed here: it arrived late (the viewer was busy,
+        /// or the editor was) and a newer choice stands. 0 is a viewer from before picks carried their time: never stale.
+        /// </summary>
+        public static bool IsOlderThanSelection(uint tick)
+        {
+            return tick != 0 && SelectionInputTick != 0 && unchecked((int)(tick - SelectionInputTick)) < 0;
+        }
+
+        /// <summary>
+        /// Run another viewer-originated packet apply (paste/create) under the same focus rules as
+        /// selection sync: editor UI updates without stealing Win32 focus from the viewer, and viewer
+        /// focus is restored afterwards while the cursor is over the viewport.
+        /// </summary>
+        public static void RunAsViewerOriginated(Action action)
+        {
+            if (action == null)
+                return;
+
+            ApplyingViewerSelectionDepth++;
+            try
+            {
+                action();
+            }
+            finally
+            {
+                ApplyingViewerSelectionDepth--;
+                ScheduleLevelViewerFocusRestore();
+            }
+        }
+
         public static bool TryApply(Packet packet)
         {
             if (packet == null)
@@ -62,8 +120,19 @@ namespace OpenCAGE
             }
 
             CompositeBrowser commands = Singleton.Editor?.CompositeBrowser;
-            if (commands?.Content?.Level == null)
+            //Level is there from the moment a load begins; its commands only once it is done
+            if (commands?.Content == null || !commands.Content.IsLevelDataLoaded)
                 return false;
+
+            /* Picked in the viewport before something was selected here (a node clicked meanwhile), but only arriving now: the last
+               choice the user made stands. The viewer already shows its own pick, so it is told the editor's selection again. */
+            if (IsOlderThanSelection(packet.selection_input_tick))
+            {
+                Debug.Log("Websocket", "Ignored a viewport selection made before the editor's latest one");
+                Send.ResendSelection();
+                return false;
+            }
+            NoteSelectionInput(packet.selection_input_tick);
 
             Composite entryComposite = commands.Content.Level.Commands.GetComposite(new ShortGuid(packet.path_composites[0]));
             if (entryComposite == null)
@@ -92,6 +161,8 @@ namespace OpenCAGE
                         && display.Composite?.shortGUID == ownerComposite.shortGUID
                         && display.TrySelectAddedAlias(ownerComposite, directEntity))
                     {
+                        //The rest of a multi-selection comes along with whichever way the leaf was applied
+                        TryApplyMultiSelection(display, commands, packet);
                         return true;
                     }
                 }
@@ -118,6 +189,9 @@ namespace OpenCAGE
                     }
                 }
 
+                if (applied && entitySelected)
+                    TryApplyMultiSelection(display, commands, packet);
+
                 return applied;
             }
             finally
@@ -126,6 +200,32 @@ namespace OpenCAGE
                 SuppressSyncBroadcastDepth--;
                 ScheduleLevelViewerFocusRestore();
             }
+        }
+
+        /* The viewer selected several entities together (ctrl-clicked in the viewport). The primary
+           one is already selected here; this brings the rest with it, so the list and the inspector
+           show the same selection the viewport does. */
+        private static void TryApplyMultiSelection(CompositeDisplay display, CompositeBrowser commands, Packet packet)
+        {
+            if (packet.selection_entities == null || packet.selection_entities.Count < 2)
+                return;
+
+            Composite composite = packet.composite != 0
+                ? commands.Content.Level.Commands.GetComposite(new ShortGuid(packet.composite))
+                : display.Composite;
+            if (composite == null || display.Composite?.shortGUID != composite.shortGUID)
+                return;
+
+            List<Entity> entities = new List<Entity>();
+            foreach (uint entityId in packet.selection_entities)
+            {
+                Entity entity = composite.GetEntityByID(new ShortGuid(entityId));
+                if (entity != null && !entities.Contains(entity))
+                    entities.Add(entity);
+            }
+
+            if (entities.Count > 1)
+                display.ApplyViewerMultiSelection(entities);
         }
 
         private static void ScheduleLevelViewerFocusRestore()
@@ -137,14 +237,30 @@ namespace OpenCAGE
             editor.BeginInvoke(new Action(() => TryRestoreLevelViewerFocus(editor)));
         }
 
+        //Waits out a held mouse button before focus goes back to the viewer
+        private static System.Windows.Forms.Timer _focusRestoreWait;
+
         private static void TryRestoreLevelViewerFocus(CommandsEditor editor)
         {
             if (editor == null || editor.IsDisposed)
                 return;
 
+            /* Looked at again shortly, once the button is up. Posting this again instead ran it over and over within the one turn
+               of the UI thread (WinForms runs callbacks queued by a callback straight away) - a spin for as long as the button was
+               held, with every click, key and repaint waiting behind it. */
             if (NativeMouseInput.IsAnyMouseButtonPressed)
             {
-                editor.BeginInvoke(new Action(() => TryRestoreLevelViewerFocus(editor)));
+                if (_focusRestoreWait == null)
+                {
+                    _focusRestoreWait = new System.Windows.Forms.Timer() { Interval = 50 };
+                    _focusRestoreWait.Tick += (s, e) =>
+                    {
+                        _focusRestoreWait.Stop();
+                        TryRestoreLevelViewerFocus(Singleton.Editor);
+                    };
+                }
+                _focusRestoreWait.Stop();
+                _focusRestoreWait.Start();
                 return;
             }
 

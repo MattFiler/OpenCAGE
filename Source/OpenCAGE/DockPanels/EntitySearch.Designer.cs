@@ -6,6 +6,8 @@ namespace OpenCAGE.DockPanels
 
         protected override void Dispose(bool disposing)
         {
+            if (disposing)
+                Unsubscribe();
             if (disposing && (components != null))
                 components.Dispose();
             base.Dispose(disposing);
@@ -14,8 +16,7 @@ namespace OpenCAGE.DockPanels
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            System.ComponentModel.ComponentResourceManager clearBtnResources = new System.ComponentModel.ComponentResourceManager(typeof(OpenCAGE.Popups.UserControls.CompositeEntityList));
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(OpenCAGE.GlobalEntitySearcher));
+            System.ComponentModel.ComponentResourceManager entityListResources = new System.ComponentModel.ComponentResourceManager(typeof(OpenCAGE.Popups.UserControls.CompositeEntityList));
             this.searchHeaderPanel = new System.Windows.Forms.Panel();
             this.modeCombo = new System.Windows.Forms.ComboBox();
             this.scopeSettingsBtn = new System.Windows.Forms.Button();
@@ -28,7 +29,6 @@ namespace OpenCAGE.DockPanels
             this.entityList = new System.Windows.Forms.ListView();
             this.entityNameColumn = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.entityTypeColumn = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.entityListIcons = new System.Windows.Forms.ImageList(this.components);
             this.searchHeaderPanel.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -82,7 +82,7 @@ namespace OpenCAGE.DockPanels
             // 
             this.clearSearchBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.clearSearchBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.clearSearchBtn.Image = ((System.Drawing.Image)(clearBtnResources.GetObject("clearSearchBtn.Image")));
+            this.clearSearchBtn.Image = ((System.Drawing.Image)(entityListResources.GetObject("clearSearchBtn.Image")));
             this.clearSearchBtn.Location = new System.Drawing.Point(345, 26);
             this.clearSearchBtn.Name = "clearSearchBtn";
             this.clearSearchBtn.Size = new System.Drawing.Size(20, 20);
@@ -146,7 +146,6 @@ namespace OpenCAGE.DockPanels
             this.entityList.HideSelection = false;
             this.entityList.MultiSelect = false;
             this.entityList.Name = "entityList";
-            this.entityList.SmallImageList = this.entityListIcons;
             this.entityList.TabIndex = 1;
             this.entityList.UseCompatibleStateImageBehavior = false;
             this.entityList.View = System.Windows.Forms.View.Details;
@@ -160,18 +159,6 @@ namespace OpenCAGE.DockPanels
             // 
             this.entityTypeColumn.Text = "Type";
             this.entityTypeColumn.Width = 120;
-            // 
-            // entityListIcons
-            // 
-            this.entityListIcons.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("entityListIcons.ImageStream")));
-            this.entityListIcons.TransparentColor = System.Drawing.Color.Transparent;
-            this.entityListIcons.Images.SetKeyName(0, "AnimatorController Icon.png");
-            this.entityListIcons.Images.SetKeyName(1, "d_ScriptableObject Icon braces only.png");
-            this.entityListIcons.Images.SetKeyName(2, "d_PrefabVariant Icon.png");
-            this.entityListIcons.Images.SetKeyName(3, "d_ScriptableObject Icon.png");
-            this.entityListIcons.Images.SetKeyName(4, "AreaEffector2D Icon.ico");
-            this.entityListIcons.Images.SetKeyName(5, "variable left.png");
-            this.entityListIcons.Images.SetKeyName(6, "variable right.png");
             // 
             // EntitySearch
             // 
@@ -204,6 +191,5 @@ namespace OpenCAGE.DockPanels
         private System.Windows.Forms.ListView entityList;
         private System.Windows.Forms.ColumnHeader entityNameColumn;
         private System.Windows.Forms.ColumnHeader entityTypeColumn;
-        private System.Windows.Forms.ImageList entityListIcons;
     }
 }

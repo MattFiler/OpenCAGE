@@ -46,6 +46,20 @@ namespace OpenCAGE
                 }
             }
 
+            //A composite's name is used as a path: a character a path can't hold breaks the editor's handling of it
+            char bad = path.FirstOrDefault(c => Path.GetInvalidPathChars().Contains(c));
+            if (bad != default(char))
+            {
+                MessageBox.Show("Failed to rename composite: its name can't contain " + (char.IsControl(bad) ? "control characters" : "'" + bad + "'") + ".", "Composite path/name invalid", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            string nameProblem = EditorUtils.UnstorableTextProblem(path, "This composite name");
+            if (nameProblem != null)
+            {
+                MessageBox.Show(nameProblem, "Composite path/name invalid", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             for (int i = 0; i < Content.Level.Commands.Entries.Count; i++)
             {
                 if (Content.Level.Commands.Entries[i].name.Replace("\\", "/") == path)
@@ -56,6 +70,7 @@ namespace OpenCAGE
             }
             //--
 
+            string previousName = _composite.name;
             //Update composite name
             _composite.name = path.Replace("/", "\\");
 
@@ -70,6 +85,10 @@ namespace OpenCAGE
 
             //Fire off an event so any UI that references the name can update
             Singleton.OnCompositeRenamed?.Invoke(_composite, path);
+            DirtyTracker.MarkLevelDataModified();
+            OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.CompositeRenameEdit(
+                new List<OpenCAGE.Undo.CompositeRenameEdit.Rename>() { new OpenCAGE.Undo.CompositeRenameEdit.Rename() { Composite = _composite.shortGUID, Before = previousName, After = _composite.name } },
+                "Rename composite " + EditorUtils.GetCompositeName(_composite)));
 
             this.Close();
         }

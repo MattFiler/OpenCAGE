@@ -29,18 +29,12 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SelectEnumString));
-            System.Windows.Forms.ListViewGroup listViewGroup1 = new System.Windows.Forms.ListViewGroup("Parameters", System.Windows.Forms.HorizontalAlignment.Left);
-            System.Windows.Forms.ListViewGroup listViewGroup2 = new System.Windows.Forms.ListViewGroup("Functions", System.Windows.Forms.HorizontalAlignment.Left);
-            System.Windows.Forms.ListViewGroup listViewGroup3 = new System.Windows.Forms.ListViewGroup("Composite Instances", System.Windows.Forms.HorizontalAlignment.Left);
-            System.Windows.Forms.ListViewGroup listViewGroup4 = new System.Windows.Forms.ListViewGroup("Proxies", System.Windows.Forms.HorizontalAlignment.Left);
-            System.Windows.Forms.ListViewGroup listViewGroup5 = new System.Windows.Forms.ListViewGroup("Aliases", System.Windows.Forms.HorizontalAlignment.Left);
             this.clearSearchBtn = new System.Windows.Forms.Button();
             this.strings = new System.Windows.Forms.ListView();
             this.ID = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.EntityType = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.search_box = new System.Windows.Forms.TextBox();
             this.selectBtn = new System.Windows.Forms.Button();
-            this.ShowMetadata = new System.Windows.Forms.Button();
             this.enumStringTypeSelect = new System.Windows.Forms.ComboBox();
             this.SuspendLayout();
             // 
@@ -65,22 +59,6 @@
             this.ID,
             this.EntityType});
             this.strings.FullRowSelect = true;
-            listViewGroup1.Header = "Parameters";
-            listViewGroup1.Name = "Variables";
-            listViewGroup2.Header = "Functions";
-            listViewGroup2.Name = "Functions";
-            listViewGroup3.Header = "Composite Instances";
-            listViewGroup3.Name = "Composites";
-            listViewGroup4.Header = "Proxies";
-            listViewGroup4.Name = "Proxies";
-            listViewGroup5.Header = "Aliases";
-            listViewGroup5.Name = "Aliases";
-            this.strings.Groups.AddRange(new System.Windows.Forms.ListViewGroup[] {
-            listViewGroup1,
-            listViewGroup2,
-            listViewGroup3,
-            listViewGroup4,
-            listViewGroup5});
             this.strings.HideSelection = false;
             this.strings.LabelWrap = false;
             this.strings.Location = new System.Drawing.Point(2, 29);
@@ -124,17 +102,6 @@
             this.selectBtn.UseVisualStyleBackColor = true;
             this.selectBtn.Click += new System.EventHandler(this.selectBtn_Click);
             // 
-            // ShowMetadata
-            // 
-            this.ShowMetadata.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.ShowMetadata.Location = new System.Drawing.Point(441, 634);
-            this.ShowMetadata.Name = "ShowMetadata";
-            this.ShowMetadata.Size = new System.Drawing.Size(151, 26);
-            this.ShowMetadata.TabIndex = 182;
-            this.ShowMetadata.Text = "Show Metadata";
-            this.ShowMetadata.UseVisualStyleBackColor = true;
-            this.ShowMetadata.Click += new System.EventHandler(this.ShowMetadata_Click);
-            // 
             // enumStringTypeSelect
             // 
             this.enumStringTypeSelect.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
@@ -154,7 +121,6 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(759, 670);
             this.Controls.Add(this.enumStringTypeSelect);
-            this.Controls.Add(this.ShowMetadata);
             this.Controls.Add(this.selectBtn);
             this.Controls.Add(this.clearSearchBtn);
             this.Controls.Add(this.strings);
@@ -178,7 +144,6 @@
         private System.Windows.Forms.ColumnHeader EntityType;
         private System.Windows.Forms.TextBox search_box;
         private System.Windows.Forms.Button selectBtn;
-        private System.Windows.Forms.Button ShowMetadata;
         private System.Windows.Forms.ComboBox enumStringTypeSelect;
     }
 }

@@ -37,6 +37,7 @@ namespace OpenCAGE
             guid_parent = entDisplay.Entity.shortGUID;
 
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/scripting-intro/");
 
             this.Text += " - " + Content.EditorUtils.GenerateEntityName(entDisplay.Entity, entDisplay.Composite);
             resourceType.SelectedIndex = 0;
@@ -48,9 +49,11 @@ namespace OpenCAGE
         {
             _entDisplay = entDisplay;
             _parameter = parameter;
+            _entity = entDisplay?.Entity as FunctionEntity;
             guid_parent = parameter.shortGUID;
 
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/scripting-intro/");
 
             this.Text += " - " + windowTitle;
             resourceType.SelectedIndex = 0;
@@ -66,6 +69,10 @@ namespace OpenCAGE
             List<ResourceReference> resources = (_parameter != null) ? _parameter.value : _entity.resources;
             for (int i = 0; i < resources.Count; i++)
             {
+                //these types are just managed on save, no need to show in ui
+                if (EntityInspector.IsMarkerOnlyResourceType(resources[i].resource_type))
+                    continue;
+
                 ResourceUserControl resourceGroup = null;
                 switch (resources[i].resource_type)
                 {
@@ -78,6 +85,9 @@ namespace OpenCAGE
                         if (resources[i].CollisionMapping == null)
                             continue;
                         resourceGroup = new GUI_Resource_CollisionMapping();
+                        break;
+                    case ResourceType.DYNAMIC_PHYSICS_SYSTEM:
+                        resourceGroup = new GUI_Resource_DynamicPhysicsSystem() { HostComposite = _entDisplay?.Composite, HostEntity = _entity };
                         break;
                     case ResourceType.RENDERABLE_INSTANCE:
                         if (resources[i].RenderableInstance == null)
@@ -98,8 +108,6 @@ namespace OpenCAGE
         /* Add a new resource reference to the list */
         private void addResource_Click(object sender, EventArgs e)
         {
-            //todo - this should be handled better - in particular, if you make a ModelReference entity for example, the appropriate resources should be added by default
-
             ResourceType type = (ResourceType)Enum.Parse(typeof(ResourceType), resourceType.Items[resourceType.SelectedIndex].ToString());
 
             //If we don't have EntityDisplay, we can't make DynamicPhysicsSystem: this is the result of this editor being made in a crap way. really we should probs implicitly handle the resource parameter
@@ -133,15 +141,25 @@ namespace OpenCAGE
                     return;
                 }
 
-                newReference.AnimatedModel = new EnvironmentAnimations.EnvironmentAnimation();
-                newReference.AnimatedModel.ResourceIndex = Content.Level.EnvironmentAnimations.Entries[Content.Level.EnvironmentAnimations.Entries.Count - 1].ResourceIndex + 1;
+                //Empty but complete: the save writes every one of these lists (and hashes the skeleton name), so none may be null
+                newReference.AnimatedModel = new EnvironmentAnimations.EnvironmentAnimation()
+                {
+                    Matrix = System.Numerics.Matrix4x4.Identity,
+                    SkeletonName = "",
+                    BoneMappings = new List<ShortGuid>(),
+                    MeshMappings = new List<ShortGuid>(),
+                    InverseBindPoses = new List<System.Numerics.Matrix4x4>(),
+                    HavokToCathodeMappings = new List<System.Numerics.Matrix4x4>(),
+                    HelperMatrices = new List<EnvironmentAnimations.WeightedHelperData>(),
+                };
+                newReference.AnimatedModel.ID = Content.Level.EnvironmentAnimations.AllocateUniqueId();
                 Content.Level.EnvironmentAnimations.Entries.Add(newReference.AnimatedModel);
             }
             
             if (newReference.resource_type == ResourceType.COLLISION_MAPPING)
             {
                 newReference.CollisionMapping = new CollisionMaps.COLLISION_MAPPING();
-                //TODO
+                newReference.CollisionMapping.Flags = CollisionMaps.CollisionFlags.WORLD | CollisionMaps.CollisionFlags.BALLISTIC;
                 Content.Level.CollisionMaps.Entries.Add(newReference.CollisionMapping);
             }
 

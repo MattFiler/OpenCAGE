@@ -32,7 +32,6 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(EntityInspector));
             this.goToZone = new System.Windows.Forms.Button();
             this.showOverridesAndProxies = new System.Windows.Forms.Button();
-            this.editEntityMovers = new System.Windows.Forms.Button();
             this.editEntityResources = new System.Windows.Forms.Button();
             this.entityInfoGroup = new System.Windows.Forms.GroupBox();
             this.hierarchyDisplay = new System.Windows.Forms.TextBox();
@@ -45,22 +44,14 @@
             this.entityParamGroup = new System.Windows.Forms.GroupBox();
             this.tableLayoutPanel2 = new System.Windows.Forms.TableLayoutPanel();
             this.addLinkOut = new System.Windows.Forms.Button();
-            this.ModifyParameters_Link = new System.Windows.Forms.Button();
             this.entity_params = new System.Windows.Forms.Panel();
             this.contextMenuStrip2 = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.createLinkToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.toolStrip1 = new System.Windows.Forms.ToolStrip();
-            this.renameEntity = new System.Windows.Forms.ToolStripButton();
-            this.duplicateEntity = new System.Windows.Forms.ToolStripButton();
             this.deleteEntity = new System.Windows.Forms.ToolStripButton();
-            this.imageList1 = new System.Windows.Forms.ImageList(this.components);
-            this.ModifyParameters = new System.Windows.Forms.Button();
+            this.changeProxyTarget = new System.Windows.Forms.ToolStripButton();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
-            this.applyDefaultsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.addUnsetParametersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.applyAllDefaultsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.entityInfoGroup.SuspendLayout();
             this.entityParamGroup.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
@@ -93,20 +84,8 @@
             this.showOverridesAndProxies.UseVisualStyleBackColor = true;
             this.showOverridesAndProxies.Click += new System.EventHandler(this.showOverridesAndProxies_Click);
             // 
-            // editEntityMovers
-            // 
-            this.editEntityMovers.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.editEntityMovers.Location = new System.Drawing.Point(3, 3);
-            this.editEntityMovers.Name = "editEntityMovers";
-            this.editEntityMovers.Size = new System.Drawing.Size(70, 23);
-            this.editEntityMovers.TabIndex = 186;
-            this.editEntityMovers.Text = "Movers";
-            this.toolTip1.SetToolTip(this.editEntityMovers, "Movers");
-            this.editEntityMovers.UseVisualStyleBackColor = true;
-            this.editEntityMovers.Click += new System.EventHandler(this.editEntityMovers_Click);
-            // 
             // editEntityResources
-            // 
+            //
             this.editEntityResources.Dock = System.Windows.Forms.DockStyle.Fill;
             this.editEntityResources.Location = new System.Drawing.Point(155, 3);
             this.editEntityResources.Name = "editEntityResources";
@@ -217,9 +196,9 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.entityParamGroup.Controls.Add(this.tableLayoutPanel2);
             this.entityParamGroup.Controls.Add(this.entity_params);
-            this.entityParamGroup.Location = new System.Drawing.Point(12, 132);
+            this.entityParamGroup.Location = new System.Drawing.Point(12, 161);
             this.entityParamGroup.Name = "entityParamGroup";
-            this.entityParamGroup.Size = new System.Drawing.Size(382, 638);
+            this.entityParamGroup.Size = new System.Drawing.Size(382, 609);
             this.entityParamGroup.TabIndex = 182;
             this.entityParamGroup.TabStop = false;
             this.entityParamGroup.Text = "Selected Entity Parameters";
@@ -232,8 +211,8 @@
             this.tableLayoutPanel2.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
             this.tableLayoutPanel2.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
             this.tableLayoutPanel2.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
-            this.tableLayoutPanel2.Controls.Add(this.addLinkOut, 1, 0);
-            this.tableLayoutPanel2.Controls.Add(this.ModifyParameters_Link, 0, 0);
+            this.tableLayoutPanel2.Controls.Add(this.addLinkOut, 0, 0);
+            this.tableLayoutPanel2.SetColumnSpan(this.addLinkOut, 3);
             this.tableLayoutPanel2.Location = new System.Drawing.Point(6, 603);
             this.tableLayoutPanel2.Name = "tableLayoutPanel2";
             this.tableLayoutPanel2.RowCount = 1;
@@ -251,18 +230,7 @@
             this.addLinkOut.Text = "Create Link";
             this.addLinkOut.UseVisualStyleBackColor = true;
             this.addLinkOut.Click += new System.EventHandler(this.addLinkOut_Click);
-            // 
-            // ModifyParameters_Link
-            // 
-            this.ModifyParameters_Link.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.ModifyParameters_Link.Location = new System.Drawing.Point(3, 3);
-            this.ModifyParameters_Link.Name = "ModifyParameters_Link";
-            this.ModifyParameters_Link.Size = new System.Drawing.Size(181, 22);
-            this.ModifyParameters_Link.TabIndex = 149;
-            this.ModifyParameters_Link.Text = "Modify Parameters";
-            this.ModifyParameters_Link.UseVisualStyleBackColor = true;
-            this.ModifyParameters_Link.Click += new System.EventHandler(this.ModifyParameters_Click);
-            // 
+            //
             // entity_params
             // 
             this.entity_params.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -278,21 +246,11 @@
             // contextMenuStrip2
             // 
             this.contextMenuStrip2.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.toolStripMenuItem1,
-            this.createLinkToolStripMenuItem,
-            this.applyDefaultsToolStripMenuItem});
+            this.createLinkToolStripMenuItem});
             this.contextMenuStrip2.Name = "contextMenuStrip1";
             this.contextMenuStrip2.Size = new System.Drawing.Size(181, 92);
             this.contextMenuStrip2.Opening += new System.ComponentModel.CancelEventHandler(this.contextMenuStrip2_Opening);
-            // 
-            // toolStripMenuItem1
-            // 
-            this.toolStripMenuItem1.Image = ((System.Drawing.Image)(resources.GetObject("toolStripMenuItem1.Image")));
-            this.toolStripMenuItem1.Name = "toolStripMenuItem1";
-            this.toolStripMenuItem1.Size = new System.Drawing.Size(180, 22);
-            this.toolStripMenuItem1.Text = "Modify Parameters";
-            this.toolStripMenuItem1.Click += new System.EventHandler(this.toolStripMenuItem1_Click);
-            // 
+            //
             // createLinkToolStripMenuItem
             // 
             this.createLinkToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createLinkToolStripMenuItem.Image")));
@@ -305,56 +263,31 @@
             // 
             this.tableLayoutPanel1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.tableLayoutPanel1.ColumnCount = 5;
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 20F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 20F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 20F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 20F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 20F));
-            this.tableLayoutPanel1.Controls.Add(this.editEntityMovers, 0, 0);
-            this.tableLayoutPanel1.Controls.Add(this.goToZone, 3, 0);
-            this.tableLayoutPanel1.Controls.Add(this.editFunction, 4, 0);
-            this.tableLayoutPanel1.Controls.Add(this.showOverridesAndProxies, 1, 0);
-            this.tableLayoutPanel1.Controls.Add(this.editEntityResources, 2, 0);
+            this.tableLayoutPanel1.ColumnCount = 2;
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.tableLayoutPanel1.Controls.Add(this.showOverridesAndProxies, 0, 0);
+            this.tableLayoutPanel1.Controls.Add(this.editEntityResources, 1, 0);
+            this.tableLayoutPanel1.Controls.Add(this.goToZone, 0, 1);
+            this.tableLayoutPanel1.Controls.Add(this.editFunction, 1, 1);
             this.tableLayoutPanel1.Location = new System.Drawing.Point(12, 97);
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
-            this.tableLayoutPanel1.RowCount = 1;
-            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.tableLayoutPanel1.Size = new System.Drawing.Size(384, 29);
+            this.tableLayoutPanel1.RowCount = 2;
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.tableLayoutPanel1.Size = new System.Drawing.Size(384, 58);
             this.tableLayoutPanel1.TabIndex = 189;
             // 
             // toolStrip1
             // 
             this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.renameEntity,
-            this.duplicateEntity,
-            this.deleteEntity});
+            this.deleteEntity,
+            this.changeProxyTarget});
             this.toolStrip1.Location = new System.Drawing.Point(0, 0);
             this.toolStrip1.Name = "toolStrip1";
             this.toolStrip1.Size = new System.Drawing.Size(406, 25);
             this.toolStrip1.TabIndex = 190;
-            this.toolStrip1.Text = "toolStrip1";
-            // 
-            // renameEntity
-            // 
-            this.renameEntity.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
-            this.renameEntity.Image = ((System.Drawing.Image)(resources.GetObject("renameEntity.Image")));
-            this.renameEntity.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.renameEntity.Name = "renameEntity";
-            this.renameEntity.Size = new System.Drawing.Size(103, 22);
-            this.renameEntity.Text = "Rename Entity";
-            this.renameEntity.Click += new System.EventHandler(this.renameEntity_Click);
-            // 
-            // duplicateEntity
-            // 
-            this.duplicateEntity.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
-            this.duplicateEntity.Image = ((System.Drawing.Image)(resources.GetObject("duplicateEntity.Image")));
-            this.duplicateEntity.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.duplicateEntity.Name = "duplicateEntity";
-            this.duplicateEntity.Size = new System.Drawing.Size(110, 22);
-            this.duplicateEntity.Text = "Duplicate Entity";
-            this.duplicateEntity.Click += new System.EventHandler(this.duplicateEntity_Click);
-            // 
+            this.toolStrip1.Text = "toolStrip1";            // 
             // deleteEntity
             // 
             this.deleteEntity.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
@@ -365,57 +298,22 @@
             this.deleteEntity.Text = "Delete Entity";
             this.deleteEntity.Click += new System.EventHandler(this.deleteEntity_Click);
             // 
-            // imageList1
+            // changeProxyTarget
             // 
-            this.imageList1.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList1.ImageStream")));
-            this.imageList1.TransparentColor = System.Drawing.Color.Transparent;
-            this.imageList1.Images.SetKeyName(0, "GenericEditor.ico");
-            // 
-            // ModifyParameters
-            // 
-            this.ModifyParameters.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.ModifyParameters.Location = new System.Drawing.Point(22, 738);
-            this.ModifyParameters.Name = "ModifyParameters";
-            this.ModifyParameters.Size = new System.Drawing.Size(368, 22);
-            this.ModifyParameters.TabIndex = 1;
-            this.ModifyParameters.Text = "Modify Parameters";
-            this.ModifyParameters.UseVisualStyleBackColor = true;
-            this.ModifyParameters.Click += new System.EventHandler(this.ModifyParameters_Click);
-            // 
-            // applyDefaultsToolStripMenuItem
-            // 
-            this.applyDefaultsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.addUnsetParametersToolStripMenuItem,
-            this.applyAllDefaultsToolStripMenuItem});
-            this.applyDefaultsToolStripMenuItem.Name = "applyDefaultsToolStripMenuItem";
-            this.applyDefaultsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.applyDefaultsToolStripMenuItem.Text = "Apply Defaults";
-            // 
-            // addUnsetParametersToolStripMenuItem
-            // 
-            this.addUnsetParametersToolStripMenuItem.Name = "addUnsetParametersToolStripMenuItem";
-            this.addUnsetParametersToolStripMenuItem.Size = new System.Drawing.Size(278, 22);
-            this.addUnsetParametersToolStripMenuItem.Text = "Add Missing Parameter Defaults";
-            this.addUnsetParametersToolStripMenuItem.ToolTipText = "Selecting this will add the default values for all parameters currently not appli" +
-    "ed to the entity.";
-            this.addUnsetParametersToolStripMenuItem.Click += new System.EventHandler(this.addUnsetParametersToolStripMenuItem_Click);
-            // 
-            // applyAllDefaultsToolStripMenuItem
-            // 
-            this.applyAllDefaultsToolStripMenuItem.Name = "applyAllDefaultsToolStripMenuItem";
-            this.applyAllDefaultsToolStripMenuItem.Size = new System.Drawing.Size(278, 22);
-            this.applyAllDefaultsToolStripMenuItem.Text = "Apply All Defaults (Overwrites Existing)";
-            this.applyAllDefaultsToolStripMenuItem.ToolTipText = "Selecting this will apply all default parameters to this entity, overwriting the " +
-    "ones already set.";
-            this.applyAllDefaultsToolStripMenuItem.Click += new System.EventHandler(this.applyAllDefaultsToolStripMenuItem_Click);
-            // 
+            this.changeProxyTarget.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
+            this.changeProxyTarget.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.changeProxyTarget.Name = "changeProxyTarget";
+            this.changeProxyTarget.Size = new System.Drawing.Size(86, 22);
+            this.changeProxyTarget.Text = "Change Target";
+            this.changeProxyTarget.ToolTipText = "Point this proxy at a different entity, keeping its links";
+            this.changeProxyTarget.Visible = false;
+            this.changeProxyTarget.Click += new System.EventHandler(this.changeProxyTarget_Click);
+            //
             // EntityInspector
-            // 
+            //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(406, 780);
-            this.Controls.Add(this.ModifyParameters);
             this.Controls.Add(this.toolStrip1);
             this.Controls.Add(this.tableLayoutPanel1);
             this.Controls.Add(this.entityInfoGroup);
@@ -442,7 +340,6 @@
 
         private System.Windows.Forms.Button goToZone;
         private System.Windows.Forms.Button showOverridesAndProxies;
-        private System.Windows.Forms.Button editEntityMovers;
         private System.Windows.Forms.Button editEntityResources;
         private System.Windows.Forms.GroupBox entityInfoGroup;
         private System.Windows.Forms.TextBox hierarchyDisplay;
@@ -454,22 +351,14 @@
         private System.Windows.Forms.Button editFunction;
         private System.Windows.Forms.GroupBox entityParamGroup;
         private System.Windows.Forms.Button addLinkOut;
-        private System.Windows.Forms.Button ModifyParameters_Link;
         private System.Windows.Forms.Panel entity_params;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel2;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
         private System.Windows.Forms.ToolStrip toolStrip1;
         private System.Windows.Forms.ToolStripButton deleteEntity;
-        private System.Windows.Forms.ToolStripButton duplicateEntity;
-        private System.Windows.Forms.ToolStripButton renameEntity;
-        private System.Windows.Forms.ImageList imageList1;
-        private System.Windows.Forms.Button ModifyParameters;
+        private System.Windows.Forms.ToolStripButton changeProxyTarget;
         private System.Windows.Forms.ContextMenuStrip contextMenuStrip2;
-        private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem1;
         private System.Windows.Forms.ToolStripMenuItem createLinkToolStripMenuItem;
         private System.Windows.Forms.ToolTip toolTip1;
-        private System.Windows.Forms.ToolStripMenuItem applyDefaultsToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem addUnsetParametersToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem applyAllDefaultsToolStripMenuItem;
     }
 }

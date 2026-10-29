@@ -32,9 +32,9 @@
             this.FollowEntityThrough = new System.Windows.Forms.Button();
             this.SelectEntity = new System.Windows.Forms.Button();
             this.compositeEntityList1 = new Popups.UserControls.CompositeEntityList();
-            this.pathDisplay = new System.Windows.Forms.TextBox();
+            this.pathBreadcrumb = new OpenCAGE.UserControls.CompositePathBreadcrumb();
             this.goBackOnPath = new System.Windows.Forms.Button();
-            this.applyDefaultParams = new System.Windows.Forms.CheckBox();
+            this.browseFromRoot = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // FollowEntityThrough
@@ -69,18 +69,15 @@
             this.compositeEntityList1.Size = new System.Drawing.Size(741, 715);
             this.compositeEntityList1.TabIndex = 149;
             // 
-            // pathDisplay
+            // pathBreadcrumb
             // 
-            this.pathDisplay.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            this.pathBreadcrumb.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.pathDisplay.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pathDisplay.Enabled = false;
-            this.pathDisplay.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.pathDisplay.Location = new System.Drawing.Point(72, 724);
-            this.pathDisplay.Name = "pathDisplay";
-            this.pathDisplay.ReadOnly = true;
-            this.pathDisplay.Size = new System.Drawing.Size(678, 20);
-            this.pathDisplay.TabIndex = 178;
+            this.pathBreadcrumb.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.pathBreadcrumb.Location = new System.Drawing.Point(78, 724);
+            this.pathBreadcrumb.Name = "pathBreadcrumb";
+            this.pathBreadcrumb.Size = new System.Drawing.Size(672, 20);
+            this.pathBreadcrumb.TabIndex = 178;
             // 
             // goBackOnPath
             // 
@@ -93,27 +90,28 @@
             this.goBackOnPath.Text = "< Back";
             this.goBackOnPath.UseVisualStyleBackColor = true;
             this.goBackOnPath.Click += new System.EventHandler(this.goBackOnPath_Click);
-            // 
-            // applyDefaultParams
-            // 
-            this.applyDefaultParams.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.applyDefaultParams.AutoSize = true;
-            this.applyDefaultParams.Location = new System.Drawing.Point(429, 759);
-            this.applyDefaultParams.Name = "applyDefaultParams";
-            this.applyDefaultParams.Size = new System.Drawing.Size(145, 17);
-            this.applyDefaultParams.TabIndex = 185;
-            this.applyDefaultParams.Text = "Apply Default Parameters";
-            this.applyDefaultParams.UseVisualStyleBackColor = true;
+            //
+            // browseFromRoot
+            //
+            this.browseFromRoot.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.browseFromRoot.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+            this.browseFromRoot.Location = new System.Drawing.Point(78, 724);
+            this.browseFromRoot.Name = "browseFromRoot";
+            this.browseFromRoot.Size = new System.Drawing.Size(130, 20);
+            this.browseFromRoot.TabIndex = 180;
+            this.browseFromRoot.Text = "Browse from level root";
+            this.browseFromRoot.UseVisualStyleBackColor = true;
+            this.browseFromRoot.Visible = false;
+            this.browseFromRoot.Click += new System.EventHandler(this.browseFromRoot_Click);
             // 
             // SelectHierarchy
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(763, 792);
-            this.Controls.Add(this.applyDefaultParams);
-            this.Controls.Add(this.pathDisplay);
+            this.Controls.Add(this.pathBreadcrumb);
             this.Controls.Add(this.goBackOnPath);
+            this.Controls.Add(this.browseFromRoot);
             this.Controls.Add(this.compositeEntityList1);
             this.Controls.Add(this.FollowEntityThrough);
             this.Controls.Add(this.SelectEntity);
@@ -130,8 +128,8 @@
         private System.Windows.Forms.Button SelectEntity;
         private System.Windows.Forms.Button FollowEntityThrough;
         private Popups.UserControls.CompositeEntityList compositeEntityList1;
-        private System.Windows.Forms.TextBox pathDisplay;
+        private OpenCAGE.UserControls.CompositePathBreadcrumb pathBreadcrumb;
         private System.Windows.Forms.Button goBackOnPath;
-        private System.Windows.Forms.CheckBox applyDefaultParams;
+        private System.Windows.Forms.Button browseFromRoot;
     }
 }

@@ -34,15 +34,15 @@ namespace OpenCAGE.ConfigEditors
 
         public void Save(XmlElement parent)
         {
-            parent.SetAttribute("linearVelocity", linearVelocity.Text);
-            parent.SetAttribute("linearAcceleration", linearAcceleration.Text);
-            parent.SetAttribute("maxAngularVelocity", maxAngularVelocity.Text);
-            parent.SetAttribute("angularAcceleration", angularAcceleration.Text);
-            parent.SetAttribute("stoppingDistance", stoppingDistance.Text);
-            parent.SetAttribute("corneringWeight", corneringWeight.Text);
-            parent.SetAttribute("corneringPenalty", corneringPenalty.Text);
-            parent.SetAttribute("maxAngularWarping", maxAngularWarping.Text);
-            parent.SetAttribute("maxLinearWarping", maxLinearWarping.Text);
+            parent.SetAttribute("linearVelocity", ConfigEditorUtils.NumberText(linearVelocity));
+            parent.SetAttribute("linearAcceleration", ConfigEditorUtils.NumberText(linearAcceleration));
+            parent.SetAttribute("maxAngularVelocity", ConfigEditorUtils.NumberText(maxAngularVelocity));
+            parent.SetAttribute("angularAcceleration", ConfigEditorUtils.NumberText(angularAcceleration));
+            parent.SetAttribute("stoppingDistance", ConfigEditorUtils.NumberText(stoppingDistance));
+            parent.SetAttribute("corneringWeight", ConfigEditorUtils.NumberText(corneringWeight));
+            parent.SetAttribute("corneringPenalty", ConfigEditorUtils.NumberText(corneringPenalty));
+            parent.SetAttribute("maxAngularWarping", ConfigEditorUtils.NumberText(maxAngularWarping));
+            parent.SetAttribute("maxLinearWarping", ConfigEditorUtils.NumberText(maxLinearWarping));
         }
     }
 }

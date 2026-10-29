@@ -121,4 +121,21 @@
     <value>17, 17</value>
   </metadata>
   <assembly alias="System.Drawing" name="System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
-  </root>
+  <data name="$this.Icon" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+    <value>
+        AAABAAEAICAQAAAAAADoAgAAFgAAACgAAAAgAAAAQAAAAAEABAAAAAAAgAIAAAAAAAAAAAAAAAAAAAAA
+        AAAAAAAAAACAAACAAAAAgIAAgAAAAIAAgACAgAAAgICAAMDAwAAAAP8AAP8AAAD//wD/AAAA/wD/AP//
+        AAD///8AAAAAAAAAAAAAAAd3gAAAAAAAAAAAAAAAAAB3d4gAAAAAAAAAAAAAAAAHd3eIiAAAAAAAAAAA
+        AAAAiHd3iIiAAAAAAHcAAAAAB4h3d4iIiIAAAHd3cAAAAAiIh3eIiIiIAAd3d3cAAACIiId3iIiIiAB3
+        d3d3cAAIiIiHd4iIiIhXd3d3d3cAiIiIh3eIiIiIdXd3d3d3eIiIiId3iIiIiHdXd3d3d3iIiIiId4iI
+        iIh3dXd3d3d4iIiIiHeIiIiId3dXd3d3iIiIiIiAiIiIiHd3V3d3eIiIiIiIAIiIiIh3d1B3d4iIiIiI
+        gACIiIiId3dwB3iIiIiIiAAAiIiIiHd3cAiIiIiIiHcAAIiIiIh3d1CIiIiIiId3cACIiIiId3dYiIiI
+        iIh3d3cAiIiIiHd3WIiIiIiHd3d3cIiIiIh3dXiIiIiId3d3d3eIiIiId1eIiIiIh3d3d3d3iIiIiHd4
+        iIiIiId3d3d3d4iIiIh3iIiIiIgAd3d3d3eIiIiIAIiIiIiAAAd3d3d3iIiIiAAIiIiIAAAAd3d3d4iI
+        iIgAAIiIgAAAAAd3d3eIiIiIAAAAiAAAAAAHd3d3iIiIgAAAAAAAAAAAAHd3d4iIgAAAAAAAAAAAAAAH
+        d3eIiAAAAAAAAAAAAAAAAHd3iAAAAAAAAAAAAAAAAAAHd4AAAAD///h////wP///4A///8AH/P+AAfB/
+        gADgPwAAwB4AAAAMAAAAAAAAAAAAAAAAAAAAAAEAAAADAAQABwAGAA8ABgAPAAQABwAAAAMAAAABAAAA
+        AAAAAAAAAAAAAAAMAADAHgAA4D8AAPB/gAD8/4AB///AB///4A////A////4fw==
+</value>
+  </data>
+</root>

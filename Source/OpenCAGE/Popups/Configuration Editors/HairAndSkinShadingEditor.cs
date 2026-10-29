@@ -1,9 +1,11 @@
 ﻿using OpenCAGE.Popups.Base;
+using OpenCAGE.RuntimeUtilsConnection;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -14,9 +16,14 @@ namespace OpenCAGE.ConfigEditors
 {
     public partial class HairAndSkinShadingEditor : BaseWindow
     {
+        //Keys the files don't have (the stock hair file has no alpha_threshold_shadow): their boxes show the editor's own default,
+        //which needn't be what the game uses without the key, so such a key is only written, and sent over Live Link, once its box is changed
+        private readonly HashSet<NumericUpDown> _notInFile = new HashSet<NumericUpDown>();
+
         public HairAndSkinShadingEditor() : base()
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/hair-and-skin-shading/");
             ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
             string[] skin = File.ReadAllLines(Singleton.PathToAI + "/DATA/SKIN_SHADING_SETTINGS.TXT");
@@ -47,7 +54,20 @@ namespace OpenCAGE.ConfigEditors
 
             ConfigEditorUtils.Subscribe(this.Controls, Save);
             this.FormClosing += HairAndSkinShadingEditor_FormClosing;
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
+
+            //The game reads these when a level loads; with Live Link connected each change reaches it at once
+            LiveSettings.Attach(this, liveStatus,
+                (LiveLink.SettingsFile.SkinShading, () => LiveSettings.Values(InFile(scattering_radius, scattering_saturation))),
+                (LiveLink.SettingsFile.HairShading, () => LiveSettings.Values(InFile(alpha_threshold, alpha_threshold_shadow, primary_spec_level, secondary_spec_level,
+                    primary_spec_width, secondary_spec_width, spec_separation, diffuse_level, base_absorption, absorption_rate, ao_absorption, scatter_dist_rate,
+                    occlusion_rate, occlusion_bias, occlusion_ao_infl, specular_occlusion, specular_ao, softening_length, softening_normal_bias, softening_distance_rate))));
+        }
+
+        //The boxes whose keys are in the files, or which have been changed since
+        private NumericUpDown[] InFile(params NumericUpDown[] updowns)
+        {
+            return updowns.Where(o => !_notInFile.Contains(o)).ToArray();
         }
 
         private void HairAndSkinShadingEditor_FormClosing(object sender, FormClosingEventArgs e)
@@ -60,22 +80,31 @@ namespace OpenCAGE.ConfigEditors
         {
             foreach (string value in config)
             {
-                if (value.StartsWith(name + "="))
+                if (IsKey(value, name))
                 {
-                    ConfigEditorUtils.SetNumericFromText(updown, value.Substring(name.Length + 1));
-                    break;
+                    ConfigEditorUtils.SetNumericFromText(updown, value.Substring(value.IndexOf('=') + 1));
+                    return;
                 }
             }
+            _notInFile.Add(updown);
         }
 
         private void Save(object sender, EventArgs e)
         {
-            List<string> skin = new List<string>();
+            //A box changed by the user is written from now on, whether or not the file had its key
+            if (sender is NumericUpDown edited)
+                _notInFile.Remove(edited);
+
+            //Edited in place: the stock files carry keys this editor has no control for (glint_intensity,
+            //sub_strand_frequency...) and they should survive a save rather than vanish on the first edit
+            string skinPath = Singleton.PathToAI + "/DATA/SKIN_SHADING_SETTINGS.TXT";
+            List<string> skin = File.Exists(skinPath) ? File.ReadAllLines(skinPath).ToList() : new List<string>();
             SetValue(skin, "scattering_radius", scattering_radius);
             SetValue(skin, "scattering_saturation", scattering_saturation);
-            File.WriteAllLines(Singleton.PathToAI + "/DATA/SKIN_SHADING_SETTINGS.TXT", skin);
+            File.WriteAllLines(skinPath, skin);
 
-            List<string> hair = new List<string>();
+            string hairPath = Singleton.PathToAI + "/DATA/HAIR_SHADING_SETTINGS.TXT";
+            List<string> hair = File.Exists(hairPath) ? File.ReadAllLines(hairPath).ToList() : new List<string>();
             SetValue(hair, "alpha_threshold", alpha_threshold);
             SetValue(hair, "alpha_threshold_shadow", alpha_threshold_shadow);
             SetValue(hair, "primary_spec_level", primary_spec_level);
@@ -96,14 +125,34 @@ namespace OpenCAGE.ConfigEditors
             SetValue(hair, "softening_length", softening_length);
             SetValue(hair, "softening_normal_bias", softening_normal_bias);
             SetValue(hair, "softening_distance_rate", softening_distance_rate);
-            File.WriteAllLines(Singleton.PathToAI + "/DATA/HAIR_SHADING_SETTINGS.TXT", hair);
+            File.WriteAllLines(hairPath, hair);
+            LiveSettings.Changed(LiveLink.SettingsFile.SkinShading, LiveLink.SettingsFile.HairShading);
 
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
         }
 
         private void SetValue(List<string> config, string name, NumericUpDown updown)
         {
-            config.Add(name + "=" + updown.Value.ToString());
+            string line = name + "=" + ConfigEditorUtils.NumberText(updown);
+            for (int i = 0; i < config.Count; i++)
+            {
+                if (!IsKey(config[i], name)) continue;
+                //A line the game reads that already holds this number keeps its spelling ("1.0", "1.500000"), so a save changes only what was edited
+                if (config[i].StartsWith(name + "=") && decimal.TryParse(config[i].Substring(name.Length + 1), NumberStyles.Float, CultureInfo.InvariantCulture, out decimal current) && current == updown.Value)
+                    return;
+                config[i] = line;
+                return;
+            }
+            if (!_notInFile.Contains(updown))
+                config.Add(line);
+        }
+
+        //"key=1", " key = 1": the same key, so a spaced line is replaced rather than left beside the new one (the game itself
+        //only reads a key written at the very start of its line, straight before the '=')
+        internal static bool IsKey(string line, string name)
+        {
+            int eq = line.IndexOf('=');
+            return eq >= 0 && line.Substring(0, eq).Trim() == name;
         }
     }
 }

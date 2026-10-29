@@ -46,34 +46,25 @@ namespace OpenCAGE.Scripts
             bool showId = SettingsManager.GetBool(Settings.ShowShortGuids);
             entityComposites.Clear();
 
-            entityList.BeginUpdate();
-            entityList.Items.Clear();
-            entityList.Groups.Clear();
+            ResultRows rows = new ResultRows(entityList);
 
             string normalizedName = name.ToUpper().Replace(" ", "");
+            string idSearch = name.Replace("-", "");
             foreach (Composite comp in GetCompositesInScope(content, scope))
             {
                 List<Entity> ents = comp.GetEntities().FindAll(o =>
                     content.Level.Commands.Utils.GetEntityName(comp, o).ToUpper().Replace(" ", "").Contains(normalizedName)
-                    || (showId && o.shortGUID.ToByteString().Replace("-", "").Contains(name.Replace("-", ""))));
+                    || (showId && o.shortGUID.ToByteString().Replace("-", "").Contains(idSearch)));
 
                 if (ents.Count == 0)
                     continue;
 
-                entityList.Groups.Add(new ListViewGroup() { Header = comp.name });
+                rows.StartGroup(comp);
                 foreach (Entity ent in ents)
-                {
-                    ListViewItem item = (ListViewItem)content.GenerateListViewItem(ent, comp).Clone();
-                    item.Tag = new SearchResultTag(ent, comp);
-                    item.Group = entityList.Groups[entityList.Groups.Count - 1];
-                    item.ImageIndex = EditorUtils.GetIndexesForListViewItem(ent, comp, content.Level.Commands).Item1;
-                    entityList.Items.Add(item);
-                    entityComposites.Add(ent, comp);
-                }
+                    rows.Add(content, ent, comp, entityComposites);
             }
 
-            entityList.EndUpdate();
-            return entityList.Items.Count;
+            return rows.Fill();
         }
 
         public static int SearchByFunction(LevelContent content, ShortGuid functionGuid, ListView entityList, Dictionary<Entity, Composite> entityComposites)
@@ -96,9 +87,7 @@ namespace OpenCAGE.Scripts
         {
             entityComposites.Clear();
 
-            entityList.BeginUpdate();
-            entityList.Items.Clear();
-            entityList.Groups.Clear();
+            ResultRows rows = new ResultRows(entityList);
 
             foreach (Composite comp in GetCompositesInScope(content, scope))
             {
@@ -109,20 +98,12 @@ namespace OpenCAGE.Scripts
                 if (funcs.Count == 0)
                     continue;
 
-                entityList.Groups.Add(new ListViewGroup() { Header = comp.name });
+                rows.StartGroup(comp);
                 foreach (FunctionEntity ent in funcs)
-                {
-                    ListViewItem item = (ListViewItem)content.GenerateListViewItem(ent, comp).Clone();
-                    item.Tag = new SearchResultTag(ent, comp);
-                    item.Group = entityList.Groups[entityList.Groups.Count - 1];
-                    item.ImageIndex = ent.function.IsFunctionType ? 1 : 2;
-                    entityList.Items.Add(item);
-                    entityComposites.Add(ent, comp);
-                }
+                    rows.Add(content, ent, comp, entityComposites);
             }
 
-            entityList.EndUpdate();
-            return entityList.Items.Count;
+            return rows.Fill();
         }
 
         public static int SearchByComposite(LevelContent content, ShortGuid compositeGuid, ListView entityList, Dictionary<Entity, Composite> entityComposites)
@@ -134,9 +115,7 @@ namespace OpenCAGE.Scripts
         {
             entityComposites.Clear();
 
-            entityList.BeginUpdate();
-            entityList.Items.Clear();
-            entityList.Groups.Clear();
+            ResultRows rows = new ResultRows(entityList);
 
             foreach (Composite comp in GetCompositesInScope(content, scope))
             {
@@ -144,62 +123,67 @@ namespace OpenCAGE.Scripts
                 if (funcs.Count == 0)
                     continue;
 
-                entityList.Groups.Add(new ListViewGroup() { Header = comp.name });
+                rows.StartGroup(comp);
                 foreach (FunctionEntity ent in funcs)
-                {
-                    ListViewItem item = (ListViewItem)content.GenerateListViewItem(ent, comp).Clone();
-                    item.Tag = new SearchResultTag(ent, comp);
-                    item.Group = entityList.Groups[entityList.Groups.Count - 1];
-                    item.ImageIndex = ent.function.IsFunctionType ? 1 : 2;
-                    entityList.Items.Add(item);
-                    entityComposites.Add(ent, comp);
-                }
+                    rows.Add(content, ent, comp, entityComposites);
             }
 
-            entityList.EndUpdate();
-            return entityList.Items.Count;
+            return rows.Fill();
         }
 
-        public static bool RemoveDeletedEntityFromResults(
-            Entity entity,
-            ListView entityList,
-            Dictionary<Entity, Composite> entityComposites)
+        /* A search's rows, made before any go in: then the groups, and all the rows, are each added to the list in one go.
+           Added a group and its rows at a time, a few thousand results took longer to fill, and twice as long again to
+           empty for the next search - which a scope following the open composite runs for every composite opened. */
+        private sealed class ResultRows
         {
-            if (entity == null || entityList == null || entityComposites == null)
-                return false;
+            private readonly ListView _list;
+            private readonly List<ListViewGroup> _groups = new List<ListViewGroup>();
+            private readonly List<ListViewItem> _items = new List<ListViewItem>();
+            private ListViewGroup _group;
 
-            ShortGuid entityId = entity.shortGUID;
-            List<Entity> staleKeys = new List<Entity>();
-            foreach (KeyValuePair<Entity, Composite> pair in entityComposites)
+            public ResultRows(ListView list)
             {
-                if (pair.Key?.shortGUID == entityId)
-                    staleKeys.Add(pair.Key);
+                _list = list;
+                _list.BeginUpdate();
+                ClearResultList(_list);
             }
 
-            if (staleKeys.Count == 0)
-                return false;
-
-            entityList.BeginUpdate();
-            try
+            public void StartGroup(Composite comp)
             {
-                for (int i = entityList.Items.Count - 1; i >= 0; i--)
-                {
-                    Entity listedEntity = GetEntityFromListTag(entityList.Items[i].Tag);
-                    if (listedEntity != null && listedEntity.shortGUID == entityId)
-                    {
-                        entityList.Items.RemoveAt(i);
-                    }
-                }
-
-                foreach (Entity staleKey in staleKeys)
-                    entityComposites.Remove(staleKey);
-            }
-            finally
-            {
-                entityList.EndUpdate();
+                _group = new ListViewGroup() { Header = comp.name };
+                _groups.Add(_group);
             }
 
-            return true;
+            public void Add(LevelContent content, Entity ent, Composite comp, Dictionary<Entity, Composite> entityComposites)
+            {
+                ListViewItem item = (ListViewItem)content.GenerateListViewItem(ent, comp).Clone();
+                item.Tag = new SearchResultTag(ent, comp);
+                item.Group = _group;
+                item.ImageIndex = EditorUtils.GetIndexesForListViewItem(ent, comp, content.Level.Commands).Item1;
+                _items.Add(item);
+                entityComposites.Add(ent, comp);
+            }
+
+            public int Fill()
+            {
+                _list.Groups.AddRange(_groups.ToArray());
+                _list.Items.AddRange(_items.ToArray());
+                _list.EndUpdate();
+                return _list.Items.Count;
+            }
+        }
+
+        /* Empties a list of results and their groups. Group view is off while the rows go: the list ends the same either
+           way (the framework turns the native group view off once the last group has gone), but thousands of rows are
+           deleted in about half the time when the native list isn't keeping its groups up to date as each one goes. */
+        public static void ClearResultList(ListView entityList)
+        {
+            bool showGroups = entityList.ShowGroups;
+            if (showGroups && entityList.Items.Count != 0)
+                entityList.ShowGroups = false;
+            entityList.Items.Clear();
+            entityList.Groups.Clear();
+            entityList.ShowGroups = showGroups;
         }
 
         public static void JumpToSelectedEntity(ListView entityList, Dictionary<Entity, Composite> entityComposites)
@@ -220,8 +204,9 @@ namespace OpenCAGE.Scripts
 
         /// <summary>
         /// Navigates the editor to the given entity within the given composite, honouring the search
-        /// scope so that "current" / "current and nested" jumps stay inside the active hierarchy
-        /// (drilling down through composite instances) instead of re-opening the composite at the root.
+        /// scope so that "current" / "current and nested" / "root and nested" jumps stay inside the
+        /// relevant hierarchy (drilling down through composite instances) instead of re-opening the
+        /// composite at the root.
         /// </summary>
         public static void JumpToEntity(Entity selected, Composite composite, GlobalEntitySearchScope scope)
         {
@@ -229,15 +214,13 @@ namespace OpenCAGE.Scripts
                 return;
 
             CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
-            Composite currentComposite = GetActiveHierarchyRootComposite();
             Composite displayedComposite = display?.Populated == true ? display.Composite : null;
             Commands commands = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Commands;
 
             if (scope == GlobalEntitySearchScope.CurrentComposite
-                && currentComposite != null
-                && display != null)
+                && displayedComposite != null)
             {
-                if (displayedComposite != null && composite.shortGUID == displayedComposite.shortGUID)
+                if (composite.shortGUID == displayedComposite.shortGUID)
                 {
                     display.LoadEntity(selected, true);
                     return;
@@ -247,16 +230,31 @@ namespace OpenCAGE.Scripts
                 return;
             }
 
-            if (scope == GlobalEntitySearchScope.CurrentCompositeAndNested
-                && currentComposite != null
-                && commands != null
-                && display != null)
+            //Where the hierarchy is entered (kept, so the breadcrumb stays as it is), the steps already taken from there, and the
+            //composite the result is looked for under: for "current and nested" that is the composite on show, so the jump carries
+            //on down from where the user is standing
+            Composite nestedEntry = null;
+            Composite searchRoot = null;
+            List<uint> pathGuids = new List<uint>();
+            if (scope == GlobalEntitySearchScope.CurrentCompositeAndNested && displayedComposite != null)
             {
-                Composite entryComposite = GetHierarchyEntryComposite(display, currentComposite);
+                nestedEntry = GetHierarchyEntryComposite(display, displayedComposite);
+                searchRoot = displayedComposite;
+                if (display.Path?.AllEntities != null && nestedEntry != displayedComposite)
+                    foreach (Entity step in display.Path.AllEntities)
+                        pathGuids.Add(step.shortGUID.AsUInt32);
+            }
+            else if (scope == GlobalEntitySearchScope.RootCompositeAndNested && commands?.EntryPoints != null && commands.EntryPoints.Length > 0)
+            {
+                nestedEntry = commands.EntryPoints[0];
+                searchRoot = nestedEntry;
+            }
 
-                if (!IsHierarchyEntryReachable(display, entryComposite))
+            if (nestedEntry != null && commands != null && display != null)
+            {
+                if (!IsHierarchyEntryReachable(display, nestedEntry))
                 {
-                    display = Singleton.Editor?.CompositeBrowser?.LoadComposite(entryComposite);
+                    display = Singleton.Editor?.CompositeBrowser?.LoadComposite(nestedEntry);
                     if (display == null)
                     {
                         Singleton.Editor?.CompositeBrowser?.LoadCompositeAndEntity(composite, selected);
@@ -264,11 +262,9 @@ namespace OpenCAGE.Scripts
                     }
                 }
 
-                List<uint> pathGuids = new List<uint>();
-
-                if (composite.shortGUID != entryComposite.shortGUID)
+                if (composite.shortGUID != searchRoot.shortGUID)
                 {
-                    if (!TryFindCompositeInstancePath(entryComposite, composite, commands, out List<Entity> instancePath))
+                    if (!TryFindCompositeInstancePath(searchRoot, composite, commands, out List<Entity> instancePath))
                     {
                         Singleton.Editor?.CompositeBrowser?.LoadCompositeAndEntity(composite, selected);
                         return;
@@ -281,7 +277,7 @@ namespace OpenCAGE.Scripts
                 pathGuids.Add(selected.shortGUID.AsUInt32);
 
                 if (display.ApplyViewerSelectionPath(
-                    entryComposite,
+                    nestedEntry,
                     pathGuids,
                     selectLeafEntity: true,
                     entity => GetChildCompositeForSearch(entity, commands)))
@@ -300,13 +296,6 @@ namespace OpenCAGE.Scripts
         {
             return scope == GlobalEntitySearchScope.CurrentComposite
                 || scope == GlobalEntitySearchScope.CurrentCompositeAndNested;
-        }
-
-        private static Entity GetEntityFromListTag(object tag)
-        {
-            if (tag is SearchResultTag searchResult)
-                return searchResult.Entity;
-            return tag as Entity;
         }
 
         private static bool TryResolveSelectedSearchResult(
@@ -340,19 +329,14 @@ namespace OpenCAGE.Scripts
         }
 
         /// <summary>
-        /// The composite at the root of the currently active hierarchy (the composite originally
-        /// entered from the browser). When the path is empty this is simply the displayed composite.
-        /// This is the shared definition of "current composite" used by both global search and find references.
+        /// The composite on show - after stepping into instances, the one stepped into, not the one first opened from the
+        /// browser. This is the shared definition of "current composite" for the search scopes and find references.
         /// </summary>
-        public static Composite GetActiveHierarchyRootComposite()
+        public static Composite GetCurrentComposite()
         {
             CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
             if (display == null || !display.Populated)
                 return null;
-
-            if (display.Path?.AllComposites != null && display.Path.AllComposites.Count > 0)
-                return display.Path.AllComposites[0];
-
             return display.Composite;
         }
 
@@ -429,9 +413,9 @@ namespace OpenCAGE.Scripts
             if (content?.Level?.Commands == null)
                 yield break;
 
-            Composite currentComposite = GetActiveHierarchyRootComposite();
+            Composite currentComposite = GetCurrentComposite();
 
-            if (scope == GlobalEntitySearchScope.AllComposites || currentComposite == null)
+            if (scope == GlobalEntitySearchScope.AllComposites || currentComposite == null && scope != GlobalEntitySearchScope.RootCompositeAndNested)
             {
                 foreach (Composite comp in content.Level.Commands.Entries)
                     yield return comp;
@@ -444,8 +428,24 @@ namespace OpenCAGE.Scripts
                 yield break;
             }
 
+            Composite nestedRoot = null;
+            if (scope == GlobalEntitySearchScope.CurrentCompositeAndNested)
+                nestedRoot = currentComposite;
+            else if (scope == GlobalEntitySearchScope.RootCompositeAndNested)
+            {
+                if (content.Level.Commands.EntryPoints != null && content.Level.Commands.EntryPoints.Length > 0)
+                    nestedRoot = content.Level.Commands.EntryPoints[0];
+            }
+
+            if (nestedRoot == null)
+            {
+                foreach (Composite comp in content.Level.Commands.Entries)
+                    yield return comp;
+                yield break;
+            }
+
             HashSet<ShortGuid> visited = new HashSet<ShortGuid>();
-            foreach (Composite comp in CollectNestedComposites(currentComposite, content.Level.Commands, visited))
+            foreach (Composite comp in CollectNestedComposites(nestedRoot, content.Level.Commands, visited))
                 yield return comp;
         }
 

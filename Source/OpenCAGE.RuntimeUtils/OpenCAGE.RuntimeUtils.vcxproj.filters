@@ -1,0 +1,567 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Source Files\libs">
+      <UniqueIdentifier>{aefe1225-55f6-484c-b192-bb3a54c5aed3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\libs\detours">
+      <UniqueIdentifier>{0494e4bd-8e86-409c-8a99-b9bedcb95375}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\libs\imgui">
+      <UniqueIdentifier>{395abe27-88a2-432f-b14a-40b086f1267f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\libs">
+      <UniqueIdentifier>{81f59066-ccd2-4d38-9d75-7b8c7515cd8c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\libs\imgui">
+      <UniqueIdentifier>{8938b32a-d8a2-4213-8d08-39428fe36a25}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\libs\detours">
+      <UniqueIdentifier>{92c2dc3d-92af-4de8-a5b3-381e6c798c83}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Game">
+      <UniqueIdentifier>{fd9d11b8-4b66-480b-a97c-de210af3ab91}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Game">
+      <UniqueIdentifier>{64619a84-11b0-45e3-aca7-71088dd637d4}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="dllmain.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\imgui\imgui_widgets.cpp">
+      <Filter>Source Files\libs\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\imgui\imgui.cpp">
+      <Filter>Source Files\libs\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\imgui\imgui_demo.cpp">
+      <Filter>Source Files\libs\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\imgui\imgui_draw.cpp">
+      <Filter>Source Files\libs\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\imgui\imgui_tables.cpp">
+      <Filter>Source Files\libs\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\detours\src\disolx86.cpp">
+      <Filter>Source Files\libs\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\detours\src\image.cpp">
+      <Filter>Source Files\libs\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\detours\src\modules.cpp">
+      <Filter>Source Files\libs\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\detours\src\creatwth.cpp">
+      <Filter>Source Files\libs\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\detours\src\detours.cpp">
+      <Filter>Source Files\libs\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\detours\src\disasm.cpp">
+      <Filter>Source Files\libs\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\detours\src\disolarm.cpp">
+      <Filter>Source Files\libs\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\imgui\backends\imgui_impl_win32.cpp">
+      <Filter>Source Files\libs\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\imgui\backends\imgui_impl_dx11.cpp">
+      <Filter>Source Files\libs\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="GAME_LEVEL_MANAGER.cpp">
+      <Filter>Source Files\Game</Filter>
+    </ClCompile>
+    <ClCompile Include="GameFlow.cpp">
+      <Filter>Source Files\Game</Filter>
+    </ClCompile>
+    <ClCompile Include="DevTools.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Menu.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LIVE_LINK.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LIVE_LINK_SERVER.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LIVE_CAMERA.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CUBEMAP_CAPTURE.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CINEMATIC_CAMERA.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CINEMATIC_TRACKS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CINEMATIC_VISUALS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CINEMATIC_TOOLS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CINEMATIC_CAPTURE.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LIVE_SETTINGS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DEBUG_MENU.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BT_DEBUG.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AI_DEBUG.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AI_DEBUG_VIEWS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AI_STATE.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AI_STATE_VIEWS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AI_ALIEN.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AI_SQUADS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AI_STATE_LOG.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AI_TUNING.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AI_DAMAGE_EFFECTS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AI_RAGDOLL.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PLAYER_SCREEN_EFFECTS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AI_CONFIGS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RENDER_SWITCHES.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RENDER_COMMON.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RENDER_DEBUG_VIEW.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RENDER_LIGHTS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RENDER_RADIOSITY.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RENDER_POST.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RENDER_TARGETS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RENDER_VISIBILITY.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RENDER_DEVELOPER.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DEBUG_ACTIONS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DEBUG_INFO.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GAME_SAVES.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GAME_DEBUG.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GAME_ACHIEVEMENTS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GAME_TIME_STEP.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GAME_SNAPSHOTS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ANIM_NAMES.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ANIM_DEBUG.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ANIM_DEBUG_VIEWS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ANIM_TOOLS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ANIM_ENVIRONMENT.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SOUND_DEBUG.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SOUND_DEBUG_VIEWS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PLAYER_DEBUG.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PLAYER_CHEATS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PLAYER_INVENTORY.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PLAYER_ESCAPE.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PLAYER_KILL_GUARD.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PLAYER_VIEWS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PLAYER_STENCH.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AI_COMBAT.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SCRIPT_PROFILER.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SCRIPT_ENTITIES.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SCRIPT_ANIMATIONS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SCRIPT_EVENTS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SCRIPT_PROGRESS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SCRIPT_NAMES.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SCRIPT_TRIGGERS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SCRIPT_ERRORS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SCRIPT_DEBUG.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WORLD_ENTITIES.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WORLD_OVERLAYS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WORLD_ZONES.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WORLD_RINGS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SCRIPT_CAMERAS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="COLLISION_INFO.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="INSPECT.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PHYSICS_DEBUG.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PHYSICS_LOG.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PERF_STATS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PERF_TIMING.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PERF_MEMORY.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PERF_STREAMING.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SOUND_TOOLS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SOUND_HEARING.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LIVE_ANIMATION.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LIVE_TRACE.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="NAV_DEBUG.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="NAV_DEBUG_VIEWS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="COVER_DEBUG.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="COVER_DEBUG_VIEWS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LIVE_DEBUGGER.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LIVE_DEBUGGER_VIEWS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MOUSE_UNLOCK.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FRAME_CAP.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="POSSESS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SCREENSHOT.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Config.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DEBUG_MARKER.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DEBUG_TEXT.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ZONE_LOADER.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="libs\imgui\imconfig.h">
+      <Filter>Header Files\libs\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="libs\imgui\imgui.h">
+      <Filter>Header Files\libs\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="libs\imgui\imgui_internal.h">
+      <Filter>Header Files\libs\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="libs\imgui\imstb_rectpack.h">
+      <Filter>Header Files\libs\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="libs\imgui\imstb_textedit.h">
+      <Filter>Header Files\libs\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="libs\imgui\imstb_truetype.h">
+      <Filter>Header Files\libs\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="libs\detours\src\detours.h">
+      <Filter>Header Files\libs\detours</Filter>
+    </ClInclude>
+    <ClInclude Include="libs\detours\src\detver.h">
+      <Filter>Header Files\libs\detours</Filter>
+    </ClInclude>
+    <ClInclude Include="libs\imgui\backends\imgui_impl_win32.h">
+      <Filter>Header Files\libs\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="libs\imgui\backends\imgui_impl_dx11.h">
+      <Filter>Header Files\libs\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="GAME_LEVEL_MANAGER.h">
+      <Filter>Header Files\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="GameFlow.h">
+      <Filter>Header Files\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="DevTools.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GameAddresses.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Menu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LIVE_LINK.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LIVE_LINK_SERVER.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LIVE_CAMERA.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CUBEMAP_CAPTURE.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CINEMATIC_CAMERA.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CINEMATIC_TRACKS.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CINEMATIC_VISUALS.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LIVE_SETTINGS.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DEBUG_MENU.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TABLE_ORDER.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CINEMATIC_CAPTURE.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BT_DEBUG.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AI_DEBUG.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AI_STATE.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AI_COMBAT.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RENDER_SWITCHES.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RENDER_COMMON.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DEBUG_ACTIONS.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GAME_SAVES.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GAME_DEBUG.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GAME_TIME_STEP.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GAME_SNAPSHOTS.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ANIM_NAMES.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ANIM_DEBUG.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SOUND_DEBUG.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PLAYER_DEBUG.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SCRIPT_DEBUG.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WORLD_DEBUG.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="COLLISION_INFO.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PERF_STATS.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PERF_TIMING.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LIVE_ANIMATION.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LIVE_TRACE.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NAV_DEBUG.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="COVER_DEBUG.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LIVE_DEBUGGER.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MOUSE_UNLOCK.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FRAME_CAP.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="POSSESS.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SCREENSHOT.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DEBUG_MARKER.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DEBUG_TEXT.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ZONE_LOADER.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="cpp.hint" />
+  </ItemGroup>
+</Project>

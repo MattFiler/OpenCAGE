@@ -7,7 +7,7 @@
 		echo "The required data was not sent.";
 		exit();
 	}
-	$connection = mysqli_connect("localhost", $username, $password, "OpenCAGE");
+	$connection = mysqli_connect("127.0.0.1", $username, $password, "OpenCAGE");
 	
 	$result = mysqli_query($connection, "SELECT * FROM analytics WHERE client_id='".mysqli_real_escape_string($connection, $_GET["uid"])."' AND version_number='".mysqli_real_escape_string($connection, $_GET["version"])."' AND is_on_staging='".mysqli_real_escape_string($connection, $_GET["staging"])."'");
 	

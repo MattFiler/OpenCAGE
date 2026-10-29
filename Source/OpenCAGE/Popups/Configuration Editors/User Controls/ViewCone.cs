@@ -46,23 +46,23 @@ namespace OpenCAGE.ConfigEditors
         public void Save(XmlElement viewcone)
         {
             ConfigEditorUtils.EnsureChildElements(viewcone, "ViewconeSettings_type").InnerText = _name;
-            ConfigEditorUtils.EnsureChildElements(viewcone, "Length").InnerText = Length.Text;
-            ConfigEditorUtils.EnsureChildElements(viewcone, "SmokeLengthModifier").InnerText = SmokeLengthModifier.Text;
-            ConfigEditorUtils.EnsureChildElements(viewcone, "VerticalAngle").InnerText = VerticalAngle.Text;
-            ConfigEditorUtils.EnsureChildElements(viewcone, "HorizontalAngle").InnerText = HorizontalAngle.Text;
-            ConfigEditorUtils.EnsureChildElements(viewcone, "ExposureEffectLower").InnerText = ExposureEffectLower.Text;
-            ConfigEditorUtils.EnsureChildElements(viewcone, "ExposureEffectUpper").InnerText = ExposureEffectUpper.Text;
-            ConfigEditorUtils.EnsureChildElements(viewcone, "StanceEffectLower").InnerText = StanceEffectLower.Text;
-            ConfigEditorUtils.EnsureChildElements(viewcone, "StanceEffectUpper").InnerText = StanceEffectUpper.Text;
-            ConfigEditorUtils.EnsureChildElements(viewcone, "MovementEffectLower").InnerText = MovementEffectLower.Text;
-            ConfigEditorUtils.EnsureChildElements(viewcone, "MovementEffectUpper").InnerText = MovementEffectUpper.Text;
-            ConfigEditorUtils.EnsureChildElements(viewcone, "SmokeEffectLower").InnerText = SmokeEffectLower.Text;
-            ConfigEditorUtils.EnsureChildElements(viewcone, "SmokeEffectUpper").InnerText = SmokeEffectUpper.Text;
-            ConfigEditorUtils.EnsureChildElements(viewcone, "DistanceEffectLower").InnerText = DistanceEffectLower.Text;
-            ConfigEditorUtils.EnsureChildElements(viewcone, "DistanceEffectUpper").InnerText = DistanceEffectUpper.Text;
-            ConfigEditorUtils.EnsureChildElements(viewcone, "Light_meter_dark_level").InnerText = Light_meter_dark_level.Text;
-            ConfigEditorUtils.EnsureChildElements(viewcone, "Light_meter_partially_lit_level").InnerText = Light_meter_partially_lit_level.Text;
-            ConfigEditorUtils.EnsureChildElements(viewcone, "Light_meter_fully_lit_level").InnerText = Light_meter_fully_lit_level.Text;
+            ConfigEditorUtils.EnsureChildElements(viewcone, "Length").InnerText = ConfigEditorUtils.NumberText(Length);
+            ConfigEditorUtils.EnsureChildElements(viewcone, "SmokeLengthModifier").InnerText = ConfigEditorUtils.NumberText(SmokeLengthModifier);
+            ConfigEditorUtils.EnsureChildElements(viewcone, "VerticalAngle").InnerText = ConfigEditorUtils.NumberText(VerticalAngle);
+            ConfigEditorUtils.EnsureChildElements(viewcone, "HorizontalAngle").InnerText = ConfigEditorUtils.NumberText(HorizontalAngle);
+            ConfigEditorUtils.EnsureChildElements(viewcone, "ExposureEffectLower").InnerText = ConfigEditorUtils.NumberText(ExposureEffectLower);
+            ConfigEditorUtils.EnsureChildElements(viewcone, "ExposureEffectUpper").InnerText = ConfigEditorUtils.NumberText(ExposureEffectUpper);
+            ConfigEditorUtils.EnsureChildElements(viewcone, "StanceEffectLower").InnerText = ConfigEditorUtils.NumberText(StanceEffectLower);
+            ConfigEditorUtils.EnsureChildElements(viewcone, "StanceEffectUpper").InnerText = ConfigEditorUtils.NumberText(StanceEffectUpper);
+            ConfigEditorUtils.EnsureChildElements(viewcone, "MovementEffectLower").InnerText = ConfigEditorUtils.NumberText(MovementEffectLower);
+            ConfigEditorUtils.EnsureChildElements(viewcone, "MovementEffectUpper").InnerText = ConfigEditorUtils.NumberText(MovementEffectUpper);
+            ConfigEditorUtils.EnsureChildElements(viewcone, "SmokeEffectLower").InnerText = ConfigEditorUtils.NumberText(SmokeEffectLower);
+            ConfigEditorUtils.EnsureChildElements(viewcone, "SmokeEffectUpper").InnerText = ConfigEditorUtils.NumberText(SmokeEffectUpper);
+            ConfigEditorUtils.EnsureChildElements(viewcone, "DistanceEffectLower").InnerText = ConfigEditorUtils.NumberText(DistanceEffectLower);
+            ConfigEditorUtils.EnsureChildElements(viewcone, "DistanceEffectUpper").InnerText = ConfigEditorUtils.NumberText(DistanceEffectUpper);
+            ConfigEditorUtils.EnsureChildElements(viewcone, "Light_meter_dark_level").InnerText = ConfigEditorUtils.NumberText(Light_meter_dark_level);
+            ConfigEditorUtils.EnsureChildElements(viewcone, "Light_meter_partially_lit_level").InnerText = ConfigEditorUtils.NumberText(Light_meter_partially_lit_level);
+            ConfigEditorUtils.EnsureChildElements(viewcone, "Light_meter_fully_lit_level").InnerText = ConfigEditorUtils.NumberText(Light_meter_fully_lit_level);
         }
     }
 }

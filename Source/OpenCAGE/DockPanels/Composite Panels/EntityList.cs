@@ -32,21 +32,25 @@ namespace OpenCAGE.DockPanels
         public EntityList()
         {
             InitializeComponent();
+            Theming.ThemeManager.ApplyToForm(this);
+
+            EditorIcons.Bind(createParameterToolStripMenuItem, EditorIcon.Parameter);
+            EditorIcons.Bind(createFunctionToolStripMenuItem, EditorIcon.Function);
+            EditorIcons.Bind(createInstanceOfCompositeToolStripMenuItem, EditorIcon.CompositeInstance);
+            EditorIcons.Bind(createProxyToolStripMenuItem, EditorIcon.Proxy);
+            EditorIcons.Bind(createAliasToolStripMenuItem1, EditorIcon.Alias);
+            EditorIcons.Bind(deinstanceToolStripMenuItem, EditorIcon.DeinstanceComposite);
+            EditorIcons.Bind(createVariantToolStripMenuItem, EditorIcon.CompositeVariant);
+            EditorIcons.Bind(createCompositeToolStripMenuItem, EditorIcon.CreateCompositeFromSelected);
 
             compositeEntityList1.ContextMenuStrip = EntityListContextMenu;
 
             compositeEntityList1.SelectedEntityChanged += OnEntitySelected;
+            compositeEntityList1.StepIntoCompositeInstance = entity => Singleton.Editor?.CompositeDisplay?.StepIntoCompositeInstance(entity);
             this.FormClosed += EntityList_FormClosed;
-
-            this.DockStateChanged += EntityList_DockStateChanged;
 
             this.CloseButtonVisible = false;
             this.AllowEndUserDocking = false;
-        }
-
-        protected override string GetPersistString()
-        {
-            return "EntityList";
         }
 
         public void UpdateTitle()
@@ -78,20 +82,9 @@ namespace OpenCAGE.DockPanels
             compositeEntityList1.Focus();
         }
 
-        private void EntityList_DockStateChanged(object sender, EventArgs e)
-        {
-            if (DockState == DockState.Unknown || DockState == DockState.Hidden)
-                return;
-
-            if (DockState == _previousDockState) return;
-            _previousDockState = DockState;
-        }
-
         private void EntityList_FormClosed(object sender, FormClosedEventArgs e)
         {
             this.FormClosed -= EntityList_FormClosed;
-            if (_entityRenameDialog != null)
-                _entityRenameDialog.FormClosed -= _entityRenameDialog_FormClosed;
         }
 
         private void OnEntitySelected(Entity entity)
@@ -103,11 +96,108 @@ namespace OpenCAGE.DockPanels
         private void EntityListContextMenu_Opening(object sender, System.ComponentModel.CancelEventArgs e)
         {
             bool hasSelectedEntity = compositeEntityList1.SelectedEntity != null;
+            int selectedCount = compositeEntityList1.SelectedEntities.Count;
 
             deleteToolStripMenuItem.Enabled = hasSelectedEntity;
-            renameToolStripMenuItem.Enabled = hasSelectedEntity && compositeEntityList1.SelectedEntity.variant != EntityVariant.ALIAS && compositeEntityList1.SelectedEntity.variant != EntityVariant.VARIABLE;
-            duplicateToolStripMenuItem.Enabled = hasSelectedEntity && compositeEntityList1.SelectedEntity.variant != EntityVariant.ALIAS && compositeEntityList1.SelectedEntity.variant != EntityVariant.VARIABLE;
-            findReferencesToolStripMenuItem.Enabled = hasSelectedEntity && compositeEntityList1.SelectedEntity.variant != EntityVariant.ALIAS && compositeEntityList1.SelectedEntity.variant != EntityVariant.VARIABLE;
+            //Say how many are going: from a list of rows it is not otherwise obvious that the whole
+            //selection is the target rather than the row under the cursor.
+            deleteToolStripMenuItem.Text = selectedCount > 1 ? "Delete " + selectedCount + " Entities" : "Delete";
+            copyToolStripMenuItem.Enabled = hasSelectedEntity;
+            pasteToolStripMenuItem.Enabled = EntityClipboard.HasContent;
+            findReferencesToolStripMenuItem.Enabled = hasSelectedEntity; //any entity can be referenced, same as on a node
+            //Vector parameter entities can be shown as colours, or as vectors again (as on their nodes)
+            ColourParameters.ConfigureMenuItem(treatAsColourToolStripMenuItem, Content?.Level?.Commands, List.Composite, List.SelectedEntities);
+
+            ConfigureRefactorItems();
+            ConfigureTriggerSequenceItems();
+        }
+
+        /* De-instance and Create Composite Variant for a composite instance on its own; Create Composite From Selected
+           for anything but the composite's own parameters. Only in the editor's list, for the composite it is showing. */
+        private void ConfigureRefactorItems()
+        {
+            CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
+            List<Entity> selected = List.SelectedEntities;
+            bool here = display?.Composite != null && display.Composite == List.Composite;
+            bool deinstance = here && CompositeRefactoring.CanDeinstance(selected, Content?.Level?.Commands);
+            bool variant = here && CompositeRefactoring.CanCreateVariant(selected, Content?.Level?.Commands);
+            bool create = here && selected.Count != 0;
+            deinstanceToolStripMenuItem.Visible = deinstance;
+            createVariantToolStripMenuItem.Visible = variant;
+            createCompositeToolStripMenuItem.Visible = create;
+            createCompositeToolStripMenuItem.Enabled = CompositeRefactoring.CanCreateComposite(selected);
+            //From what was decided: an item's Visible reads false until its menu is on screen, and this runs as it opens
+            refactorSeparator.Visible = deinstance || variant || create;
+        }
+
+        private void treatAsColourToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ColourParameters.MenuItemClicked(Content?.Level?.Commands, List.Composite, List.SelectedEntities, List.SelectedEntity);
+        }
+
+        private void deinstanceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (List.SelectedEntity is FunctionEntity instance)
+                CompositeRefactoring.Deinstance(instance);
+        }
+
+        private void createVariantToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (List.SelectedEntity is FunctionEntity instance)
+                CompositeRefactoring.CreateVariant(instance);
+        }
+
+        private void createCompositeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            CompositeRefactoring.CreateComposite(List.SelectedEntities);
+        }
+
+        //What the menu's TriggerSequence actions act on, settled as it opened
+        private TriggerSequenceMembers.MenuChoice _menuSequence = null;
+
+        /* Right-clicking a TriggerSequence row offers to put the rest of the selection in it, or take it
+           out, without going through its editor. A right-click selects the row under it unless that row is
+           in the selection already, so the entities go in the selection with it: Ctrl+click them and the
+           sequence, then right-click the sequence. With no sequence under the cursor (the menu opened from
+           the keyboard, say), a sequence that is the only one selected is the one meant. While a sequence
+           is taking new entities, right-clicking anything else offers the same for that one. */
+        private void ConfigureTriggerSequenceItems()
+        {
+            CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
+            List<Entity> selected = List.SelectedEntities;
+            _menuSequence = null;
+
+            if (display?.Composite != null && display.Composite == List.Composite && selected.Count != 0)
+            {
+                Entity clicked = List.EntityAtScreenPoint(Cursor.Position);
+                if (clicked == null || !selected.Contains(clicked))
+                    clicked = List.SelectedEntity;
+                if (TriggerSequenceMembers.At(display, clicked) == null)
+                {
+                    List<Entity> sequences = selected.Where(o => TriggerSequenceMembers.At(display, o) != null).ToList();
+                    if (sequences.Count == 1)
+                        clicked = sequences[0];
+                }
+                _menuSequence = TriggerSequenceMembers.ChooseForMenu(display, clicked, selected);
+            }
+
+            TriggerSequenceMembers.ConfigureMenuItems(_menuSequence, display, triggerSequenceSeparator,
+                addSelectedToTriggerSequenceToolStripMenuItem, removeSelectedFromTriggerSequenceToolStripMenuItem, autoAddToTriggerSequenceToolStripMenuItem);
+        }
+
+        private void addSelectedToTriggerSequenceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            TriggerSequenceMembers.Add(_menuSequence?.Target, Singleton.Editor?.CompositeDisplay, _menuSequence?.Entities);
+        }
+
+        private void removeSelectedFromTriggerSequenceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            TriggerSequenceMembers.Remove(_menuSequence?.Target, Singleton.Editor?.CompositeDisplay, _menuSequence?.Entities);
+        }
+
+        private void autoAddToTriggerSequenceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            TriggerSequenceMembers.ToggleAutoAdd(_menuSequence);
         }
 
         //Temporarily hijacked these options here: they should be handled in CompositeDisplay really...
@@ -132,37 +222,103 @@ namespace OpenCAGE.DockPanels
             Singleton.Editor.CompositeDisplay.CreateEntity(EntityVariant.ALIAS);
         }
 
+        protected override bool ProcessCmdKey(ref System.Windows.Forms.Message msg, System.Windows.Forms.Keys keyData)
+        {
+            if (OpenCAGE.Undo.UndoKeys.TryHandle(keyData))
+                return true;
+            if (OpenCAGE.UnityConnection.ViewerCreateModeKeys.TryHandle(keyData))
+                return true;
+
+            /* Only when the list is the thing being typed at: in the search box Delete is a character
+               and Ctrl+C / Ctrl+V are the text box's own copy and paste. With the list focused they mean
+               the same as on the flowgraph and in the viewport - the selection to the entity clipboard,
+               and the clipboard into this composite. */
+            if (List.ListHasFocus)
+            {
+                Keys key = keyData & Keys.KeyCode;
+                Keys modifiers = keyData & Keys.Modifiers;
+                if (key == Keys.Delete && modifiers == Keys.None)
+                {
+                    DeleteSelectedEntities();
+                    return true;
+                }
+                if (key == Keys.C && modifiers == Keys.Control)
+                {
+                    CopySelectedEntities();
+                    return true;
+                }
+                if (key == Keys.V && modifiers == Keys.Control)
+                {
+                    PasteClipboard();
+                    return true;
+                }
+            }
+
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
         private void deleteToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Singleton.Editor.CompositeDisplay.DeleteEntity(List.SelectedEntity);
-        }
-        RenameEntity _entityRenameDialog = null;
-        private void renameToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            if (_entityRenameDialog != null)
-                _entityRenameDialog.Close();
-
-            _entityRenameDialog = new RenameEntity(List.SelectedEntity, Singleton.Editor.CompositeDisplay.Composite);
-            _entityRenameDialog.Show();
-            _entityRenameDialog.FormClosed += _entityRenameDialog_FormClosed;
-        }
-        private void _entityRenameDialog_FormClosed(object sender, FormClosedEventArgs e)
-        {
-            _entityRenameDialog = null;
-        }
-        private void duplicateToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            Singleton.Editor.CompositeDisplay.DuplicateEntity(List.SelectedEntity);
+            DeleteSelectedEntities();
         }
 
-        private void deleteCheckedEntities_Click(object sender, EventArgs e)
+        /// <summary>
+        /// Delete everything selected, as one step.
+        /// </summary>
+        private void DeleteSelectedEntities()
         {
-            Singleton.Editor?.CompositeDisplay?.DeleteCheckedEntities();
+            List<Entity> entities = List.SelectedEntities;
+            if (entities.Count == 0)
+                return;
+
+            //One question and one undo step for the lot, rather than one per entity
+            Singleton.Editor?.CompositeDisplay?.DeleteEntities(entities);
+        }
+        private void copyToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            CopySelectedEntities();
+        }
+
+        private void pasteToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            PasteClipboard();
+        }
+
+        /// <summary>
+        /// Copy the whole selection to the entity clipboard - the whole of it, so links between the
+        /// copied entities come along with them. Right-click Copy and Ctrl+C both land here.
+        /// </summary>
+        private void CopySelectedEntities()
+        {
+            List<Entity> entities = List.SelectedEntities;
+            if (entities.Count == 0 && List.SelectedEntity != null)
+                entities.Add(List.SelectedEntity);
+            if (entities.Count == 0)
+                return;
+
+            List<EntityClipboard.Entry> entries = new List<EntityClipboard.Entry>();
+            foreach (Entity entity in entities)
+                entries.Add(new EntityClipboard.Entry() { EntityId = entity.shortGUID.AsUInt32, Offset = System.Drawing.Point.Empty });
+
+            Singleton.Editor?.CompositeDisplay?.CopyEntitiesToClipboard(entries);
+        }
+
+        /// <summary>
+        /// Paste the entity clipboard into this composite as new entities. Right-click Paste and Ctrl+V
+        /// both land here; the display takes the same route the viewport's Ctrl+V does.
+        /// </summary>
+        private void PasteClipboard()
+        {
+            if (!EntityClipboard.HasContent)
+                return;
+            Singleton.Editor?.CompositeDisplay?.PasteClipboardFromViewport();
         }
 
         ShowCrossRefs _crossRefsDialog = null;
         private void findReferencesToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            if (List.SelectedEntity == null)
+                return;
             if (_crossRefsDialog != null)
                 _crossRefsDialog.Close();
 

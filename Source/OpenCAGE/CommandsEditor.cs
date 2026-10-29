@@ -11,7 +11,7 @@ using OpenCAGE.Popups.Configuration_Editors;
 using OpenCAGE.Scripts;
 using OpenCAGE.UserControls;
 using OpenCAGE.UnityConnection;
-using DarkModeForms;
+using OpenCAGE.AnimTrees;
 using DiscordRPC;
 using Newtonsoft.Json;
 using OpenCAGE;
@@ -27,13 +27,11 @@ using System.IO.Compression;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.Remoting.Contexts;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
-using System.Xml;
 using WebSocketSharp;
 using WebSocketSharp.Server;
 using WeifenLuo.WinFormsUI.Docking;
@@ -76,10 +74,15 @@ namespace OpenCAGE
         private Dictionary<string, ToolStripMenuItem> _levelMenuItems = new Dictionary<string, ToolStripMenuItem>();
         private readonly Dictionary<float, ToolStripMenuItem> _transformGridSnapMenuItems = new Dictionary<float, ToolStripMenuItem>();
         private readonly Dictionary<float, ToolStripMenuItem> _rotationSnapMenuItems = new Dictionary<float, ToolStripMenuItem>();
+        private ToolStripMenuItem _vertexSnapMenuItem;
 
         private Thread _loadThread = null;
         private ProgressUI _progressUI = null;
         private bool _levelLoadInProgress;
+        /// <summary>A level is being read in on the loader thread: neither open nor not open yet.</summary>
+        public bool IsLevelLoadInProgress => _levelLoadInProgress;
+        /// <summary>The level loader thread is still working (the progress flag can be cleared by the viewer before it is done).</summary>
+        internal bool IsLevelLoaderRunning => _loadThread != null && _loadThread.IsAlive;
         private System.Windows.Forms.Timer _progressKeepOnTopTimer;
         private bool _cathodeLoadComplete;
         private bool _viewerPopulateFinished;
@@ -92,29 +95,27 @@ namespace OpenCAGE
 
         private const float DefaultSideDockPortion = 0.22f;
         private const float DefaultEntityInspectorPortion = 0.18f;
-        private const int CurrentMainDockLayoutVersion = 8;
         private const double DefaultLeftSearchPortion = 0.28;
         private float _defaultSplitterDistance = 0.25f;
         private int _defaultWidth;
         private int _defaultHeight;
-        private int _lastMainDockAreaWidth;
-        private int _lastMainDockAreaHeight;
-        private int _lastFormClientWidth;
-        private int _lastFormClientHeight;
         private FormWindowState _lastWindowState;
 
         private bool _settingUp = true;
 
-        private DarkModeCS _dm;
+        //A level given on the command line, held until the window is up (see the constructor)
+        private string _startupLevel = null;
+
 
         public CommandsEditor(string level = null)
         {
+            //LocalDebug.CheckAnimKFTypes();
+
+
             //LocalDebug.CheckWriteInstanced();
 
             InitializeComponent();
-#if USE_DARK_MODE
-            _dm = new DarkModeCS(this);
-#endif
+            Theming.ThemeManager.ApplyToForm(this);
 
             Singleton.Editor = this;
             Singleton.LoadGlobals();
@@ -128,63 +129,66 @@ namespace OpenCAGE
 
             Singleton.OnCompositeSelected += OnCompositeSelectedForDiscord;
 
+            //Live link: script edits and method calls reach the game while it runs the level
+            RuntimeUtilsConnection.LiveLink.Initialise();
+            //...and the game's camera and the viewport's follow one another as the viewport's Live Link Camera menu says
+            RuntimeUtilsConnection.LiveLinkCameraSync.Initialise();
+            RuntimeUtilsConnection.LiveLink.Activity += ShowLiveLinkActivity;
+            RuntimeUtilsConnection.LiveLink.ConnectionChanged += OnLiveLinkConnectionChanged;
+
 #if USE_DIRTY_TRACKER
             DirtyTracker.OnChanged += OnDirtyChanged;
 #endif
 
             dockPanel.ShowDocumentIcon = true;
             dockPanel.DocumentStyle = DocumentStyle.DockingWindow;
+            Theming.ThemeManager.ApplyToDockPanel(dockPanel);
 
             _defaultWidth = Width;
             _defaultHeight = Height;
 
 #if !DEBUG
-            //Dev options
-            DEBUG_ReloadLevel.Visible = false;
-            connectToRuntimeUtils.Visible = false;
-            optionsToolStripSeparatorRuntimeUtils.Visible = false;
-            
             //WIP forms
-            inputsToolStripMenuItem.Visible = false;
             scriptReadableVariablesToolStripMenuItem.Visible = false;
-            voiceMappingsToolStripMenuItem.Visible = false;
-            localisationToolStripMenuItem.Visible = false;
-            levelTextDBsToolStripMenuItem.Visible = false;
-            fontConfigToolStripMenuItem.Visible = false;
 #endif
 
             WindowState = SettingsManager.GetString(Settings.WindowState, "Normal") == "Maximized" ? FormWindowState.Maximized : FormWindowState.Normal;
             _lastWindowState = WindowState;
             Width = SettingsManager.GetInteger(Settings.WindowWidth, _defaultWidth);
             Height = SettingsManager.GetInteger(Settings.WindowHeight, _defaultHeight);
+            //Never larger than the screen it opens on: a size can be saved on a bigger monitor, or in physical pixels by a
+            //session that WPF had made DPI-aware before issue 676 was fixed
+            Rectangle workingArea = Screen.FromRectangle(Bounds).WorkingArea;
+            Width = Math.Min(Width, workingArea.Width);
+            Height = Math.Min(Height, workingArea.Height);
             ApplyMainDockPortionsFromSettings();
-            UpdateMainDockAreaCache();
-            ResizeBegin += CommandsEditor_ResizeBegin;
             Resize += CommandsEditor_Resize;
-            ResizeEnd += CommandsEditor_ResizeEnd;
             Shown += CommandsEditor_Shown;
             FormClosing += CommandsEditor_FormClosing;
-            Load += CommandsEditor_Load;
 
             Singleton.OnEntityAdded += OnEntityAdded;
             Singleton.OnResourceModified += OnResourceModified;
+            SetupUndo();
+            SetupAiAssistantStatus();
 
-            //Fixes for dodgy top dropdowns
+            // Options category menus: open on hover, and stay open when toggling checkable items
             compositeViewerToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
-            compositeViewerToolStripMenuItem.DropDown.Closing += DropDown_Closing;
+            compositeViewerToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
             entityDisplayToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
-            entityDisplayToolStripMenuItem.DropDown.Closing += DropDown_Closing;
+            entityDisplayToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
+            saveBuildToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
+            saveBuildToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
+            saveBuildToolStripMenuItem.DropDownOpening += SaveBuildOptionsDropDownOpening;
             miscToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };
-            miscToolStripMenuItem.DropDown.Closing += DropDown_Closing;
-            toolStripButton2.DropDown.Closing += DropDown_Closing;
-            viewportOptionsToolStripMenuItem.DropDown.Closing += DropDown_Closing;
+            miscToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
+            viewportOptionsToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
             viewportOptionsToolStripMenuItem.DropDownOpening += ViewportOptionsDropdownOpening;
             SetupOptions();
 
             SettingsManager.SettingsChanged += OnSettingsChanged;
 
             //Populate level list
-            List<string> levels = Level.GetLevels(Singleton.PathToAI);
+            List<string> levels = EditorUtils.GetEditableLevels();
             for (int i = 0; i < levels.Count; i++)
             {
                 ToolStripMenuItem levelItem = new ToolStripMenuItem(levels[i]);
@@ -193,15 +197,49 @@ namespace OpenCAGE
                 _levelMenuItems.Add(levels[i], levelItem);
             }
 
-            //If we have been launched to a level, load that
-            if (level != null)
-                OnLevelSelected(level);
+            //If we have been launched to a level, load that. With the viewport on it waits for the window to be shown: the
+            //viewer is embedded into a panel of this window, which has no handle to take it yet - the embed used to wait out
+            //its 30 seconds here, before there was any window, and then give up
+            string startupLevel = level != null ? ResolveStartupLevel(level, levels) : null;
+            if (level != null && startupLevel == null)
+            {
+                MessageBox.Show("There is no level '" + level + "' in this install to open (-level in the launch options). Choose a level to load instead.",
+                    "Level not found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            if (startupLevel != null)
+            {
+                if (Singleton.ViewportEnabled)
+                    _startupLevel = startupLevel;
+                else
+                    OnLevelSelected(startupLevel);
+            }
             else
                 loadLevel_Click(null, null);
         }
 
+        /* The level a -level launch option means, as the level list spells it: its full name in any case or slashes, or only its
+           last part ('SCI_HUB') when one level ends so. Null when it is none of them - loading a name with no level behind it
+           crashed the loader, at every launch until the option was taken out. */
+        private static string ResolveStartupLevel(string given, List<string> levels)
+        {
+            string Tidy(string name) => (name ?? "").Replace('\\', '/').Trim().Trim('"').Trim('/').ToUpperInvariant();
+            string wanted = Tidy(given);
+            if (wanted.Length == 0)
+                return null;
+            string exact = levels.FirstOrDefault(o => Tidy(o) == wanted);
+            if (exact != null)
+                return exact;
+            List<string> byLeaf = levels.Where(o => Tidy(o).EndsWith("/" + wanted, StringComparison.Ordinal)).ToList();
+            return byLeaf.Count == 1 ? byLeaf[0] : null;
+        }
+
         private void SetupOptions()
         {
+            SetupHighlightModeMenu();
+            SetupAntialiasingMenu();
+            SetupDrawDistanceMenu();
+            SetupCubemapCaptureSizeMenu();
+            SetupCompositeBrowserModeMenu();
             ConfigureLevelViewerAvailability();
 
             //Apply every setting's effect on startup through the same single path used for local/external changes
@@ -220,27 +258,77 @@ namespace OpenCAGE
                     break;
             }
 
-#if SHIP_BUILD
-            //This option is dependent on external tools, so disable if they don't exist
-            if (!Directory.Exists("legendplugin"))
-                behaviourTreesToolStripMenuItem.Enabled = false;
-#endif
+            //The Live Link menu beside it: only there while the game is running, and only builds the runtime utils support have the live link
+            StartLiveLinkMenuWatch();
 
-            //Game directory management should not be visible in child processes
+            //This option is dependent on external tools, so disable if they don't exist
+            if (!File.Exists(BehaviourTreeEditorPath))
+                behaviourTreesToolStripMenuItem.Enabled = false;
+
+            //Game directory management should not be visible in child processes - until the primary goes away
             manageGameDirectoriesToolStripMenuItem.Visible = Singleton.IsPrimaryInstance;
+            if (!Singleton.IsPrimaryInstance)
+                WatchForPrimaryInstanceHandover();
+
+#if ENABLE_MOD_PACKAGES
+            //Mod packaging lives on the toolbar next to backups
+            ToolStripButton modManagerBtn = new ToolStripButton("Mod Manager") { DisplayStyle = ToolStripItemDisplayStyle.Text };
+            modManagerBtn.Click += modManagerBtn_Click;
+            toolStrip.Items.Insert(toolStrip.Items.IndexOf(manageBackupsBtn) + 1, modManagerBtn);
+#endif
+            //Menus an older OpenCAGE's Launch Game options wrote over the game's in UI.PAK go back as shipped (in what the Mod
+            //Manager keeps too, so UI.PAK doesn't read as a change of the user's), and options still on are set up the new way -
+            //beside the game's menus - straight away, as they'd be in place whether the game is launched from OpenCAGE or not
+            if (Singleton.IsPrimaryInstance && UiMovieOverrides.PutBackOldMenus(Singleton.PathToAI) && UiMovieOverrides.All.Any(UiMovieOverrides.IsOn))
+                UiMovieOverrides.Sync(Singleton.PathToAI);
+            Modding.ModServices.CaptureSmallFilesInBackground();
 
             versionToolStripMenuItem.Text = "Version " + ProductVersion;
+
+            //Package files (.ocp / .omp) can be dropped anywhere on the window to open them
+            PackageDropTarget.Attach(this);
+
             _settingUp = false;
         }
 
+#if ENABLE_MOD_PACKAGES
+        ModManagerForm _modManager = null;
+        private void modManagerBtn_Click(object sender, EventArgs e)
+        {
+            if (_modManager != null)
+            {
+                _modManager.FormClosed -= _modManager_FormClosed;
+                _modManager.Close();
+            }
+
+            _modManager = new ModManagerForm();
+            _modManager.Show();
+            _modManager.FormClosed += _modManager_FormClosed;
+        }
+        private void _modManager_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            _modManager = null;
+        }
+        /// <summary>Open the Mod Manager, and import a package into its library if one is given.</summary>
+        public void OpenModManager(string packagePath)
+        {
+            //Reuse a manager that is up: a scan or a selection in it should not be thrown away for each file
+            if (_modManager == null || _modManager.IsDisposed)
+                modManagerBtn_Click(this, EventArgs.Empty);
+            else
+                _modManager.Activate();
+            if (!string.IsNullOrEmpty(packagePath))
+                _modManager?.ImportPackageFile(packagePath);
+        }
+#endif
+
         private void OnEntityAdded(Entity e)
         {
-            Steam.UnlockAchievement(Steam.Achievements.CREATE_A_NEW_ENTITY);
-
-            int entCount = SettingsManager.GetInteger(Settings.EntityCounter) + 1;
-            SettingsManager.SetInteger(Settings.EntityCounter, entCount);
-            if (entCount >= 100)
-                Steam.UnlockAchievement(Steam.Achievements.ONE_HUNDRED_ENTITIES);
+            //Entities made, not ones coming back: an undo or redo puts back one that was already counted, and an alias (each
+            //deep-selected entity gets one) overrides an entity that is already there
+            if (e == null || e is AliasEntity || OpenCAGE.Undo.UndoStack.Current.IsApplying)
+                return;
+            Steam.CountTowards(Steam.Achievements.ONE_HUNDRED_ENTITIES);
         }
 
         private void OnResourceModified()
@@ -248,22 +336,37 @@ namespace OpenCAGE
             Steam.UnlockAchievement(Steam.Achievements.ASSETS_MODIFIED);
         }
 
-        //keep dropdown open if cursor is inside it 
-        private void DropDown_Closing(object sender, ToolStripDropDownClosingEventArgs e)
+        // Keep option toggle menus open after clicking a checkable item so ticks stay visible.
+        // Still close on outside click, focus loss, Escape, etc.
+        private void OptionsDropDown_Closing(object sender, ToolStripDropDownClosingEventArgs e)
         {
-            var dropdown = sender as ToolStripDropDown;
-            if (dropdown != null)
-            {
-                Point cursorPosition = dropdown.PointToClient(Cursor.Position);
-                if (dropdown.DisplayRectangle.Contains(cursorPosition))
-                {
-                    e.Cancel = true;
-                }
-            }
+            if (e.CloseReason == ToolStripDropDownCloseReason.ItemClicked)
+                e.Cancel = true;
         }
 
         private void CommandsEditor_FormClosing(object sender, FormClosingEventArgs e)
         {
+            //A save still writing the level (a build pumps messages as it runs, with this window disabled - the taskbar can
+            //still ask it to close): the editor isn't taken down under it. Windows shutting down, or a crash, still close it.
+            if (_saveInProgress && e.CloseReason != CloseReason.WindowsShutDown && e.CloseReason != CloseReason.TaskManagerClosing && !Program.ExitingAfterCriticalError)
+            {
+                e.Cancel = true;
+                return;
+            }
+
+            //An AI assistant part-way through a tool call is asked about first (see CommandsEditor.Mcp.cs)
+            if (!ConfirmCloseWhileAiAssistantWorks() || !TryConfirmCloseWithOptionalSave())
+            {
+                e.Cancel = true;
+                return;
+            }
+
+            //Breakpoints set from here would stop the game with nothing left to let it go on
+            RuntimeUtilsConnection.LiveLinkDebugger.DisarmOnLeave();
+            _primaryInstanceTimer?.Stop();
+            //A closing primary must not accept package files it can no longer open
+            PackageHandover.StopServer();
+            MCP.McpServer.Stop();
             SettingsManager.SettingsChanged -= OnSettingsChanged;
 
             // Cancel in-flight loads so a completing background thread cannot touch this form after dispose
@@ -277,19 +380,106 @@ namespace OpenCAGE
             KillBehaviourTreeEditor();
             HideLoadProgressUI();
             KillLevelViewer();
-            SaveDockLayout();
+            SaveSplitterDistances();
         }
 
-        private void CommandsEditor_Load(object sender, EventArgs e)
+        private bool TryConfirmCloseWithOptionalSave()
         {
-            UpdateMainDockAreaCache();
-            UpdateFormClientSizeCache();
+            //A crash is taking the application down (Program.HandleError): nothing to ask, and no save to offer
+            if (Program.ExitingAfterCriticalError)
+                return true;
+
+            if (!SettingsManager.GetBool(Settings.PromptSaveOnClose))
+                return true;
+
+            if (_compositeBrowser?.Content?.Level == null)
+                return true;
+
+#if USE_DIRTY_TRACKER
+            if (!DirtyTracker.IsDirty)
+                return true;
+#endif
+
+            string levelName = _compositeBrowser.Content.Level.Name;
+            //Asked as the user's own box: an AI assistant's call may still be running underneath it
+            DialogResult result = MCP.McpDialogs.AskUser(
+                "Save \"" + levelName + "\" before closing OpenCAGE?",
+                "Save level?",
+                MessageBoxButtons.YesNoCancel,
+                MessageBoxIcon.Question);
+
+            if (result == DialogResult.Cancel)
+                return false;
+
+            if (result == DialogResult.Yes)
+                SaveLevel(false, successMsg: false, allowLaunchGame: false);
+
+            return true;
         }
 
         private void CommandsEditor_Shown(object sender, EventArgs e)
         {
-            RefreshDockLayoutAfterResize();
-            BeginInvoke(new Action(RefreshDockLayoutAfterResize));
+            dockPanel?.PerformLayout();
+            _compositeDisplay?.RefreshInnerDockLayoutAfterResize();
+
+            //The entity lists show each function type's category icon, which comes from the shipped tables (flowgraphs.dat,
+            //info.dat): read them now, off this thread, not when the first level load builds the entity palette
+            Task.Run(() =>
+            {
+                try
+                {
+                    System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(CustomTable).TypeHandle);
+                    System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(FlowgraphLayoutManager).TypeHandle);
+                }
+                catch (Exception) { } //the first real use reports it
+            });
+
+            //The level given on the command line, now there is a window to embed the viewer in. Started ahead of everything
+            //below, which sees it loading just as it did when it started in the constructor (a package file waits for it).
+            //Painted first: launching and embedding the viewer holds this thread for a few seconds.
+            if (_startupLevel != null)
+            {
+                string level = _startupLevel;
+                _startupLevel = null;
+                Update();
+                OnLevelSelected(level);
+            }
+
+            /* Harvest the shader permutation database if this install has no database yet. It only
+             * widens what the material editor can offer, so it runs itself once in the background
+             * rather than waiting to be asked - nothing here blocks, and a failure just leaves the
+             * editor with the permutations each level already carries. */
+            Modding.ShaderDatabase.EnsureBuiltInBackground(Singleton.PathToAI,
+                msg => SetIdleStatus("Shader database: " + msg),
+                () => SetIdleStatus(null));
+
+            //Double-clicked package files reach the running OpenCAGE through a pipe the primary serves
+            //(and a stash file it watches); one this process was launched with is opened now the window is up
+            if (PrimaryInstanceLock.IsHeld)
+                StartPackageHandoverServer();
+            PackageFiles.OpenPending();
+
+            _shown = true;
+            ApplyAiAssistantSetting();
+
+            //The live link may have been switched on (and tried) at startup, before this window had a handle to report to
+            OnLiveLinkConnectionChanged();
+            //...and the game may be running already, for the Live Link menu
+            RefreshLiveLinkMenu();
+        }
+
+        /* Serve the package handover pipe (see PackageHandover): files arrive on its thread and are queued on ours */
+        private void StartPackageHandoverServer()
+        {
+            PackageHandover.StartServer(path =>
+            {
+                try
+                {
+                    if (!IsDisposed)
+                        BeginInvoke(new Action(() => PackageFiles.Open(path)));
+                }
+                catch { }
+            });
         }
 
         //UI: remember width/height of editor
@@ -306,90 +496,22 @@ namespace OpenCAGE
             }
             SettingsManager.SetString(Settings.WindowState, WindowState.ToString());
 
-            // Maximize/restore often skip ResizeEnd - refresh dock layout when state changes
+            // Maximize/restore often skip a full layout pass - nudge the dock panel once.
             if (WindowState != _lastWindowState && WindowState != FormWindowState.Minimized)
             {
                 _lastWindowState = WindowState;
-                BeginInvoke(new Action(RefreshDockLayoutAfterResize));
+                BeginInvoke(new Action(() =>
+                {
+                    if (IsDisposed || Disposing || dockPanel == null || dockPanel.IsDisposed)
+                        return;
+                    dockPanel.PerformLayout();
+                    _compositeDisplay?.RefreshInnerDockLayoutAfterResize();
+                }));
             }
             else
             {
                 _lastWindowState = WindowState;
             }
-
-            UpdateFormClientSizeCache();
-        }
-
-        private void CommandsEditor_ResizeBegin(object sender, EventArgs e)
-        {
-            // Convert any absolute pixel dock portions to ratios before continuous resize begins
-            ConvertMainDockPixelPortionsBeforeResize();
-            UpdateMainDockAreaCache();
-        }
-
-        private void CommandsEditor_ResizeEnd(object sender, EventArgs e)
-        {
-            RefreshDockLayoutAfterResize();
-        }
-
-        private void RefreshDockLayoutAfterResize()
-        {
-            if (IsDisposed || Disposing || dockPanel == null || dockPanel.IsDisposed)
-                return;
-
-            try
-            {
-                ForceDockPortionsToRatiosFromCurrentLayout();
-                if (dockPanel.Region != null)
-                    dockPanel.Region = null;
-                dockPanel.PerformLayout();
-                dockPanel.Invalidate(true);
-                _compositeDisplay?.RefreshInnerDockLayoutAfterResize();
-            }
-            catch
-            {
-            }
-
-            UpdateMainDockAreaCache();
-            UpdateFormClientSizeCache();
-        }
-
-        /// <summary>
-        /// DockPanel Suite treats values &gt; 1 as absolute pixels. Convert any leftover pixel
-        /// portions (or derive ratios from the live dock window widths) so resize scales cleanly.
-        /// </summary>
-        private void ForceDockPortionsToRatiosFromCurrentLayout()
-        {
-            if (dockPanel == null)
-                return;
-
-            int width = dockPanel.ClientSize.Width;
-            int height = dockPanel.ClientSize.Height;
-            if (width <= 0)
-                width = ClientSize.Width;
-            if (height <= 0)
-                height = ClientSize.Height;
-            if (width <= 0 || height <= 0)
-                return;
-
-            DockWindow left = dockPanel.DockWindows[DockState.DockLeft];
-            DockWindow right = dockPanel.DockWindows[DockState.DockRight];
-            DockWindow bottom = dockPanel.DockWindows[DockState.DockBottom];
-
-            if (left != null && left.Visible && left.Width > 0)
-                dockPanel.DockLeftPortion = ClampDockPortion((double)left.Width / width);
-            else if (dockPanel.DockLeftPortion > 1.0)
-                dockPanel.DockLeftPortion = ClampDockPortion(dockPanel.DockLeftPortion / width);
-
-            if (right != null && right.Visible && right.Width > 0)
-                dockPanel.DockRightPortion = ClampDockPortion((double)right.Width / width);
-            else if (dockPanel.DockRightPortion > 1.0)
-                dockPanel.DockRightPortion = ClampDockPortion(dockPanel.DockRightPortion / width);
-
-            if (bottom != null && bottom.Visible && bottom.Height > 0)
-                dockPanel.DockBottomPortion = ClampDockPortion((double)bottom.Height / height);
-            else if (dockPanel.DockBottomPortion > 1.0)
-                dockPanel.DockBottomPortion = ClampDockPortion(dockPanel.DockBottomPortion / height);
         }
 
         private static double ClampDockPortion(double portion)
@@ -397,24 +519,11 @@ namespace OpenCAGE
             return Math.Max(0.05, Math.Min(0.95, portion));
         }
 
-        private static double ToStoredDockPortion(double portion, double axisSize)
-        {
-            if (portion <= 1.0 || axisSize <= 0)
-                return portion;
-            return ClampDockPortion(portion / axisSize);
-        }
-
-        private static double LoadDockPortionSetting(float savedPortion, int savedAxisSize, double currentAxisSize, double defaultPortion)
+        private static double LoadDockPortionSetting(float savedPortion, double defaultPortion)
         {
             if (savedPortion <= 0f)
                 return defaultPortion;
-            if (savedPortion <= 1f)
-                return savedPortion;
-            if (savedAxisSize > 0)
-                return ClampDockPortion(savedPortion / savedAxisSize);
-            if (currentAxisSize > 0)
-                return ClampDockPortion(savedPortion / currentAxisSize);
-            return defaultPortion;
+            return ClampDockPortion(savedPortion);
         }
 
         private void ApplyMainDockPortionsFromSettings()
@@ -422,133 +531,81 @@ namespace OpenCAGE
             if (dockPanel == null)
                 return;
 
-            Rectangle area = dockPanel.DockArea;
-            double areaWidth = area.Width > 0 ? area.Width : Width;
-            double areaHeight = area.Height > 0 ? area.Height : Height;
-            int savedWidth = SettingsManager.GetInteger(Settings.WindowWidth, Width);
-            int savedHeight = SettingsManager.GetInteger(Settings.WindowHeight, Height);
-
             dockPanel.DockLeftPortion = LoadDockPortionSetting(
-                SettingsManager.GetFloat(Settings.SplitWidthMainRight, DefaultSideDockPortion),
-                savedWidth,
-                areaWidth,
+                SettingsManager.GetFloat(Settings.DockSplitterLeft, DefaultSideDockPortion),
                 DefaultSideDockPortion);
             dockPanel.DockRightPortion = LoadDockPortionSetting(
-                SettingsManager.GetFloat(Settings.EntityInspectorWidth, DefaultEntityInspectorPortion),
-                savedWidth,
-                areaWidth,
+                SettingsManager.GetFloat(Settings.DockSplitterRight, DefaultEntityInspectorPortion),
                 DefaultEntityInspectorPortion);
             dockPanel.DockBottomPortion = LoadDockPortionSetting(
-                SettingsManager.GetFloat(Settings.SplitWidthMainBottom, _defaultSplitterDistance),
-                savedHeight,
-                areaHeight,
+                SettingsManager.GetFloat(Settings.DockSplitterBottom, _defaultSplitterDistance),
                 _defaultSplitterDistance);
         }
 
-        private void SaveMainDockPortionsToSettings()
+        private void SaveSplitterDistances()
         {
             if (dockPanel == null)
                 return;
 
-            Rectangle area = dockPanel.DockArea;
-            double width = area.Width > 0 ? area.Width : Width;
-            double height = area.Height > 0 ? area.Height : Height;
-
-            SettingsManager.SetFloat(
-                Settings.SplitWidthMainRight,
-                (float)ToStoredDockPortion(dockPanel.DockLeftPortion, width));
-            SettingsManager.SetFloat(
-                Settings.EntityInspectorWidth,
-                (float)ToStoredDockPortion(dockPanel.DockRightPortion, width));
-            SettingsManager.SetFloat(
-                Settings.SplitWidthMainBottom,
-                (float)ToStoredDockPortion(dockPanel.DockBottomPortion, height));
-        }
-
-        private void ConvertMainDockPixelPortionsBeforeResize()
-        {
-            if (dockPanel == null)
-                return;
-
-            double widthBasis = _lastMainDockAreaWidth > 0
-                ? _lastMainDockAreaWidth
-                : dockPanel.DockArea.Width > 0
-                    ? dockPanel.DockArea.Width
-                    : ClientSize.Width;
-            double heightBasis = _lastMainDockAreaHeight > 0
-                ? _lastMainDockAreaHeight
-                : dockPanel.DockArea.Height > 0
-                    ? dockPanel.DockArea.Height
-                    : ClientSize.Height;
-
-            NormalizeMainDockPortionsToRatios(widthBasis, heightBasis);
-        }
-
-        private void NormalizeMainDockPortionsAfterXmlLoad()
-        {
-            NormalizeMainDockPortionsToRatios();
-        }
-
-        private void NormalizeMainDockPortionsToRatios(double? widthBasis = null, double? heightBasis = null)
-        {
-            if (dockPanel == null)
-                return;
-
-            Rectangle area = dockPanel.DockArea;
-            double width = widthBasis
-                ?? (area.Width > 0 ? area.Width : ClientSize.Width);
-            double height = heightBasis
-                ?? (area.Height > 0 ? area.Height : ClientSize.Height);
-
-            // Always keep portions in ratio mode so panes scale with the window.
-            // DockPanel Suite treats values > 1 as absolute pixels, which freezes strip sizes on resize.
-            if (width > 0)
+            try
             {
-                if (dockPanel.DockLeftPortion > 1.0)
-                    dockPanel.DockLeftPortion = ClampDockPortion(dockPanel.DockLeftPortion / width);
-                if (dockPanel.DockRightPortion > 1.0)
-                    dockPanel.DockRightPortion = ClampDockPortion(dockPanel.DockRightPortion / width);
+                SettingsManager.SetFloat(
+                    Settings.DockSplitterLeft,
+                    (float)ClampDockPortion(dockPanel.DockLeftPortion));
+                SettingsManager.SetFloat(
+                    Settings.DockSplitterRight,
+                    (float)ClampDockPortion(dockPanel.DockRightPortion));
+                SettingsManager.SetFloat(
+                    Settings.DockSplitterBottom,
+                    (float)ClampDockPortion(dockPanel.DockBottomPortion));
+
+                _compositeDisplay?.SaveInnerDockLayout();
             }
-
-            if (height > 0 && dockPanel.DockBottomPortion > 1.0)
-                dockPanel.DockBottomPortion = ClampDockPortion(dockPanel.DockBottomPortion / height);
+            catch
+            {
+            }
         }
-
-        private void UpdateMainDockAreaCache()
-        {
-            if (dockPanel == null)
-                return;
-
-            Rectangle area = dockPanel.DockArea;
-            if (area.Width > 0)
-                _lastMainDockAreaWidth = area.Width;
-            if (area.Height > 0)
-                _lastMainDockAreaHeight = area.Height;
-        }
-
-        private void UpdateFormClientSizeCache()
-        {
-            _lastFormClientWidth = ClientSize.Width;
-            _lastFormClientHeight = ClientSize.Height;
-        }
-
         private void OnCompositeSelectedForDiscord(Composite composite)
         {
-            RichPresence newPresence = _discord.CurrentPresence.Copy();
-            newPresence.Details = "Level: " + (_compositeBrowser?.Content?.Level?.Name ?? "No Level");
-            newPresence.State = "Composite: " + EditorUtils.GetCompositeName(composite);
-            _discord.SetPresence(newPresence);
-            _discord.UpdateStartTime();
+            //The presence is never worth losing the editor over (Discord throws on a line over 128 bytes, and names can be longer)
+            try
+            {
+                RichPresence newPresence = _discord.CurrentPresence.Copy();
+                newPresence.Details = PresenceText("Level: " + (_compositeBrowser?.Content?.Level?.Name ?? "No Level"));
+                newPresence.State = PresenceText("Composite: " + EditorUtils.GetCompositeName(composite));
+                _discord.SetPresence(newPresence);
+                _discord.UpdateStartTime();
+            }
+            catch { }
 
             if (_compositeBrowser?.Content?.Level == null)
                 Steam.UpdatePresence(Steam.RichPresences.NO_PRESENCE);
             else
                 Steam.UpdatePresence(Steam.RichPresences.EditingLevel, _compositeBrowser.Content.Level.Name);
         }
+        /* Discord takes at most 128 bytes (UTF-8) a line: anything longer is cut short, ending in "..." */
+        private static string PresenceText(string text)
+        {
+            if (System.Text.Encoding.UTF8.GetByteCount(text) <= 128) return text;
+            while (text.Length > 0 && System.Text.Encoding.UTF8.GetByteCount(text) > 125)
+                text = text.Substring(0, text.Length - 1);
+            return text + "...";
+        }
 
         private void OnDirtyChanged(bool dirty) => UpdateTitle();
         private void UpdateTitle()
         {
+            //The dirty tracker clears on OnLevelLoaded, which is raised on the level loader's thread
+            if (IsDisposed)
+                return;
+            if (InvokeRequired)
+            {
+                try { BeginInvoke(new Action(UpdateTitle)); }
+                catch (ObjectDisposedException) { }
+                catch (InvalidOperationException) { }
+                return;
+            }
+
             string title = "OpenCAGE";
 
             if (SettingsManager.GetBool(Settings.ShowGamePlatform))
@@ -562,7 +619,7 @@ namespace OpenCAGE
                         title += " - Epic Games Store";
                         break;
                     case PatchManager.Platform.GOG:
-                        title += " - GoG";
+                        title += " - GOG";
                         break;
                     case PatchManager.Platform.WINDOWS_STORE:
                         title += " - Windows Store";
@@ -588,8 +645,10 @@ namespace OpenCAGE
             }
             else
             {
-                string[] levelBits = _compositeBrowser.Content.Level.Name.Split('/');
-                this.Text = title + " - " + levelBits[levelBits.Length - 1] + " (" + _compositeBrowser.Content.Level.Name.Substring(0, _compositeBrowser.Content.Level.Name.Length - levelBits[levelBits.Length - 1].Length).TrimEnd('/') + ")";
+                //A level in a folder of ENV (PRODUCTION, DLC...) shows the folder after its name; one directly in ENV has none to show
+                string levelName = _compositeBrowser.Content.Level.Name;
+                int folderEnd = levelName.LastIndexOfAny(new[] { '/', '\\' });
+                this.Text = title + " - " + (folderEnd < 0 ? levelName : levelName.Substring(folderEnd + 1) + " (" + levelName.Substring(0, folderEnd) + ")");
             }
 
 #if USE_DIRTY_TRACKER
@@ -603,6 +662,106 @@ namespace OpenCAGE
             OnLevelSelected(level);
         }
 
+        /// <summary>
+        /// Load a level the user chose to open (the Load Level menu and picker, Create Level), first offering to save the open
+        /// level when it has unsaved changes. False when they cancelled, or the save they asked for didn't happen (it said why).
+        /// <see cref="LoadLevel"/> doesn't ask: a reload after the level's files changed on disk (the Mod Manager, a backup
+        /// restore, an import) must not save the old copy over them, and an assistant's load_level has its own check.
+        /// </summary>
+        public bool LoadLevelAskingToSave(string level)
+        {
+            if (!ConfirmSaveBeforeLevelChange(level))
+                return false;
+            OnLevelSelected(level);
+            return true;
+        }
+
+        /* Loading a level closes the one open, and its unsaved changes go with it: offered a save first, as Launch Game and
+           the viewport offer one. True to go ahead with the load. */
+        private bool ConfirmSaveBeforeLevelChange(string nextLevel)
+        {
+            //FRONTEND is refused by the load itself, which leaves the open level as it is
+            if (nextLevel == null || EditorUtils.IsFrontend(nextLevel.ToUpper()) || _compositeBrowser?.Content?.Level == null)
+                return true;
+            if (!DirtyTracker.IsDirty)
+                return true;
+
+            string levelName = _compositeBrowser.Content.Level.Name;
+            bool sameLevel = string.Equals(levelName.Replace('\\', '/'), nextLevel.Replace('\\', '/'), StringComparison.OrdinalIgnoreCase);
+            //Asked as the user's own box: an AI assistant's call may still be running underneath it
+            DialogResult answer = MCP.McpDialogs.AskUser(
+                "\"" + levelName + "\" has unsaved changes. " +
+                (sameLevel ? "Loading it again from disk will lose them." : "Loading " + nextLevel.ToUpper() + " closes it, and they will be lost.") +
+                "\n\nSave \"" + levelName + "\" first?",
+                "Save level?",
+                MessageBoxButtons.YesNoCancel,
+                MessageBoxIcon.Warning);
+            if (answer == DialogResult.Cancel)
+                return false;
+            if (answer == DialogResult.Yes)
+            {
+                SaveLevel(false, successMsg: false, allowLaunchGame: false);
+                //Not saved after all (a backup running, or the save failed - it said why): stay on this level
+                if (DirtyTracker.IsDirty)
+                    return false;
+            }
+            return true;
+        }
+
+        /// <summary>Close the Load Level picker if it is open - before something that must not race a level load.</summary>
+        public void CloseLevelPicker()
+        {
+            _levelSelect?.Close();
+        }
+
+        /// <summary>Open the Load Level picker (when the open level can't be shown any more, say).</summary>
+        internal void ShowLevelPicker()
+        {
+            loadLevel_Click(null, null);
+        }
+
+        /// <summary>
+        /// Load the open level again from disk, after something else changed its files (the Mod Manager). The viewport
+        /// starts afresh too when <paramref name="restartViewport"/>: it keeps what every level shares (the global textures)
+        /// as it first read it.
+        /// </summary>
+        internal void ReloadLevel(bool restartViewport)
+        {
+            string level = _compositeBrowser?.Content?.Level?.Name;
+            if (level == null)
+                return;
+            CloseLevelPicker();
+            if (restartViewport)
+                KillLevelViewer();
+            LoadLevel(level);
+        }
+
+        /// <summary>
+        /// Save the open level as File > Save Level does, without the messages after. A save that fails throws (saying why)
+        /// instead of showing its box, and doesn't leave its progress window up.
+        /// </summary>
+        internal void SaveLevelQuietly()
+        {
+            try
+            {
+                SaveLevelCore(false, false, false, throwOnFailure: true);
+            }
+            catch
+            {
+                statusText.Text = "";
+                Cursor.Current = Cursors.Default;
+                CloseProgressUI();
+                throw;
+            }
+        }
+
+        /// <summary>Start the viewport afresh if it's running, so it reads what every level shares (the global textures) again.</summary>
+        internal void RestartLevelViewerIfRunning()
+        {
+            if (_levelViewerPanel?.IsRunning == true)
+                RestartLevelViewer();
+        }
+
         private void loadLevel_Click(object sender, EventArgs e)
         {
             if (_levelSelect == null)
@@ -610,22 +769,197 @@ namespace OpenCAGE
                 _levelSelect = new SelectLevel();
                 _levelSelect.Show();
                 _levelSelect.FormClosed += OnLevelSelectClosed;
-                _levelSelect.OnLevelSelected += OnLevelSelected;
+                _levelSelect.OnLevelSelected += level => LoadLevelAskingToSave(level);
             }
         }
         private void OnLevelSelectClosed(object sender, FormClosedEventArgs e)
         {
             _levelSelect = null;
         }
+        private void createLevelToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            new CreateLevel().Show();
+        }
+        private void importCompositesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!LevelIsOpenForPorting()) return;
+            new ImportComposites(false, _compositeBrowser.Content.Level.Name).Show();
+        }
+        private void portCompositesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!LevelIsOpenForPorting()) return;
+            new ExportComposite(null).Show();
+        }
+        /* The same two ports, but by way of a file: for carrying composites to another install or
+           another machine rather than to another level here. */
+        private void exportCompositesToDiskToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!LevelIsOpenForPorting()) return;
+            new ExportCompositeArchive(null).Show();
+        }
+        private void fileMenu_DropDownOpening(object sender, EventArgs e)
+        {
+            //Recapturing needs a level open; while a recapture runs, the item stops it
+            recaptureAllCubemapsToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null && (!EnvironmentMapCapture.Busy || _recapturingAll);
+            recaptureAllCubemapsToolStripMenuItem.Text = _recapturingAll ? (_stopRecapture ? "Stopping After This Cubemap..." : "Stop Recapturing Cubemaps") : "Recapture All Cubemaps";
+        }
+
+        //Recapture All Cubemaps running, and asked to stop
+        private bool _recapturingAll = false, _stopRecapture = false;
+
+        /* Every environment map's cubemap captured again in the running game, one after another (see EnvironmentMapCapture):
+           each one placed exactly once in the level, as a step of its own on the undo history. The editor stays usable
+           meanwhile; the menu item stops it after the cubemap being captured. */
+        private async void recaptureAllCubemapsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (_recapturingAll)
+            {
+                _stopRecapture = true;
+                return;
+            }
+            Level level = _compositeBrowser?.Content?.Level;
+            if (level?.Commands == null || EnvironmentMapCapture.Busy)
+                return;
+            if (!RuntimeUtilsConnection.LiveLink.Connected)
+            {
+                MessageBox.Show("Recapturing cubemaps needs the game running this level, connected over Live Link: launch it from Launch Game with Live Link ticked, then try again.",
+                    "Recapture All Cubemaps", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            RuntimeUtilsConnection.LiveLink.GameStatus status = await RuntimeUtilsConnection.LiveLink.Status();
+            if (!status.IsRunning(level.Commands))
+            {
+                MessageBox.Show(status.Reply.Ok ? "The game isn't running " + level.Name + " - load it in the game (as saved), then try again." : "The game didn't answer: " + status.Reply.Message,
+                    "Recapture All Cubemaps", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            List<EnvironmentMapCapture.Target> targets = EnvironmentMapCapture.LevelTargets(level.Commands, out List<EnvironmentMapCapture.Skipped> skipped);
+            if (targets.Count == 0)
+            {
+                MessageBox.Show(level.Name + " has no environment maps placed in it to capture" + (skipped.Count != 0 ? " (" + skipped.Count + " are placed in more than one place, or not at all)" : "") + ".",
+                    "Recapture All Cubemaps", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            int minutes = Math.Max(1, (int)Math.Ceiling(targets.Count * 4.5 / 60.0));
+            string question = "Capture all " + targets.Count + " of " + level.Name + "'s environment map cubemaps again in the running game?\n\n"
+                + "The game's camera goes to each in turn, a few seconds each (about " + minutes + " minute" + (minutes == 1 ? "" : "s") + " in all): keep the game running and unpaused meanwhile. "
+                + "Each new cubemap replaces the one its environment map used, which is deleted if nothing else uses it, and each is its own step on the undo history. "
+                + "Choose Recapture All Cubemaps again from the File menu to stop."
+                + (skipped.Count != 0 ? "\n\n" + skipped.Count + " can't be captured, as they're placed in more than one place or not at all." : "");
+            if (MessageBox.Show(question, "Recapture All Cubemaps", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+
+            _recapturingAll = true;
+            _stopRecapture = false;
+            ProgressUI progress = new ProgressUI();
+            progress.ShowCounted("Recapturing cubemaps", targets.Count);
+            List<(EnvironmentMapCapture.Target target, EnvironmentMapCapture.Outcome outcome)> results;
+            try
+            {
+                results = await EnvironmentMapCapture.CaptureAllAsync(level, targets, new EnvironmentMapCapture.Options() { FaceSize = EnvironmentMapCapture.ConfiguredFaceSize },
+                    (done, text) =>
+                    {
+                        progress.SetCount(done);
+                        if (text != null)
+                            ShowLiveLinkActivity("Live Link: (" + (done + 1) + " of " + targets.Count + ") " + text);
+                    },
+                    () => _stopRecapture);
+            }
+            finally
+            {
+                _recapturingAll = false;
+                _stopRecapture = false;
+                progress.Close();
+                progress.Dispose();
+            }
+
+            //What came of it
+            List<EnvironmentMapCapture.Outcome> captured = results.Where(o => o.outcome.Ok).Select(o => o.outcome).ToList();
+            List<string> failed = results.Where(o => !o.outcome.Ok)
+                .Select(o => level.Commands.Utils.GetEntityName(o.target.Composite, o.target.Entity) + " in " + EditorUtils.GetCompositeName(o.target.Composite) + ": " + o.outcome.Message).ToList();
+            bool needsBuild = captured.Any(o => o.NeedsBuild);
+            string summary = "Captured " + captured.Count + " of " + targets.Count + " cubemaps"
+                + (captured.Count(o => o.PreviousDeleted) is int deleted && deleted != 0 ? ", deleting " + deleted + " old one" + (deleted == 1 ? "" : "s") + " nothing else used" : "") + ".";
+            if (results.Count < targets.Count)
+                summary += "\n\nStopped" + (failed.Count != 0 ? " after the last one failed" : "") + ", leaving " + (targets.Count - results.Count) + " not recaptured.";
+            if (failed.Count != 0)
+                summary += "\n\nNot captured:\n" + string.Join("\n", failed.Take(8)) + (failed.Count > 8 ? "\n... and " + (failed.Count - 8) + " more" : "");
+            if (captured.Any(o => o.Capture?.ZonesStillStreaming == true))
+                summary += "\n\nThe zones round " + captured.Count(o => o.Capture?.ZonesStillStreaming == true) + " of them were still streaming in, so parts may be missing: capture those again from their Capture buttons.";
+            if (captured.Count != 0)
+                summary += "\n\n" + (needsBuild ? "Use File > Save and Build Level" : "Save") + ", then load the level again in the game to see them there.";
+            ShowLiveLinkActivity("Live Link: captured " + captured.Count + " of " + targets.Count + " cubemaps");
+            MessageBox.Show(summary, "Recapture All Cubemaps", MessageBoxButtons.OK, failed.Count != 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
+            if (_entityInspector != null && !_entityInspector.IsDisposed)
+                _entityInspector.Reload();
+        }
+
+        private void importCompositesFromDiskToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            //No level need be open: the import window asks which level on disk to import into when none is
+            string archivePath;
+            using (OpenFileDialog dialog = new OpenFileDialog())
+            {
+                dialog.Title = "Import composites from disk";
+                dialog.Filter = CompositeArchive.FileFilter;
+                dialog.CheckFileExists = true;
+                if (dialog.ShowDialog(this) != DialogResult.OK)
+                    return;
+                archivePath = dialog.FileName;
+            }
+            PackageFiles.CloseActiveImport();
+            PackageFiles.Open(archivePath);
+        }
+        private bool LevelIsOpenForPorting()
+        {
+            if (_compositeBrowser?.Content?.IsLevelDataLoaded == true)
+                return true;
+            MessageBox.Show("Load a level first.", "No level loaded", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return false;
+        }
+
+        //The level menu is built at startup, so a level created during this session has no entry yet
+        private ToolStripMenuItem EnsureLevelMenuItem(string level)
+        {
+            if (_levelMenuItems.TryGetValue(level, out ToolStripMenuItem item))
+                return item;
+
+            item = new ToolStripMenuItem(level);
+            item.Click += OnLevelSelected;
+            loadLevel.DropDownItems.Add(item);
+            _levelMenuItems.Add(level, item);
+            return item;
+        }
         private void OnLevelSelected(object sender, EventArgs e)
         {
-            OnLevelSelected(((ToolStripMenuItem)sender).Text);
+            LoadLevelAskingToSave(((ToolStripMenuItem)sender).Text);
         }
         private void OnLevelSelected(string level)
         {
             if (level == null)
                 return;
             level = level.ToUpper();
+
+            //Not on top of a level still being read: closing it would pull its content out from under the loader thread
+            //(a backup restore or package import asking for a reload while one runs)
+            if (IsLevelLoaderRunning)
+            {
+                MessageBox.Show("A level is still loading. Wait for it to finish, then load " + level + " again.", "Level still loading", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            //A level picker still open beside the loading level could start a second load on top of it
+            CloseLevelPicker();
+
+            //The menu level is the base every new level is built from, not something to edit
+            if (EditorUtils.IsFrontend(level))
+            {
+                MessageBox.Show("FRONTEND is the game's menu level and cannot be edited.\nUse File -> Create Level to start a level of your own from it.", "Not an editable level", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                if (_compositeBrowser == null)
+                    loadLevel_Click(null, null);
+                return;
+            }
 
             SettingsManager.SetString(Settings.LastSelectedLevel, level);
 
@@ -634,8 +968,8 @@ namespace OpenCAGE
             {
                 Singleton.Editor.DockPanel.ActiveAutoHideContent = null;
                 string oldLevelName = _compositeBrowser.Content?.Level?.Name;
-                if (oldLevelName != null)
-                    _levelMenuItems[oldLevelName].Checked = false;
+                if (oldLevelName != null && _levelMenuItems.TryGetValue(oldLevelName, out ToolStripMenuItem oldLevelItem))
+                    oldLevelItem.Checked = false;
 
                 CloseLevelPanels();
             }
@@ -672,14 +1006,14 @@ namespace OpenCAGE
             _loadThread = new Thread(ThreadedLevelLoader);
             _loadThread.Start();
 
-            _levelMenuItems[_compositeBrowser.Content.Level.Name].Checked = true;
+            EnsureLevelMenuItem(_compositeBrowser.Content.Level.Name).Checked = true;
             UpdateTitle();
 
             if (Singleton.ViewportEnabled && SettingsManager.GetBool(Settings.ResetRenderFilters))
             {
                 foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All)
                 {
-                    RenderFilters.SetEnabled(definition.FunctionType, false);
+                    RenderFilters.SetEnabled(definition.FunctionType, definition.DefaultEnabled);
                 }
                 UnityConnection.Send.SendRenderFilterPacket();
                 _renderFiltersPanel?.RefreshFilters();
@@ -764,10 +1098,7 @@ namespace OpenCAGE
                     return;
                 }
 
-                if (!_progressUI.TopMost)
-                    _progressUI.TopMost = true;
-
-                _progressUI.BringToFront();
+                _progressUI.KeepOnTop();
             };
             _progressKeepOnTopTimer.Start();
         }
@@ -878,6 +1209,12 @@ namespace OpenCAGE
                     return;
 
                 HideLoadProgressUI();
+
+                //A populate with no level load behind it is the viewer launched for the level already open
+                //(Enable Viewport) or reconnecting. The panel is hidden while it fills, as on a load, and
+                //this is the point it is ready to be seen.
+                if (Singleton.ViewportEnabled)
+                    _compositeDisplay?.ShowLevelViewerPanel(activate: false);
                 return;
             }
 
@@ -917,6 +1254,31 @@ namespace OpenCAGE
             _cathodeLoadComplete = false;
             _viewerPopulateFinished = false;
             _viewerActivePopulateToken = 0;
+        }
+
+        /* The viewer numbers its populates from 1 for the life of its process, and that is all the tokens
+           here are ever compared against. A relaunched viewer starts over, so left as they were its first
+           populate read as one that had already finished: never acknowledged, and the panel hidden for the
+           launch was never shown again (issue 649). Cleared when a viewer goes away and again when one is
+           started, so a late packet from the old process can't leave a stale high-water mark behind. */
+        private void ResetViewerPopulateTokens()
+        {
+            _viewerPopulateFinishedToken = 0;
+            _viewerActivePopulateToken = 0;
+            _populateTokenAtLoadStart = 0;
+            //Its copy too: a viewer launched here numbers its populates from 1 again, whether or not the old one's close came first
+            UnityConnection.ViewerPopulateSync.Reset();
+        }
+
+        /* The viewer's connection closed: it was stopped, died, or dropped the socket and will reconnect */
+        internal void OnViewerDisconnected()
+        {
+            EndViewerPopulateProgress(0, forceClose: true);
+            ResetViewerPopulateTokens();
+            //A populate the viewer had running will never report finished: left set, it read as "populating" for good
+            UnityConnection.ViewerPopulateSync.Reset();
+            //A viewport menu still up has nothing left to act on
+            UnityConnection.ViewerContextMenu.Close();
         }
 
         private void TryCloseLevelLoadProgress()
@@ -992,6 +1354,10 @@ namespace OpenCAGE
             if (loadGeneration != _levelLoadGeneration)
                 return;
 
+            //Not inside the box of a question the user is being asked, such as closing mid AI assistant task (CommandsEditor.Mcp.cs)
+            if (DeferWhileUserIsAsked(() => TryBuildLevelPanelsWhenReady(content, loadGeneration, attempt)))
+                return;
+
             //Another level load replaced this browser - don't retry, the new load owns the UI now.
             if (_compositeBrowser == null || _compositeBrowser.IsDisposed)
             {
@@ -1025,7 +1391,6 @@ namespace OpenCAGE
             EnableButtons(true, "");
             _compositeBrowser.Resize += _compositeBrowser_Resize;
             _compositeBrowser.FormClosed += _compositeBrowser_FormClosed;
-            _compositeBrowser.DockStateChanged += DockPanelContent_DockStateChanged;
 
             EnsureRequiredDockLayout();
 
@@ -1034,10 +1399,14 @@ namespace OpenCAGE
             _entityBrowser.InitializeFromLevel();
             _entityList.UpdateTitle();
             _entitySearch.InitializeFromLevel();
+            //State list depends on the level's ExclusiveMaster resources
+            EntityClipboard.Clear(); //static ctor may not have run yet on the first load
+            UnityConnection.ViewerStateInfoMode.Clear();
+            _levelViewerPanel?.RefreshStateInfoMenu(_compositeBrowser?.Content);
             _compositeBrowser.OnLevelDataReady();
             _compositeBrowser.LoadInitialComposite();
             _compositeDisplay.Show(dockPanel, DockState.Document);
-            _entityList.FocusPanel();
+            _compositeBrowser.FocusPanel();
 
             BeginInvoke(new Action(() =>
             {
@@ -1049,6 +1418,7 @@ namespace OpenCAGE
 
                 _compositeBrowser.UpdateDockState();
                 _compositeBrowser.EnsureCompositeTreePopulated();
+                _compositeBrowser.FocusPanel();
             }));
         }
 
@@ -1056,11 +1426,17 @@ namespace OpenCAGE
         {
             EnsureDockPanelsCreated();
 
-            bool layoutLoaded = TryLoadDockLayout();
-            if (!layoutLoaded || !IsMainDockLayoutValid())
+            // Always rebuild the fixed dock structure, then restore saved splitter ratios. Laid out once, when it's all in
+            // place: each panel hidden and shown again was otherwise a layout of the whole dock, a good part of a second.
+            dockPanel.SuspendLayout(true);
+            try
+            {
                 ApplyDefaultDockLayout();
-            else
-                EnsureRequiredDockLayout();
+            }
+            finally
+            {
+                dockPanel.ResumeLayout(true, true);
+            }
 
             _compositeDisplay.Show(dockPanel, DockState.Document);
             _compositeDisplay.EnsureInnerDockLayoutRestored();
@@ -1086,18 +1462,24 @@ namespace OpenCAGE
             UnityConnection.Send.NotifyLevelLoadStarting(levelName);
             _compositeDisplay.EnsureLevelViewerDocked();
 
+            //A viewer that lost its host window (the panel's handle was recreated by a dock/layout change) is
+            //still running but invisible. It is not re-embedded mid-session, since its state may have diverged
+            //from what is about to be loaded - a level load is the point at which it is safe to start again.
+            if (_levelViewerPanel.IsRunning && !_levelViewerPanel.IsEmbedded)
+                _levelViewerPanel.Stop();
+
             if (_levelViewerPanel.IsRunning)
             {
                 _compositeDisplay.HideLevelViewerPanelForLoad();
                 return;
             }
 
+            ResetViewerPopulateTokens();
             _levelViewerPanel.Launch(focusAfterEmbed: false);
 
             if (!_levelViewerPanel.IsRunning)
                 return;
 
-            Steam.UnlockAchievement(Steam.Achievements.LEVEL_VIEWER_LAUNCHED); //todo - deprecate this post v18?
             _compositeDisplay.HideLevelViewerPanelForLoad();
         }
 
@@ -1108,14 +1490,12 @@ namespace OpenCAGE
                 _entityInspector = new EntityInspector();
                 _entityInspector.FormClosing += EntityInspector_FormClosing;
                 _entityInspector.Resize += _entityInspector_Resize;
-                _entityInspector.DockStateChanged += DockPanelContent_DockStateChanged;
             }
 
             if (_entityList == null)
             {
                 _entityList = new EntityList();
                 _entityList.FormClosing += EntityList_FormClosing;
-                _entityList.DockStateChanged += DockPanelContent_DockStateChanged;
             }
 
             if (_levelViewerPanel == null)
@@ -1129,7 +1509,6 @@ namespace OpenCAGE
             {
                 _compositeDisplay = new CompositeDisplay(_compositeBrowser, _entityInspector, _entityList, _levelViewerPanel);
                 _compositeDisplay.FormClosing += CompositeDisplay_FormClosing;
-                _compositeDisplay.DockStateChanged += DockPanelContent_DockStateChanged;
 
                 if (Singleton.ViewportEnabled)
                     _compositeDisplay.EnsureInnerDockLayoutRestored();
@@ -1142,21 +1521,18 @@ namespace OpenCAGE
             if (_entityBrowser == null)
             {
                 _entityBrowser = new EntityBrowser();
-                _entityBrowser.DockStateChanged += DockPanelContent_DockStateChanged;
             }
 
             if (_entitySearch == null)
             {
                 _entitySearch = new EntitySearch();
                 _entitySearch.FormClosing += EntitySearch_FormClosing;
-                _entitySearch.DockStateChanged += DockPanelContent_DockStateChanged;
             }
 
             if (_renderFiltersPanel == null)
             {
                 _renderFiltersPanel = new RenderFiltersPanel();
                 _renderFiltersPanel.FormClosing += RenderFiltersPanel_FormClosing;
-                _renderFiltersPanel.DockStateChanged += DockPanelContent_DockStateChanged;
             }
 
             _entityInspector.AttachCompositeDisplay(_compositeDisplay);
@@ -1164,24 +1540,19 @@ namespace OpenCAGE
 
         private void ApplyDefaultDockLayout(bool resetInnerDock = true)
         {
-            dockPanel.DockLeftPortion = DefaultSideDockPortion;
-            dockPanel.DockRightPortion = DefaultEntityInspectorPortion;
-            dockPanel.DockBottomPortion = _defaultSplitterDistance;
-
             _compositeDisplay.Show(dockPanel, DockState.Document);
             ApplyLeftDockLayout();
             ApplyRightDockLayout();
 
             if (resetInnerDock)
             {
-                if (SettingsManager.IsSet(Settings.CompositeDisplayDockTopPortion))
+                if (SettingsManager.IsSet(Settings.DockSplitterLevelViewer))
                     _compositeDisplay?.EnsureInnerDockLayoutRestored();
                 else
                     _compositeDisplay?.ApplyDefaultInnerDockLayout();
             }
 
-            SettingsManager.SetInteger(Settings.MainDockLayoutVersion, CurrentMainDockLayoutVersion);
-            SaveDockLayout();
+            ApplyMainDockPortionsFromSettings();
         }
 
         private void ApplyLeftDockLayout()
@@ -1198,6 +1569,8 @@ namespace OpenCAGE
             _compositeBrowser.Show(_entitySearch.Pane, DockAlignment.Bottom, 1.0 - DefaultLeftSearchPortion);
             _entityBrowser.Show(_compositeBrowser.Pane, (IDockContent)null);
             _entityList.Show(_compositeBrowser.Pane, (IDockContent)null);
+            
+            _compositeBrowser.Activate();
         }
 
         private void HideLeftDockPanelsForRelayout()
@@ -1254,43 +1627,8 @@ namespace OpenCAGE
             if (!IsLeftDockLayoutValid())
                 ApplyLeftDockLayout();
 
+            ApplyMainDockPortionsFromSettings();
             _compositeDisplay?.EnsureInnerDockLayoutRestored();
-        }
-
-        private bool TryLoadDockLayout()
-        {
-            if (SettingsManager.GetInteger(Settings.MainDockLayoutVersion, 0) < CurrentMainDockLayoutVersion)
-                return false;
-
-            string layout = SettingsManager.GetString(Settings.MainDockLayout);
-            if (string.IsNullOrWhiteSpace(layout))
-                return false;
-
-            try
-            {
-                byte[] bytes = Encoding.UTF8.GetBytes(layout);
-                using (MemoryStream stream = new MemoryStream(bytes))
-                    dockPanel.LoadFromXml(stream, DeserializeDockContent);
-                NormalizeMainDockPortionsAfterXmlLoad();
-                UpdateMainDockAreaCache();
-
-                // DockArea can still be empty during XML restore; refresh again after layout.
-                BeginInvoke(new Action(RefreshDockLayoutAfterResize));
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private bool IsMainDockLayoutValid()
-        {
-            EnsureDockPanelsCreated();
-
-            return IsPanelDocked(_compositeDisplay, DockState.Document)
-                && IsRightDockLayoutValid()
-                && IsLeftDockLayoutValid();
         }
 
         private bool IsRightDockLayoutValid()
@@ -1340,78 +1678,8 @@ namespace OpenCAGE
             return panel != null && panel.DockState == expectedState;
         }
 
-        private IDockContent DeserializeDockContent(string persistString)
-        {
-            EnsureDockPanelsCreated();
-
-            switch (persistString)
-            {
-                case "CommandsDisplay":
-                    return _compositeBrowser;
-                case "EntityInspector":
-                    return _entityInspector;
-                case "EntityList":
-                    return _entityList;
-                case "CompositeDisplay":
-                    return _compositeDisplay;
-                case "CompositeBrowser":
-                    return _compositeBrowser;
-                case "EntityBrowser":
-                    return _entityBrowser;
-                case "EntitySearch":
-                    return _entitySearch;
-                case "RenderFiltersPanel":
-                    return Singleton.ViewportEnabled ? _renderFiltersPanel : null;
-                case "LevelViewerPanel":
-                    return Singleton.ViewportEnabled ? _levelViewerPanel : null;
-            }
-
-            if (persistString == typeof(EntityInspector).ToString())
-                return _entityInspector;
-            if (persistString == typeof(EntityList).ToString())
-                return _entityList;
-            if (persistString == typeof(CompositeDisplay).ToString())
-                return _compositeDisplay;
-            if (persistString == typeof(CompositeBrowser).ToString())
-                return _compositeBrowser;
-            if (persistString == typeof(EntityBrowser).ToString())
-                return _entityBrowser;
-            if (persistString == typeof(EntitySearch).ToString())
-                return _entitySearch;
-            if (persistString == typeof(RenderFiltersPanel).ToString())
-                return Singleton.ViewportEnabled ? _renderFiltersPanel : null;
-            if (persistString == typeof(LevelViewerPanel).ToString())
-                return Singleton.ViewportEnabled ? _levelViewerPanel : null;
-
-            return null;
-        }
-
-        private void SaveDockLayout()
-        {
-            if (_compositeBrowser == null || dockPanel.Contents.Count == 0)
-                return;
-
-            try
-            {
-                using (MemoryStream stream = new MemoryStream())
-                {
-                    dockPanel.SaveAsXml(stream, Encoding.UTF8);
-                    SettingsManager.SetString(Settings.MainDockLayout, Encoding.UTF8.GetString(stream.ToArray()));
-                    SettingsManager.SetInteger(Settings.MainDockLayoutVersion, CurrentMainDockLayoutVersion);
-                }
-
-                SaveMainDockPortionsToSettings();
-                _compositeDisplay?.SaveInnerDockLayout();
-            }
-            catch { }
-        }
-
-        private void DockPanelContent_DockStateChanged(object sender, EventArgs e)
-        {
-            SaveDockLayout();
-        }
-
-        public CompositeDisplay LoadComposite(Composite composite, bool newDisplay = false)
+        /// <param name="path">The path the user stepped down to the composite by, to open it there (see CompositeDisplay.PopulateUI).</param>
+        public CompositeDisplay LoadComposite(Composite composite, bool newDisplay = false, CompositePath.Snapshot path = null)
         {
             if (composite == null || _compositeDisplay == null || _compositeDisplay.IsDisposed)
                 return null;
@@ -1423,13 +1691,20 @@ namespace OpenCAGE
             if (_compositeBrowser?.Content?.EditorUtils == null)
                 return null;
 
-            if (!newDisplay && _compositeDisplay.Populated && _compositeDisplay.Composite == composite)
+            if (!newDisplay && path == null && _compositeDisplay.Populated && _compositeDisplay.Composite == composite)
                 return _compositeDisplay;
 
             if (newDisplay)
                 _compositeDisplay.DepopulateUI();
 
-            _compositeDisplay.PopulateUI(composite);
+            _compositeDisplay.PopulateUI(composite, path);
+            /* Show and Activate both give the display's focus back to the window it last had focused - the viewer's, often -
+               and that waited on the viewer's thread, which the switch PopulateUI just sent has usually set populating: the
+               freeze lasted the populate. A display already up and docked is left as it is then; a hidden one still has to
+               be shown. */
+            bool alreadyShown = _compositeDisplay.DockPanel == dockPanel && !_compositeDisplay.IsHidden && _compositeDisplay.DockState == DockState.Document;
+            if (alreadyShown && UnityConnection.ViewerBusy.FocusMoveWouldWait)
+                return _compositeDisplay;
             _compositeDisplay.Show(dockPanel, DockState.Document);
             if (!ViewerSelectionSync.IsApplyingViewerSelection)
                 _compositeDisplay.Activate();
@@ -1444,7 +1719,7 @@ namespace OpenCAGE
             else
                 KillLevelViewer();
 
-            SaveDockLayout();
+            SaveSplitterDistances();
             _compositeBrowser?.CloseAllChildTabs();
             CloseDockPanelContents(preserveLevelViewer: preserveViewer);
 
@@ -1452,7 +1727,6 @@ namespace OpenCAGE
             {
                 _compositeBrowser.Resize -= _compositeBrowser_Resize;
                 _compositeBrowser.FormClosed -= _compositeBrowser_FormClosed;
-                _compositeBrowser.DockStateChanged -= DockPanelContent_DockStateChanged;
                 _compositeBrowser.Close();
                 _compositeBrowser.Dispose();
                 _compositeBrowser = null;
@@ -1510,6 +1784,8 @@ namespace OpenCAGE
             }
 
             _levelViewerPanel = null;
+            //The panel made in its place has a toolbar of its own, whose events are still to be wired up
+            _levelViewerToolbarConfigured = false;
         }
 
         private void ForceCloseDockContent<T>(ref T content, FormClosingEventHandler formClosingHandler, EventHandler resizeHandler = null) where T : DockContent
@@ -1524,7 +1800,6 @@ namespace OpenCAGE
                 panel.FormClosing -= formClosingHandler;
             if (resizeHandler != null)
                 panel.Resize -= resizeHandler;
-            panel.DockStateChanged -= DockPanelContent_DockStateChanged;
 
             if (panel is CompositeDisplay compositeDisplay)
                 compositeDisplay.DepopulateUI();
@@ -1537,18 +1812,12 @@ namespace OpenCAGE
 
         private void _compositeBrowser_Resize(object sender, EventArgs e)
         {
-            NormalizeMainDockPortionsToRatios();
-            UpdateMainDockAreaCache();
-            SaveMainDockPortionsToSettings();
-            SaveDockLayout();
+            SaveSplitterDistances();
         }
 
         private void _entityInspector_Resize(object sender, EventArgs e)
         {
-            NormalizeMainDockPortionsToRatios();
-            UpdateMainDockAreaCache();
-            SaveMainDockPortionsToSettings();
-            SaveDockLayout();
+            SaveSplitterDistances();
         }
 
         private void _compositeBrowser_FormClosed(object sender, FormClosedEventArgs e)
@@ -1556,14 +1825,22 @@ namespace OpenCAGE
             CloseLevelPanels();
         }
 
+        /* The panels hide on a user close and stay alive. An application exit goes through untouched (see
+           CloseReasons): Application.Exit is walking Application.OpenForms as these run, and closing the
+           flowgraph pages or a picker here changes that collection under it. Nothing is lost - the main
+           window's own closing has saved the layout (SaveSplitterDistances) and offered the save. */
         private void CompositeDisplay_FormClosing(object sender, FormClosingEventArgs e)
         {
+            if (CloseReasons.IsApplicationShutdown(e))
+                return;
             e.Cancel = true;
             ((CompositeDisplay)sender).DepopulateUI();
         }
 
         private void EntityInspector_FormClosing(object sender, FormClosingEventArgs e)
         {
+            if (CloseReasons.IsApplicationShutdown(e))
+                return;
             e.Cancel = true;
             ((EntityInspector)sender).DepopulateUI();
             Singleton.OnCompositeDisplayClosing?.Invoke(_compositeDisplay);
@@ -1571,68 +1848,197 @@ namespace OpenCAGE
 
         private void EntityList_FormClosing(object sender, FormClosingEventArgs e)
         {
+            if (CloseReasons.IsApplicationShutdown(e))
+                return;
             e.Cancel = true;
             ((EntityList)sender).Hide();
         }
 
         private void EntitySearch_FormClosing(object sender, FormClosingEventArgs e)
         {
+            if (CloseReasons.IsApplicationShutdown(e))
+                return;
             e.Cancel = true;
             ((EntitySearch)sender).Hide();
         }
 
         private void RenderFiltersPanel_FormClosing(object sender, FormClosingEventArgs e)
         {
+            if (CloseReasons.IsApplicationShutdown(e))
+                return;
             e.Cancel = true;
             ((RenderFiltersPanel)sender).Hide();
         }
 
         private void saveLevel_Click(object sender, EventArgs e)
         {
-            SaveLevel();
+            SaveLevel(false);
         }
 
-        public void SaveLevel(bool successMsg = true)
+        private void saveAndBuildLevelToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SaveLevel(true);
+        }
+
+        /// <summary>A save is writing the level (a build pumps messages while it does, so a second could otherwise start).</summary>
+        private bool _saveInProgress = false;
+
+        /// <summary>
+        /// Save the open level, and build it too when <paramref name="doInstancing"/>. A save that fails (a file that can't be
+        /// written, or the save throwing) says why in a box, and leaves the level unsaved here - still marked as changed, and
+        /// <see cref="Singleton.OnSaved"/> not raised - and on disk as it was.
+        /// </summary>
+        public void SaveLevel(bool doInstancing, bool successMsg = true, bool allowLaunchGame = true)
+        {
+            SaveLevelCore(doInstancing, successMsg, allowLaunchGame, throwOnFailure: false);
+        }
+
+        /* SaveLevel; with throwOnFailure a failed save throws (an IOException saying why) instead of showing its box */
+        private void SaveLevelCore(bool doInstancing, bool successMsg, bool allowLaunchGame, bool throwOnFailure)
         {
             if (_compositeBrowser == null) return;
 
-            //Close alien down if it's open, it conflicts with our write locks!
-            EditorUtils.CloseAI();
+            //Save & Build pressed again (or the viewport asking) while a build is still writing: that one is the save
+            if (_saveInProgress) return;
+
+            //If backup manager is working on this level, don't allow saving
+            switch (Singleton.CurrentBackupState)
+            {
+                case Singleton.BackupState.ALL_LEVELS:
+                    MessageBox.Show("Cannot save level - backup is in progress!", "Backup in progress...", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                case Singleton.BackupState.SINGLE_LEVEL:
+                    if (Singleton.BackupLevel.ToLower() == _compositeBrowser.Content.Level.Name.ToLower())
+                    {
+                        MessageBox.Show("Cannot save level - backup is in progress!", "Backup in progress...", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                    break;
+                case Singleton.BackupState.APPLYING_MODS:
+                    MessageBox.Show("Cannot save level - the Mod Manager is changing the game's files. Save once it's done.", "Applying mods...", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+            }
+
+            //Close alien down if it's open, it conflicts with our write locks! Only this install's: another install's game holds
+            //none of the files a save writes
+            EditorUtils.CloseAI(thisInstallOnly: true);
 
             Cursor.Current = Cursors.WaitCursor;
             statusText.Text = "Saving...";
             statusStrip.Update();
 
+            string levelName = _compositeBrowser.Content.Level.Name;
             CloseProgressUI();
             EnsureProgressUI();
-            _progressUI.ShowLevelSaving(_compositeBrowser.Content.Level);
-            StartProgressKeepOnTop();
 
             if (_compositeDisplay != null)
                 _compositeDisplay.SaveAllFlowgraphs();
 
-#if DEBUG
-            if (SettingsManager.GetBool(Settings.CompileInstances))
-            {
-                _compositeBrowser.Content.Level.Resources.Entries.Clear();
-                _compositeBrowser.Content.Level.PhysicsMaps.Entries.Clear();
-                //todo - clear others when i write them
+            //Whatever changes the level from here on isn't in what is written: it must not be marked saved along with it
+            int modificationsBefore = DirtyTracker.Modifications;
 
-                Instancing inst = new Instancing(_compositeBrowser.Content.Level);
-                inst.GenerateInstances();
-                inst.ProcessInstances();
+            /* A build pumps the message loop for minutes while a worker reads and writes the live level, so every window that
+               could edit, load, restore or close the level is disabled until it is done, as Import from Disk disables the
+               editor (the viewport's own edits are held by ViewerInboundDispatcher.HoldForSave). The progress window stays. */
+            List<Form> disabledForSave = new List<Form>();
+            if (doInstancing)
+                DisableWindowsForSave(disabledForSave);
+
+            //The instanced save pumps the message loop from here; an undo underneath it would edit
+            //the level while it is being written
+            OpenCAGE.Undo.UndoStack.Current.Blocked = true;
+            //Composites edited since their preview was taken are captured again by the viewer while the save runs
+            CompositePreviewManager.BeginSave();
+            _saveInProgress = true;
+            //...and so would anything the viewport asks for while the build pumps messages (see ViewerInboundDispatcher.HoldForSave) - released in the finally
+            if (doInstancing)
+                UnityConnection.ViewerInboundDispatcher.HoldForSave();
+            Exception thrown = null;
+            try
+            {
+                /* The first save of a level in an install keeps a pristine copy of each of its files first (for the Mod
+                   Manager), hashing and compressing the whole level: a minute or more on a big one. It runs on a worker while
+                   the message loop is pumped, as a build does, with the windows disabled meanwhile; the save itself finds it
+                   done (and a later save finds nothing to do). */
+                Task capture = Task.Run(() => Modding.ModServices.CaptureLevelBeforeSave(levelName));
+                //Not Task.Wait: waiting on a task that hasn't started yet runs it right here, on this thread
+                if (!SpinWait.SpinUntil(() => capture.IsCompleted, 150))
+                {
+                    _progressUI?.ShowTransferring("Preparing the first save of " + levelName + "...");
+                    StartProgressKeepOnTop();
+                    if (!doInstancing)
+                        DisableWindowsForSave(disabledForSave);
+                    while (!capture.IsCompleted)
+                    {
+                        Application.DoEvents();
+                        Thread.Sleep(16);
+                    }
+                }
+                capture.GetAwaiter().GetResult();
+                _progressUI?.ShowLevelSaving(_compositeBrowser.Content.Level, doInstancing);
+                StartProgressKeepOnTop();
+
+                if (doInstancing)
+                {
+                    Task saveTask = Task.Run(() => _compositeBrowser.Content.Save(true));
+                    while (!saveTask.IsCompleted)
+                    {
+                        Application.DoEvents();
+                        Thread.Sleep(16);
+                    }
+                    saveTask.GetAwaiter().GetResult();
+                }
+                else
+                {
+                    _compositeBrowser.Content.Save(false);
+                }
             }
-#endif
-
-            //TODO: take a backup first
-            _compositeBrowser.Content.Save();
-
-            if (!_compositeBrowser.Content.Level.Commands.Compressed && SettingsManager.GetBool(Settings.SavePakAndBin))
+            catch (Exception e)
             {
-                string ext = "BIN";
-                if (Path.GetExtension(_compositeBrowser.Content.Level.Commands.Filepath).ToUpper() == ".BIN")
-                    ext = "PAK";
-                _compositeBrowser.Content.Level.Commands.Save(_compositeBrowser.Content.Level.Commands.Filepath.Substring(0, _compositeBrowser.Content.Level.Commands.Filepath.Length - 3) + ext, false);
+                //Reported below as the save failing: the level stays open with its changes, rather than going with the app
+                thrown = e;
+            }
+            finally
+            {
+                _saveInProgress = false;
+                OpenCAGE.Undo.UndoStack.Current.Blocked = false;
+                CompositePreviewManager.EndSave();
+                UnityConnection.ViewerInboundDispatcher.ReleaseAfterSave();
+                EnableWindowsAfterSave(disabledForSave);
+            }
+
+            //A file that couldn't be written, or the save throwing: nothing is marked saved, and the user is told
+            IReadOnlyList<CathodeFile.SaveFailure> notWritten = _compositeBrowser.Content.LastSaveFailures;
+            if (thrown != null || (notWritten != null && notWritten.Count != 0))
+            {
+                statusText.Text = "";
+                Cursor.Current = Cursors.Default;
+                CloseProgressUI();
+                Debug.Log("Save", "Saving " + levelName + " failed: " + (thrown != null ? thrown.ToString() : "") +
+                    string.Concat((notWritten ?? new CathodeFile.SaveFailure[0]).Select(f => "\n  " + f.Path + ": " + (f.Error?.ToString() ?? f.Reason))));
+                if (throwOnFailure)
+                    throw new IOException(DescribeSaveFailure(thrown, notWritten, false), thrown);
+                MessageBox.Show(DescribeSaveFailure(thrown, notWritten, true), "Save failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            //A baker that threw was caught so one bad system could not cost the whole save, which
+            //means the level kept whatever that system already had on disk. Say so: a console line
+            //nobody sees is not enough when the AI then paths through geometry that has moved.
+            IReadOnlyList<string> bakeWarnings = _compositeBrowser.Content.LastBakeWarnings;
+            IReadOnlyList<string> warnings = _compositeBrowser.Content.LastWarnings;
+            bool anyBake = bakeWarnings != null && bakeWarnings.Count != 0;
+            bool anyWarn = warnings != null && warnings.Count != 0;
+            if (anyBake || anyWarn)
+            {
+                string text = "The level saved, but not everything made it in.";
+                if (anyBake)
+                    text += "\n\n" + bakeWarnings.Count + " system" + (bakeWarnings.Count == 1 ? "" : "s") +
+                            " could not be regenerated and kept the data already on disk:\n  " + string.Join("\n  ", bakeWarnings);
+                if (anyWarn)
+                    text += "\n\n" + warnings.Count + " thing" + (warnings.Count == 1 ? "" : "s") +
+                            " the build could not do as asked:\n  " + string.Join("\n  ", warnings);
+                MessageBox.Show(text, "Some data was not regenerated", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
 
 #if !DEBUG
@@ -1640,14 +2046,32 @@ namespace OpenCAGE
             PatchManager.PatchPopupMessage(Singleton.Platform, Singleton.PathToAI);
             PatchManager.UpdateLevelListInPackages(Singleton.Platform, Singleton.PathToAI);
 
-            PatchManager.PatchSkipFrontendFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool(Settings.SkipFrontend));
             PatchManager.PatchNoUIFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool(Settings.HudDisabled));
-            PatchManager.PatchMemReplayLogFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool(Settings.MemReplayLogs));
-            PatchManager.PatchUIPerfFlag(Singleton.Platform, Singleton.PathToAI, SettingsManager.GetBool(Settings.UiEnabledUiPerf));
+            //Memory logging and the UI memory overlay are no longer launch options (the overlay is the Debug Menu's now): an
+            //AI.exe an older OpenCAGE patched for them is put back, or the overlay would draw in every game
+            PatchManager.PatchMemReplayLogFlag(Singleton.Platform, Singleton.PathToAI, false);
+            PatchManager.PatchUIPerfFlag(Singleton.Platform, Singleton.PathToAI, false);
 
-            if (SettingsManager.GetBool(Settings.LaunchGameWhenSaved))
+            if (allowLaunchGame && SettingsManager.GetBool(Settings.LaunchGameWhenSaved))
             {
                 PatchManager.PatchLaunchMode(Singleton.Platform, Singleton.PathToAI, _compositeBrowser.Content.Level.Name);
+                //Straight into the level past the title screen, as Launch Game's "Load straight into" does (the skip is written
+                //with the level a launch starts in, never on its own)
+                PatchManager.PatchSkipFrontendFlag(Singleton.Platform, Singleton.PathToAI, true);
+
+                //The scripting helpers, Possess Characters and the Debug Menu (runtime utils ASI and its config) go in or come out as
+                //the Launch Game window's settings ask, as they do when launched from there
+                string runtimeUtilsProblem = LaunchGame.ApplyRuntimeUtils(out string keptAside);
+                if (runtimeUtilsProblem != null)
+                    MessageBox.Show(runtimeUtilsProblem, "Runtime utils error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                //Another mod's d3d11.dll was just moved aside for the loader: said once, as that mod won't run in this game
+                else if (keptAside != null)
+                    MessageBox.Show(keptAside, "Another mod's d3d11.dll", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                //...and a Cinematic Tools injector an older OpenCAGE left waiting (its game never came up) would put them in this
+                //game: closed before the game starts (the save closed the game itself)
+                LaunchGame.CloseGameAndOldInjector();
+                //The UI options as their settings say, as a launch from the Launch Game window does
+                UiMovieOverrides.Sync(Singleton.PathToAI);
 
                 if (Singleton.Platform == PatchManager.Platform.STEAM)
                 {
@@ -1661,6 +2085,7 @@ namespace OpenCAGE
                     Process.Start(alienProcess);
                 }
                 Steam.UnlockAchievement(Steam.Achievements.LAUNCHED_GAME);
+                RefreshLiveLinkMenu();
             }
 #endif
 
@@ -1669,12 +2094,11 @@ namespace OpenCAGE
             CloseProgressUI();
 
             Singleton.OnSaved?.Invoke();
-            Steam.UnlockAchievement(Steam.Achievements.FIRST_SAVE);
-
-            int saveCount = SettingsManager.GetInteger(Settings.SaveCounter) + 1;
-            SettingsManager.SetInteger(Settings.SaveCounter, saveCount);
-            if (saveCount >= 100)
-                Steam.UnlockAchievement(Steam.Achievements.ONE_HUNDRED_SAVES);
+            //The level changed after it was written (viewport edits held during a build, applied while a box above was up):
+            //those changes are not on disk, so it is still unsaved
+            if (DirtyTracker.Modifications != modificationsBefore)
+                DirtyTracker.MarkLevelDataModified();
+            int saveCount = Steam.CountTowards(Steam.Achievements.ONE_HUNDRED_SAVES);
 
 #if SHIP_BUILD
             if (saveCount > 10 && !SettingsManager.GetBool(Settings.DidSteamReviewPrompt))
@@ -1689,28 +2113,150 @@ namespace OpenCAGE
             }
 #endif
 
-            //if (saved)
-            //{
-                if (SettingsManager.GetBool(Settings.ShowSavedMsgOpt) && successMsg)
-                    MessageBox.Show("Saved changes!", "Saved.", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            //}
-            //else
-            //    MessageBox.Show("Failed to save changes!", "Failed!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            if (SettingsManager.GetBool(Settings.ShowSavedMsgOpt) && successMsg)
+                MessageBox.Show("Saved changes!", "Saved.", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        /* For a save that pumps the message loop: every open window but the progress window disabled, as a modal window
+           disables the others - a disabled window, and everything in it, takes no input and can't be closed - and added to
+           the list for EnableWindowsAfterSave. Disabled in Windows only: setting Enabled would repaint every control in each
+           window, seconds of the UI thread with a big level open. */
+        private void DisableWindowsForSave(List<Form> disabled)
+        {
+            foreach (Form form in Application.OpenForms.Cast<Form>().ToList())
+            {
+                if (form == null || form == _progressUI || form.IsDisposed || !form.TopLevel || !form.IsHandleCreated || form.InvokeRequired || !IsWindowEnabled(form.Handle))
+                    continue;
+                EnableWindow(form.Handle, false);
+                disabled.Add(form);
+            }
+        }
+        private static void EnableWindowsAfterSave(List<Form> disabled)
+        {
+            foreach (Form form in disabled)
+                if (!form.IsDisposed && form.IsHandleCreated)
+                    EnableWindow(form.Handle, true);
+            disabled.Clear();
+        }
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool EnableWindow(IntPtr hWnd, bool enable);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool IsWindowEnabled(IntPtr hWnd);
+
+        /* What a failed save says: the files it could not write and why, or what stopped it, and that the level on disk is as
+           it was. forBox: the whole message for its box; otherwise one line, for a caller that puts it in its own words. */
+        private string DescribeSaveFailure(Exception thrown, IReadOnlyList<CathodeFile.SaveFailure> notWritten, bool forBox)
+        {
+            LevelContent content = _compositeBrowser?.Content;
+            string levelName = content?.Level?.Name ?? "The level";
+            string levelFolder = content?.Level?.Filepath == null ? null : content.Level.Filepath.Replace('/', '\\').TrimEnd('\\') + "\\";
+            List<string> files = new List<string>();
+            foreach (CathodeFile.SaveFailure failure in notWritten ?? new CathodeFile.SaveFailure[0])
+            {
+                string path = (failure.Path ?? "").Replace('/', '\\');
+                if (levelFolder != null && path.StartsWith(levelFolder, StringComparison.OrdinalIgnoreCase))
+                    path = path.Substring(levelFolder.Length);
+                files.Add(path + " - " + SaveFailureReason(failure.Error, failure.Reason));
+            }
+            //After every file was swapped in, the save itself is on disk: only what came after it (the build's bookkeeping) failed
+            bool written = content != null && content.LastSaveWritten;
+
+            if (!forBox)
+            {
+                string line = files.Count != 0
+                    ? files.Count + " file" + (files.Count == 1 ? "" : "s") + " could not be written: " + string.Join("; ", files.Take(3)) + (files.Count > 3 ? "; ..." : "")
+                    : SaveFailureReason(thrown, thrown?.Message);
+                return line + (written ? "" : " - nothing on disk was changed");
+            }
+
+            string text = written ? "\"" + levelName + "\" was written to disk, but the save did not finish." : "\"" + levelName + "\" was not saved.";
+            if (files.Count != 0)
+            {
+                text += "\n\n" + files.Count + " file" + (files.Count == 1 ? "" : "s") + " could not be written:\n  " + string.Join("\n  ", files.Take(10)) +
+                    (files.Count > 10 ? "\n  ...and " + (files.Count - 10) + " more" : "");
+            }
+            if (thrown != null)
+                text += "\n\nThe save stopped: " + SaveFailureReason(thrown, thrown.Message) + (thrown is IOException || thrown is UnauthorizedAccessException ? "" : " (" + thrown.GetType().Name + ")") + ".";
+            if (written)
+                return text + "\n\nSave again to be sure it all finishes. Your changes are still here in the editor.";
+            return text + "\n\nNothing on disk was changed: the level is as it was before this save." +
+                "\n\nCheck the level's files aren't read-only or open in another program (the game, or a backup or sync tool), and that the drive has space, then save again. " +
+                "Your changes are still here in the editor.";
+        }
+
+        /* Why a file could not be written, in plain words where the error is a common one */
+        private static string SaveFailureReason(Exception error, string fallback)
+        {
+            const int SharingViolation = unchecked((int)0x80070020), LockViolation = unchecked((int)0x80070021);
+            const int DiskFull = unchecked((int)0x80070070), HandleDiskFull = unchecked((int)0x80070027);
+            if (error is UnauthorizedAccessException)
+                return "it is read-only, or OpenCAGE isn't allowed to change it";
+            if (error is IOException)
+            {
+                if (error.HResult == SharingViolation || error.HResult == LockViolation)
+                    return "it is open in another program";
+                if (error.HResult == DiskFull || error.HResult == HandleDiskFull)
+                    return "the drive is full";
+            }
+            return string.IsNullOrEmpty(fallback) ? "unknown error" : fallback.TrimEnd('.');
+        }
+
+        /* Status text for background work nobody asked for: it may only write when the bar is idle,
+         * and may only clear its own message. Otherwise a long harvest would stamp over "Saving..."
+         * and then blank it, which would read as the save having finished. Null clears. */
+        private string _idleStatus = null;
+        private void SetIdleStatus(string text)
+        {
+            try
+            {
+                if (statusStrip == null || statusStrip.IsDisposed) return;
+                Action apply = () =>
+                {
+                    if (statusText == null) return;
+                    if (text == null)
+                    {
+                        if (_idleStatus != null && statusText.Text == _idleStatus)
+                            statusText.Text = "";
+                        _idleStatus = null;
+                    }
+                    else if (string.IsNullOrEmpty(statusText.Text) || statusText.Text == _idleStatus)
+                    {
+                        _idleStatus = text;
+                        statusText.Text = text;
+                    }
+                    statusStrip.Update();
+                };
+                if (statusStrip.InvokeRequired) statusStrip.BeginInvoke(apply);
+                else apply();
+            }
+            catch { }
         }
 
         public void EnableButtons(bool shouldEnable, string text)
         {
             try
             {
+                //Braces matter here: without them the Refresh/Update ran on the calling thread as well, which on
+                //the level loader thread was a (swallowed) cross-thread call on the toolbar every load
                 if (toolStrip.InvokeRequired)
+                {
                     toolStrip.Invoke(new Action(() => { toolStrip.Enabled = shouldEnable; toolStrip.Refresh(); }));
+                }
                 else
-                    toolStrip.Enabled = shouldEnable; toolStrip.Refresh();
+                {
+                    toolStrip.Enabled = shouldEnable;
+                    toolStrip.Refresh();
+                }
 
                 if (statusStrip.InvokeRequired)
+                {
                     statusStrip.Invoke(new Action(() => { statusText.Text = text; statusStrip.Update(); }));
+                }
                 else
-                    statusText.Text = text; statusStrip.Update();
+                {
+                    statusText.Text = text;
+                    statusStrip.Update();
+                }
             }
             catch { }
         }
@@ -1722,34 +2268,102 @@ namespace OpenCAGE
 
         private void openLevelViewerToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            RestartLevelViewer();
+            toolStripButton2.HideDropDown();
+        }
+
+        /// <summary>Close the viewport's process and start it again for the open level, which it reads from disk.</summary>
+        internal void RestartLevelViewer()
+        {
             KillLevelViewer();
             EnsureDockPanelsCreated();
             BeginParallelLevelViewerLoad(_compositeBrowser?.Content?.Level?.Name);
-            toolStripButton2.HideDropDown();
         }
 
         private void LevelViewerPanel_ProcessExited(object sender, EventArgs e)
         {
+            UnityConnection.ViewerContextMenu.Close();
             _compositeDisplay?.HideLevelViewerPanel();
         }
 
         private void ConfigureLevelViewerAvailability()
         {
+            //The Viewport menu stays, since its first item is what turns the viewport back on; the rest of it
+            //and the viewer's own controls only mean something while it is running
+            enableViewportToolStripMenuItem.Checked = Singleton.ViewportEnabled;
+            foreach (ToolStripItem item in viewportOptionsToolStripMenuItem.DropDownItems)
+            {
+                if (item != enableViewportToolStripMenuItem && item != viewportOptionsToolStripSeparator)
+                    item.Enabled = Singleton.ViewportEnabled;
+            }
+            ApplyRenderOptionGates();
+            resetRenderFiltersOnLoadToolStripMenuItem.Visible = Singleton.ViewportEnabled;
+
             if (!Singleton.ViewportEnabled)
             {
-                viewportOptionsToolStripMenuItem.Visible = false;
-                resetRenderFiltersOnLoadToolStripMenuItem.Visible = false;
                 _renderFiltersPanel?.Hide();
                 _compositeDisplay?.HideLevelViewerPanel();
                 if (_entityInspector != null && dockPanel != null && dockPanel.Contents.Count > 0)
                     EnsureRequiredDockLayout();
             }
             else
-            { 
-                resetRenderFiltersOnLoadToolStripMenuItem.Visible = true;
-                viewportOptionsToolStripMenuItem.Visible = true;
+            {
                 EnsureLevelViewerConnection();
             }
+        }
+
+        /* Options > Viewport > Enable Viewport. Off is what -disable_viewport does (the Steam launch option
+           and child instances pass it), only remembered and switchable without a restart: the viewer is
+           closed on the spot, or launched for the level that is open. */
+        private void enableViewportToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            bool enable = !Singleton.ViewportEnabled;
+            if (enable && !File.Exists(Singleton.ViewportExecutablePath))
+            {
+                MessageBox.Show(
+                    "Could not find CathodeEditorGodot.exe.\nExpected path:\n" + Singleton.ViewportExecutablePath,
+                    "Viewport",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
+            }
+
+            /* The viewer reads the level from disk. Anything edited while it was off (or before it was
+             * ever on) would not be in what it loads, and every edit after that would be applied on top
+             * of a level that is already behind - so it either saves first or waits for the next level
+             * load, which is the point the two are in step again. Either way the setting is on. */
+            bool openNow = enable && ConfirmSaveBeforeOpeningViewport();
+            SetViewportEnabled(enable, openNow);
+        }
+
+        /// <summary>
+        /// Turn the viewport on or off, once any question about unsaved changes has been answered: turned on,
+        /// it opens for the level now when <paramref name="openNow"/>, and otherwise at the next level load.
+        /// </summary>
+        internal void SetViewportEnabled(bool enable, bool openNow)
+        {
+            SettingsManager.SetBool(Settings.ViewportEnabled, enable);
+            Singleton.ViewportEnabled = enable;
+
+            if (enable)
+            {
+                ConfigureLevelViewerAvailability();
+                EnsureDockPanelsCreated();
+                if (_renderFiltersPanel != null && dockPanel != null && dockPanel.Contents.Count > 0)
+                    EnsureRequiredDockLayout();
+                if (openNow && _compositeBrowser?.Content?.Level != null)
+                    BeginParallelLevelViewerLoad(_compositeBrowser.Content.Level.Name);
+                else if (!openNow)
+                    SetIdleStatus("The viewport will open when a level is next loaded.");
+            }
+            else
+            {
+                KillLevelViewer();
+                ConfigureLevelViewerAvailability();
+            }
+
+            //The flowgraph and inspector show zone colours only alongside a viewport drawing them
+            UnityConnection.ViewerZoneSync.SendNow();
         }
 
         private static bool EnsureLevelViewerConnection()
@@ -1775,9 +2389,52 @@ namespace OpenCAGE
             ToggleBoolSetting(Settings.ShowCameraPosition);
         }
 
+        private void focusOnSelectedToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            bool enabled = !SettingsManager.GetBool(Settings.FocusOnSelected);
+            SettingsManager.SetBool(Settings.FocusOnSelected, enabled);
+            if (!enabled)
+                SettingsManager.SetBool(Settings.FixCameraToSelected, false);
+            ApplySettingEffects(new[] { Settings.FocusOnSelected, Settings.FixCameraToSelected });
+        }
+
+        private void fixCameraToSelectedEntityToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            bool enabled = !SettingsManager.GetBool(Settings.FixCameraToSelected);
+            SettingsManager.SetBool(Settings.FixCameraToSelected, enabled);
+            if (enabled)
+                SettingsManager.SetBool(Settings.FocusOnSelected, true);
+            ApplySettingEffects(new[] { Settings.FixCameraToSelected, Settings.FocusOnSelected });
+        }
+
         private void renderWireframeToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ToggleBoolSetting(Settings.RenderWireframe);
+        }
+
+        private void renderGalaxyToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.RenderGalaxy);
+        }
+
+        private void renderFogToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.RenderFog);
+        }
+
+        private void renderWaterToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.RenderWater);
+        }
+
+        private void planarReflectionsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.PlanarReflections);
+        }
+
+        private void renderPlanetsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.RenderPlanets);
         }
 
         private void hideNestedScriptEntitiesToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1785,9 +2442,188 @@ namespace OpenCAGE
             ToggleBoolSetting(Settings.HideNestedScriptEntities);
         }
 
+        /* Which item stands for which mode. Held on the items themselves so the handler and the tick
+           both read one thing, and a mode added later is a designer item plus a line here. */
+        private void SetupHighlightModeMenu()
+        {
+            highlightModeGreenToolStripMenuItem.Tag = LevelViewerHighlightMode.Green;
+            highlightModeWireframeToolStripMenuItem.Tag = LevelViewerHighlightMode.Wireframe;
+            highlightModeWireframeTransparentToolStripMenuItem.Tag = LevelViewerHighlightMode.WireframeTransparent;
+            highlightModeNoneToolStripMenuItem.Tag = LevelViewerHighlightMode.None;
+
+            //Each mode has a viewport hotkey (issue 673) - the item that sets it is where it should read
+            foreach (ToolStripItem item in highlightModeToolStripMenuItem.DropDownItems)
+            {
+                if (item is ToolStripMenuItem menuItem && menuItem.Tag is LevelViewerHighlightMode itemMode)
+                    menuItem.ShortcutKeyDisplayString = LevelViewerViewportDefinitions.GetHighlightModeShortcut(itemMode);
+            }
+
+            //Same as the rest of the Options menus: picking one shouldn't shut the menu you picked it from
+            highlightModeToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
+        }
+
+        /* Options > Viewport > Selection Highlight Mode. One of four, so the items read as a set of choices
+           rather than switches: the chosen one is ticked and clicking it again does nothing. */
+        private void highlightModeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!((sender as ToolStripMenuItem)?.Tag is LevelViewerHighlightMode mode))
+                return;
+
+            SettingsManager.SetInteger(Settings.LevelViewerHighlightMode, (int)mode);
+            ApplySettingEffects(new[] { Settings.LevelViewerHighlightMode });
+        }
+
+        /// <summary>
+        /// The viewport picked a highlight mode with its own hotkey and the setting has already been
+        /// stored: move the tick to match. No settings packet goes back - the viewer is where it came from.
+        /// </summary>
+        internal void RefreshHighlightModeMenu() => ApplyHighlightModeSelectionFromSettings();
+
+        private void ApplyHighlightModeSelectionFromSettings()
+        {
+            LevelViewerHighlightMode mode = LevelViewerViewportDefinitions.NormalizeHighlightMode(
+                SettingsManager.GetInteger(Settings.LevelViewerHighlightMode));
+
+            foreach (ToolStripItem item in highlightModeToolStripMenuItem.DropDownItems)
+            {
+                if (item is ToolStripMenuItem menuItem && menuItem.Tag is LevelViewerHighlightMode itemMode)
+                    menuItem.Checked = itemMode == mode;
+            }
+        }
+
+        private void SetupAntialiasingMenu()
+        {
+            antialiasingOffToolStripMenuItem.Tag = LevelViewerAntialiasMode.Off;
+            antialiasingFxaaToolStripMenuItem.Tag = LevelViewerAntialiasMode.Fxaa;
+            antialiasingSmaaToolStripMenuItem.Tag = LevelViewerAntialiasMode.Smaa;
+            antialiasingMsaa2xToolStripMenuItem.Tag = LevelViewerAntialiasMode.Msaa2x;
+            antialiasingMsaa4xToolStripMenuItem.Tag = LevelViewerAntialiasMode.Msaa4x;
+            antialiasingMsaa8xToolStripMenuItem.Tag = LevelViewerAntialiasMode.Msaa8x;
+            antialiasingToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
+        }
+
+        /* Options > Viewport > Anti-aliasing. One of several, as Selection Highlight Mode is: the chosen one is ticked. */
+        private void antialiasingToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!((sender as ToolStripMenuItem)?.Tag is LevelViewerAntialiasMode mode))
+                return;
+
+            SettingsManager.SetInteger(Settings.LevelViewerAntialiasMode, (int)mode);
+            ApplySettingEffects(new[] { Settings.LevelViewerAntialiasMode });
+        }
+
+        private void SetupDrawDistanceMenu()
+        {
+            drawDistanceShortToolStripMenuItem.Tag = LevelViewerDrawDistance.Short;
+            drawDistanceMediumToolStripMenuItem.Tag = LevelViewerDrawDistance.Medium;
+            drawDistanceLongToolStripMenuItem.Tag = LevelViewerDrawDistance.Long;
+            drawDistanceVeryLongToolStripMenuItem.Tag = LevelViewerDrawDistance.VeryLong;
+            drawDistanceUnlimitedToolStripMenuItem.Tag = LevelViewerDrawDistance.Unlimited;
+            drawDistanceToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
+        }
+
+        /* Options > Viewport > Draw Distance. One of several, as Anti-aliasing is: the chosen one is ticked. */
+        private void drawDistanceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!((sender as ToolStripMenuItem)?.Tag is LevelViewerDrawDistance preset))
+                return;
+
+            SettingsManager.SetInteger(Settings.LevelViewerDrawDistance, (int)preset);
+            ApplySettingEffects(new[] { Settings.LevelViewerDrawDistance });
+        }
+
+        private void ApplyDrawDistanceSelectionFromSettings()
+        {
+            LevelViewerDrawDistance preset = LevelViewerViewportDefinitions.NormalizeDrawDistance(
+                SettingsManager.GetInteger(Settings.LevelViewerDrawDistance));
+
+            foreach (ToolStripItem item in drawDistanceToolStripMenuItem.DropDownItems)
+            {
+                if (item is ToolStripMenuItem menuItem && menuItem.Tag is LevelViewerDrawDistance itemPreset)
+                    menuItem.Checked = itemPreset == preset;
+            }
+        }
+
+        private void SetupCubemapCaptureSizeMenu()
+        {
+            cubemapCaptureSizeReplacedToolStripMenuItem.Tag = 0;
+            cubemapCaptureSize64ToolStripMenuItem.Tag = 64;
+            cubemapCaptureSize128ToolStripMenuItem.Tag = 128;
+            cubemapCaptureSize256ToolStripMenuItem.Tag = 256;
+            cubemapCaptureSize512ToolStripMenuItem.Tag = 512;
+            cubemapCaptureSizeToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
+        }
+
+        /* Options > Misc > Cubemap Capture Size. One of several, as Draw Distance is: the chosen one is ticked. */
+        private void cubemapCaptureSizeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!((sender as ToolStripMenuItem)?.Tag is int size))
+                return;
+
+            SettingsManager.SetInteger(Settings.CubemapCaptureSize, size);
+            ApplySettingEffects(new[] { Settings.CubemapCaptureSize });
+        }
+
+        private void ApplyCubemapCaptureSizeSelectionFromSettings()
+        {
+            int size = EnvironmentMapCapture.ConfiguredFaceSize;
+            foreach (ToolStripItem item in cubemapCaptureSizeToolStripMenuItem.DropDownItems)
+            {
+                if (item is ToolStripMenuItem menuItem && menuItem.Tag is int itemSize)
+                    menuItem.Checked = itemSize == size;
+            }
+        }
+
+        private void ApplyAntialiasingSelectionFromSettings()
+        {
+            LevelViewerAntialiasMode mode = LevelViewerViewportDefinitions.NormalizeAntialiasMode(
+                SettingsManager.GetInteger(Settings.LevelViewerAntialiasMode));
+
+            foreach (ToolStripItem item in antialiasingToolStripMenuItem.DropDownItems)
+            {
+                if (item is ToolStripMenuItem menuItem && menuItem.Tag is LevelViewerAntialiasMode itemMode)
+                    menuItem.Checked = itemMode == mode;
+            }
+        }
+
         private void resetRenderFiltersOnLoadToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ToggleBoolSetting(Settings.ResetRenderFilters);
+        }
+
+        private void alwaysFullyRebuildRadiosityToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.AlwaysFullyRebuildRadiosity);
+        }
+
+        private void skipRadiosityRebuildToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.SkipRadiosityRebuild);
+        }
+
+        /* Options > Save/Build's radiosity pair. Don't Rebuild Radiosity skips the bake that Always Fully Rebuild Radiosity
+           changes, so while it is on the other is greyed out and shown unticked, keeping its own setting for when the bake
+           comes back (LevelContent.RadiositySettingsFromOptions lets the skip win the same way). */
+        private void ApplyRadiosityOptionGates()
+        {
+            bool skip = SettingsManager.GetBool(Settings.SkipRadiosityRebuild);
+            skipRadiosityRebuildToolStripMenuItem.Checked = skip;
+            alwaysFullyRebuildRadiosityToolStripMenuItem.Enabled = !skip;
+            alwaysFullyRebuildRadiosityToolStripMenuItem.Checked = !skip && SettingsManager.GetBool(Settings.AlwaysFullyRebuildRadiosity);
+        }
+
+        private void hideLiveLinkLabelToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.HideLiveLinkLabel);
+        }
+
+        /* Options > Misc > Hide Live Link Label In-Game, told to a connected game straight away (a launch writes it into the
+           game's ini too, and each new connection is told it again). An older runtime utils doesn't know the request: it keeps
+           its label until the next launch. */
+        private static void SendLiveLinkLabelSetting()
+        {
+            if (RuntimeUtilsConnection.LiveLink.Connected)
+                RuntimeUtilsConnection.LiveLink.SetOverlay(!SettingsManager.GetBool(Settings.HideLiveLinkLabel));
         }
 
         private bool _levelViewerToolbarConfigured;
@@ -1814,6 +2650,18 @@ namespace OpenCAGE
             _levelViewerPanel.SelectionModeChanged += LevelViewerPanel_SelectionModeChanged;
             _levelViewerPanel.GizmoModeChanged -= LevelViewerPanel_GizmoModeChanged;
             _levelViewerPanel.GizmoModeChanged += LevelViewerPanel_GizmoModeChanged;
+            _levelViewerPanel.CreateModeChanged -= LevelViewerPanel_CreateModeChanged;
+            _levelViewerPanel.CreateModeChanged += LevelViewerPanel_CreateModeChanged;
+            _levelViewerPanel.StateInfoChanged -= LevelViewerPanel_StateInfoChanged;
+            _levelViewerPanel.StateInfoChanged += LevelViewerPanel_StateInfoChanged;
+            _levelViewerPanel.ShowZonesChanged -= LevelViewerPanel_ShowZonesChanged;
+            _levelViewerPanel.ShowZonesChanged += LevelViewerPanel_ShowZonesChanged;
+            _levelViewerPanel.MeasureModeChanged -= LevelViewerPanel_MeasureModeChanged;
+            _levelViewerPanel.MeasureModeChanged += LevelViewerPanel_MeasureModeChanged;
+            _levelViewerPanel.LiveLinkCameraModeChanged -= LevelViewerPanel_LiveLinkCameraModeChanged;
+            _levelViewerPanel.LiveLinkCameraModeChanged += LevelViewerPanel_LiveLinkCameraModeChanged;
+            //The panel can be made after Live Link connected: Live Link Camera shows only while it is
+            _levelViewerPanel.SetLiveLinkConnected(RuntimeUtilsConnection.Send.Connected);
             ApplyLevelViewerViewportModesFromSettings();
         }
 
@@ -1826,26 +2674,147 @@ namespace OpenCAGE
                 SettingsManager.GetInteger(Settings.LevelViewerDeepSelectMode)));
             _levelViewerPanel.ApplyGizmoMode(LevelViewerViewportDefinitions.NormalizeGizmoMode(
                 SettingsManager.GetInteger(Settings.LevelViewerGizmoMode)));
+            _levelViewerPanel.ApplyCreateMode(UnityConnection.ViewerCreateMode.ActiveFunctionType);
+            _levelViewerPanel.ApplyMeasureMode(UnityConnection.ViewerMeasureMode.Active);
+            _levelViewerPanel.ApplyStateInfo();
+            _levelViewerPanel.ApplyShowZones(SettingsManager.GetBool(Settings.ShowZones));
+            _levelViewerPanel.ApplyLiveLinkCameraMode(RuntimeUtilsConnection.LiveLinkCameraSync.WantedMode);
+        }
+
+        private void LevelViewerPanel_StateInfoChanged(object sender, EventArgs e)
+        {
+            UnityConnection.Send.SendSettingsPacket();
+        }
+
+        private void LevelViewerPanel_ShowZonesChanged(object sender, bool enabled)
+        {
+            SettingsManager.SetBool(Settings.ShowZones, enabled);
+
+            /* Table first, and only then the settings packet. Nothing is calculated while the overlay
+               is off, so switching it on is what asks for one - and the zone packet carries the new
+               state itself, so the viewer turns the colouring on and gets the table it should draw in
+               the same step. The other way round it would spend the moment in between drawing the
+               level from whatever table was left over from the last time it was on. Switching it off
+               sends nothing, but drops the table the flowgraph and inspector colour by. */
+            UnityConnection.ViewerZoneSync.SendNow();
+
+            UnityConnection.Send.SendSettingsPacket();
+        }
+
+        private void LevelViewerPanel_MeasureModeChanged(object sender, bool enabled)
+        {
+            UnityConnection.ViewerMeasureMode.Active = enabled;
+
+            //Measuring takes the viewport's clicks, as creation mode does: switching it on leaves creation mode
+            if (enabled)
+                ClearViewerCreateMode();
+
+            UnityConnection.Send.SendSettingsPacket();
+        }
+
+        private void LevelViewerPanel_LiveLinkCameraModeChanged(object sender, int mode)
+        {
+            SettingsManager.SetInteger(Settings.LiveLinkCameraMode, mode);
+
+            //Tells the viewer to stream its camera or follow the game's (or neither), and the game to follow the viewport's
+            //or have its own back
+            RuntimeUtilsConnection.LiveLinkCameraSync.Refresh();
         }
 
         private void LevelViewerPanel_SelectionModeChanged(object sender, LevelViewerDeepSelectMode mode)
         {
+            //Choosing a selection mode exits entity creation mode
+            ClearViewerCreateMode();
+
             SettingsManager.SetInteger(Settings.LevelViewerDeepSelectMode, (int)mode);
             UnityConnection.Send.SendSettingsPacket();
         }
 
         private void LevelViewerPanel_GizmoModeChanged(object sender, LevelViewerGizmoMode mode)
         {
+            //Choosing a gizmo mode exits entity creation mode
+            ClearViewerCreateMode();
+
             SettingsManager.SetInteger(Settings.LevelViewerGizmoMode, (int)mode);
+            UnityConnection.Send.SendSettingsPacket();
+        }
+
+        /* Leave entity creation mode, in the toolbar and in our own state. False if it wasn't in
+           creation mode, so a caller acting on a key can fall through to what that key otherwise
+           means. Doesn't tell the viewer: callers that change other modes send one packet for the
+           lot, and ExitViewerCreateMode sends it for callers that don't. */
+        private bool ClearViewerCreateMode()
+        {
+            if (!UnityConnection.ViewerCreateMode.IsActive)
+                return false;
+
+            UnityConnection.ViewerCreateMode.ActiveFunctionType = 0;
+            _levelViewerPanel?.ApplyCreateMode(0);
+            return true;
+        }
+
+        /// <summary>Leave entity creation mode and tell the viewer. False if it wasn't active.</summary>
+        public bool ExitViewerCreateMode()
+        {
+            if (!ClearViewerCreateMode())
+                return false;
+
+            UnityConnection.Send.SendSettingsPacket();
+            return true;
+        }
+
+        /// <summary>Stop measuring (the toolbar's Measure) and tell the viewer. False if it wasn't on.</summary>
+        public bool ExitViewerMeasureMode()
+        {
+            if (!UnityConnection.ViewerMeasureMode.Active)
+                return false;
+
+            UnityConnection.ViewerMeasureMode.Active = false;
+            _levelViewerPanel?.ApplyMeasureMode(false);
+            UnityConnection.Send.SendSettingsPacket();
+            return true;
+        }
+
+        private void LevelViewerPanel_CreateModeChanged(object sender, uint functionType)
+        {
+            UnityConnection.ViewerCreateMode.ActiveFunctionType = functionType;
+
+            if (functionType != 0)
+            {
+                //Entering creation mode disables the transform gizmo
+                SettingsManager.SetInteger(Settings.LevelViewerGizmoMode, (int)LevelViewerGizmoMode.None);
+                _levelViewerPanel?.ApplyGizmoMode(LevelViewerGizmoMode.None);
+
+                //... and stops measuring: both take the viewport's clicks
+                UnityConnection.ViewerMeasureMode.Active = false;
+                _levelViewerPanel?.ApplyMeasureMode(false);
+
+                //Make sure the created entities will actually be visible in the viewer
+                if (!RenderFilters.IsEnabled(functionType))
+                {
+                    RenderFilters.SetEnabled(functionType, true);
+                    UnityConnection.Send.SendRenderFilterPacket();
+                    _renderFiltersPanel?.RefreshFilters();
+                }
+            }
+
             UnityConnection.Send.SendSettingsPacket();
         }
 
         private void ApplyTransformSnapSelectionsFromSettings()
         {
-            ApplyTransformGridSnapSelection(TransformSnapDefinitions.NormalizeGridSnap(
-                SettingsManager.GetFloat(Settings.TransformGridSnap)));
-            ApplyRotationSnapSelection(TransformSnapDefinitions.NormalizeRotationSnap(
-                SettingsManager.GetFloat(Settings.RotationSnapDegrees)));
+            //Normalise against the current (possibly user-edited) list: if the increment that was
+            //selected has been deleted, the selection lands on its nearest neighbour, and the value is
+            //written back so the setting, the tick, the caption and the viewer packet all agree.
+            float grid = SnapIncrementSettings.NormalizeGrid(SettingsManager.GetFloat(Settings.TransformGridSnap));
+            if (!SnapValuesEqual(grid, SettingsManager.GetFloat(Settings.TransformGridSnap)))
+                SettingsManager.SetFloat(Settings.TransformGridSnap, grid);
+            ApplyTransformGridSnapSelection(grid);
+
+            float rot = SnapIncrementSettings.NormalizeRotation(SettingsManager.GetFloat(Settings.RotationSnapDegrees));
+            if (!SnapValuesEqual(rot, SettingsManager.GetFloat(Settings.RotationSnapDegrees)))
+                SettingsManager.SetFloat(Settings.RotationSnapDegrees, rot);
+            ApplyRotationSnapSelection(rot);
         }
 
         //Flip a boolean setting and route its effect through the single ApplySettingEffects path
@@ -1853,6 +2822,13 @@ namespace OpenCAGE
         {
             SettingsManager.SetBool(key, !SettingsManager.GetBool(key));
             ApplySettingEffects(new[] { key });
+        }
+
+        /// <summary>The Snap Increments popup edited a list; rebuild the menus and push the viewer packet.</summary>
+        public void ApplySnapIncrementChange(string[] changedKeys)
+        {
+            if (changedKeys != null && changedKeys.Length != 0)
+                ApplySettingEffects(changedKeys);
         }
 
         private void SetupTransformGridSnapMenu(ToolStripDropDownButton parent)
@@ -1863,7 +2839,7 @@ namespace OpenCAGE
             parent.DropDownItems.Clear();
             _transformGridSnapMenuItems.Clear();
 
-            foreach (float value in TransformSnapDefinitions.GridSnapValues)
+            foreach (float value in SnapIncrementSettings.GridValues)
             {
                 ToolStripMenuItem item = new ToolStripMenuItem(TransformSnapDefinitions.FormatGridSnapLabel(value))
                 {
@@ -1874,6 +2850,24 @@ namespace OpenCAGE
                 _transformGridSnapMenuItems[value] = item;
                 parent.DropDownItems.Add(item);
             }
+
+            //Vertex snap is a mode, not a distance, so it sits apart from the values as its own toggle.
+            //On means it is always active; otherwise the viewport turns it on only while V is held.
+            parent.DropDownItems.Add(new ToolStripSeparator());
+            _vertexSnapMenuItem = new ToolStripMenuItem("Vertex")
+            {
+                CheckOnClick = false,
+                Checked = SettingsManager.GetBool(Settings.TransformVertexSnap),
+                ShortcutKeyDisplayString = "Hold V",
+                ToolTipText = "Snap the drag to mesh vertices. Turn on to keep it active, or hold V in the viewport.",
+            };
+            _vertexSnapMenuItem.Click += VertexSnapMenuItem_Click;
+            parent.DropDownItems.Add(_vertexSnapMenuItem);
+        }
+
+        private void VertexSnapMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.TransformVertexSnap);
         }
 
         private void SetupRotationSnapMenu(ToolStripDropDownButton parent)
@@ -1884,7 +2878,7 @@ namespace OpenCAGE
             parent.DropDownItems.Clear();
             _rotationSnapMenuItems.Clear();
 
-            foreach (float value in TransformSnapDefinitions.RotationSnapValues)
+            foreach (float value in SnapIncrementSettings.RotationValues)
             {
                 ToolStripMenuItem item = new ToolStripMenuItem(TransformSnapDefinitions.FormatRotationSnapLabel(value))
                 {
@@ -1902,10 +2896,15 @@ namespace OpenCAGE
             foreach (KeyValuePair<float, ToolStripMenuItem> entry in _transformGridSnapMenuItems)
                 entry.Value.Checked = SnapValuesEqual(entry.Key, value);
 
+            bool vertex = SettingsManager.GetBool(Settings.TransformVertexSnap);
+            if (_vertexSnapMenuItem != null)
+                _vertexSnapMenuItem.Checked = vertex;
+
             if (_levelViewerPanel?.PanelTransformGridSnapMenu != null)
             {
                 _levelViewerPanel.PanelTransformGridSnapMenu.Text = "Transform Snap: "
-                    + TransformSnapDefinitions.FormatGridSnapLabel(value);
+                    + TransformSnapDefinitions.FormatGridSnapLabel(value)
+                    + (vertex ? " + Vertex" : "");
             }
         }
 
@@ -1929,8 +2928,7 @@ namespace OpenCAGE
         private void TransformGridSnapMenuItem_Click(object sender, EventArgs e)
         {
             ToolStripMenuItem item = (ToolStripMenuItem)sender;
-            float value = (float)item.Tag;
-            value = TransformSnapDefinitions.NormalizeGridSnap(value);
+            float value = SnapIncrementSettings.NormalizeGrid((float)item.Tag);
             ApplyTransformGridSnapSelection(value);
             SettingsManager.SetFloat(Settings.TransformGridSnap, value);
             UnityConnection.Send.SendSettingsPacket();
@@ -1939,8 +2937,7 @@ namespace OpenCAGE
         private void RotationSnapMenuItem_Click(object sender, EventArgs e)
         {
             ToolStripMenuItem item = (ToolStripMenuItem)sender;
-            float value = (float)item.Tag;
-            value = TransformSnapDefinitions.NormalizeRotationSnap(value);
+            float value = SnapIncrementSettings.NormalizeRotation((float)item.Tag);
             ApplyRotationSnapSelection(value);
             SettingsManager.SetFloat(Settings.RotationSnapDegrees, value);
             UnityConnection.Send.SendSettingsPacket();
@@ -1964,13 +2961,24 @@ namespace OpenCAGE
         {
             Settings.HighlightAliases,
             Settings.HighlightProxies,
+            Settings.FocusOnSelected,
+            Settings.FixCameraToSelected,
             Settings.ShowCameraPosition,
             Settings.RenderWireframe,
+            Settings.RenderGalaxy,
+            Settings.RenderFog,
+            Settings.RenderWater,
+            Settings.PlanarReflections,
+            Settings.RenderPlanets,
+            Settings.LevelViewerAntialiasMode,
+            Settings.LevelViewerDrawDistance,
             Settings.HideNestedScriptEntities,
             Settings.LevelViewerDeepSelectMode,
             Settings.LevelViewerGizmoMode,
+            Settings.LevelViewerHighlightMode,
             Settings.TransformGridSnap,
             Settings.RotationSnapDegrees,
+            Settings.TransformVertexSnap,
         };
 
         private static bool ShouldApplySetting(string key, IReadOnlyList<string> changedKeys)
@@ -1981,7 +2989,7 @@ namespace OpenCAGE
         private void ApplyAllOptionCheckboxesFromSettings(IReadOnlyList<string> changedKeys)
         {
             if (ShouldApplySetting(Settings.RuntimeUtilsOpt, changedKeys))
-                connectToRuntimeUtils.Checked = SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
+                liveLinkBtn.Checked = SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
 
             if (ShouldApplySetting(Settings.ShowShortGuids, changedKeys))
                 showEntityIDs.Checked = SettingsManager.GetBool(Settings.ShowShortGuids);
@@ -1989,39 +2997,93 @@ namespace OpenCAGE
                 searchOnlyCompositeNames.Checked = SettingsManager.GetBool(Settings.CompNameOnlyOpt);
             if (ShouldApplySetting(Settings.ShowSavedMsgOpt, changedKeys))
                 showConfirmationWhenSavingToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ShowSavedMsgOpt);
+            if (ShouldApplySetting(Settings.PromptSaveOnClose, changedKeys))
+                promptToSaveOnCloseToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.PromptSaveOnClose);
+            if (ShouldApplySetting(Settings.AllowAiAssistants, changedKeys))
+            {
+                allowAiAssistantsToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.AllowAiAssistants, true);
+                if (_shown)
+                    ApplyAiAssistantSetting();
+            }
             if (ShouldApplySetting(Settings.ShowTexOpt, changedKeys))
                 useTexturedModelViewExperimentalToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ShowTexOpt);
-            if (ShouldApplySetting(Settings.EnableFileBrowser, changedKeys))
-                showExplorerViewToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.EnableFileBrowser);
+            if (ShouldApplySetting(Settings.CompositeBrowserMode, changedKeys))
+                ApplyCompositeBrowserModeSelectionFromSettings();
+            if (ShouldApplySetting(Settings.CompositePreviewsInTrees, changedKeys))
+                showCompositePreviewsInTreeViewsToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.CompositePreviewsInTrees, false);
+            if (ShouldApplySetting(Settings.CompositePreviewScale, changedKeys))
+                ApplyCompositePreviewScaleSelectionFromSettings();
             if (ShouldApplySetting(Settings.KeepUsesWindowOpen, changedKeys))
                 keepFunctionUsesWindowOpenToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.KeepUsesWindowOpen);
-            if (ShouldApplySetting(Settings.CompileInstances, changedKeys))
-                writeInstancedResourcesExperimentalToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.CompileInstances);
             if (ShouldApplySetting(Settings.LaunchGameWhenSaved, changedKeys))
                 openGameOnSaveToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.LaunchGameWhenSaved);
             if (ShouldApplySetting(Settings.ShowGamePlatform, changedKeys))
                 showGamePlatformToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ShowGamePlatform);
-            if (ShouldApplySetting(Settings.SavePakAndBin, changedKeys))
-                savePAKAndBINToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.SavePakAndBin);
             if (ShouldApplySetting(Settings.PopulateAllPinsOnCreateNode, changedKeys))
                 populateAllNodePinsWhenCreatedToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.PopulateAllPinsOnCreateNode);
-            if (ShouldApplySetting(Settings.OptionToDeleteEntityWithNode, changedKeys))
-                giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.OptionToDeleteEntityWithNode);
+            if (ShouldApplySetting(Settings.FocusCanvasOnNewNode, changedKeys))
+                focusCanvasOnNewNodeToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.FocusCanvasOnNewNode);
+            if (ShouldApplySetting(Settings.NodeIconsWhenZoomedOut, changedKeys))
+                showNodeIconsWhenZoomedOutToolStripMenuItem.Checked = EditorIcons.NodeIconsWhenZoomedOut;
+            if (ShouldApplySetting(Settings.DarkMode, changedKeys))
+                darkModeToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.DarkMode);
             if (ShouldApplySetting(Settings.AskBeforeDeletingNode, changedKeys))
                 showConfirmationWhenDeletingNodeToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.AskBeforeDeletingNode);
+
+            if (ShouldApplySetting(Settings.LevelViewerHighlightMode, changedKeys))
+                ApplyHighlightModeSelectionFromSettings();
+            if (ShouldApplySetting(Settings.LevelViewerAntialiasMode, changedKeys))
+                ApplyAntialiasingSelectionFromSettings();
+            if (ShouldApplySetting(Settings.LevelViewerDrawDistance, changedKeys))
+                ApplyDrawDistanceSelectionFromSettings();
 
             if (ShouldApplySetting(Settings.HighlightAliases, changedKeys))
                 highlightAliasesToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.HighlightAliases);
             if (ShouldApplySetting(Settings.HighlightProxies, changedKeys))
                 highlightProxiesToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.HighlightProxies);
+            if (ShouldApplySetting(Settings.FocusOnSelected, changedKeys))
+                focusOnSelectedToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.FocusOnSelected);
+            if (ShouldApplySetting(Settings.FixCameraToSelected, changedKeys))
+                fixCameraToSelectedEntityToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.FixCameraToSelected);
             if (ShouldApplySetting(Settings.ShowCameraPosition, changedKeys))
                 showCameraPositionToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ShowCameraPosition);
             if (ShouldApplySetting(Settings.RenderWireframe, changedKeys))
                 renderWireframeToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.RenderWireframe);
+            if (ShouldApplySetting(Settings.RenderGalaxy, changedKeys))
+                renderGalaxyToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.RenderGalaxy);
+            if (ShouldApplySetting(Settings.RenderFog, changedKeys))
+                renderFogToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.RenderFog);
+            if (ShouldApplySetting(Settings.RenderWater, changedKeys))
+                renderWaterToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.RenderWater);
+            if (ShouldApplySetting(Settings.RenderGalaxy, changedKeys) || ShouldApplySetting(Settings.RenderPlanets, changedKeys)
+                || ShouldApplySetting(Settings.RenderWater, changedKeys) || ShouldApplySetting(Settings.PlanarReflections, changedKeys))
+                ApplyRenderOptionGates();
             if (ShouldApplySetting(Settings.HideNestedScriptEntities, changedKeys))
                 hideNestedScriptEntitiesToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.HideNestedScriptEntities);
             if (ShouldApplySetting(Settings.ResetRenderFilters, changedKeys))
                 resetRenderFiltersOnLoadToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ResetRenderFilters);
+            if (ShouldApplySetting(Settings.AlwaysFullyRebuildRadiosity, changedKeys) || ShouldApplySetting(Settings.SkipRadiosityRebuild, changedKeys))
+                ApplyRadiosityOptionGates();
+            if (ShouldApplySetting(Settings.CubemapCaptureSize, changedKeys))
+                ApplyCubemapCaptureSizeSelectionFromSettings();
+            if (ShouldApplySetting(Settings.HideLiveLinkLabel, changedKeys))
+            {
+                hideLiveLinkLabelToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.HideLiveLinkLabel);
+                SendLiveLinkLabelSetting();
+            }
+        }
+
+        /* Render Planets and Use Planar Reflections each hang off the option above them. Planets are drawn in the galaxy's sky,
+           so with Render Galaxy off they are off too, and shown so; planar reflections are the water's, greyed while Render
+           Water is off. Each keeps its own setting for when the one above comes back on (the viewer gates the same way). */
+        private void ApplyRenderOptionGates()
+        {
+            bool galaxy = SettingsManager.GetBool(Settings.RenderGalaxy);
+            bool water = SettingsManager.GetBool(Settings.RenderWater);
+            renderPlanetsToolStripMenuItem.Enabled = Singleton.ViewportEnabled && galaxy;
+            renderPlanetsToolStripMenuItem.Checked = galaxy && SettingsManager.GetBool(Settings.RenderPlanets);
+            planarReflectionsToolStripMenuItem.Enabled = Singleton.ViewportEnabled && water;
+            planarReflectionsToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.PlanarReflections);
         }
 
         private void ApplySettingEffects(IReadOnlyList<string> changedKeys)
@@ -2033,18 +3095,57 @@ namespace OpenCAGE
             if (ShouldApplySetting(Settings.ShowShortGuids, changedKeys))
                 ApplyShowShortGuidsDisplayRefresh();
 
-            if (ShouldApplySetting(Settings.EnableFileBrowser, changedKeys))
+            //Covers the settings file being edited outside the app, where nothing has switched yet
+            if (ShouldApplySetting(Settings.DarkMode, changedKeys))
+                Theming.ThemeManager.SetDark(SettingsManager.GetBool(Settings.DarkMode));
+
+            //The browser lays its panel out again for the mode: list rebuilt, path row shown or hidden, panel collapsed or not
+            if (ShouldApplySetting(Settings.CompositeBrowserMode, changedKeys))
                 UpdateCompositeBrowserDockState();
+
+            //Previews in the browser's tree and list, and their size; pickers open later read the settings for themselves
+            if (ShouldApplySetting(Settings.CompositePreviewsInTrees, changedKeys) || ShouldApplySetting(Settings.CompositePreviewScale, changedKeys))
+                _compositeBrowser?.ApplyCompositePreviewSettings();
+
+            //The browser and any open composite picker: a search on show matches again, and the Search buttons' hover text follows
+            if (ShouldApplySetting(Settings.CompNameOnlyOpt, changedKeys))
+                CompositeSearchOption.RaiseChanged();
+
+            //Open script flowgraphs and animation trees draw zoomed-out nodes as icons, or in full, at once
+            if (ShouldApplySetting(Settings.NodeIconsWhenZoomedOut, changedKeys))
+                EditorIcons.RaiseNodeIconsWhenZoomedOutChanged();
 
             if (ShouldApplySetting(Settings.RuntimeUtilsOpt, changedKeys))
                 ApplyRuntimeUtilsOptFromSettings();
+
+            //Live Link Camera changed elsewhere (the settings file): the toolbar menu, the viewer and the game follow
+            if (ShouldApplySetting(Settings.LiveLinkCameraMode, changedKeys))
+            {
+                _levelViewerPanel?.ApplyLiveLinkCameraMode(RuntimeUtilsConnection.LiveLinkCameraSync.WantedMode);
+                RuntimeUtilsConnection.LiveLinkCameraSync.Refresh();
+            }
 
             if (ShouldApplySetting(Settings.LevelViewerDeepSelectMode, changedKeys)
                 || ShouldApplySetting(Settings.LevelViewerGizmoMode, changedKeys))
                 ApplyLevelViewerViewportModesFromSettings();
 
+            //The increment lists were edited: rebuild the two menus, then re-select (which lands the
+            //current value on its nearest surviving increment if the selected one was removed).
+            if (ShouldApplySetting(Settings.TransformSnapIncrements, changedKeys)
+                || ShouldApplySetting(Settings.RotationSnapIncrements, changedKeys))
+            {
+                if (_levelViewerPanel != null)
+                {
+                    SetupTransformGridSnapMenu(_levelViewerPanel.PanelTransformGridSnapMenu);
+                    SetupRotationSnapMenu(_levelViewerPanel.PanelRotationSnapMenu);
+                }
+            }
+
             if (ShouldApplySetting(Settings.TransformGridSnap, changedKeys)
-                || ShouldApplySetting(Settings.RotationSnapDegrees, changedKeys))
+                || ShouldApplySetting(Settings.RotationSnapDegrees, changedKeys)
+                || ShouldApplySetting(Settings.TransformVertexSnap, changedKeys)
+                || ShouldApplySetting(Settings.TransformSnapIncrements, changedKeys)
+                || ShouldApplySetting(Settings.RotationSnapIncrements, changedKeys))
                 ApplyTransformSnapSelectionsFromSettings();
 
             if (ShouldApplySetting(Settings.BoxRenderFilters, changedKeys))
@@ -2066,9 +3167,6 @@ namespace OpenCAGE
                 }
             }
 
-            if (ShouldApplyAnyNodeColour(changedKeys))
-                Singleton.OnNodeStyleChanged?.Invoke();
-
             if (ShouldApplySetting(Settings.NumericStep, changedKeys)
                 || ShouldApplySetting(Settings.NumericStepRot, changedKeys))
                 NumericStepSettings.NotifyChanged();
@@ -2077,47 +3175,315 @@ namespace OpenCAGE
                 UnityConnection.Send.SendSettingsPacket();
         }
 
-        private static bool ShouldApplyAnyNodeColour(IReadOnlyList<string> changedKeys)
-        {
-            if (changedKeys == null || changedKeys.Count == 0)
-                return true;
-
-            foreach (string key in changedKeys)
-            {
-                if (Settings.IsNodeColourKey(key))
-                    return true;
-            }
-            return false;
-        }
-
+        /* The Live Link button stays on while the game is not there yet: the game only serves the live link when it was
+           launched from OpenCAGE with Enable Live Link (LaunchGame writes LiveLink=1, and switches this on), so the game is
+           found when it starts. Connecting happens off the UI thread - a refused connect takes the network stack ~2 s. */
         private void ApplyRuntimeUtilsOptFromSettings()
         {
-            bool enabled = SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
-
-            if (enabled)
-            {
-                if (!RuntimeUtilsConnection.Send.Start())
-                    enabled = false;
-            }
+            bool wanted = LiveLinkWanted;
+            if (wanted)
+                TryConnectLiveLink();
             else
-            {
-                RuntimeUtilsConnection.Send.Stop();
-            }
+                Task.Run(() => RuntimeUtilsConnection.Send.Stop()); //waits out a connect attempt in progress (~2 s when refused): not on the UI thread
 
-            connectToRuntimeUtils.Checked = enabled;
+            liveLinkBtn.Checked = SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
+            UpdateLiveLinkMenu();
+        }
+
+        /* The Live Link button's setting is one for every install (the settings file sits beside OpenCAGE.exe), but only the
+           builds the runtime utils support (Steam, GOG, Epic Games Store) serve the live link, and only there is there a button
+           to switch it off: anywhere else it counts as off, without being written, so those installs keep it */
+        private static bool LiveLinkWanted => LaunchGame.RuntimeUtilsSupports(Singleton.Platform) && SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
+
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr OpenProcess(uint access, bool inherit, int pid);
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+        private static extern bool QueryFullProcessImageName(IntPtr process, int flags, System.Text.StringBuilder name, ref int size);
+        [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+        private static extern bool CloseHandle(IntPtr handle);
+
+        /// <summary>
+        /// Whether this install's Alien: Isolation (its AI.exe) is running. A game from another install is not - it would
+        /// take the live link's one connection, or be sent this install's edits - nor is one whose path cannot be read. Goes
+        /// through every process: keep it off the UI thread where it is asked often.
+        /// </summary>
+        internal static bool GameRunning()
+        {
+            string install;
+            try
+            {
+                install = Path.GetFullPath(Singleton.PathToAI).TrimEnd('\\', '/');
+            }
+            catch
+            {
+                return false;
+            }
+            bool ours = false;
+            foreach (Process process in Process.GetProcessesByName("AI"))
+            {
+                try
+                {
+                    //The game is 32-bit and OpenCAGE 64-bit: its path comes from the limited query, not MainModule
+                    IntPtr handle = OpenProcess(0x1000 /*PROCESS_QUERY_LIMITED_INFORMATION*/, false, process.Id);
+                    if (handle != IntPtr.Zero)
+                    {
+                        try
+                        {
+                            System.Text.StringBuilder name = new System.Text.StringBuilder(1024);
+                            int size = name.Capacity;
+                            if (QueryFullProcessImageName(handle, 0, name, ref size)
+                                && string.Equals(Path.GetDirectoryName(name.ToString()).TrimEnd('\\', '/'), install, StringComparison.OrdinalIgnoreCase))
+                                ours = true;
+                        }
+                        finally
+                        {
+                            CloseHandle(handle);
+                        }
+                    }
+                }
+                catch
+                {
+                    //Gone meanwhile, or not ours to ask about
+                }
+                process.Dispose();
+            }
+            return ours;
+        }
+
+        private bool _liveLinkConnecting = false;
+        private bool _liveLinkNotListeningShown = false;
+        private int _liveLinkRefusals = 0;
+        private async void TryConnectLiveLink()
+        {
+            if (_liveLinkConnecting || RuntimeUtilsConnection.Send.Connected || !LiveLinkWanted)
+                return;
+            _liveLinkConnecting = true;
+            bool running = false;
+            bool connected;
+            try
+            {
+                //Looking for the game goes through every process: that too off the UI thread, as this is asked every 3 s
+                connected = await Task.Run(() => (running = GameRunning()) && RuntimeUtilsConnection.Send.Start());
+            }
+            finally
+            {
+                _liveLinkConnecting = false;
+            }
+            if (!running)
+                return; //no game yet: not a refusal
+            if (connected)
+            {
+                _liveLinkNotListeningShown = false;
+                _liveLinkRefusals = 0;
+            }
+            else if (!_liveLinkNotListeningShown && !IsDisposed)
+            {
+                //A game launched with the live link opens it a moment after it starts (and Launch Game has this looking for
+                //it from then): only one launched without it, or still without it after a few tries, is said to be so
+                _liveLinkRefusals++;
+                if (!LaunchGame.LiveLinkInstalled() || _liveLinkRefusals >= 5)
+                {
+                    _liveLinkNotListeningShown = true;
+                    ShowLiveLinkActivity("Live Link: the game is running but not serving Live Link - restart it from OpenCAGE (Launch Game) with Live Link ticked");
+                }
+            }
         }
 
         private void connectToRuntimeUtils_Click(object sender, EventArgs e)
         {
-            SettingsManager.SetBool(Settings.RuntimeUtilsOpt, !SettingsManager.GetBool(Settings.RuntimeUtilsOpt));
+            bool wanted = !SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
+            //Breakpoints set from here would stop the game with nothing left to let it go on: switched off before the connection goes
+            if (!wanted)
+                RuntimeUtilsConnection.LiveLinkDebugger.DisarmOnLeave();
+            SettingsManager.SetBool(Settings.RuntimeUtilsOpt, wanted);
+            _liveLinkNotListeningShown = false;
+            _liveLinkRefusals = 0;
             ApplySettingEffects(new[] { Settings.RuntimeUtilsOpt });
+            if (!wanted)
+                ShowLiveLinkActivity("Live Link: off");
+            else if (!RuntimeUtilsConnection.Send.Connected && !GameRunning())
+                ShowLiveLinkActivity("Live Link: on - launch the game from OpenCAGE (Launch Game) with Live Link ticked, and it connects once the game is up");
+            OnLiveLinkConnectionChanged();
+        }
 
-            //If we asked to connect but the effect couldn't establish a connection, revert and warn
-            if (SettingsManager.GetBool(Settings.RuntimeUtilsOpt) && !connectToRuntimeUtils.Checked)
+        /* The Live Link menu, beside Launch Game: there only while the game is running and serves Live Link, and only for
+           the builds the runtime utils (which serve it) support. The game is looked for every couple of seconds, off the UI
+           thread, and again whenever it is launched. */
+        private System.Windows.Forms.Timer _liveLinkMenuWatch;
+        private bool _liveLinkMenuLooking = false;
+        private bool _gameServesLiveLink = false;
+
+        private void StartLiveLinkMenuWatch()
+        {
+            if (!LaunchGame.RuntimeUtilsSupports(Singleton.Platform) || _liveLinkMenuWatch != null)
+                return;
+            _liveLinkMenuWatch = new System.Windows.Forms.Timer() { Interval = 2000 };
+            _liveLinkMenuWatch.Tick += (s, e) => RefreshLiveLinkMenu();
+            _liveLinkMenuWatch.Start();
+        }
+
+        /// <summary>Look for the game again, and show the Live Link menu (or not) to match. UI thread.</summary>
+        private async void RefreshLiveLinkMenu()
+        {
+            if (_liveLinkMenuLooking || IsDisposed || !LaunchGame.RuntimeUtilsSupports(Singleton.Platform))
+                return;
+            _liveLinkMenuLooking = true;
+            try
             {
-                SettingsManager.SetBool(Settings.RuntimeUtilsOpt, false);
-                MessageBox.Show("Failed to connect to RuntimeUtils server.\nIs the game running with the RuntimeUtils DLL loaded?", "Connection failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                bool serves = false;
+                await Task.Run(() => serves = GameRunning() && LaunchGame.LiveLinkInstalled());
+                _gameServesLiveLink = serves;
             }
+            catch (Exception ex)
+            {
+                Debug.Log("Live Link", "Could not look for the game: " + ex.Message);
+            }
+            finally
+            {
+                _liveLinkMenuLooking = false;
+            }
+            UpdateLiveLinkMenu();
+        }
+
+        /// <summary>
+        /// The Live Link button as the game was last found, and as the connection is now: pressed while Connect to Game is
+        /// on, its tooltip saying where that stands. UI thread.
+        /// </summary>
+        private void UpdateLiveLinkMenu()
+        {
+            if (IsDisposed)
+                return;
+            bool connected = RuntimeUtilsConnection.Send.Connected;
+            bool wanted = SettingsManager.GetBool(Settings.RuntimeUtilsOpt);
+            //A game launched without Live Link has nothing to connect to: no button for it
+            liveLinkBtn.Visible = LaunchGame.RuntimeUtilsSupports(Singleton.Platform) && (_gameServesLiveLink || connected);
+            liveLinkBtn.Checked = wanted;
+            liveLinkBtn.ToolTipText = connected ? "Connected to the game: script edits reach it as they are made, entity methods can be triggered from the Entity Inspector or a method pin's right-click menu, and the viewport's Live Link Camera menu is there. Click to disconnect."
+                : wanted ? "Waiting for the game to serve Live Link (it opens it a moment after starting). Click to stop connecting."
+                : "Connect to the running game over Live Link: script edits reach it as they are made, and entity methods can be triggered from the Entity Inspector or a method pin's right-click menu.";
+        }
+
+        /// <summary>
+        /// The game is about to be launched (the Launch Game window, or launch_game), serving the live link or not. Serving
+        /// it, OpenCAGE connects by itself: the Live Link button is switched on, and the game found once it is up. Any thread.
+        /// </summary>
+        public void OnGameLaunching(bool servesLiveLink)
+        {
+            if (IsDisposed || !IsHandleCreated)
+                return;
+            if (InvokeRequired)
+            {
+                try
+                {
+                    BeginInvoke(new Action(() => OnGameLaunching(servesLiveLink)));
+                }
+                catch
+                {
+                    //Closing
+                }
+                return;
+            }
+            if (servesLiveLink)
+            {
+                SettingsManager.SetBool(Settings.RuntimeUtilsOpt, true);
+                _liveLinkNotListeningShown = false;
+                _liveLinkRefusals = 0;
+                ApplySettingEffects(new[] { Settings.RuntimeUtilsOpt });
+                OnLiveLinkConnectionChanged();
+            }
+            //A new session: the Error Log opens with Launch Game's Error log ticked, and starts afresh (emptied too, with its Clear
+            //on Play on) - the game numbers its errors from the start again
+            bool errorLog = servesLiveLink && LaunchGame.ErrorLogOn();
+            if (errorLog || ErrorLog.IsOpen)
+                RuntimeUtilsConnection.ScriptErrorLog.NewSession(SettingsManager.GetBool(Settings.ErrorLogClearOnPlay, true));
+            if (errorLog)
+                ErrorLog.Open();
+            RefreshLiveLinkMenu();
+        }
+
+        /* Live link messages go in the status bar while it is free, and clear themselves after a while */
+        private System.Windows.Forms.Timer _liveLinkStatusTimer;
+        private string _liveLinkStatus = null;
+        public void ShowLiveLinkActivity(string text)
+        {
+            if (IsDisposed)
+                return;
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => ShowLiveLinkActivity(text)));
+                return;
+            }
+            Debug.Log("Live Link", text);
+            //Only ever replaces or clears its own message, never another's (a shader database harvest's, say)
+            if (_liveLinkStatus != null && _idleStatus == _liveLinkStatus)
+                SetIdleStatus(null);
+            _liveLinkStatus = text;
+            SetIdleStatus(text);
+            if (_liveLinkStatusTimer == null)
+            {
+                _liveLinkStatusTimer = new System.Windows.Forms.Timer() { Interval = 8000 };
+                _liveLinkStatusTimer.Tick += (s, e) =>
+                {
+                    _liveLinkStatusTimer.Stop();
+                    if (_liveLinkStatus != null && _idleStatus == _liveLinkStatus)
+                        SetIdleStatus(null);
+                };
+            }
+            _liveLinkStatusTimer.Stop();
+            _liveLinkStatusTimer.Start();
+        }
+
+        /* While the live link is switched on, a game that closes (or restarts, or has not finished starting) is
+           reconnected to when it is back, rather than the option quietly doing nothing from then on */
+        private System.Windows.Forms.Timer _liveLinkReconnect;
+        private bool _liveLinkWasConnected = false;
+        private void OnLiveLinkConnectionChanged()
+        {
+            if (IsDisposed || !IsHandleCreated)
+                return;
+            BeginInvoke(new Action(() =>
+            {
+                bool connected = RuntimeUtilsConnection.Send.Connected;
+                bool wanted = LiveLinkWanted;
+                //Every new connection starts with Live Link Camera off: the game keeps the player's camera and the viewport
+                //stays where it is, until a sync is chosen for this connection
+                if (connected && !_liveLinkWasConnected)
+                {
+                    SettingsManager.SetInteger(Settings.LiveLinkCameraMode, (int)RuntimeUtilsConnection.LiveLinkCameraSync.CameraMode.Disabled);
+                    _levelViewerPanel?.ApplyLiveLinkCameraMode(RuntimeUtilsConnection.LiveLinkCameraSync.CameraMode.Disabled);
+                    //The label as the option is now (it may have changed since the game was launched)
+                    SendLiveLinkLabelSetting();
+                }
+                //Live Link Camera needs a game to follow or be followed by: shown while connected, and started or stopped with it
+                _levelViewerPanel?.SetLiveLinkConnected(connected);
+                RuntimeUtilsConnection.LiveLinkCameraSync.Refresh();
+                //Pressed while the live link is switched on, connected or waiting for the game
+                UpdateLiveLinkMenu();
+                if (connected != _liveLinkWasConnected)
+                {
+                    ShowLiveLinkActivity(connected ? "Live Link: connected to the game" : "Live Link: the game is no longer connected" + (wanted ? " - will reconnect when it is back" : ""));
+                    _liveLinkWasConnected = connected;
+                }
+                if (connected || !wanted)
+                {
+                    _liveLinkReconnect?.Stop();
+                    return;
+                }
+                if (_liveLinkReconnect == null)
+                {
+                    _liveLinkReconnect = new System.Windows.Forms.Timer() { Interval = 3000 };
+                    _liveLinkReconnect.Tick += (s, e) =>
+                    {
+                        if (RuntimeUtilsConnection.Send.Connected || !LiveLinkWanted)
+                        {
+                            _liveLinkReconnect.Stop();
+                            return;
+                        }
+                        TryConnectLiveLink();
+                    };
+                }
+                _liveLinkReconnect.Start();
+            }));
         }
 
         private void KillLevelViewer()
@@ -2156,14 +3522,102 @@ namespace OpenCAGE
             ToggleBoolSetting(Settings.ShowSavedMsgOpt);
         }
 
+        private void promptToSaveOnCloseToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.PromptSaveOnClose);
+        }
+
+        private void allowAiAssistantsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.AllowAiAssistants);
+        }
+
+        /* AI assistants reach the editor over a local pipe (see MCP.McpServer), only while the option is on - whoever started
+         * this OpenCAGE. While it is off, a marker tells OpenCAGE.MCP so, and it gives up at once rather than waiting. */
+        private EventWaitHandle _aiAssistantsOff = null;
+        private void ApplyAiAssistantSetting()
+        {
+            if (SettingsManager.GetBool(Settings.AllowAiAssistants, true))
+            {
+                _aiAssistantsOff?.Dispose();
+                _aiAssistantsOff = null;
+                MCP.McpServer.Start();
+            }
+            else
+            {
+                MCP.McpServer.Stop();
+                if (_aiAssistantsOff == null)
+                    try { _aiAssistantsOff = new EventWaitHandle(false, EventResetMode.ManualReset, @"Local\OpenCAGE_MCP_Off"); } catch { }
+            }
+        }
+
         private void useTexturedModelViewExperimentalToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ToggleBoolSetting(Settings.ShowTexOpt);
         }
 
-        private void showExplorerViewToolStripMenuItem_Click(object sender, EventArgs e)
+        private void SetupCompositeBrowserModeMenu()
         {
-            ToggleBoolSetting(Settings.EnableFileBrowser);
+            browserModeTreeOnlyToolStripMenuItem.Tag = CompositeBrowserMode.TreeOnly;
+            browserModeTreeAndBrowserToolStripMenuItem.Tag = CompositeBrowserMode.TreeAndBrowser;
+            browserModeTreeAndPreviewToolStripMenuItem.Tag = CompositeBrowserMode.TreeAndPreview;
+
+            //Same as the rest of the Options menus: picking one shouldn't shut the menu you picked it from
+            compositeBrowserModeToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
+
+            previewScale50ToolStripMenuItem.Tag = 50;
+            previewScale75ToolStripMenuItem.Tag = 75;
+            previewScale100ToolStripMenuItem.Tag = 100;
+            previewScale150ToolStripMenuItem.Tag = 150;
+            previewScale200ToolStripMenuItem.Tag = 200;
+            compositePreviewScaleToolStripMenuItem.DropDown.Closing += OptionsDropDown_Closing;
+        }
+
+        /* Options > Composite Display > Composite Browser Mode. One of three, so the items read as a set of
+           choices rather than switches: the chosen one is ticked and clicking it again does nothing. */
+        private void browserModeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!((sender as ToolStripMenuItem)?.Tag is CompositeBrowserMode mode))
+                return;
+
+            CompositeBrowserModes.Set(mode);
+            ApplySettingEffects(new[] { Settings.CompositeBrowserMode });
+        }
+
+        private void ApplyCompositeBrowserModeSelectionFromSettings()
+        {
+            CompositeBrowserMode mode = CompositeBrowserModes.Current;
+            foreach (ToolStripItem item in compositeBrowserModeToolStripMenuItem.DropDownItems)
+            {
+                if (item is ToolStripMenuItem menuItem && menuItem.Tag is CompositeBrowserMode itemMode)
+                    menuItem.Checked = itemMode == mode;
+            }
+        }
+
+        /* Options > Composite Display > Composite Preview Scale: how big the previews are drawn, as a percentage
+           of their normal size, in the browser's flat list and in the trees alike. */
+        private void previewScaleToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!((sender as ToolStripMenuItem)?.Tag is int scale))
+                return;
+
+            SettingsManager.SetInteger(Settings.CompositePreviewScale, scale);
+            ApplySettingEffects(new[] { Settings.CompositePreviewScale });
+        }
+
+        private void ApplyCompositePreviewScaleSelectionFromSettings()
+        {
+            int scale = CompositePreviewImages.Scale;
+            foreach (ToolStripItem item in compositePreviewScaleToolStripMenuItem.DropDownItems)
+            {
+                if (item is ToolStripMenuItem menuItem && menuItem.Tag is int itemScale)
+                    menuItem.Checked = itemScale == scale;
+            }
+        }
+
+        private void showCompositePreviewsInTreeViewsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.CompositePreviewsInTrees);
         }
 
         private void keepFunctionUsesWindowOpenToolStripMenuItem_Click(object sender, EventArgs e)
@@ -2182,20 +3636,110 @@ namespace OpenCAGE
             numericStepConfig.Show();
         }
 
-        private void savePAKAndBINToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            ToggleBoolSetting(Settings.SavePakAndBin);
-        }
-
         private void populateAllNodePinsWhenCreatedToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ToggleBoolSetting(Settings.PopulateAllPinsOnCreateNode);
         }
 
-        private void giveOptionToDeleteEntityWhenNoNodesToolStripMenuItem_Click(object sender, EventArgs e)
+        private void focusCanvasOnNewNodeToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            ToggleBoolSetting(Settings.OptionToDeleteEntityWithNode);
+            ToggleBoolSetting(Settings.FocusCanvasOnNewNode);
         }
+
+        private void showNodeIconsWhenZoomedOutToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.NodeIconsWhenZoomedOut);
+        }
+
+        private void darkModeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            //The docked panels are closed and made again in the new theme below (RebuildDockChromeForTheme), so the switch
+            //itself leaves them alone: theming them first, only to close them, was the bulk of what it cost - every text box
+            //and number box in them is made again to take its new border. Any of them still open after goes through it then.
+            List<Control> remade = PanelsRemadeForTheme();
+
+            //ThemeManager writes the setting itself, so this goes through it rather than ToggleBoolSetting
+            Theming.ThemeManager.SetDark(!Theming.ThemeManager.IsDark, remade);
+            ApplySettingEffects(new[] { Settings.DarkMode });
+
+            //DockPanelSuite builds its panes from the theme, so the docking chrome can only change while
+            //nothing is docked. Rather than making that the user's problem, rebuild the panels in place -
+            //the level, the open composite and the 3D viewer all carry across.
+            if (!Theming.ThemeManager.DockChromeNeedsRestart)
+            {
+                ThemePanelsKept(remade);
+                return;
+            }
+
+            Cursor previous = Cursor;
+            Cursor = Cursors.WaitCursor;
+            bool rebuilt = false;
+            try
+            {
+                rebuilt = RebuildDockChromeForTheme();
+            }
+            finally
+            {
+                Cursor = previous;
+                ThemePanelsKept(remade);
+            }
+
+            if (rebuilt)
+                return;
+
+            //Only if the rebuild couldn't be done does a restart come into it
+            DialogResult result = MessageBox.Show(
+                "Dark mode has been applied.\n\nThe docked panel tabs and borders will finish switching when OpenCAGE restarts.\n\nRestart now?",
+                "Dark Mode",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Information);
+
+            if (result == DialogResult.Yes)
+                RestartApplication();
+        }
+
+        /* The docked panels a theme switch closes and makes again (RebuildDockChromeForTheme) while a level is open; none
+           otherwise. The level viewer's panel is kept while the viewer runs. */
+        private List<Control> PanelsRemadeForTheme()
+        {
+            List<Control> panels = new List<Control>();
+            if (_compositeBrowser == null)
+                return panels;
+
+            Control[] docked = { _compositeBrowser, _compositeDisplay, _entityInspector, _entityList, _entityBrowser, _entitySearch, _renderFiltersPanel,
+                _levelViewerPanel?.IsRunning == true ? null : _levelViewerPanel };
+            foreach (Control panel in docked)
+                if (panel != null && !panel.IsDisposed)
+                    panels.Add(panel);
+            return panels;
+        }
+
+        /* Those of them still open - the rebuild couldn't be done, or stopped part way - take the theme now */
+        private static void ThemePanelsKept(List<Control> panels)
+        {
+            foreach (Control panel in panels)
+                if (!panel.IsDisposed)
+                    Theming.ThemeManager.ApplyCurrent(panel);
+        }
+
+        /* Application.Restart starts the new copy whether or not the exit went through - it drops the
+           refusal that Application.Exit(CancelEventArgs) reports - so a Cancel at the save prompt would
+           leave this OpenCAGE running, level and all, with a second one beside it. Ask first, and start
+           the copy only once every window has agreed to close. The arguments go over as they came. */
+        private static void RestartApplication()
+        {
+            CancelEventArgs exit = new CancelEventArgs();
+            Application.Exit(exit);
+            if (exit.Cancel)
+                return;
+
+            string arguments = string.Join(" ", Environment.GetCommandLineArgs().Skip(1).Select(Program.QuoteArgument));
+            //Saves wait a moment (SettingsManager.Save): the new instance reads the file as it starts
+            SettingsManager.Flush();
+            Process.Start(Application.ExecutablePath, arguments);
+        }
+
+
 
         private void resetUILayoutsToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -2205,18 +3749,16 @@ namespace OpenCAGE
 
             bool preserveLevelViewer = _levelViewerPanel?.IsRunning == true;
 
-            SettingsManager.SetString(Settings.MainDockLayout, "");
-            SettingsManager.SetInteger(Settings.MainDockLayoutVersion, 0);
-            SettingsManager.SetInteger(Settings.CompositeDisplayDockLayoutVersion, 0);
-            if (!preserveLevelViewer)
-                SettingsManager.SetString(Settings.LevelViewerPanelDockState, DockState.Hidden.ToString());
-            SettingsManager.SetFloat(Settings.CompositeDisplayDockTopPortion, 0.35f);
-            SettingsManager.SetFloat(Settings.SplitWidthMainRight, DefaultSideDockPortion);
-            SettingsManager.SetFloat(Settings.EntityInspectorWidth, DefaultEntityInspectorPortion);
-            SettingsManager.SetFloat(Settings.SplitWidthMainBottom, _defaultSplitterDistance);
-            SettingsManager.SetInteger(Settings.CompositeSplitWidth, 0);
+            SettingsManager.SetFloat(Settings.DockSplitterLeft, DefaultSideDockPortion);
+            SettingsManager.SetFloat(Settings.DockSplitterRight, DefaultEntityInspectorPortion);
+            SettingsManager.SetFloat(Settings.DockSplitterBottom, _defaultSplitterDistance);
+            SettingsManager.SetFloat(Settings.DockSplitterLevelViewer, 0.35f);
+            SettingsManager.SetInteger(Settings.CompositeBrowserSplitter, 0);
 
             Composite loadedComposite = _compositeDisplay?.Populated == true ? _compositeDisplay.Composite : null;
+            //The display is closed and made again, so where the user stands in it goes across too (see RebuildDockChromeForTheme)
+            CompositePath.Snapshot navigation = _compositeDisplay?.CaptureNavigationPath();
+            List<Entity> selected = _compositeDisplay?.CaptureSelection();
             LevelContent loadedContent = _compositeBrowser?.Content;
             bool levelDataLoaded = loadedContent?.IsLevelDataLoaded == true;
 
@@ -2239,17 +3781,18 @@ namespace OpenCAGE
                     }
 
                     if (loadedComposite != null)
-                        LoadComposite(loadedComposite);
+                    {
+                        ReopenAfterRebuild(loadedComposite, navigation, selected);
+                        _entityList.FocusPanel();
+                    }
                     else if (levelDataLoaded)
+                    {
                         _compositeBrowser.LoadInitialComposite();
-
-                    _entityList.FocusPanel();
+                        _compositeBrowser.FocusPanel();
+                    }
 
                     if (preserveLevelViewer)
                     {
-                        SettingsManager.SetString(
-                            Settings.LevelViewerPanelDockState,
-                            DockState.DockTop.ToString());
                         _compositeDisplay.RepositionLevelViewerForLayoutReset();
                         BeginInvoke(new Action(() =>
                         {
@@ -2278,9 +3821,140 @@ namespace OpenCAGE
             _compositeBrowser?.ResetSplitter();
         }
 
-        private void writeInstancedResourcesExperimentalToolStripMenuItem_Click(object sender, EventArgs e)
+        /// <summary>
+        /// Rebuild the docked panels so the docking chrome can change theme without restarting.
+        ///
+        /// DockPanelSuite builds every pane, caption and splitter from the theme's factories, so it
+        /// refuses to swap a theme while anything is docked. Everything docked here can be closed and
+        /// recreated in place, though - which is what Reset UI Layouts already does - so the only real
+        /// obstacle is the composite browser, which owns the loaded level. It hands the level over to
+        /// its replacement rather than being reloaded, so nothing is read off disk and the level, the
+        /// open composite and the 3D viewer all survive.
+        /// </summary>
+        /// <returns>False if the panels couldn't be rebuilt, in which case a restart is still needed.</returns>
+        public bool RebuildDockChromeForTheme()
         {
-            ToggleBoolSetting(Settings.CompileInstances);
+            if (_compositeBrowser == null)
+            {
+                //Nothing is docked yet, so the theme applies directly
+                return Theming.ThemeManager.ApplyToDockPanel(dockPanel);
+            }
+
+            //A value still being typed into the parameter grid lives in the editing control, not in the
+            //parameter, until the control loses focus. Clicking the menu does that already, but this
+            //makes it certain before anything is torn down.
+            try
+            {
+                Validate();
+            }
+            catch
+            {
+            }
+
+            bool preserveLevelViewer = _levelViewerPanel?.IsRunning == true;
+            Composite loadedComposite = _compositeDisplay?.Populated == true ? _compositeDisplay.Composite : null;
+            //Reopening the composite puts the user back where they were standing, but not how they got
+            //there: the display resets its path whenever a composite is opened, so without carrying the
+            //breadcrumb over a theme switch strands them at the bottom of the hierarchy they drilled.
+            //What they had selected goes across with it.
+            CompositePath.Snapshot navigation = _compositeDisplay?.CaptureNavigationPath();
+            List<Entity> selected = _compositeDisplay?.CaptureSelection();
+            LevelContent content = _compositeBrowser.Content;
+            bool levelDataLoaded = content?.IsLevelDataLoaded == true;
+            //Reopening the composite brings the entity list's tab forward in the pane it shares with the browser: the
+            //browser's tab is put back after if it was the one showing
+            bool browserTabShown = _compositeBrowser.Pane != null && _compositeBrowser.Pane.ActiveContent == _compositeBrowser;
+
+            try
+            {
+                //The browser keeps the level alive across the rebuild
+                LevelContent retained = _compositeBrowser.DetachContent();
+
+                CloseDockPanelContents(preserveLevelViewer);
+                ForceCloseDockContent(ref _compositeBrowser, null);
+
+                //Only now, with the panel genuinely empty, will the theme take
+                if (!Theming.ThemeManager.ApplyToDockPanel(dockPanel))
+                {
+                    _compositeBrowser = new CompositeBrowser(retained);
+                    RestoreDockLayoutAfterRebuild(loadedComposite, navigation, selected, levelDataLoaded, preserveLevelViewer);
+                    if (browserTabShown) ShowCompositeBrowserTab();
+                    return false;
+                }
+
+                _compositeBrowser = new CompositeBrowser(retained);
+                RestoreDockLayoutAfterRebuild(loadedComposite, navigation, selected, levelDataLoaded, preserveLevelViewer);
+                if (browserTabShown) ShowCompositeBrowserTab();
+
+                //The inner panel inside the composite display is new, and picked the theme up when it
+                //was built; this settles whether anything is still outstanding
+                Theming.ThemeManager.RecheckDockChrome();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.Log("Theme", "Rebuilding the dock layout for a theme change failed: " + ex);
+                return false;
+            }
+        }
+
+        /* Bring the composite browser's tab forward in its pane, without failing a theme switch if the pane can't show it */
+        private void ShowCompositeBrowserTab()
+        {
+            try
+            {
+                DockPane pane = _compositeBrowser?.Pane;
+                if (pane != null && pane.DisplayingContents.Contains(_compositeBrowser))
+                    pane.ActiveContent = _compositeBrowser;
+            }
+            catch (InvalidOperationException) { }
+        }
+
+        private void RestoreDockLayoutAfterRebuild(Composite loadedComposite, CompositePath.Snapshot navigation, List<Entity> selected, bool levelDataLoaded, bool preserveLevelViewer)
+        {
+            EnsureDockPanelsCreated();
+            ApplyDefaultDockLayout(resetInnerDock: !preserveLevelViewer);
+            UpdateCompositeBrowserDockState();
+
+            if (levelDataLoaded)
+            {
+                _entityBrowser.InitializeFromLevel();
+                _entityList.UpdateTitle();
+                _entitySearch.InitializeFromLevel();
+                _renderFiltersPanel.RefreshFilters();
+            }
+
+            if (loadedComposite != null)
+            {
+                ReopenAfterRebuild(loadedComposite, navigation, selected);
+                _entityList.FocusPanel();
+            }
+            else if (levelDataLoaded)
+            {
+                _compositeBrowser.LoadInitialComposite();
+                _compositeBrowser.FocusPanel();
+            }
+
+            if (preserveLevelViewer)
+            {
+                _compositeDisplay.RepositionLevelViewerForLayoutReset();
+                BeginInvoke(new Action(() =>
+                {
+                    _levelViewerPanel?.RefreshEmbeddedBounds();
+                    _levelViewerPanel?.RestoreInputFocus();
+                }));
+            }
+
+            _compositeBrowser?.ResetSplitter();
+        }
+
+        /* Open the composite a rebuild of the panels closed, where the user stood in it. The path goes in with it rather
+           than after: put back afterwards, the editor had its breadcrumb again, but the viewer - which kept its scene
+           across the rebuild - had already been told of the composite alone and built that as its whole scene. The level
+           is handed across, so the path and the selection are still the objects they were. */
+        private void ReopenAfterRebuild(Composite composite, CompositePath.Snapshot navigation, List<Entity> selected)
+        {
+            LoadComposite(composite, false, navigation)?.RestoreSelection(selected);
         }
 
         private void UpdateCompositeBrowserDockState()
@@ -2299,16 +3973,6 @@ namespace OpenCAGE
             Process.Start("https://opencage.co.uk/docs/");
         }
 
-        private void DEBUG_ReloadLevel_Click(object sender, EventArgs e)
-        {
-            if (!RuntimeUtilsConnection.Send.Connected)
-            {
-                MessageBox.Show("Cannot reload level - not connected to RuntimeUtils", "Not connected", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            RuntimeUtilsConnection.Send.SendData(new RuntimeUtilsConnection.Packet() { load_level = "Production/HAB_Airport" });
-        }
 
         private void openGameOnSaveToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -2422,6 +4086,64 @@ namespace OpenCAGE
             _galaxyEditor = null;
         }
 
+        /* The sound events window that the inspector opens for a SOUND_EVENT parameter, opened to browse:
+           preview, soundbanks and Replace are all there, with no parameter to write back to */
+        SelectEnumString _soundEditor = null;
+        private void soundEditorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (_soundEditor != null)
+            {
+                _soundEditor.FormClosed -= _soundEditor_FormClosed;
+                _soundEditor.Close();
+                _soundEditor = null;
+            }
+            _soundEditor = new SelectEnumString(EnumStringType.SOUND_EVENT, "Sound Editor");
+            _soundEditor.Show();
+            _soundEditor.FormClosed += _soundEditor_FormClosed;
+        }
+        private void _soundEditor_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            _soundEditor = null;
+        }
+
+        /* The collision proxy and physics system pickers that a COLLISION_MAPPING / DYNAMIC_PHYSICS_SYSTEM resource
+           opens, opened as editors: browse, preview and import, with no resource to hand a selection back to */
+        EditCollisionProxy _collisionEditor = null;
+        private void collisionEditorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (_collisionEditor != null)
+            {
+                _collisionEditor.FormClosed -= _collisionEditor_FormClosed;
+                _collisionEditor.Close();
+            }
+
+            _collisionEditor = new EditCollisionProxy(null, false);
+            _collisionEditor.Show();
+            _collisionEditor.FormClosed += _collisionEditor_FormClosed;
+        }
+        private void _collisionEditor_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            _collisionEditor = null;
+        }
+
+        EditPhysicsSystem _physicsSystemEditor = null;
+        private void physicsSystemEditorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (_physicsSystemEditor != null)
+            {
+                _physicsSystemEditor.FormClosed -= _physicsSystemEditor_FormClosed;
+                _physicsSystemEditor.Close();
+            }
+
+            _physicsSystemEditor = new EditPhysicsSystem(null, false);
+            _physicsSystemEditor.Show();
+            _physicsSystemEditor.FormClosed += _physicsSystemEditor_FormClosed;
+        }
+        private void _physicsSystemEditor_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            _physicsSystemEditor = null;
+        }
+
         private void toolStripButton3_Click(object sender, EventArgs e)
         {
             modelsToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
@@ -2429,6 +4151,9 @@ namespace OpenCAGE
             materialMappingsToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
             texturesToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
             galaxyToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
+            soundEditorToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
+            collisionEditorToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
+            physicsSystemEditorToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
         }
 
         private void charactersToolStripMenuItem_Click(object sender, EventArgs e)
@@ -2436,29 +4161,18 @@ namespace OpenCAGE
             assetSetsToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null;
         }
 
-        SetNodeColours _setNodeColours;
-        private void setNodeColoursToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            if (_setNodeColours != null)
-                _setNodeColours.Close();
 
-            _setNodeColours = new SetNodeColours();
-            _setNodeColours.Show();
-        }
 
         private void showConfirmationWhenDeletingNodeToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ToggleBoolSetting(Settings.AskBeforeDeletingNode);
         }
 
-        private void miscToolStripMenuItem_Click(object sender, EventArgs e)
+        private void SaveBuildOptionsDropDownOpening(object sender, EventArgs e)
         {
-            //NOTE: When in compressed mode, we ALWAYS save in the BIN format, so hide this option in that case.
-            savePAKAndBINToolStripMenuItem.Visible = _compositeBrowser?.Content?.Level?.Commands != null && _compositeBrowser.Content.Level.Commands.Compressed;
-
             //NOTE: We don't actually allow this to be changed (even though it could be done) because it's not much use, for now at least. Maybe some sort of conversion between compressed and uncompressed levels in future.
             writeCompressedToolStripMenuItem.Checked = _compositeBrowser?.Content?.Level?.Commands != null && _compositeBrowser.Content.Level.Commands.Compressed;
-            writeCompressedToolStripMenuItem.Enabled = false; 
+            writeCompressedToolStripMenuItem.Enabled = false;
         }
 
         ControlsWindow _controlsWindow = null;
@@ -2477,6 +4191,23 @@ namespace OpenCAGE
         private void _controlsWindow_FormClosed(object sender, FormClosedEventArgs e)
         {
             _controlsWindow = null;
+        }
+
+        private Popups.SnapIncrements _snapIncrementsWindow;
+        private void snapIncrementsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            //Let the Viewport dropdown close so the dialog is not left floating over it
+            viewportOptionsToolStripMenuItem.DropDown.Close();
+
+            if (_snapIncrementsWindow != null && !_snapIncrementsWindow.IsDisposed)
+            {
+                _snapIncrementsWindow.Activate();
+                return;
+            }
+
+            _snapIncrementsWindow = new Popups.SnapIncrements();
+            _snapIncrementsWindow.FormClosed += (s, ev) => _snapIncrementsWindow = null;
+            _snapIncrementsWindow.Show();
         }
 
         LaunchGame _launchGamePopup = null;
@@ -2516,8 +4247,7 @@ namespace OpenCAGE
             _editUiPak = null;
         }
 
-        //todo - eventually will want to expand this for anim trees and better handling of data (previews?)
-        EditPAK2 _editAnimations = null;
+        EditAnimations _editAnimations = null;
         private void animationsToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (_editAnimations != null)
@@ -2526,9 +4256,8 @@ namespace OpenCAGE
                 _editAnimations.Close();
             }
 
-            _editAnimations = new EditPAK2();
+            _editAnimations = new EditAnimations();
             _editAnimations.Show();
-            _editAnimations.LoadPAK2("GLOBAL/ANIMATION.PAK", "Animations");
             _editAnimations.FormClosed += _editAnimations_FormClosed;
         }
         private void _editAnimations_FormClosed(object sender, FormClosedEventArgs e)
@@ -2536,19 +4265,52 @@ namespace OpenCAGE
             _editAnimations = null;
         }
 
+        EditBlendSets _editBlendSets = null;
+        private void blendSetsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (_editBlendSets != null && !_editBlendSets.IsDisposed)
+            {
+                _editBlendSets.BringToFront();
+                return;
+            }
+
+            _editBlendSets = new EditBlendSets();
+            _editBlendSets.Show();
+            _editBlendSets.FormClosed += (s, args) => _editBlendSets = null;
+        }
+
+        /* The packaged editor sits beside the exe. Named in full: a path relative to the working
+           directory, with a forward slash, was one ShellExecute never found (crash 394 on every
+           install since the paths moved), and the working directory is not the exe's on every launch. */
+        private static string BehaviourTreeEditorPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "legendplugin", "BehaviourTreeEditor.exe");
+
         Process _behaviourEditor = null;
         private void behaviourTreesToolStripMenuItem_Click(object sender, EventArgs e)
         {
             KillBehaviourTreeEditor();
 
-            string editorPath = "legendplugin/";
-            _behaviourEditor = Process.Start(new ProcessStartInfo
+            string editorExe = BehaviourTreeEditorPath;
+            if (!File.Exists(editorExe))
+            {
+                MessageBox.Show("The Behaviour Tree Editor was not found at:\n" + editorExe + "\n\nVerify OpenCAGE's files in Steam to restore it.", "Behaviour Tree Editor missing", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                _behaviourEditor = Process.Start(new ProcessStartInfo
                 {
-                    FileName = editorPath + "BehaviourTreeEditor.exe",
-                    Arguments = "-pathToAI=\"" + Singleton.PathToAI + "\"",
-                    WorkingDirectory = editorPath,
-                }
-            );
+                    FileName = editorExe,
+                    Arguments = "-pathToAI=" + Program.QuoteArgument(Singleton.PathToAI) + (Theming.ThemeManager.IsDark ? " -darkMode=true" : ""),
+                    WorkingDirectory = Path.GetDirectoryName(editorExe),
+                });
+            }
+            catch (System.ComponentModel.Win32Exception ex)
+            {
+                //Blocked or quarantined rather than missing - say so instead of going down with it
+                MessageBox.Show("Failed to start the Behaviour Tree Editor.\n" + ex.Message, "Behaviour Tree Editor error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
             Steam.UnlockAchievement(Steam.Achievements.BEHAVIOUR_TREE_TOOL_LAUNCHED);
         }
@@ -2564,6 +4326,45 @@ namespace OpenCAGE
                 }
                 catch { }
             }
+        }
+
+        AnimTreeEditor animTreeEditor = null;
+        private void animationTreesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (animTreeEditor != null)
+            {
+                animTreeEditor.FormClosed -= animTreeEditor_FormClosed;
+                animTreeEditor.Close();
+
+                //Kept open (its unsaved changes' prompt was cancelled): brought forward rather than a second editor opened beside it
+                if (!animTreeEditor.IsDisposed) { animTreeEditor.FormClosed += animTreeEditor_FormClosed; animTreeEditor.Activate(); return; }
+            }
+
+            animTreeEditor = new AnimTreeEditor();
+            animTreeEditor.Show();
+            animTreeEditor.FormClosed += animTreeEditor_FormClosed;
+        }
+        private void animTreeEditor_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            animTreeEditor = null;
+        }
+
+        /// <summary>The Animation Tree Editor, opened if it is closed (an AI assistant showing a tree there), else brought forward.</summary>
+        internal AnimTreeEditor ShowAnimTreeEditor()
+        {
+            if (animTreeEditor == null || animTreeEditor.IsDisposed)
+            {
+                animTreeEditor = new AnimTreeEditor();
+                animTreeEditor.Show();
+                animTreeEditor.FormClosed += animTreeEditor_FormClosed;
+            }
+            else
+            {
+                if (animTreeEditor.WindowState == FormWindowState.Minimized)
+                    animTreeEditor.WindowState = FormWindowState.Normal;
+                animTreeEditor.Activate();
+            }
+            return animTreeEditor;
         }
 
         LevelBackupManager _levelBackups = null;
@@ -2673,6 +4474,24 @@ namespace OpenCAGE
         private void _radiosityEditor_FormClosed(object sender, FormClosedEventArgs e)
         {
             _radiosityEditor = null;
+        }
+
+        GraphicsEditor _graphicsEditor = null;
+        private void graphicsSettingsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (_graphicsEditor != null)
+            {
+                _graphicsEditor.FormClosed -= _graphicsEditor_FormClosed;
+                _graphicsEditor.Close();
+            }
+
+            _graphicsEditor = new GraphicsEditor();
+            _graphicsEditor.Show();
+            _graphicsEditor.FormClosed += _graphicsEditor_FormClosed;
+        }
+        private void _graphicsEditor_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            _graphicsEditor = null;
         }
 
         GlobalConstantsEditor _globalConstEditor = null;
@@ -3024,9 +4843,74 @@ namespace OpenCAGE
             Process.Start("https://opencage.co.uk/docs/");
         }
 
+        private void changelogToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Process.Start("https://opencage.co.uk/docs/changelog");
+        }
+
         private void logABugToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Process.Start("https://github.com/MattFiler/OpenCAGE/issues/new");
+        }
+
+        //Made if no crash has written a log yet, so there is always a folder to open
+        private void openLogsFolderToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Directory.CreateDirectory(Program.LogsFolder);
+            Process.Start("explorer.exe", "\"" + Program.LogsFolder + "\"");
+        }
+
+        /* Unsaved changes when the viewport is about to load the level from disk: save now and open it,
+           or leave it closed until the next level load. True when it can open now. */
+        private bool ConfirmSaveBeforeOpeningViewport()
+        {
+            if (_compositeBrowser?.Content?.Level == null)
+                return true;
+
+#if USE_DIRTY_TRACKER
+            if (!DirtyTracker.IsDirty)
+                return true;
+#endif
+
+            DialogResult result = MessageBox.Show(
+                "\"" + _compositeBrowser.Content.Level.Name + "\" has unsaved changes.\n\n" +
+                "The viewport loads the level from disk, so it can't show them until the level is saved. Save now?\n\n" +
+                "Yes: save, then open the viewport.\nNo: keep the viewport closed until a level is next loaded.",
+                "Save before opening the viewport?",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result != DialogResult.Yes)
+                return false;
+
+            SaveLevel(false, successMsg: false, allowLaunchGame: false);
+#if USE_DIRTY_TRACKER
+            if (DirtyTracker.IsDirty)
+                return false; //the save was refused (a backup in progress): same as No
+#endif
+            return true;
+        }
+
+        /* A child instance outlives the primary that launched it often enough - closed first, or crashed -
+           for the user to be left with no way to manage directories short of relaunching. Poll for the
+           primary's lock, and take its menu over when it frees up. */
+        private System.Windows.Forms.Timer _primaryInstanceTimer;
+        private bool _shown;
+        private void WatchForPrimaryInstanceHandover()
+        {
+            _primaryInstanceTimer = new System.Windows.Forms.Timer { Interval = 3000 };
+            _primaryInstanceTimer.Tick += (sender, e) =>
+            {
+                if (!PrimaryInstanceLock.TryAcquire())
+                    return;
+                //Now the primary: handovers and the stash are this instance's to look after
+                StartPackageHandoverServer();
+                PackageFiles.OpenPending();
+
+                _primaryInstanceTimer.Stop();
+                manageGameDirectoriesToolStripMenuItem.Visible = true;
+            };
+            _primaryInstanceTimer.Start();
         }
 
         GameDirectoryManager _directoryManager = null;

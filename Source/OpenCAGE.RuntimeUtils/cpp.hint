@@ -1,0 +1,4 @@
+// Hint files help the Visual Studio IDE interpret Visual C++ identifiers
+// such as names of functions and macros.
+// For more information see https://go.microsoft.com/fwlink/?linkid=865984
+#define DEVTOOLS_DECLARE_CLASS_HOOK(return_type, original_func_name, hook_name, typedef_name, func_offset, __VA_ARGS__) return_type __fastcall hook_name(void* _this, void* _EDX, __VA_ARGS__); typedef return_type(__thiscall* typedef_name)(void*, __VA_ARGS__); inline auto original_func_name = reinterpret_cast<typedef_name>(DEVTOOLS_RELATIVE_ADDRESS(func_offset));

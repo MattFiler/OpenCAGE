@@ -30,7 +30,6 @@
         {
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(CompositeDisplay));
-            this.entityListIcons = new System.Windows.Forms.ImageList(this.components);
             this.toolStrip1 = new System.Windows.Forms.ToolStrip();
             this.createEntity = new System.Windows.Forms.ToolStripDropDownButton();
             this.createVariableEntityToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -46,7 +45,6 @@
             this.dockPanel = new WeifenLuo.WinFormsUI.Docking.DockPanel();
             this.vS2015DarkTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015DarkTheme();
             this.vS2015BlueTheme1 = new WeifenLuo.WinFormsUI.Docking.VS2015BlueTheme();
-            this.imageList = new System.Windows.Forms.ImageList(this.components);
             this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.closeSelected = new System.Windows.Forms.ToolStripMenuItem();
             this.pathBreadcrumb = new OpenCAGE.UserControls.CompositePathBreadcrumb();
@@ -54,16 +52,6 @@
             this.toolStrip1.SuspendLayout();
             this.contextMenuStrip1.SuspendLayout();
             this.SuspendLayout();
-            // 
-            // entityListIcons
-            // 
-            this.entityListIcons.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("entityListIcons.ImageStream")));
-            this.entityListIcons.TransparentColor = System.Drawing.Color.Transparent;
-            this.entityListIcons.Images.SetKeyName(0, "AnimatorController Icon.png");
-            this.entityListIcons.Images.SetKeyName(1, "d_ScriptableObject Icon braces only.png");
-            this.entityListIcons.Images.SetKeyName(2, "d_PrefabVariant Icon.png");
-            this.entityListIcons.Images.SetKeyName(3, "d_ScriptableObject Icon.png");
-            this.entityListIcons.Images.SetKeyName(4, "AreaEffector2D Icon.ico");
             // 
             // toolStrip1
             // 
@@ -96,7 +84,6 @@
             // 
             // createVariableEntityToolStripMenuItem
             // 
-            this.createVariableEntityToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createVariableEntityToolStripMenuItem.Image")));
             this.createVariableEntityToolStripMenuItem.Name = "createVariableEntityToolStripMenuItem";
             this.createVariableEntityToolStripMenuItem.Size = new System.Drawing.Size(230, 22);
             this.createVariableEntityToolStripMenuItem.Text = "Create Parameter";
@@ -106,7 +93,6 @@
             // 
             // createFunctionEntityToolStripMenuItem
             // 
-            this.createFunctionEntityToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createFunctionEntityToolStripMenuItem.Image")));
             this.createFunctionEntityToolStripMenuItem.Name = "createFunctionEntityToolStripMenuItem";
             this.createFunctionEntityToolStripMenuItem.Size = new System.Drawing.Size(230, 22);
             this.createFunctionEntityToolStripMenuItem.Text = "Create Function";
@@ -115,7 +101,6 @@
             // 
             // createCompositeEntityToolStripMenuItem
             // 
-            this.createCompositeEntityToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createCompositeEntityToolStripMenuItem.Image")));
             this.createCompositeEntityToolStripMenuItem.Name = "createCompositeEntityToolStripMenuItem";
             this.createCompositeEntityToolStripMenuItem.Size = new System.Drawing.Size(230, 22);
             this.createCompositeEntityToolStripMenuItem.Text = "Create Instance of Composite";
@@ -124,7 +109,6 @@
             // 
             // createProxyEntityToolStripMenuItem
             // 
-            this.createProxyEntityToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createProxyEntityToolStripMenuItem.Image")));
             this.createProxyEntityToolStripMenuItem.Name = "createProxyEntityToolStripMenuItem";
             this.createProxyEntityToolStripMenuItem.Size = new System.Drawing.Size(230, 22);
             this.createProxyEntityToolStripMenuItem.Text = "Create Proxy";
@@ -133,7 +117,6 @@
             // 
             // createAliasToolStripMenuItem
             // 
-            this.createAliasToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createAliasToolStripMenuItem.Image")));
             this.createAliasToolStripMenuItem.Name = "createAliasToolStripMenuItem";
             this.createAliasToolStripMenuItem.Size = new System.Drawing.Size(230, 22);
             this.createAliasToolStripMenuItem.Text = "Create Alias";
@@ -145,8 +128,9 @@
             this.exportComposite.Image = ((System.Drawing.Image)(resources.GetObject("exportComposite.Image")));
             this.exportComposite.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.exportComposite.Name = "exportComposite";
-            this.exportComposite.Size = new System.Drawing.Size(110, 22);
-            this.exportComposite.Text = "Port Composite";
+            this.exportComposite.Size = new System.Drawing.Size(49, 22);
+            this.exportComposite.Text = "Port";
+            this.exportComposite.ToolTipText = "Port this composite to other levels.";
             this.exportComposite.Click += new System.EventHandler(this.exportComposite_Click);
             // 
             // findUses
@@ -155,8 +139,9 @@
             this.findUses.Image = ((System.Drawing.Image)(resources.GetObject("findUses.Image")));
             this.findUses.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.findUses.Name = "findUses";
-            this.findUses.Size = new System.Drawing.Size(177, 22);
-            this.findUses.Text = "Find Instances of Composite";
+            this.findUses.Size = new System.Drawing.Size(102, 22);
+            this.findUses.Text = "Find Instances";
+            this.findUses.ToolTipText = "Find every instance of this composite (listed in the Search panel).";
             this.findUses.Click += new System.EventHandler(this.findUses_Click);
             // 
             // renameComposite
@@ -165,8 +150,9 @@
             this.renameComposite.Image = ((System.Drawing.Image)(resources.GetObject("renameComposite.Image")));
             this.renameComposite.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.renameComposite.Name = "renameComposite";
-            this.renameComposite.Size = new System.Drawing.Size(131, 22);
-            this.renameComposite.Text = "Rename Composite";
+            this.renameComposite.Size = new System.Drawing.Size(70, 22);
+            this.renameComposite.Text = "Rename";
+            this.renameComposite.ToolTipText = "Rename this composite.";
             this.renameComposite.Click += new System.EventHandler(this.renameComposite_Click);
             // 
             // deleteComposite
@@ -175,8 +161,9 @@
             this.deleteComposite.Image = ((System.Drawing.Image)(resources.GetObject("deleteComposite.Image")));
             this.deleteComposite.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.deleteComposite.Name = "deleteComposite";
-            this.deleteComposite.Size = new System.Drawing.Size(121, 22);
-            this.deleteComposite.Text = "Delete Composite";
+            this.deleteComposite.Size = new System.Drawing.Size(60, 22);
+            this.deleteComposite.Text = "Delete";
+            this.deleteComposite.ToolTipText = "Delete this composite.";
             this.deleteComposite.Click += new System.EventHandler(this.deleteComposite_Click);
             // 
             // createFlowgraph
@@ -198,27 +185,6 @@
             this.dockPanel.Size = new System.Drawing.Size(1615, 773);
             this.dockPanel.TabIndex = 178;
             this.dockPanel.Theme = this.vS2015BlueTheme1;
-            // 
-            // imageList
-            // 
-            this.imageList.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList.ImageStream")));
-            this.imageList.TransparentColor = System.Drawing.Color.Magenta;
-            this.imageList.Images.SetKeyName(0, "flag_blue");
-            this.imageList.Images.SetKeyName(1, "flag_green");
-            this.imageList.Images.SetKeyName(2, "flag_red");
-            this.imageList.Images.SetKeyName(3, "behavior");
-            this.imageList.Images.SetKeyName(4, "behavior_loaded");
-            this.imageList.Images.SetKeyName(5, "behavior_modified");
-            this.imageList.Images.SetKeyName(6, "condition");
-            this.imageList.Images.SetKeyName(7, "impulse");
-            this.imageList.Images.SetKeyName(8, "action");
-            this.imageList.Images.SetKeyName(9, "decorator");
-            this.imageList.Images.SetKeyName(10, "sequence");
-            this.imageList.Images.SetKeyName(11, "selector");
-            this.imageList.Images.SetKeyName(12, "parallel");
-            this.imageList.Images.SetKeyName(13, "folder_closed");
-            this.imageList.Images.SetKeyName(14, "folder_open");
-            this.imageList.Images.SetKeyName(15, "event");
             // 
             // contextMenuStrip1
             // 
@@ -286,7 +252,6 @@
         private WeifenLuo.WinFormsUI.Docking.VS2015DarkTheme vS2015DarkTheme1;
         private WeifenLuo.WinFormsUI.Docking.VS2015BlueTheme vS2015BlueTheme1;
         private System.Windows.Forms.ToolStripButton exportComposite;
-        private System.Windows.Forms.ImageList imageList;
         private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
         private System.Windows.Forms.ToolStripDropDownButton createEntity;
         private System.Windows.Forms.ToolStripMenuItem createVariableEntityToolStripMenuItem;
@@ -295,7 +260,6 @@
         private System.Windows.Forms.ToolStripMenuItem createProxyEntityToolStripMenuItem;
         private OpenCAGE.UserControls.CompositePathBreadcrumb pathBreadcrumb;
         private System.Windows.Forms.ToolStripMenuItem closeSelected;
-        private System.Windows.Forms.ImageList entityListIcons;
         private System.Windows.Forms.ToolStripMenuItem createAliasToolStripMenuItem;
         private System.Windows.Forms.Button instanceInfo;
         private System.Windows.Forms.ToolStripButton renameComposite;

@@ -19,6 +19,7 @@ namespace OpenCAGE.ConfigEditors
         public BlueprintEditor() : base()
         {
             InitializeComponent();
+            BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/blueprint-recipes/");
 
             _gblItem = new BML(Singleton.PathToAI + @"\DATA\GBL_ITEM.BML");
 
@@ -29,7 +30,7 @@ namespace OpenCAGE.ConfigEditors
             }
             blueprints.SelectedIndex = 0;
 
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
         }
 
         private void blueprints_SelectedIndexChanged(object sender, EventArgs e)
@@ -145,12 +146,6 @@ namespace OpenCAGE.ConfigEditors
                 type.AppendChild(itemElement);
             }
             parent.AppendChild(type);
-        }
-
-        private void helpBtn_Click(object sender, EventArgs e)
-        {
-            Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
-            Process.Start("https://opencage.co.uk/docs/configs/blueprint-recipes");
         }
     }
 }

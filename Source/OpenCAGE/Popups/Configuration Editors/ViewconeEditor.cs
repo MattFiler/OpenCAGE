@@ -1,5 +1,6 @@
 ﻿using CATHODE;
 using OpenCAGE.Popups.Base;
+using OpenCAGE.RuntimeUtilsConnection;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -22,6 +23,7 @@ namespace OpenCAGE.ConfigEditors
         public ViewconeEditor() : base()
         {
             InitializeComponent();
+            BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/viewcones/");
             ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
             BML viewconeTypes = new BML(Singleton.PathToAI + "\\DATA\\VIEW_CONE_SETS\\VIEWCONESETS.BML");
@@ -46,12 +48,15 @@ namespace OpenCAGE.ConfigEditors
             viewconeSets.EndUpdate();
 
             this.FormClosing += ViewconeEditor_FormClosing;
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
         }
 
         private void ViewconeEditor_Load(object sender, EventArgs e)
         {
             viewconeSets.SelectedIndex = 0;
+
+            //The game reads these when it starts; with Live Link connected each edit has it read them again
+            LiveSettings.AttachReload(this, liveStatus, LiveSettings.ReloadableConfig.Viewcones);
         }
 
         private void ViewconeEditor_FormClosing(object sender, FormClosingEventArgs e)
@@ -67,7 +72,15 @@ namespace OpenCAGE.ConfigEditors
 
             _activeSet = new BML(Singleton.PathToAI + "\\DATA\\VIEW_CONE_SETS\\" + viewconeSets.Text + ".BML");
             var viewcones = _activeSet.Content["ViewconeSet"]["ViewconeSettings"];
+
+            //Pages taken off the tab control keep their window handles (a page with its viewcone controls is ~70 windows)
+            //until they are disposed: dispose what is replaced - the designer's placeholder pages on open, the previous set's on a switch.
+            //Their autosave handlers came off with the Unsubscribe above.
+            List<TabPage> replaced = tabControl1.TabPages.Cast<TabPage>().ToList();
             tabControl1.TabPages.Clear();
+            foreach (TabPage old in replaced)
+                old.Dispose();
+
             foreach (XmlElement viewcone in viewcones)
             {
                 TabPage page = new TabPage();
@@ -81,6 +94,10 @@ namespace OpenCAGE.ConfigEditors
 
             tabControl1.ResumeLayout();
             ConfigEditorUtils.Subscribe(this.Controls, Save);
+
+            //Earlier builds wrote the entries as <steeringBoundary>, which the engine ignores (the character ends up blind): re-save on sight to repair the file (#604)
+            if (viewcones.ChildNodes.OfType<XmlElement>().Any(o => o.Name != "ViewconeSetting"))
+                Save(null, EventArgs.Empty);
         }
         
         private void Save(object sender, EventArgs e)
@@ -90,7 +107,7 @@ namespace OpenCAGE.ConfigEditors
             doc["ViewconeSet"]["ViewconeSettings"].RemoveAll();
             foreach (TabPage page in tabControl1.TabPages)
             {
-                XmlElement set = doc.CreateElement("steeringBoundary");
+                XmlElement set = doc.CreateElement("ViewconeSetting"); 
                 page.Controls.OfType<ViewCone>().FirstOrDefault().Save(set);
                 doc["ViewconeSet"]["ViewconeSettings"].AppendChild(set);
             }
@@ -98,13 +115,11 @@ namespace OpenCAGE.ConfigEditors
             _activeSet.Content = doc;
             _activeSet.Save();
 
-            Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
-        }
+            //Only an edit goes to the game: the saves made as another set is picked (or to repair a file) change nothing it reads
+            if (sender != null && sender != viewconeSets)
+                LiveSettings.ReloadAfterEdit(LiveSettings.ReloadableConfig.Viewcones);
 
-        private void helpBtn_Click(object sender, EventArgs e)
-        {
-            Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
-            Process.Start("https://opencage.co.uk/docs/configs/viewcones");
+            Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
         }
     }
 }

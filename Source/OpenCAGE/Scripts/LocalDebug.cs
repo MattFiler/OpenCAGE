@@ -31,14 +31,73 @@ using static CATHODE.Models;
 using static CATHODE.Movers;
 using static CathodeLib.CathodeEnumTable;
 using static CathodeLib.CompositeFlowgraphTable;
+using CATHODE.Enums;
 
 namespace OpenCAGE
 {
     public static class LocalDebug
     {
+        public static void CheckAnimKFTypes()
+        {
+            Dictionary<ANIM_TRACK_TYPE, int> types = new Dictionary<ANIM_TRACK_TYPE, int>();
+
+            List<string> levels = Level.GetLevels("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Alien Isolation");
+            foreach (string level in levels)
+            {
+                Level lvl = Utilities.LoadLevel("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Alien Isolation", level);
+
+                foreach (Composite comp in lvl.Commands.Entries)
+                {
+                    foreach (CAGEAnimation anim in comp.GetFunctionEntitiesOfType(FunctionType.CAGEAnimation))
+                    {
+                        foreach (var e in anim.eventTracks)
+                        {
+                            foreach (var k in e.keyframes)
+                            {
+                                if (types.ContainsKey(k.track_type))
+                                {
+                                    types[k.track_type] += 1;
+                                }
+                                else
+                                {
+                                    types.Add(k.track_type, 1);
+                                }
+                                switch (k.track_type)
+                                {
+                                    case CATHODE.Enums.ANIM_TRACK_TYPE.T_FLOAT:
+
+                                        break;
+                                    case CATHODE.Enums.ANIM_TRACK_TYPE.T_FLOAT3:
+
+                                        break;
+                                    case CATHODE.Enums.ANIM_TRACK_TYPE.T_POSITION:
+
+                                        break;
+                                    case CATHODE.Enums.ANIM_TRACK_TYPE.T_STRING:
+
+                                        break;
+                                    case CATHODE.Enums.ANIM_TRACK_TYPE.T_GUID:
+
+                                        break;
+                                    case CATHODE.Enums.ANIM_TRACK_TYPE.T_MASTERING:
+
+                                        break;
+                                    default:
+
+                                        break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+             string sdfsdf = "";
+        }
+
         public static void CheckMVRZones(string lvl)
         {
-            Singleton.Global = new Global(Singleton.PathToAI + "\\DATA\\ENV\\GLOBAL\\", new PAK2(Singleton.PathToAI + "/DATA/GLOBAL/ANIMATION.PAK"));
+            Singleton.Global = new Global(Singleton.PathToAI + "\\DATA\\ENV\\GLOBAL\\");
             LevelContent content = new LevelContent(lvl);
             content.Load();
             content.EditorUtils = new EditorUtils(content);
@@ -125,8 +184,6 @@ namespace OpenCAGE
             lvll.Movers.Entries.Clear();
 
             Instancing inst = new Instancing(lvll);
-            inst.GenerateInstances();
-            inst.ProcessInstances();
 
             lvll.PhysicsMaps.Save("PHYSICS.MAP");
             lvll.PhysicsMaps.Entries.Sort();
@@ -242,11 +299,6 @@ namespace OpenCAGE
                 lvll.Commands.Utils.PurgeDeadLinks(lvll.Commands.Entries[i]);
 
             Instancing inst = new Instancing(lvll);
-            inst.GenerateInstances();
-
-           // var entries = lvll.Resources.Entries.Copy();
-           lvll.Resources.Entries.Clear();
-            inst.ProcessInstances();
 
           //  if (entries.Count != lvll.Resources.Entries.Count)
           //  {
@@ -320,7 +372,7 @@ namespace OpenCAGE
             Level lvll = Utilities.LoadLevel(Singleton.PathToAI, "Production/" + level);
 
             lvll.CollisionMaps.Entries.Sort();
-            var newEntries = lvll.CollisionMaps.Entries.OrderBy(o => o.ResourceGUID).ThenBy(o => o.Entity.entity_id).ThenBy(o => o.Entity.composite_instance_id).ThenBy(o => o.Index).ThenBy(o => o.CollisionProxyIndex).ToList().Select(e => new ColMapEntry(e)).ToList();
+            var newEntries = lvll.CollisionMaps.Entries.OrderBy(o => o.ResourceGUID).ThenBy(o => o.Entity.entity_id).ThenBy(o => o.Entity.composite_instance_id).ThenBy(o => o.CollisionInstanceIndex).ThenBy(o => o.CollisionProxyIndex).ToList().Select(e => new ColMapEntry(e)).ToList();
             File.WriteAllText("COLMAPS/ORIG/" + level.Replace("/", "_") + ".json", JsonConvert.SerializeObject(newEntries, Formatting.Indented, new ShortGuidConverter()));
 
             for (int i = 0; i < lvll.Commands.Entries.Count; i++)
@@ -329,11 +381,8 @@ namespace OpenCAGE
                 lvll.Commands.Utils.PurgeDeadLinks(lvll.Commands.Entries[i]);
 
             Instancing inst = new Instancing(lvll);
-            inst.GenerateInstances();
-            lvll.CollisionMaps.Entries.Clear();
-            inst.ProcessInstances();
 
-            newEntries = lvll.CollisionMaps.Entries.OrderBy(o => o.ResourceGUID).ThenBy(o => o.Entity.entity_id).ThenBy(o => o.Entity.composite_instance_id).ThenBy(o => o.Index).ThenBy(o => o.CollisionProxyIndex).ToList().Select(e => new ColMapEntry(e)).ToList();
+            newEntries = lvll.CollisionMaps.Entries.OrderBy(o => o.ResourceGUID).ThenBy(o => o.Entity.entity_id).ThenBy(o => o.Entity.composite_instance_id).ThenBy(o => o.CollisionInstanceIndex).ThenBy(o => o.CollisionProxyIndex).ToList().Select(e => new ColMapEntry(e)).ToList();
             File.WriteAllText("COLMAPS/NEW/" + level.Replace("/", "_") + ".json", JsonConvert.SerializeObject(newEntries, Formatting.Indented, new ShortGuidConverter()));
 
             //lvll.CollisionMaps.Save();
@@ -449,9 +498,6 @@ namespace OpenCAGE
                 lvll.Commands.Utils.PurgeDeadLinks(lvll.Commands.Entries[i]);
 
             Instancing inst = new Instancing(lvll);
-            inst.GenerateInstances();
-            lvll.PhysicsMaps.Entries.Clear();
-            inst.ProcessInstances();
 
             lvll.PhysicsMaps.Entries.Sort();
             var newEntries = lvll.PhysicsMaps.Entries.Select(e => new PhysMapEntry(e)).ToList();
@@ -475,7 +521,7 @@ namespace OpenCAGE
 
             public PhysMapEntry(PhysicsMaps.DYNAMIC_PHYSICS_SYSTEM entry)
             {
-                physics_system_index = entry.physics_system_index;
+                physics_system_index = entry.PhysicsSystemIndex;
                 composite_instance_id = entry.composite_instance_id.ToByteString();
                 entity = entry.entity;
                 Position = new RoundedVec(entry.Position);
@@ -1803,7 +1849,6 @@ namespace OpenCAGE
         {
 #if DEBUG
             List<string> files = Directory.GetFiles(Singleton.PathToAI + "/DATA/ENV/PRODUCTION/", "COMMANDS.PAK", SearchOption.AllDirectories).ToList<string>();
-            GUI_EnumDataType enumUI = new GUI_EnumDataType();
             Parallel.ForEach(files, file =>
             {
                 Commands phys = new Commands(file);
@@ -1874,7 +1919,6 @@ namespace OpenCAGE
         {
 #if DEBUG
             List<string> files = Directory.GetFiles(Singleton.PathToAI + "/DATA/ENV/PRODUCTION/", "COMMANDS.PAK", SearchOption.AllDirectories).ToList<string>();
-            GUI_EnumDataType enumUI = new GUI_EnumDataType();
             Parallel.ForEach(files, file =>
             {
                 Commands phys = new Commands(file);

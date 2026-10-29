@@ -1,4 +1,4 @@
-using CATHODE.Scripting;
+﻿using CATHODE.Scripting;
 using CathodeLib;
 using OpenCAGE.DockPanels;
 using OpenCAGE.Popups.Base;
@@ -23,6 +23,7 @@ namespace OpenCAGE.Popups
         public SelectLevel() : base()
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/level-names/");
             EditorUtils.PopulateLevelDropdown(env_list);
         }
 

@@ -20,6 +20,8 @@ namespace OpenCAGE
     public partial class RenameGeneric : BaseWindow
     {
         public Action<string> OnRenamed;
+        /// <summary>Optional: why a name can't be used (shown, and the window stays open), or null when it can.</summary>
+        public Func<string, string> Validate;
 
         public RenameGeneric(string initialText, RenameGenericContent content) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
@@ -35,6 +37,13 @@ namespace OpenCAGE
         private void save_entity_name_Click(object sender, EventArgs e)
         {
             if (entity_name.Text == "") return;
+
+            string problem = Validate?.Invoke(entity_name.Text);
+            if (problem != null)
+            {
+                MessageBox.Show(problem, "Can't use this name", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
             OnRenamed?.Invoke(entity_name.Text);
             this.Close();

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <clipPath id="panel"><rect x="39" y="39" width="178" height="178" rx="10"/></clipPath>
+    <pattern id="hazard" width="34" height="34" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="17" height="34" fill="#161616"/>
+    </pattern>
+  </defs>
+  <rect width="256" height="256" rx="26" fill="#EE2026"/>
+  <rect x="26" y="26" width="204" height="204" rx="16" fill="#FFFFFF"/>
+  <rect x="39" y="39" width="178" height="178" rx="10" fill="#1F5A36"/>
+  <g clip-path="url(#panel)" fill="#FFFFFF">
+      <rect x="71" y="56" width="14" height="144"/>
+      <rect x="121" y="56" width="14" height="144"/>
+      <rect x="171" y="56" width="14" height="144"/>
+      <rect x="54" y="134" width="48" height="28" stroke="#1F5A36" stroke-width="6" paint-order="stroke"/>
+      <rect x="104" y="80" width="48" height="28" stroke="#1F5A36" stroke-width="6" paint-order="stroke"/>
+      <rect x="154" y="114" width="48" height="28" stroke="#1F5A36" stroke-width="6" paint-order="stroke"/>
+      <g fill="#1F5A36"><rect x="62" y="145" width="32" height="6"/><rect x="112" y="91" width="32" height="6"/><rect x="162" y="125" width="32" height="6"/></g>
+  </g>
+
+</svg>

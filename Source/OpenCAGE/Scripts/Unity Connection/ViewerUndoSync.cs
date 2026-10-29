@@ -1,0 +1,56 @@
+using OpenCAGE.Undo;
+using System;
+
+namespace OpenCAGE.UnityConnection
+{
+    /// <summary>
+    /// Applies UNDO_REQUEST / REDO_REQUEST (and GESTURE_CANCEL_REQUEST) from the Level Viewer.
+    /// </summary>
+    public static class ViewerUndoSync
+    {
+        public static bool TryApply(Packet packet)
+        {
+            if (packet == null)
+                return false;
+
+            CommandsEditor editor = Singleton.Editor;
+            if (editor == null || editor.IsDisposed)
+                return false;
+
+            if (editor.InvokeRequired)
+            {
+                try
+                {
+                    editor.BeginInvoke(new Action(() => ApplyCore(packet)));
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log("Websocket", "Failed to queue viewer undo on UI thread: " + ex.Message);
+                    return false;
+                }
+            }
+
+            return ApplyCore(packet);
+        }
+
+        private static bool ApplyCore(Packet packet)
+        {
+            /* A shift-clone called off in the viewport: its copies go, but only by taking back the step that
+               made them - and only while that step is the latest and the gesture's own. The request is queued
+               behind the duplicate it cancels, so it lands after the copies are made; if the duplicate was
+               refused, or anything has been done since, there is nothing of the gesture's to take back. */
+            if (packet.packet_event == PacketEvent.GESTURE_CANCEL_REQUEST)
+                return UndoStack.Current.CancelGesture(ViewerParameterSync.GestureUndoKey(packet.gesture));
+
+            /* Straight onto the same stack the Edit menu drives, so a step made in the viewport and one
+               made in the editor are the same history and undo in the same order. */
+            if (packet.packet_event == PacketEvent.UNDO_REQUEST)
+                UndoStack.Current.Undo();
+            else
+                UndoStack.Current.Redo();
+
+            return true;
+        }
+    }
+}

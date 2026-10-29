@@ -272,19 +272,22 @@ namespace OpenCAGE
             if (Content.Level.Commands == null)
                 return entity.shortGUID.ToByteString();
 
-            if (hasFinishedCachingEntityNames && regenCache)
+            //The cache is built on a worker while a level loads (GenerateEntityNameCache): it is only used once complete, and
+            //always under its lock - until then names are worked out as they are asked for
+            lock (_entityNameLock)
             {
-                if (!cachedEntityName.ContainsKey(composite.shortGUID)) cachedEntityName.Add(composite.shortGUID, new Dictionary<ShortGuid, string>());
+                if (hasFinishedCachingEntityNames)
+                {
+                    if (!cachedEntityName.TryGetValue(composite.shortGUID, out Dictionary<ShortGuid, string> names))
+                        cachedEntityName.Add(composite.shortGUID, names = new Dictionary<ShortGuid, string>());
 
-                if (cachedEntityName[composite.shortGUID].ContainsKey(entity.shortGUID)) cachedEntityName[composite.shortGUID].Remove(entity.shortGUID);
-                cachedEntityName[composite.shortGUID].Add(entity.shortGUID, GenerateEntityNameInternal(entity, composite));
+                    if (regenCache)
+                        names[entity.shortGUID] = GenerateEntityNameInternal(entity, composite);
+
+                    if (names.TryGetValue(entity.shortGUID, out string name))
+                        return name;
+                }
             }
-
-            if (!cachedEntityName.ContainsKey(composite.shortGUID))
-                cachedEntityName.Add(composite.shortGUID, new Dictionary<ShortGuid, string>());
-
-            if (hasFinishedCachingEntityNames && cachedEntityName[composite.shortGUID].TryGetValue(entity.shortGUID, out string name))
-                return name;
 
             return GenerateEntityNameInternal(entity, composite);
         }
@@ -303,48 +306,99 @@ namespace OpenCAGE
                 case EntityVariant.FUNCTION:
                     Composite funcComposite = Content.Level.Commands.GetComposite(((FunctionEntity)entity).function);
                     if (funcComposite != null)
-                        desc = Content.Level.Commands.Utils.GetEntityName(composite.shortGUID, entity.shortGUID) + " (" + funcComposite.name + ")";
+                        desc = Content.Level.Commands.Utils.GetEntityName(composite, entity) + " (" + funcComposite.name + ")";
                     else
-                        desc = Content.Level.Commands.Utils.GetEntityName(composite.shortGUID, entity.shortGUID) + " (" + ((FunctionType)((FunctionEntity)entity).function.AsUInt32).ToString() + ")";
+                        desc = Content.Level.Commands.Utils.GetEntityName(composite, entity) + " (" + ((FunctionType)((FunctionEntity)entity).function.AsUInt32).ToString() + ")";
                     break;
                 case EntityVariant.ALIAS:
                     desc = "[ALIAS] " + Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveAlias((AliasEntity)entity, composite), SettingsManager.GetBool(Settings.ShowShortGuids));
                     break;
                 case EntityVariant.PROXY:
-                    desc = "[PROXY] " + Content.Level.Commands.Utils.GetEntityName(composite.shortGUID, entity.shortGUID) + " (" + Content.Level.Commands.Utils.GetResolvedAsString(Content.Level.Commands.Utils.ResolveProxy((ProxyEntity)entity), SettingsManager.GetBool(Settings.ShowShortGuids)) + ")";
+                    desc = "[PROXY] " + Content.Level.Commands.Utils.GetEntityName(composite, entity) + " (" + DescribeProxyTarget(Content.Level.Commands, (ProxyEntity)entity) + ")";
                     break;
             }
             bool showID = SettingsManager.GetBool(Settings.ShowShortGuids);
             return (showID ? "[" + entity.shortGUID.ToByteString() + "] " : "") + desc;
         }
 
+        /// <summary>
+        /// Where a proxy leads, for a caption or a list row: the resolved path, or for a dead proxy (see
+        /// CommandsUtils.IsDeadProxy) the type it pointed at, marked as dead.
+        /// </summary>
+        public static string DescribeProxyTarget(Commands commands, ProxyEntity proxy)
+        {
+            if (commands?.Utils == null || proxy == null)
+                return "";
+            List<Tuple<Composite, Entity>> resolved = commands.Utils.ResolveProxy(proxy);
+            if (commands.Utils.CouldResolve(resolved))
+                return commands.Utils.GetResolvedAsString(resolved, SettingsManager.GetBool(Settings.ShowShortGuids));
+
+            //What it pointed at, when this level has a name for it - a guid tells the user nothing
+            string target = null;
+            if (proxy.function.IsFunctionType)
+                target = proxy.function.AsFunctionType.ToString();
+            else
+            {
+                Composite composite = commands.GetComposite(proxy.function);
+                if (composite != null)
+                    target = GetCompositeName(composite);
+            }
+            return "UNRESOLVABLE" + (target == null ? "" : " - was " + target);
+        }
+
         /* Generate a cache of entity names */
+        private readonly object _entityNameLock = new object();
         private bool hasFinishedCachingEntityNames = false;
         private Dictionary<ShortGuid, Dictionary<ShortGuid, string>> cachedEntityName = new Dictionary<ShortGuid, Dictionary<ShortGuid, string>>();
         public void GenerateEntityNameCache(CommandsEditor mainInst)
         {
-            if (Content.Level.Commands == null) return;
-            hasFinishedCachingEntityNames = false;
-            mainInst?.EnableButtons(false, "Generating caches...");
-            cachedEntityName.Clear();
-            for (int i = 0; i < Content.Level.Commands.Entries.Count; i++)
+            Commands commands = Content?.Level?.Commands;
+            if (commands == null) return;
+            lock (_entityNameLock)
             {
-                Composite comp = Content.Level.Commands.Entries[i];
-                if (!cachedEntityName.ContainsKey(comp.shortGUID))
-                    cachedEntityName.Add(comp.shortGUID, new Dictionary<ShortGuid, string>());
-                List<Entity> ents = comp.GetEntities();
-                for (int x = 0; x < ents.Count; x++)
-                    if (!cachedEntityName[comp.shortGUID].ContainsKey(ents[x].shortGUID))
-                        cachedEntityName[comp.shortGUID].Add(ents[x].shortGUID, GenerateEntityNameInternal(ents[x], comp));
+                hasFinishedCachingEntityNames = false;
+                cachedEntityName = new Dictionary<ShortGuid, Dictionary<ShortGuid, string>>();
+            }
+            mainInst?.EnableButtons(false, "Generating caches...");
+
+            //Built aside and swapped in whole, as the UI thread asks for names meanwhile. Given up if the level is closed part
+            //way through (another level loaded quickly): its names are of no use then, and the new level builds its own
+            Dictionary<ShortGuid, Dictionary<ShortGuid, string>> built = new Dictionary<ShortGuid, Dictionary<ShortGuid, string>>();
+            try
+            {
+                for (int i = 0; i < commands.Entries.Count; i++)
+                {
+                    if (!ReferenceEquals(Content?.Level?.Commands, commands))
+                        return;
+                    Composite comp = commands.Entries[i];
+                    if (!built.TryGetValue(comp.shortGUID, out Dictionary<ShortGuid, string> names))
+                        built.Add(comp.shortGUID, names = new Dictionary<ShortGuid, string>());
+                    List<Entity> ents = comp.GetEntities();
+                    for (int x = 0; x < ents.Count; x++)
+                        if (!names.ContainsKey(ents[x].shortGUID))
+                            names.Add(ents[x].shortGUID, GenerateEntityNameInternal(ents[x], comp));
+                }
+            }
+            catch (NullReferenceException) when (!ReferenceEquals(Content?.Level?.Commands, commands))
+            {
+                return;
+            }
+
+            lock (_entityNameLock)
+            {
+                cachedEntityName = built;
+                hasFinishedCachingEntityNames = true;
             }
             mainInst?.EnableButtons(true, "");
-            hasFinishedCachingEntityNames = true;
         }
 
         public void ClearEntityNameCache()
         {
-            cachedEntityName.Clear();
-            hasFinishedCachingEntityNames = false;
+            lock (_entityNameLock)
+            {
+                cachedEntityName = new Dictionary<ShortGuid, Dictionary<ShortGuid, string>>();
+                hasFinishedCachingEntityNames = false;
+            }
         }
 
         /* Utility: generate a list of suggested parameters for an entity */
@@ -355,6 +409,8 @@ namespace OpenCAGE
             List<(ShortGuid, ParameterVariant, DataType)> parameters = Content.Level.Commands.Utils.GetAllParameters(entity, composite);
             foreach ((ShortGuid, ParameterVariant, DataType) parameter in parameters)
             {
+                if (EntityParameterVisibility.IsHiddenFromEditor(entity, parameter.Item1))
+                    continue;
                 items.Add(parameter.Item1.ToString());
                 if (parameter.Item2 == ParameterVariant.METHOD_PIN)
                 {
@@ -373,6 +429,8 @@ namespace OpenCAGE
             List<(ShortGuid, ParameterVariant, DataType)> parameters = Content.Level.Commands.Utils.GetAllParameters(entity, composite);
             foreach ((ShortGuid, ParameterVariant,DataType) parameter in parameters)
             {
+                if (EntityParameterVisibility.IsHiddenFromEditor(entity, parameter.Item1))
+                    continue;
                 items.Add(ParameterDefinitionToListViewItem(parameter.Item1, parameter.Item3, parameter.Item2));
             }
             return items;
@@ -415,7 +473,56 @@ namespace OpenCAGE
             return editedText;
         }
 
-        /* Populates a combobox with available levels and selects the appropriate one - you should update OPT_LoadToMap on selected change */
+        /// <summary>
+        /// Why text can't be saved into a level as it is, or null if it can. A level stores its script text (entity
+        /// names, string values, composite paths) as Windows-1252: accented letters, curly quotes, dashes and the pound
+        /// and euro signs fit, but any other character (emoji, CJK, arrows and most symbols) would be saved as '?', and a
+        /// NUL would end the text there. The message lists each such character; <paramref name="what"/> starts it, e.g.
+        /// "This name". The naming dialogs, the inspector and the AI assistant tools all refuse text by this one rule.
+        /// </summary>
+        public static string UnstorableTextProblem(string text, string what)
+        {
+            if (string.IsNullOrEmpty(text))
+                return null;
+            if (text.IndexOf('\0') != -1)
+                return what + " contains a NUL character, which the game can't store: it would cut the text short when the level is saved.";
+            List<string> unstorable = CathodeLib.Utilities.GetNonWindows1252Characters(text);
+            if (unstorable.Count == 0)
+                return null;
+            //Each as the character and its code point; half of a surrogate pair on its own only by its code point
+            string list = string.Join(", ", unstorable.Take(8).Select(o => o.Length == 1 && char.IsSurrogate(o[0])
+                ? "U+" + ((int)o[0]).ToString("X4")
+                : "'" + o + "' (U+" + (o.Length == 2 ? char.ConvertToUtf32(o[0], o[1]) : o[0]).ToString("X4") + ")"));
+            if (unstorable.Count > 8)
+                list += " and " + (unstorable.Count - 8) + " more";
+            return unstorable.Count == 1
+                ? what + " has a character the game can't store: " + list + ". It would be saved as '?'. Use letters (accented ones are fine), numbers and common punctuation instead."
+                : what + " has characters the game can't store: " + list + ". They would be saved as '?'. Use letters (accented ones are fine), numbers and common punctuation instead.";
+        }
+
+        /// <summary>
+        /// The menu level. The game boots into it, and every new level is built from the shared data it
+        /// carries, but it is not something to edit: it is kept out of every level picker except the
+        /// launcher's, which offers it as "do not load straight into a level".
+        /// </summary>
+        public const string FrontendLevel = "PRODUCTION/FRONTEND";
+
+        public static bool IsFrontend(string level)
+        {
+            if (level == null) return false;
+            return string.Equals(level.Replace('\\', '/').Trim('/'), FrontendLevel, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// The levels the editor will open, port between, back up and build from: everything under
+        /// DATA/ENV except FRONTEND.
+        /// </summary>
+        public static List<string> GetEditableLevels()
+        {
+            return Level.GetLevels(Singleton.PathToAI).Where(o => !IsFrontend(o)).ToList();
+        }
+
+        /* Populates a combobox with available (editable) levels and selects the appropriate one - you should update OPT_LoadToMap on selected change */
         public static void PopulateLevelDropdown(ComboBox dropdown)
         {
             string toSelect = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Name;
@@ -424,7 +531,7 @@ namespace OpenCAGE
             dropdown.BeginUpdate();
             dropdown.Items.Clear();
 
-            List<string> levels = Level.GetLevels(Singleton.PathToAI);
+            List<string> levels = GetEditableLevels();
             if (levels.Count == 0)
             {
                 dropdown.EndUpdate();
@@ -440,10 +547,7 @@ namespace OpenCAGE
             dropdown.Items.AddRange(levels.ToArray());
             dropdown.SelectedItem = toSelect?.ToUpper();
             if (dropdown.SelectedIndex == -1)
-            {
-                if (dropdown.Items.Contains("PRODUCTION/FRONTEND")) dropdown.SelectedItem = "PRODUCTION/FRONTEND";
-                else dropdown.SelectedIndex = 0;
-            }
+                dropdown.SelectedIndex = 0;
             dropdown.EndUpdate();
         }
 
@@ -456,29 +560,209 @@ namespace OpenCAGE
             return cont[cont.Length - 1];
         }
 
-        /* Utility: close the game down */
-        public static void CloseAI(List<string> additionalProcesses = null)
+        /* Utility: close the game down. thisInstallOnly leaves alone an AI.exe that another install (or anything else
+           called AI) runs, and the additional processes too unless they run from this install's game folder or from beside
+           this OpenCAGE (where it keeps the tools it starts). Returns what was closed ("AI.exe (path)", or the name). */
+        public static List<string> CloseAI(List<string> additionalProcesses = null, bool thisInstallOnly = false)
         {
-            List<Process> allProcesses = new List<Process>(Process.GetProcessesByName("AI"));
+            List<string> closed = new List<string>();
+            List<KeyValuePair<Process, string>> allProcesses = new List<KeyValuePair<Process, string>>();
+            foreach (Process game in Process.GetProcessesByName("AI"))
+            {
+                string image = ProcessImagePath(game);
+                if (thisInstallOnly && !IsThisInstall(image))
+                {
+                    game.Dispose();
+                    continue;
+                }
+                allProcesses.Add(new KeyValuePair<Process, string>(game, "AI.exe" + (image != null ? " (" + image + ")" : "")));
+            }
             if (additionalProcesses != null)
             {
                 foreach (string additionalProcess in additionalProcesses)
                 {
-                    allProcesses.AddRange(Process.GetProcessesByName(additionalProcess));
+                    foreach (Process process in Process.GetProcessesByName(additionalProcess))
+                    {
+                        if (thisInstallOnly && !OwnProcess(ProcessImagePath(process)))
+                        {
+                            process.Dispose();
+                            continue;
+                        }
+                        allProcesses.Add(new KeyValuePair<Process, string>(process, additionalProcess));
+                    }
                 }
             }
             for (int x = 0; x < allProcesses.Count; x++)
             {
                 try
                 {
-                    allProcesses[x]?.Kill();
-                    allProcesses[x]?.WaitForExit();
+                    allProcesses[x].Key?.Kill();
+                    allProcesses[x].Key?.WaitForExit();
+                    if (!closed.Contains(allProcesses[x].Value))
+                        closed.Add(allProcesses[x].Value);
                 }
                 catch { }
+                allProcesses[x].Key?.Dispose();
+            }
+            return closed;
+
+            //Whether a process's file is under this install's game folder or this OpenCAGE's own (a path that can't be read is
+            //neither). The path has junctions, symlinks and subst drives resolved, which the configured folders need not: each
+            //folder above the file is compared by name, then as the same folder under another name.
+            bool OwnProcess(string image)
+            {
+                if (string.IsNullOrEmpty(image)) return false;
+                try
+                {
+                    List<string> roots = new List<string>();
+                    foreach (string own in new string[] { Singleton.PathToAI, AppDomain.CurrentDomain.BaseDirectory })
+                        if (!string.IsNullOrEmpty(own)) roots.Add(Path.GetFullPath(own).TrimEnd('\\', '/'));
+                    for (string folder = Path.GetDirectoryName(Path.GetFullPath(image)); !string.IsNullOrEmpty(folder); folder = Path.GetDirectoryName(folder))
+                    {
+                        foreach (string root in roots)
+                            if (string.Equals(folder.TrimEnd('\\', '/'), root, StringComparison.OrdinalIgnoreCase) || SameFile(folder, root))
+                                return true;
+                    }
+                }
+                catch { }
+                return false;
             }
         }
 
-        /* Utility: get the image/group index for an entity, for populating ListViewItems */
+        /* Utility: the paths of the running AI.exe processes - this install's game (thisInstall), or those of any other
+           install or program called AI (!thisInstall). A process whose path cannot be read counts as another's. */
+        public static List<string> GameProcesses(bool thisInstall = true)
+        {
+            List<string> found = new List<string>();
+            foreach (Process process in Process.GetProcessesByName("AI"))
+            {
+                string image = ProcessImagePath(process);
+                if (IsThisInstall(image) == thisInstall)
+                    found.Add(image ?? "AI.exe (pid " + process.Id + ")");
+                process.Dispose();
+            }
+            return found;
+        }
+
+        /* Utility: whether this install's game (AI.exe in Singleton.PathToAI) is running */
+        public static bool ThisInstallsGameRunning() => GameProcesses(true).Count != 0;
+
+        private static bool IsThisInstall(string image)
+        {
+            if (string.IsNullOrEmpty(image)) return false;
+            try
+            {
+                string install = Path.GetFullPath(Singleton.PathToAI).TrimEnd('\\', '/');
+                if (string.Equals(Path.GetDirectoryName(image).TrimEnd('\\', '/'), install, StringComparison.OrdinalIgnoreCase))
+                    return true;
+                //A process's image path is its file as the kernel opened it - junctions, symlinks and subst drives resolved - which
+                //the configured path need not be: the same file under either name is this install's game
+                return SameFile(Path.Combine(install, "AI.exe"), image);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /* Whether two paths name one file: the same volume and file index, whatever links lie between */
+        private static bool SameFile(string first, string second)
+        {
+            if (!FileIdentity(first, out uint volume, out ulong index))
+                return false;
+            return FileIdentity(second, out uint otherVolume, out ulong otherIndex) && volume == otherVolume && index == otherIndex;
+        }
+
+        private static bool FileIdentity(string path, out uint volume, out ulong index)
+        {
+            volume = 0;
+            index = 0;
+            //No access asked for: a running exe can still be opened to read its identity
+            using (Microsoft.Win32.SafeHandles.SafeFileHandle file = CreateFile(path, 0, 0x7 /*FILE_SHARE_READ|WRITE|DELETE*/, IntPtr.Zero, 3 /*OPEN_EXISTING*/, 0x02000000 /*FILE_FLAG_BACKUP_SEMANTICS*/, IntPtr.Zero))
+            {
+                if (file.IsInvalid || !GetFileInformationByHandle(file, out FileInformation information))
+                    return false;
+                volume = information.VolumeSerialNumber;
+                index = ((ulong)information.FileIndexHigh << 32) | information.FileIndexLow;
+                return true;
+            }
+        }
+
+        /* Utility: a process's executable path. The game is 32-bit and OpenCAGE 64-bit, so MainModule throws: the
+           limited query works across both. Null when it cannot be read (gone, or not ours to ask about). */
+        public static string ProcessImagePath(Process process)
+        {
+            try
+            {
+                IntPtr handle = OpenProcess(0x1000 /*PROCESS_QUERY_LIMITED_INFORMATION*/, false, process.Id);
+                if (handle == IntPtr.Zero) return null;
+                try
+                {
+                    System.Text.StringBuilder name = new System.Text.StringBuilder(1024);
+                    int size = name.Capacity;
+                    return QueryFullProcessImageName(handle, 0, name, ref size) ? name.ToString() : null;
+                }
+                finally
+                {
+                    CloseHandle(handle);
+                }
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr OpenProcess(int access, bool inheritHandle, int processId);
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+        private static extern bool QueryFullProcessImageName(IntPtr process, int flags, System.Text.StringBuilder name, ref int size);
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool CloseHandle(IntPtr handle);
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+        private static extern Microsoft.Win32.SafeHandles.SafeFileHandle CreateFile(string name, uint access, uint share, IntPtr security, uint disposition, uint flags, IntPtr template);
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GetFileInformationByHandle(Microsoft.Win32.SafeHandles.SafeFileHandle file, out FileInformation information);
+
+        //BY_HANDLE_FILE_INFORMATION (each FILETIME as its two halves)
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+        private struct FileInformation
+        {
+            public uint FileAttributes;
+            public uint CreationTimeLow, CreationTimeHigh;
+            public uint LastAccessTimeLow, LastAccessTimeHigh;
+            public uint LastWriteTimeLow, LastWriteTimeHigh;
+            public uint VolumeSerialNumber;
+            public uint FileSizeHigh;
+            public uint FileSizeLow;
+            public uint NumberOfLinks;
+            public uint FileIndexHigh;
+            public uint FileIndexLow;
+        }
+
+        /* Utility: get the imagve index for an entity */
+        public static int GetImageIndexForEntity(Entity ent, Composite comp)
+        {
+            switch (ent.variant)
+            {
+                case EntityVariant.FUNCTION:
+                    if (((FunctionEntity)ent).function.IsFunctionType)
+                        return 1;
+                    return 2;
+                case EntityVariant.ALIAS:
+                    return 4;
+                case EntityVariant.PROXY:
+                    return 3;
+                case EntityVariant.VARIABLE:
+                    CompositePinInfoTable.PinInfo pinInfo = Singleton.Editor.CompositeDisplay.Content.Level.Commands.Utils.GetPinInfo(comp, (VariableEntity)ent);
+                    if (pinInfo != null)
+                        return GetImageIndexForCompositePinType((CompositePinType)pinInfo.PinTypeGUID.AsUInt32);
+                    return 0;
+            }
+            return -1;
+        }
+
+        /* Utility: get the image/group index for an composite method */
         public static int GetImageIndexForCompositePinType(CompositePinType pinType)
         {
             switch (pinType)
@@ -496,8 +780,9 @@ namespace OpenCAGE
                 case CompositePinType.CompositeInputZonePtrVariablePin:
                 case CompositePinType.CompositeInputEnumVariablePin:
                 case CompositePinType.CompositeInputEnumStringVariablePin:
+                    return 8;
                 case CompositePinType.CompositeMethodPin:
-                    return 6; // variable right.png
+                    return 6;
                 case CompositePinType.CompositeOutputAnimationInfoVariablePin:
                 case CompositePinType.CompositeOutputBoolVariablePin:
                 case CompositePinType.CompositeOutputDirectionVariablePin:
@@ -511,12 +796,13 @@ namespace OpenCAGE
                 case CompositePinType.CompositeOutputZonePtrVariablePin:
                 case CompositePinType.CompositeOutputEnumVariablePin:
                 case CompositePinType.CompositeOutputEnumStringVariablePin:
+                    return 9;
                 case CompositePinType.CompositeTargetPin:
+                    return 7;
                 case CompositePinType.CompositeReferencePin:
-                    return 5; // variable left.png
-                default:
-                    return 0;
+                    return 5;
             }
+            return -1;
         }
 
         public static (int, int) GetIndexesForListViewItem(Entity entity, Composite composite, Commands commands)
@@ -542,13 +828,17 @@ namespace OpenCAGE
                     }
                     else
                     {
+                        //Its category's icon (the braces when it has none): the group is still the functions'
                         groupIndex = 1;
-                        imageIndex = 1;
+                        imageIndex = EditorIcons.EntityIndex(((FunctionEntity)entity).function.AsFunctionType);
                     }
                     break;
                 case EntityVariant.PROXY:
+                    //What it points at, so it reads as what it does (the proxy's own icon when it points nowhere); still listed with the proxies
                     groupIndex = 3;
-                    imageIndex = 3;
+                    EditorIcon? target = EditorIcons.ForEntity(entity, composite, commands);
+                    int targetIndex = target == null ? -1 : EditorIcons.EntityIndex(target.Value);
+                    imageIndex = targetIndex < 0 ? 3 : targetIndex;
                     break;
                 case EntityVariant.ALIAS:
                     groupIndex = 4;
@@ -559,124 +849,151 @@ namespace OpenCAGE
         }
 
         /* Utility: work out if any proxies/overrides reference the currently selected entity */
+        /* Runs for every selection (the inspector's References button). The pointers used to be checked with
+           Parallel.ForEach nested four deep - composites, then each composite's proxies/aliases/sequences/animations,
+           then their entries: every level parks its pool thread waiting on the one below, so on a big level (thousands
+           of composites) each click made the pool inject dozens of threads (the viewport stress run saw OpenCAGE pass
+           500), and a match or a newer selection only stopped the innermost loop - the outer one still started the
+           inner loops for every composite. Now one bounded parallel loop over the composites, each checked in order,
+           stopping at the first match or when the selection moves on. */
         public bool IsEntityReferencedExternally(Entity entity, CancellationToken ct)
         {
-            bool found = false;
-            Parallel.ForEach(Content.Level.Commands.Entries, (comp, status) =>
+            Commands commands = Content.Level.Commands;
+            int found = 0;
+            try
             {
-                Parallel.ForEach(comp.proxies, (prox, status2) =>
+                ParallelOptions options = new ParallelOptions { CancellationToken = ct, MaxDegreeOfParallelism = Environment.ProcessorCount };
+                Parallel.ForEach(commands.Entries, options, (comp, state) =>
                 {
-                    if (found || ct.IsCancellationRequested)
-                        status2.Stop();
-                    if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveProxy(prox)).Item2 == entity) 
-                        found = true;
-                });
-                Parallel.ForEach(comp.aliases, (alias, status2) =>
-                {
-                    if (found || ct.IsCancellationRequested)
-                        status2.Stop();
-                    if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(alias, comp)).Item2 == entity) 
-                        found = true;
-                });
-                List<FunctionEntity> triggerSequences = comp.GetFunctionEntitiesOfType(FunctionType.TriggerSequence);
-                Parallel.ForEach(triggerSequences, (trigEnt, status2) =>
-                {
-                    if (found || ct.IsCancellationRequested)
-                        status2.Stop();
-
-                    TriggerSequence trig = (TriggerSequence)trigEnt;
-                    Parallel.ForEach(trig.sequence, (trigger, status3) =>
+                    if (Volatile.Read(ref found) != 0)
                     {
-                        if (found || ct.IsCancellationRequested)
-                            status3.Stop();
-                        if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(trigger.connectedEntity.path, comp)).Item2 == entity)
-                            found = true;
-                    });
-                });
-                List<FunctionEntity> cageAnims = comp.GetFunctionEntitiesOfType(FunctionType.CAGEAnimation);
-                Parallel.ForEach(cageAnims, (animEnt, status2) =>
-                {
-                    if (found || ct.IsCancellationRequested)
-                        status2.Stop();
-
-                    CAGEAnimation anim = (CAGEAnimation)animEnt;
-                    Parallel.ForEach(anim.connections, (connection, status3) =>
+                        state.Stop();
+                        return;
+                    }
+                    if (CompositePointsAt(commands, comp, entity, ct))
                     {
-                        if (found || ct.IsCancellationRequested)
-                            status3.Stop();
-                        if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(connection.connectedEntity.path, comp)).Item2 == entity) 
-                            found = true;
-                    });
+                        Interlocked.Exchange(ref found, 1);
+                        state.Stop();
+                    }
                 });
+            }
+            catch (OperationCanceledException)
+            {
+                //The selection moved on: nobody is waiting for this answer
+            }
+            return found != 0;
+        }
 
-                if (found || ct.IsCancellationRequested)
-                    status.Stop();
-            });
+        private static bool CompositePointsAt(Commands commands, Composite comp, Entity entity, CancellationToken ct)
+        {
+            foreach (ProxyEntity prox in comp.proxies)
+                if (commands.Utils.GetResolvedTarget(commands.Utils.ResolveProxy(prox)).Item2 == entity)
+                    return true;
+            if (ct.IsCancellationRequested)
+                return false;
+            foreach (AliasEntity alias in comp.aliases)
+                if (commands.Utils.GetResolvedTarget(commands.Utils.ResolveAlias(alias, comp)).Item2 == entity)
+                    return true;
+            if (ct.IsCancellationRequested)
+                return false;
+            foreach (FunctionEntity trigEnt in comp.GetFunctionEntitiesOfType(FunctionType.TriggerSequence))
+                foreach (var trigger in ((TriggerSequence)trigEnt).sequence)
+                    if (commands.Utils.GetResolvedTarget(commands.Utils.ResolveEntityPath(trigger.connectedEntity.path, comp)).Item2 == entity)
+                        return true;
+            if (ct.IsCancellationRequested)
+                return false;
+            foreach (FunctionEntity animEnt in comp.GetFunctionEntitiesOfType(FunctionType.CAGEAnimation))
+                foreach (var connection in ((CAGEAnimation)animEnt).connections)
+                    if (commands.Utils.GetResolvedTarget(commands.Utils.ResolveEntityPath(connection.connectedEntity.path, comp)).Item2 == entity)
+                        return true;
+            return false;
+        }
+
+
+        /// <summary>A zone an entity is in, and how to get to it.</summary>
+        public class ZoneReference
+        {
+            public Composite Composite;
+            public FunctionEntity Zone;
+            public string Name;
+
+            /// <summary>
+            /// The entity ids stepped through from the composite the lookup started at to reach the zone.
+            /// The zone was found through the hierarchy the user is in, so this is how to go to it
+            /// through that same hierarchy rather than by opening its composite on its own.
+            /// </summary>
+            public List<uint> InstancePath = new List<uint>();
+        }
+
+        /// <summary>
+        /// The zones an entity is in, as seen from the hierarchy the user is standing in.
+        /// </summary>
+        /// <param name="startComposite">The composite the drill path starts at - what the user opened.</param>
+        /// <param name="instancePath">
+        /// The entity ids stepped through from <paramref name="startComposite"/>, ending with the entity
+        /// itself.
+        /// </param>
+        public List<ZoneReference> FindZonesForEntity(Composite startComposite, List<uint> instancePath, CancellationToken ct)
+        {
+            List<ZoneReference> found = new List<ZoneReference>();
+            if (startComposite == null || instancePath == null || instancePath.Count == 0 || Content?.Level?.Commands == null)
+                return found;
+
+            List<UnityConnection.SyncedZone> zones = ZoneMembership.CalculateFrom(Content.Level, startComposite);
+            if (ct.IsCancellationRequested)
+                return found;
+
+            HashSet<ulong> seen = new HashSet<ulong>();
+            foreach (UnityConnection.SyncedZone zone in zones)
+            {
+                if (ct.IsCancellationRequested)
+                    return found;
+
+                bool claimsIt = false;
+                foreach (List<uint> root in zone.roots)
+                {
+                    if (!IsPathPrefix(root, instancePath))
+                        continue;
+                    claimsIt = true;
+                    break;
+                }
+                if (!claimsIt)
+                    continue;
+
+                //The same zone entity reached down two different instance paths is two zones to the
+                //build, but one place to go and one name to show
+                if (!seen.Add(((ulong)zone.zone_composite << 32) | zone.zone_entity))
+                    continue;
+
+                Composite composite = Content.Level.Commands.GetComposite(new ShortGuid(zone.zone_composite));
+                FunctionEntity entity = composite?.GetEntityByID(new ShortGuid(zone.zone_entity)) as FunctionEntity;
+                if (entity == null)
+                    continue;
+
+                found.Add(new ZoneReference()
+                {
+                    Composite = composite,
+                    Zone = entity,
+                    Name = string.IsNullOrWhiteSpace(zone.name)
+                        ? Content.Level.Commands.Utils.GetEntityName(composite, entity)
+                        : zone.name,
+                    InstancePath = new List<uint>(zone.zone_path),
+                });
+            }
             return found;
         }
 
-        /* Utility: try figure out what zone this entity is in (if any) */
-        public void TryFindZoneForEntity(Entity entity, Composite startComposite, out Composite composite, out FunctionEntity zone, CancellationToken ct)
+        private static bool IsPathPrefix(List<uint> prefix, List<uint> path)
         {
-            Func<Composite, FunctionEntity> findZone = comp => {
-                if (comp == null) return null;
+            if (prefix == null || path == null || prefix.Count == 0 || prefix.Count > path.Count)
+                return false;
 
-                FunctionEntity toReturn = null;
-                ShortGuid compositesGUID = ShortGuidUtils.Generate("composites");
-
-                List<FunctionEntity> triggerSequences = comp.GetFunctionEntitiesOfType(FunctionType.TriggerSequence);
-                Parallel.ForEach(triggerSequences, (Action<FunctionEntity, ParallelLoopState>)((trigEnt, status) =>
-                {
-                    TriggerSequence trig = (TriggerSequence)trigEnt;
-                    Parallel.ForEach(trig.sequence, (Action<TriggerSequence.SequenceEntry, ParallelLoopState>)((trigger, status2) =>
-                    {
-                        if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(trigger.connectedEntity.path, comp)).Item2 == entity)
-                        {
-                            List<FunctionEntity> zones = comp.functions.FindAll(o => o.function == FunctionType.Zone);
-                            Parallel.ForEach(zones, (z, status3) =>
-                            {
-                                Parallel.ForEach(z.childLinks, (link, status4) =>
-                                {
-                                    if (link.thisParamID == compositesGUID && link.linkedEntityID == trig.shortGUID)
-                                    {
-                                        toReturn = z;
-
-                                        status.Stop();
-                                        status2.Stop();
-                                        status3.Stop();
-                                        status4.Stop();
-                                    }
-
-                                    if (ct.IsCancellationRequested)
-                                        status4.Stop();
-                                });
-
-                                if (ct.IsCancellationRequested)
-                                    status3.Stop();
-                            });
-                        }
-
-                        if (ct.IsCancellationRequested)
-                            status2.Stop();
-                    }));
-
-                    if (ct.IsCancellationRequested)
-                        status.Stop();
-                }));
-
-                return toReturn;
-            };
-
-            composite = startComposite;
-            zone = findZone(composite);
-            if (zone != null) return;
-
-            foreach (Composite comp in Content.Level.Commands.Entries)
+            for (int i = 0; i < prefix.Count; i++)
             {
-                composite = comp;
-                zone = findZone(composite);
-                if (zone != null) return;
+                if (prefix[i] != path[i])
+                    return false;
             }
+            return true;
         }
 
         [Obsolete("This function is safe to use but not performant. It's intended for test code only.")]
@@ -693,7 +1010,7 @@ namespace OpenCAGE
                     TriggerSequence trig = (TriggerSequence)trigEnt;
                     foreach (TriggerSequence.SequenceEntry trigger in trig.sequence)
                     {
-                        if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveAlias(trigger.connectedEntity.path, comp)).Item2 == entity)
+                        if (Content.Level.Commands.Utils.GetResolvedTarget(Content.Level.Commands.Utils.ResolveEntityPath(trigger.connectedEntity.path, comp)).Item2 == entity)
                         {
                             List<FunctionEntity> zones = comp.functions_dictionary.Values.Where(o => o.function == FunctionType.Zone).ToList();
                             foreach (FunctionEntity z in zones)
@@ -846,9 +1163,36 @@ namespace OpenCAGE
                 case CompositePinType.CompositeInputStringVariablePin:
                 case CompositePinType.CompositeOutputStringVariablePin:
                     return DataType.STRING;
+                //Pins that only take links, typed as the game's own levels type them (a FLOAT here gave them a FLOAT value)
+                case CompositePinType.CompositeInputObjectVariablePin:
+                case CompositePinType.CompositeOutputObjectVariablePin:
+                    return DataType.OBJECT;
+                case CompositePinType.CompositeInputZonePtrVariablePin:
+                case CompositePinType.CompositeOutputZonePtrVariablePin:
+                    return DataType.ZONE;
+                case CompositePinType.CompositeInputZoneLinkPtrVariablePin:
+                case CompositePinType.CompositeOutputZoneLinkPtrVariablePin:
+                    return DataType.ZONE_LINK;
+                case CompositePinType.CompositeInputAnimationInfoVariablePin:
+                case CompositePinType.CompositeOutputAnimationInfoVariablePin:
+                    return DataType.ANIMATION_INFO;
                 default:
                     return DataType.FLOAT;
             }
+        }
+
+        //Whether a new variable for this pin gets a value of its own: method, target and reference pins only take links, and the game's
+        //levels give theirs none (a target pin given the FLOAT default here did not relay its trigger out of the instance in game)
+        public static bool HoldsValue(this CompositePinType pinType)
+        {
+            switch (pinType)
+            {
+                case CompositePinType.CompositeMethodPin:
+                case CompositePinType.CompositeTargetPin:
+                case CompositePinType.CompositeReferencePin:
+                    return false;
+            }
+            return true;
         }
 
         public static string ToUIString(this DataType type)
@@ -880,7 +1224,9 @@ namespace OpenCAGE
 
     public static class Steam
     {
-        public enum Achievements 
+        public static bool Initialised = false;
+
+        public enum Achievements
         {
             FIRST_LOAD, // User has loaded a level for the first time
             FIRST_SAVE, // User has performed their first save of a level
@@ -893,18 +1239,65 @@ namespace OpenCAGE
             CONFIG_MODIFIED, // User has modified a config file
             BEHAVIOUR_TREE_TOOL_LAUNCHED, // User has launched the behaviour tree tool
             ASSETS_MODIFIED, // User has modified some assets
-            LEVEL_VIEWER_LAUNCHED, // User has launched the level viewer for the first time
             GALAXY_MODIFIED, // User has modified the galaxy config
+            NEW_LEVEL_CREATED, // User has created a new level
+            MOD_INSTALLED, // User has installed a mod through the Mod Manager
+            MOD_CREATED, // User has exported a mod of their own
+            LIVE_LINK_CONNECTED, // User has connected Live Link to a running game
+            CREATE_A_NEW_COMPOSITE, // User has created a new composite for the first time
+            ONE_HUNDRED_COMPOSITES, // User has created 100 new composites
+            TEN_MODS_INSTALLED, // User has installed 10 mods through the Mod Manager
+            TEN_MODS_CREATED, // User has exported 10 mods of their own
+            TEN_LEVELS_CREATED, // User has created 10 new levels
+        }
+
+        //The achievements for doing something a number of times: the achievement for doing it once, the setting the count is kept in, and how many it takes
+        private static readonly Dictionary<Achievements, (Achievements first, string setting, int target)> _counted = new Dictionary<Achievements, (Achievements, string, int)>()
+        {
+            { Achievements.ONE_HUNDRED_SAVES, (Achievements.FIRST_SAVE, Settings.SaveCounter, 100) },
+            { Achievements.ONE_HUNDRED_ENTITIES, (Achievements.CREATE_A_NEW_ENTITY, Settings.EntityCounter, 100) },
+            { Achievements.ONE_HUNDRED_COMPOSITES, (Achievements.CREATE_A_NEW_COMPOSITE, Settings.CompositeCounter, 100) },
+            { Achievements.TEN_MODS_INSTALLED, (Achievements.MOD_INSTALLED, Settings.ModInstalledCounter, 10) },
+            { Achievements.TEN_MODS_CREATED, (Achievements.MOD_CREATED, Settings.ModCreatedCounter, 10) },
+            { Achievements.TEN_LEVELS_CREATED, (Achievements.NEW_LEVEL_CREATED, Settings.LevelCounter, 10) },
+        };
+
+        /// <summary>
+        /// Count something done towards the achievement for doing it a number of times: unlocks the achievement for doing it once,
+        /// and this one when the count gets there. Counted only that far - the count is for nothing else, and each count writes the
+        /// settings file (about 10 ms). Returns the count.
+        /// </summary>
+        public static int CountTowards(Achievements achievement, int times = 1)
+        {
+            if (times <= 0 || !_counted.TryGetValue(achievement, out (Achievements first, string setting, int target) counted))
+                return 0;
+            UnlockAchievement(counted.first);
+            int count = SettingsManager.GetInteger(counted.setting);
+            if (count < counted.target)
+            {
+                count = Math.Min(counted.target, count + times);
+                SettingsManager.SetInteger(counted.setting, count);
+            }
+            if (count >= counted.target)
+                UnlockAchievement(achievement);
+            return count;
         }
 
         public static void UnlockAchievement(Achievements achievement)
         {
 #if SHIP_BUILD
-            bool result = SteamUserStats.SetAchievement(achievement.ToString());
-            if (result)
-                SteamUserStats.StoreStats();
-            else
-                Console.WriteLine("Failed to unlock achievement: " + achievement.ToString());
+            try
+            {
+                if (!Initialised)
+                    return;
+
+                bool result = SteamUserStats.SetAchievement(achievement.ToString());
+                if (result)
+                    SteamUserStats.StoreStats();
+                else
+                    Console.WriteLine("Failed to unlock achievement: " + achievement.ToString());
+            }
+            catch { }
 #endif
         }
 
@@ -921,21 +1314,27 @@ namespace OpenCAGE
         public static void UpdatePresence(RichPresences presence, string additionalInfo = "")
         {
 #if SHIP_BUILD
-            if (presence == _currentRP && additionalInfo == _currentAI)
-                return;
-
-            if (presence == RichPresences.NO_PRESENCE)
+            try
             {
-                SteamFriends.ClearRichPresence();
-                return;
+                if (!Initialised)
+                    return;
+                if (presence == _currentRP && additionalInfo == _currentAI)
+                    return;
+
+                if (presence == RichPresences.NO_PRESENCE)
+                {
+                    SteamFriends.ClearRichPresence();
+                    return;
+                }
+
+                if (additionalInfo != "")
+                    SteamFriends.SetRichPresence("AdditionalInfo", additionalInfo);
+                SteamFriends.SetRichPresence("steam_display", "#" + presence.ToString());
+
+                _currentRP = presence;
+                _currentAI = additionalInfo;
             }
-
-            if (additionalInfo != "")
-                SteamFriends.SetRichPresence("AdditionalInfo", additionalInfo);
-            SteamFriends.SetRichPresence("steam_display", "#" + presence.ToString());
-
-            _currentRP = presence;
-            _currentAI = additionalInfo;
+            catch { }
 #endif
         }
     }

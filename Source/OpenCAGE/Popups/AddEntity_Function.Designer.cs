@@ -1,4 +1,4 @@
-namespace OpenCAGE
+﻿namespace OpenCAGE
 {
     partial class AddEntity_Function
     {
@@ -33,7 +33,6 @@ namespace OpenCAGE
             this.createEntity = new System.Windows.Forms.Button();
             this.entityName = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
-            this.helpBtn = new System.Windows.Forms.Button();
             this.functionTypeList1 = new OpenCAGE.Popups.UserControls.FunctionTypeList();
             this.label2 = new System.Windows.Forms.Label();
             this.SuspendLayout();
@@ -79,22 +78,12 @@ namespace OpenCAGE
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(99, 18);
             this.label1.TabIndex = 147;
-            this.label1.Text = "Entity Name";
-            // 
-            // helpBtn
-            // 
-            this.helpBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.helpBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.helpBtn.Image = ((System.Drawing.Image)(resources.GetObject("helpBtn.Image")));
-            this.helpBtn.Location = new System.Drawing.Point(633, 0);
-            this.helpBtn.Name = "helpBtn";
-            this.helpBtn.Size = new System.Drawing.Size(20, 20);
-            this.helpBtn.TabIndex = 181;
-            this.helpBtn.UseVisualStyleBackColor = true;
-            this.helpBtn.Click += new System.EventHandler(this.helpBtn_Click);
-            // 
+            this.label1.Text = "Entity Name";            // 
             // functionTypeList1
             // 
+            this.functionTypeList1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.functionTypeList1.Location = new System.Drawing.Point(12, 78);
             this.functionTypeList1.Name = "functionTypeList1";
             this.functionTypeList1.Size = new System.Drawing.Size(630, 280);
@@ -117,12 +106,12 @@ namespace OpenCAGE
             this.ClientSize = new System.Drawing.Size(653, 400);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.functionTypeList1);
-            this.Controls.Add(this.helpBtn);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.addDefaultParams);
             this.Controls.Add(this.createEntity);
             this.Controls.Add(this.entityName);
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
+            this.MinimumSize = new System.Drawing.Size(416, 339);
             this.Name = "AddEntity_Function";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Create Function Entity";
@@ -137,7 +126,6 @@ namespace OpenCAGE
         private System.Windows.Forms.Button createEntity;
         private System.Windows.Forms.TextBox entityName;
         private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.Button helpBtn;
         private Popups.UserControls.FunctionTypeList functionTypeList1;
         private System.Windows.Forms.Label label2;
     }

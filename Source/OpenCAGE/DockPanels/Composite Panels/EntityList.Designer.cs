@@ -30,7 +30,6 @@
         {
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(EntityList));
-            this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.compositeEntityList1 = new Popups.UserControls.CompositeEntityList();
             this.EntityListContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.createToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -41,24 +40,22 @@
             this.createAliasToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.deleteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.renameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.duplicateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
             this.copyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.pasteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.findReferencesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.toolStrip1 = new System.Windows.Forms.ToolStrip();
-            this.deleteCheckedEntities = new System.Windows.Forms.ToolStripButton();
+            this.treatAsColourToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.refactorSeparator = new System.Windows.Forms.ToolStripSeparator();
+            this.deinstanceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.createVariantToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.createCompositeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.triggerSequenceSeparator = new System.Windows.Forms.ToolStripSeparator();
+            this.addSelectedToTriggerSequenceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.removeSelectedFromTriggerSequenceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.autoAddToTriggerSequenceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.EntityListContextMenu.SuspendLayout();
-            this.toolStrip1.SuspendLayout();
             this.SuspendLayout();
-            // 
-            // imageList1
-            // 
-            this.imageList1.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList1.ImageStream")));
-            this.imageList1.TransparentColor = System.Drawing.Color.Transparent;
-            this.imageList1.Images.SetKeyName(0, "GenericEditor.ico");
             // 
             // compositeEntityList1
             // 
@@ -74,13 +71,20 @@
             this.createToolStripMenuItem,
             this.toolStripSeparator1,
             this.deleteToolStripMenuItem,
-            this.renameToolStripMenuItem,
-            this.duplicateToolStripMenuItem,
             this.toolStripSeparator2,
             this.copyToolStripMenuItem,
             this.pasteToolStripMenuItem,
             this.toolStripSeparator3,
-            this.findReferencesToolStripMenuItem});
+            this.findReferencesToolStripMenuItem,
+            this.treatAsColourToolStripMenuItem,
+            this.refactorSeparator,
+            this.deinstanceToolStripMenuItem,
+            this.createVariantToolStripMenuItem,
+            this.createCompositeToolStripMenuItem,
+            this.triggerSequenceSeparator,
+            this.addSelectedToTriggerSequenceToolStripMenuItem,
+            this.removeSelectedFromTriggerSequenceToolStripMenuItem,
+            this.autoAddToTriggerSequenceToolStripMenuItem});
             this.EntityListContextMenu.Name = "EntityListContextMenu";
             this.EntityListContextMenu.Size = new System.Drawing.Size(181, 198);
             this.EntityListContextMenu.Opening += new System.ComponentModel.CancelEventHandler(this.EntityListContextMenu_Opening);
@@ -99,7 +103,6 @@
             // 
             // createParameterToolStripMenuItem
             // 
-            this.createParameterToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createParameterToolStripMenuItem.Image")));
             this.createParameterToolStripMenuItem.Name = "createParameterToolStripMenuItem";
             this.createParameterToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
             this.createParameterToolStripMenuItem.Text = "New Parameter";
@@ -107,7 +110,6 @@
             // 
             // createFunctionToolStripMenuItem
             // 
-            this.createFunctionToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createFunctionToolStripMenuItem.Image")));
             this.createFunctionToolStripMenuItem.Name = "createFunctionToolStripMenuItem";
             this.createFunctionToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
             this.createFunctionToolStripMenuItem.Text = "New Function";
@@ -115,7 +117,6 @@
             // 
             // createInstanceOfCompositeToolStripMenuItem
             // 
-            this.createInstanceOfCompositeToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createInstanceOfCompositeToolStripMenuItem.Image")));
             this.createInstanceOfCompositeToolStripMenuItem.Name = "createInstanceOfCompositeToolStripMenuItem";
             this.createInstanceOfCompositeToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
             this.createInstanceOfCompositeToolStripMenuItem.Text = "New Instance of Composite";
@@ -123,7 +124,6 @@
             // 
             // createProxyToolStripMenuItem
             // 
-            this.createProxyToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("createProxyToolStripMenuItem.Image")));
             this.createProxyToolStripMenuItem.Name = "createProxyToolStripMenuItem";
             this.createProxyToolStripMenuItem.Size = new System.Drawing.Size(220, 22);
             this.createProxyToolStripMenuItem.Text = "New Proxy";
@@ -131,7 +131,6 @@
             // 
             // createAliasToolStripMenuItem1
             // 
-            this.createAliasToolStripMenuItem1.Image = ((System.Drawing.Image)(resources.GetObject("createAliasToolStripMenuItem1.Image")));
             this.createAliasToolStripMenuItem1.Name = "createAliasToolStripMenuItem1";
             this.createAliasToolStripMenuItem1.Size = new System.Drawing.Size(220, 22);
             this.createAliasToolStripMenuItem1.Text = "New Alias";
@@ -149,43 +148,28 @@
             this.deleteToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.deleteToolStripMenuItem.Text = "Delete";
             this.deleteToolStripMenuItem.Click += new System.EventHandler(this.deleteToolStripMenuItem_Click);
-            // 
-            // renameToolStripMenuItem
-            // 
-            this.renameToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("renameToolStripMenuItem.Image")));
-            this.renameToolStripMenuItem.Name = "renameToolStripMenuItem";
-            this.renameToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.renameToolStripMenuItem.Text = "Rename";
-            this.renameToolStripMenuItem.Click += new System.EventHandler(this.renameToolStripMenuItem_Click);
-            // 
-            // duplicateToolStripMenuItem
-            // 
-            this.duplicateToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("duplicateToolStripMenuItem.Image")));
-            this.duplicateToolStripMenuItem.Name = "duplicateToolStripMenuItem";
-            this.duplicateToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.duplicateToolStripMenuItem.Text = "Duplicate";
-            this.duplicateToolStripMenuItem.Click += new System.EventHandler(this.duplicateToolStripMenuItem_Click);
-            // 
+            //
             // toolStripSeparator2
-            // 
+            //
             this.toolStripSeparator2.Name = "toolStripSeparator2";
             this.toolStripSeparator2.Size = new System.Drawing.Size(177, 6);
-            this.toolStripSeparator2.Visible = false;
-            // 
+            //
             // copyToolStripMenuItem
-            // 
+            //
+            this.copyToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("duplicateToolStripMenuItem.Image")));
             this.copyToolStripMenuItem.Name = "copyToolStripMenuItem";
             this.copyToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.copyToolStripMenuItem.Text = "Copy";
-            this.copyToolStripMenuItem.Visible = false;
-            // 
+            this.copyToolStripMenuItem.Click += new System.EventHandler(this.copyToolStripMenuItem_Click);
+            //
             // pasteToolStripMenuItem
-            // 
+            //
+            this.pasteToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("duplicateToolStripMenuItem.Image")));
             this.pasteToolStripMenuItem.Name = "pasteToolStripMenuItem";
             this.pasteToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.pasteToolStripMenuItem.Text = "Paste";
-            this.pasteToolStripMenuItem.Visible = false;
-            // 
+            this.pasteToolStripMenuItem.Click += new System.EventHandler(this.pasteToolStripMenuItem_Click);
+            //
             // toolStripSeparator3
             // 
             this.toolStripSeparator3.Name = "toolStripSeparator3";
@@ -198,28 +182,72 @@
             this.findReferencesToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.findReferencesToolStripMenuItem.Text = "Find References";
             this.findReferencesToolStripMenuItem.Click += new System.EventHandler(this.findReferencesToolStripMenuItem_Click);
+            //
+            // treatAsColourToolStripMenuItem
+            //
+            this.treatAsColourToolStripMenuItem.Name = "treatAsColourToolStripMenuItem";
+            this.treatAsColourToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.treatAsColourToolStripMenuItem.Text = "Treat As Colour";
+            this.treatAsColourToolStripMenuItem.Click += new System.EventHandler(this.treatAsColourToolStripMenuItem_Click);
+            //
+            // refactorSeparator
             // 
-            // toolStrip1
+            this.refactorSeparator.Name = "refactorSeparator";
+            this.refactorSeparator.Size = new System.Drawing.Size(177, 6);
             // 
-            this.toolStrip1.Dock = System.Windows.Forms.DockStyle.Top;
-            this.toolStrip1.GripStyle = System.Windows.Forms.ToolStripGripStyle.Hidden;
-            this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.deleteCheckedEntities});
-            this.toolStrip1.Location = new System.Drawing.Point(0, 0);
-            this.toolStrip1.Name = "toolStrip1";
-            this.toolStrip1.Size = new System.Drawing.Size(479, 25);
-            this.toolStrip1.TabIndex = 2;
-            this.toolStrip1.Text = "toolStrip1";
+            // deinstanceToolStripMenuItem
             // 
-            // deleteCheckedEntities
+            this.deinstanceToolStripMenuItem.Name = "deinstanceToolStripMenuItem";
+            this.deinstanceToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.deinstanceToolStripMenuItem.Text = "De-instance Composite Instance";
+            this.deinstanceToolStripMenuItem.ToolTipText = "Pulls this instance's contents out into the composite you're editing, and removes the instance.";
+            this.deinstanceToolStripMenuItem.Click += new System.EventHandler(this.deinstanceToolStripMenuItem_Click);
+            //
+            // createVariantToolStripMenuItem
+            //
+            this.createVariantToolStripMenuItem.Name = "createVariantToolStripMenuItem";
+            this.createVariantToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.createVariantToolStripMenuItem.Text = "Create Composite Variant...";
+            this.createVariantToolStripMenuItem.ToolTipText = "Copies the composite this instance places and switches the instance to the copy, so changes to it affect only this instance.";
+            this.createVariantToolStripMenuItem.Click += new System.EventHandler(this.createVariantToolStripMenuItem_Click);
+            //
+            // createCompositeToolStripMenuItem
             // 
-            this.deleteCheckedEntities.Image = ((System.Drawing.Image)(resources.GetObject("deleteToolStripMenuItem.Image")));
-            this.deleteCheckedEntities.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.deleteCheckedEntities.Name = "deleteCheckedEntities";
-            this.deleteCheckedEntities.Size = new System.Drawing.Size(150, 22);
-            this.deleteCheckedEntities.Text = "Delete Checked Entities";
-            this.deleteCheckedEntities.Click += new System.EventHandler(this.deleteCheckedEntities_Click);
+            this.createCompositeToolStripMenuItem.Name = "createCompositeToolStripMenuItem";
+            this.createCompositeToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.createCompositeToolStripMenuItem.Text = "Create Composite From Selected...";
+            this.createCompositeToolStripMenuItem.ToolTipText = "Moves the selected entities into a new composite, and puts an instance of it where they were.";
+            this.createCompositeToolStripMenuItem.Click += new System.EventHandler(this.createCompositeToolStripMenuItem_Click);
             // 
+            // triggerSequenceSeparator
+            // 
+            this.triggerSequenceSeparator.Name = "triggerSequenceSeparator";
+            this.triggerSequenceSeparator.Size = new System.Drawing.Size(177, 6);
+            // 
+            // addSelectedToTriggerSequenceToolStripMenuItem
+            // 
+            this.addSelectedToTriggerSequenceToolStripMenuItem.Name = "addSelectedToTriggerSequenceToolStripMenuItem";
+            this.addSelectedToTriggerSequenceToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.addSelectedToTriggerSequenceToolStripMenuItem.Text = "Add Selected To TriggerSequence";
+            this.addSelectedToTriggerSequenceToolStripMenuItem.Click += new System.EventHandler(this.addSelectedToTriggerSequenceToolStripMenuItem_Click);
+            // 
+            // removeSelectedFromTriggerSequenceToolStripMenuItem
+            // 
+            this.removeSelectedFromTriggerSequenceToolStripMenuItem.Name = "removeSelectedFromTriggerSequenceToolStripMenuItem";
+            this.removeSelectedFromTriggerSequenceToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.removeSelectedFromTriggerSequenceToolStripMenuItem.Text = "Remove Selected From TriggerSequence";
+            this.removeSelectedFromTriggerSequenceToolStripMenuItem.Click += new System.EventHandler(this.removeSelectedFromTriggerSequenceToolStripMenuItem_Click);
+            // 
+            // autoAddToTriggerSequenceToolStripMenuItem
+            // 
+            this.autoAddToTriggerSequenceToolStripMenuItem.Name = "autoAddToTriggerSequenceToolStripMenuItem";
+            this.autoAddToTriggerSequenceToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.autoAddToTriggerSequenceToolStripMenuItem.Text = "Auto-add New Entities To TriggerSequence";
+            this.autoAddToTriggerSequenceToolStripMenuItem.ToolTipText = "Add every composite instance, model, light and other placeable entity created from" +
+    " now on - here, or in a composite stepped into from here - to this TriggerSequence." +
+    " Click again to stop.";
+            this.autoAddToTriggerSequenceToolStripMenuItem.Click += new System.EventHandler(this.autoAddToTriggerSequenceToolStripMenuItem_Click);
+            //
             // EntityList
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -228,22 +256,18 @@
             this.CloseButton = false;
             this.CloseButtonVisible = false;
             this.Controls.Add(this.compositeEntityList1);
-            this.Controls.Add(this.toolStrip1);
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
             this.DockAreas = ((WeifenLuo.WinFormsUI.Docking.DockAreas)((WeifenLuo.WinFormsUI.Docking.DockAreas.Float | WeifenLuo.WinFormsUI.Docking.DockAreas.DockLeft)));
             this.Name = "EntityList";
             this.ShowHint = WeifenLuo.WinFormsUI.Docking.DockState.DockLeft;
             this.Text = "Entities";
             this.EntityListContextMenu.ResumeLayout(false);
-            this.toolStrip1.ResumeLayout(false);
-            this.toolStrip1.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
         }
 
         #endregion
-        private System.Windows.Forms.ImageList imageList1;
         private Popups.UserControls.CompositeEntityList compositeEntityList1;
         private System.Windows.Forms.ContextMenuStrip EntityListContextMenu;
         private System.Windows.Forms.ToolStripMenuItem createToolStripMenuItem;
@@ -254,14 +278,20 @@
         private System.Windows.Forms.ToolStripMenuItem createAliasToolStripMenuItem1;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
         private System.Windows.Forms.ToolStripMenuItem deleteToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem renameToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem duplicateToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator2;
         private System.Windows.Forms.ToolStripMenuItem copyToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem pasteToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
         private System.Windows.Forms.ToolStripMenuItem findReferencesToolStripMenuItem;
-        private System.Windows.Forms.ToolStrip toolStrip1;
-        private System.Windows.Forms.ToolStripButton deleteCheckedEntities;
+        private System.Windows.Forms.ToolStripMenuItem treatAsColourToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator refactorSeparator;
+        private System.Windows.Forms.ToolStripMenuItem deinstanceToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem createVariantToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem createCompositeToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator triggerSequenceSeparator;
+        private System.Windows.Forms.ToolStripMenuItem addSelectedToTriggerSequenceToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem removeSelectedFromTriggerSequenceToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem autoAddToTriggerSequenceToolStripMenuItem;
     }
 }
+

@@ -61,26 +61,6 @@ namespace OpenCAGE.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
-        /// </summary>
-        internal static System.Drawing.Icon AnimatorController_Icon {
-            get {
-                object obj = ResourceManager.GetObject("AnimatorController_Icon", resourceCulture);
-                return ((System.Drawing.Icon)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
-        /// </summary>
-        internal static System.Drawing.Icon AreaEffector2D_Icon {
-            get {
-                object obj = ResourceManager.GetObject("AreaEffector2D_Icon", resourceCulture);
-                return ((System.Drawing.Icon)(obj));
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
         internal static System.Drawing.Bitmap arrow {
@@ -103,16 +83,6 @@ namespace OpenCAGE.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
         /// </summary>
-        internal static System.Drawing.Icon Avatar_Icon {
-            get {
-                object obj = ResourceManager.GetObject("Avatar_Icon", resourceCulture);
-                return ((System.Drawing.Icon)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
-        /// </summary>
         internal static System.Drawing.Icon cog {
             get {
                 object obj = ResourceManager.GetObject("cog", resourceCulture);
@@ -127,66 +97,6 @@ namespace OpenCAGE.Properties {
             get {
                 object obj = ResourceManager.GetObject("config_backups", resourceCulture);
                 return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
-        /// </summary>
-        internal static System.Drawing.Icon d_Prefab_Icon {
-            get {
-                object obj = ResourceManager.GetObject("d_Prefab_Icon", resourceCulture);
-                return ((System.Drawing.Icon)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
-        /// </summary>
-        internal static System.Drawing.Icon d_PrefabVariant_Icon {
-            get {
-                object obj = ResourceManager.GetObject("d_PrefabVariant_Icon", resourceCulture);
-                return ((System.Drawing.Icon)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
-        /// </summary>
-        internal static System.Drawing.Icon d_ScriptableObject_Icon {
-            get {
-                object obj = ResourceManager.GetObject("d_ScriptableObject_Icon", resourceCulture);
-                return ((System.Drawing.Icon)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
-        /// </summary>
-        internal static System.Drawing.Icon d_ScriptableObject_Icon_braces_only {
-            get {
-                object obj = ResourceManager.GetObject("d_ScriptableObject_Icon_braces_only", resourceCulture);
-                return ((System.Drawing.Icon)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] flowgraphs {
-            get {
-                object obj = ResourceManager.GetObject("flowgraphs", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
-        /// </summary>
-        internal static System.Drawing.Icon globe {
-            get {
-                object obj = ResourceManager.GetObject("globe", resourceCulture);
-                return ((System.Drawing.Icon)(obj));
             }
         }
         
@@ -316,6 +226,46 @@ namespace OpenCAGE.Properties {
         internal static System.Drawing.Bitmap RenderFilter_SoundObject {
             get {
                 object obj = ResourceManager.GetObject("RenderFilter_SoundObject", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap RenderFilter_UIIcon {
+            get {
+                object obj = ResourceManager.GetObject("RenderFilter_UIIcon", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap LiveLink_Resync {
+            get {
+                object obj = ResourceManager.GetObject("LiveLink_Resync", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap LiveLink_ShowActivity {
+            get {
+                object obj = ResourceManager.GetObject("LiveLink_ShowActivity", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap LiveLink_ClearActivity {
+            get {
+                object obj = ResourceManager.GetObject("LiveLink_ClearActivity", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

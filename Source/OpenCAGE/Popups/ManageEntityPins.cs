@@ -1,4 +1,4 @@
-using CATHODE;
+﻿using CATHODE;
 using CATHODE.Scripting;
 using CathodeLib;
 using OpenCAGE.Popups.Base;
@@ -21,6 +21,8 @@ namespace OpenCAGE.Popups
         public ManageEntityPins() : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/scripting-intro/#node-types");
+            EditorIcons.ShowIn(listView1, EditorIcons.Pins);
         }
 
         public void PopulateOptions(STNode node, Composite composite, Commands commands)
@@ -42,7 +44,11 @@ namespace OpenCAGE.Popups
 
             Dictionary<ShortGuid, STNodeOption> existingPins = new Dictionary<ShortGuid, STNodeOption>();
             foreach (STNodeOption option in node.GetAllOptions())
+            {
+                if (option == STNodeOption.Empty)
+                    continue;
                 existingPins[option.ShortGUID] = option;
+            }
 
             HashSet<ShortGuid> listedPins = new HashSet<ShortGuid>();
             List<PinPositionInfo> allPinPositions = node.GetAllPinPositions(composite, commands);
@@ -54,6 +60,8 @@ namespace OpenCAGE.Popups
 
             foreach (STNodeOption existing in node.GetAllOptions())
             {
+                if (existing == STNodeOption.Empty)
+                    continue;
                 if (listedPins.Contains(existing.ShortGUID))
                     continue;
 

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="..\packages\Costura.Fody.5.7.0\build\Costura.Fody.props" Condition="Exists('..\packages\Costura.Fody.5.7.0\build\Costura.Fody.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -23,7 +22,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
     <PlatformTarget>AnyCPU</PlatformTarget>
     <OutputPath>..\..\Build\</OutputPath>
-    <DefineConstants>DEBUG;CATHODE_FAIL_HARD;DO_ENTITY_PERF_CHECK;USE_PRETTY_COMPOSITE_PATHS</DefineConstants>
+    <DefineConstants>DEBUG;CATHODE_FAIL_HARD;DO_ENTITY_PERF_CHECK;USE_PRETTY_COMPOSITE_PATHS;AUTO_POPULATE_PARAMS;USE_DIRTY_TRACKER;ENABLE_MOD_PACKAGES</DefineConstants>
     <Prefer32Bit>false</Prefer32Bit>
     <Optimize>false</Optimize>
   </PropertyGroup>
@@ -32,11 +31,11 @@
     <OutputPath>..\..\Build\</OutputPath>
     <Prefer32Bit>false</Prefer32Bit>
     <Optimize>true</Optimize>
-    <DefineConstants>CATHODE_FAIL_HARD;USE_PRETTY_COMPOSITE_PATHS</DefineConstants>
+    <DefineConstants>CATHODE_FAIL_HARD;USE_PRETTY_COMPOSITE_PATHS;AUTO_POPULATE_PARAMS;USE_DIRTY_TRACKER;ENABLE_MOD_PACKAGES</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Ship|AnyCPU'">
     <OutputPath>..\..\Build\</OutputPath>
-    <DefineConstants>CATHODE_FAIL_HARD;USE_PRETTY_COMPOSITE_PATHS;SHIP_BUILD</DefineConstants>
+    <DefineConstants>CATHODE_FAIL_HARD;USE_PRETTY_COMPOSITE_PATHS;SHIP_BUILD;AUTO_POPULATE_PARAMS;USE_DIRTY_TRACKER;ENABLE_MOD_PACKAGES</DefineConstants>
     <Optimize>true</Optimize>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <Prefer32Bit>false</Prefer32Bit>
@@ -123,10 +122,6 @@
   <ItemGroup>
     <Reference Include="AssimpNet, Version=5.0.0.0, Culture=neutral, PublicKeyToken=0d51b391f59f42a6, processorArchitecture=MSIL">
       <HintPath>..\packages\AssimpNet.5.0.0-beta1\lib\net40\AssimpNet.dll</HintPath>
-    </Reference>
-    <Reference Include="Costura, Version=5.7.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Costura.Fody.5.7.0\lib\netstandard1.0\Costura.dll</HintPath>
-      <Private>True</Private>
     </Reference>
     <Reference Include="DiscordRPC, Version=1.2.1.24, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\DiscordRichPresence.1.2.1.24\lib\net45\DiscordRPC.dll</HintPath>
@@ -350,6 +345,72 @@
     <Compile Include="DockPanels\LevelViewerPanel.Designer.cs">
       <DependentUpon>LevelViewerPanel.cs</DependentUpon>
     </Compile>
+    <Compile Include="Popups\Resource Editors\BlendSetUserPicker.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditAnimationMetadata.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditBlendSets.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditBlendSets.Designer.cs">
+      <DependentUpon>EditBlendSets.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\UserControls\BlendSpaceView.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\ImportAnimation.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\ImportAnimation.Designer.cs">
+      <DependentUpon>ImportAnimation.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditAnimations.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditAnimations.Designer.cs">
+      <DependentUpon>EditAnimations.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\AnimationPreview.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\AnimationPreview.Designer.cs">
+      <DependentUpon>AnimationPreview.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\AnimationSkeletonPicker.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\AnimationSkeletonPicker.Designer.cs">
+      <DependentUpon>AnimationSkeletonPicker.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Anim Tree Editor\AnimationNodeEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Anim Tree Editor\AnimationNodeProxy.cs" />
+    <Compile Include="Popups\Anim Tree Editor\AnimationNodeEditor.Designer.cs">
+      <DependentUpon>AnimationNodeEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Anim Tree Editor\AnimationSets.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Anim Tree Editor\AnimationSets.Designer.cs">
+      <DependentUpon>AnimationSets.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Anim Tree Editor\AnimationTreeGraph.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Anim Tree Editor\AnimationTreeGraph.Designer.cs">
+      <DependentUpon>AnimationTreeGraph.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Anim Tree Editor\AnimTreeCanvas.cs" />
+    <Compile Include="Popups\Anim Tree Editor\AnimTreeClipboard.cs" />
+    <Compile Include="Popups\Anim Tree Editor\AnimTreeEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Anim Tree Editor\AnimTreeEditor.Designer.cs">
+      <DependentUpon>AnimTreeEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\GameDirectoryManager.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -366,6 +427,14 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="DockPanels\CompositeDisplay.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\CompositeDisplay.LiveLink.cs">
+      <DependentUpon>CompositeDisplay.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\CompositeDisplay.Debugger.cs">
+      <DependentUpon>CompositeDisplay.cs</DependentUpon>
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="DockPanels\CompositeDisplay.Designer.cs">
@@ -401,6 +470,10 @@
     <Compile Include="DockPanels\Composite Panels\EntityInspector.Designer.cs">
       <DependentUpon>EntityInspector.cs</DependentUpon>
     </Compile>
+    <Compile Include="DockPanels\Composite Panels\EntityInspector.LiveLink.cs">
+      <DependentUpon>EntityInspector.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Popups\About.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -433,6 +506,25 @@
     </Compile>
     <Compile Include="DockPanels\Composite Panels\Flowgraph.Designer.cs">
       <DependentUpon>Flowgraph.cs</DependentUpon>
+    </Compile>
+    <Compile Include="DockPanels\Composite Panels\Flowgraph.Arrange.cs">
+      <DependentUpon>Flowgraph.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\Composite Panels\Flowgraph.LiveLink.cs">
+      <DependentUpon>Flowgraph.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\Composite Panels\Flowgraph.Debugger.cs">
+      <DependentUpon>Flowgraph.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\Composite Panels\Flowgraph.PinValues.cs">
+      <DependentUpon>Flowgraph.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\Composite Panels\DebuggerNodeEditor.cs">
+      <SubType>Component</SubType>
     </Compile>
     <Compile Include="Popups\Configuration Editors\AlienConfigEditor.cs">
       <SubType>Form</SubType>
@@ -661,6 +753,9 @@
     <Compile Include="Popups\ControlsWindow.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\SnapIncrements.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Popups\ControlsWindow.Designer.cs">
       <DependentUpon>ControlsWindow.cs</DependentUpon>
     </Compile>
@@ -675,6 +770,18 @@
     </Compile>
     <Compile Include="Popups\GalaxyEditor.Designer.cs">
       <DependentUpon>GalaxyEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\ErrorLog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\LevelSoundOverrideEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\LevelSoundImportDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\LevelSoundBankDialog.cs">
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="Popups\LaunchGame.cs">
       <SubType>Form</SubType>
@@ -700,18 +807,67 @@
     <Compile Include="Popups\Resource Editors\EditMaterialMapping.Designer.cs">
       <DependentUpon>EditMaterialMapping.cs</DependentUpon>
     </Compile>
+    <Compile Include="Popups\Resource Editors\EditCollisionProxy.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditCollisionProxy.Designer.cs">
+      <DependentUpon>EditCollisionProxy.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\PhysicsImportSettings.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\PhysicsBodyProperties.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditPhysicsSystem.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditPhysicsSystem.Designer.cs">
+      <DependentUpon>EditPhysicsSystem.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\ExportComposite.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Popups\ExportComposite.Designer.cs">
       <DependentUpon>ExportComposite.cs</DependentUpon>
     </Compile>
-    <Compile Include="Popups\ModifyParameters.cs">
+    <Compile Include="Popups\CreateLevel.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Popups\ModifyParameters.Designer.cs">
-      <DependentUpon>ModifyParameters.cs</DependentUpon>
+    <Compile Include="Popups\CreateLevel.Designer.cs">
+      <DependentUpon>CreateLevel.cs</DependentUpon>
     </Compile>
+    <Compile Include="Popups\ImportComposites.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\ImportComposites.Designer.cs">
+      <DependentUpon>ImportComposites.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\ExportCompositeArchive.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\ExportCompositeArchive.Designer.cs">
+      <DependentUpon>ExportCompositeArchive.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\ImportCompositeArchive.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\ImportCompositeArchive.Designer.cs">
+      <DependentUpon>ImportCompositeArchive.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Scripts\CompositeArchive.cs" />
+    <Compile Include="Popups\UserControls\CompositeTree.cs" />
+    <Compile Include="Popups\UserControls\CompositePreviewPane.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Popups\UserControls\LevelPicker.cs" />
+    <Compile Include="Scripts\FileAssociations.cs" />
+    <Compile Include="Scripts\LevelEditorTables.cs" />
+    <Compile Include="Scripts\PackageDropTarget.cs" />
+    <Compile Include="Scripts\PackageFiles.cs" />
+    <Compile Include="Scripts\PackageHandover.cs" />
+    <Compile Include="Scripts\CompositeImporter.cs" />
+    <Compile Include="Scripts\DeadProxyReport.cs" />
     <Compile Include="Popups\Function Editors\ShowCompositeInstanceOverrides.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -736,6 +892,25 @@
     <Compile Include="Popups\Resource Editors\EditMaterial.Designer.cs">
       <DependentUpon>EditMaterial.cs</DependentUpon>
     </Compile>
+    <Compile Include="Popups\Resource Editors\GenerateMaterial.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\GenerateMaterial.Designer.cs">
+      <DependentUpon>GenerateMaterial.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditTexture.MipBar.cs">
+      <DependentUpon>EditTexture.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\TextureImportOptions.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\NewMaterialPicker.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\SelectShaderPermutation.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Popups\Resource Editors\EditTexture.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -747,6 +922,12 @@
     </Compile>
     <Compile Include="Popups\SelectDestinationPin.Designer.cs">
       <DependentUpon>SelectDestinationPin.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\ShowConnectedLinks.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\ShowConnectedLinks.Designer.cs">
+      <DependentUpon>ShowConnectedLinks.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\ManageEntityPins.cs">
       <SubType>Form</SubType>
@@ -775,12 +956,6 @@
     <Compile Include="Popups\SelectEnumString.Designer.cs">
       <DependentUpon>SelectEnumString.cs</DependentUpon>
     </Compile>
-    <Compile Include="Popups\SetNodeColours.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Popups\SetNodeColours.Designer.cs">
-      <DependentUpon>SetNodeColours.cs</DependentUpon>
-    </Compile>
     <Compile Include="Popups\SetNumericStep.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -799,6 +974,9 @@
     <Compile Include="Popups\ShowInstanceInfo.Designer.cs">
       <DependentUpon>ShowInstanceInfo.cs</DependentUpon>
     </Compile>
+    <Compile Include="Popups\UserControls\AnimationTimeline.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Popups\UserControls\CompositeEntityList.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -813,17 +991,116 @@
     </Compile>
     <Compile Include="Scripts\AlienLevel.cs" />
     <Compile Include="Scripts\AnalyticsManager.cs" />
-    <Compile Include="Scripts\DarkModeCS.cs" />
-    <Compile Include="Scripts\MaterialApplier.cs" />
-    <Compile Include="Scripts\CompositePath.cs" />
-    <Compile Include="Scripts\DirectXTexUtility.cs" />
-    <Compile Include="Scripts\DirtyTracker.cs" />
-    <Compile Include="Scripts\EnumStringListViewItems.cs" />
-    <Compile Include="Scripts\FlowgraphLayoutManager.cs" />
-    <Compile Include="Scripts\GroupedListView.cs">
+    <Compile Include="Scripts\Audio\OggWriter.cs" />
+    <Compile Include="Scripts\Audio\SoundEventMetadata.cs" />
+    <Compile Include="Scripts\Audio\SoundPreviewLibrary.cs" />
+    <Compile Include="Scripts\Audio\VorbisNative.cs" />
+    <Compile Include="Scripts\AssetName.cs" />
+    <Compile Include="Scripts\AssetUsage.cs" />
+    <Compile Include="Scripts\UiMovieOverrides.cs" />
+    <Compile Include="Popups\UserControls\AssetNameBox.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Scripts\HiddenProcessLauncher.cs" />
+    <Compile Include="Scripts\NativeAssets.cs" />
+    <Compile Include="Scripts\Textures\CubemapFilter.cs" />
+    <Compile Include="Scripts\Textures\DdsFile.cs" />
+    <Compile Include="Scripts\Textures\EnvironmentMapCapture.cs" />
+    <Compile Include="Scripts\Textures\TextureConverter.cs" />
+    <Compile Include="Scripts\Audio\VorbisReader.cs" />
+    <Compile Include="Scripts\Audio\VorbisBitStream.cs" />
+    <Compile Include="Scripts\Audio\WavePlayer.cs" />
+    <Compile Include="Scripts\Audio\WwiseAudioDecoder.cs" />
+    <Compile Include="Scripts\Audio\WwiseCodebooks.cs" />
+    <Compile Include="Scripts\Audio\WwiseFilePackage.cs" />
+    <Compile Include="Scripts\Audio\WwiseFilePackageBuilder.cs" />
+    <Compile Include="Scripts\Audio\LevelSoundOverride.cs" />
+    <Compile Include="Scripts\Audio\WwiseObjects.cs" />
+    <Compile Include="Scripts\Audio\WwiseSoundBank.cs" />
+    <Compile Include="Scripts\Audio\WwiseSoundLibrary.cs" />
+    <Compile Include="Scripts\Audio\ISampleReader.cs" />
+    <Compile Include="Scripts\Audio\WwiseAdpcmReader.cs" />
+    <Compile Include="Scripts\Audio\WwiseAdpcmWriter.cs" />
+    <Compile Include="Scripts\Audio\WwiseVorbisConverter.cs" />
+    <Compile Include="Scripts\Audio\WwiseVorbisWriter.cs" />
+    <Compile Include="Scripts\Audio\WwiseVorbisSetups.cs" />
+    <Compile Include="Scripts\Audio\WwiseMediaInjector.cs" />
+    <Compile Include="Scripts\Audio\VorbisEncoder.cs" />
+    <Compile Include="Scripts\Audio\WaveFile.cs" />
+    <Compile Include="Scripts\Audio\SoundImport.cs" />
+    <Compile Include="Scripts\Audio\AudioConform.cs" />
+    <Compile Include="Scripts\Audio\SoundNames.cs" />
+    <Compile Include="Scripts\Audio\WwiseBankBuilder.cs" />
+    <Compile Include="UserControls\SoundPreviewPanel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Scripts\Theming\ThemeColours.cs" />
+    <Compile Include="Scripts\Theming\ThemeEngine.cs" />
+    <Compile Include="Scripts\Theming\ThemeListView.cs" />
+    <Compile Include="Scripts\Theming\ThemeListViewHeader.cs" />
+    <Compile Include="Scripts\Theming\ThemeToolStripRenderer.cs" />
+    <Compile Include="Scripts\Theming\ThemeManager.cs" />
+    <Compile Include="Scripts\Theming\ThemeNative.cs" />
+    <Compile Include="Scripts\Theming\ThemePainters.cs" />
+    <Compile Include="Scripts\Theming\WpfTheme.cs" />
+    <Compile Include="Scripts\MaterialApplier.cs" />
+    <Compile Include="Scripts\MaterialConsistency.cs" />
+    <Compile Include="Scripts\MaterialGenerator.cs" />
+    <Compile Include="Scripts\Modding\ModToolkit.cs" />
+    <Compile Include="Scripts\Modding\VanillaManifest.cs" />
+    <Compile Include="Scripts\Modding\HashCache.cs" />
+    <Compile Include="Scripts\Modding\ShaderDatabase.cs" />
+    <Compile Include="Scripts/Modding/ShaderDatabaseCatalogue.cs" />
+    <Compile Include="Scripts\Modding\InstallScanner.cs" />
+    <Compile Include="Scripts\Modding\BaselineStore.cs" />
+    <Compile Include="Scripts\Modding\ModState.cs" />
+    <Compile Include="Scripts\Modding\DeltaCodec.cs" />
+    <Compile Include="Scripts\Modding\BmlPatch.cs" />
+    <Compile Include="Scripts\Modding\ModPackage.cs" />
+    <Compile Include="Scripts\Modding\ModExportBuilder.cs" />
+    <Compile Include="Scripts\Modding\PakParts.cs" />
+    <Compile Include="Scripts\Modding\ModInstaller.cs" />
+    <Compile Include="Scripts\Modding\LevelMerge.cs" />
+    <Compile Include="Scripts\Modding\LevelPart.cs" />
+    <Compile Include="Scripts\Modding\Merging\MergeCore.cs" />
+    <Compile Include="Scripts\Modding\Merging\XmlMerge.cs" />
+    <Compile Include="Scripts\Modding\Merging\TextMerge.cs" />
+    <Compile Include="Scripts\Modding\Merging\FileMerger.cs" />
+    <Compile Include="Scripts\Modding\Merging\AnimationPakMerge.cs" />
+    <Compile Include="Scripts\Modding\VanillaManifestGenerator.cs" />
+    <Compile Include="Scripts\Modding\ModServices.cs" />
+    <Compile Include="Scripts\Modding\VanillaConfigs.cs" />
+    <Compile Include="Popups\ModManagerForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\ModExporterForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\PristineCaptureWizard.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Scripts\CompositePath.cs" />
+    <Compile Include="Scripts\CloseReasons.cs" />
+    <Compile Include="Scripts\DirectXTexUtility.cs" />
+    <Compile Include="Scripts\BuildFingerprint.cs" />
+    <Compile Include="Scripts\DirtyTracker.cs" />
+    <Compile Include="Scripts\EditHistory.cs" />
+    <Compile Include="Scripts\EnumStringListViewItems.cs" />
+    <Compile Include="Scripts\FlowgraphLayoutManager.cs" />
+    <Compile Include="Scripts\CompositePreviewManager.cs" />
+    <Compile Include="Scripts\AnimationPakWrite.cs" />
+    <Compile Include="Scripts\AnimTreeLayoutManager.cs" />
+    <Compile Include="Scripts\LoadedGameFiles.cs" />
+    <Compile Include="Scripts\AnimTreeLayouts.cs" />
+    <Compile Include="Scripts\CollisionProxyImporter.cs" />
+    <Compile Include="Scripts\PhysicsSystemImporter.cs" />
+    <Compile Include="Scripts\CompositePreviewImages.cs" />
+    <Compile Include="Scripts\EditorIcons.cs" />
+    <Compile Include="Scripts\CompositeBrowserMode.cs" />
+    <Compile Include="Scripts\CompositeSearchOption.cs" />
+    <Compile Include="Scripts\BulkExport.cs" />
     <Compile Include="Scripts\LocalDebug_NEW.cs" />
+    <Compile Include="Scripts\BehaviourTreeLevels.cs" />
     <Compile Include="Scripts\LevelContent.cs" />
     <Compile Include="Popups\Base\BaseWindow.cs">
       <SubType>Form</SubType>
@@ -849,17 +1126,11 @@
     <Compile Include="Popups\EditSpline.Designer.cs">
       <DependentUpon>EditSpline.cs</DependentUpon>
     </Compile>
-    <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_DeleteParam.cs">
+    <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_AddStringEvent.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_DeleteParam.Designer.cs">
-      <DependentUpon>CAGEAnimation_DeleteParam.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_DeleteEvent.cs">
+    <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_AddKeyframeAtTime.cs">
       <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_DeleteEvent.Designer.cs">
-      <DependentUpon>CAGEAnimation_DeleteEvent.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\Function Editors\CharacterEditor.cs">
       <SubType>Form</SubType>
@@ -873,23 +1144,18 @@
     <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_SelectParameter.Designer.cs">
       <DependentUpon>CAGEAnimation_SelectParameter.cs</DependentUpon>
     </Compile>
-    <Compile Include="Popups\Function Editors\CAGEAnimation\Keyframe.xaml.cs">
-      <DependentUpon>Keyframe.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Popups\Function Editors\CAGEAnimation\Timeline.xaml.cs">
-      <DependentUpon>Timeline.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Popups\Function Editors\CAGEAnimation\TimeMarker.xaml.cs">
-      <DependentUpon>TimeMarker.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Popups\Function Editors\CAGEAnimation\Track.xaml.cs">
-      <DependentUpon>Track.xaml</DependentUpon>
+    <Compile Include="Popups\Function Editors\CAGEAnimation\CurveEditor.xaml.cs">
+      <DependentUpon>CurveEditor.xaml</DependentUpon>
     </Compile>
     <Compile Include="Popups\Function Editors\CAGEAnimationEditor.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Popups\Function Editors\CAGEAnimationEditor.Designer.cs">
       <DependentUpon>CAGEAnimationEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Function Editors\CAGEAnimationEditor.AnimationMode.cs">
+      <DependentUpon>CAGEAnimationEditor.cs</DependentUpon>
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="Popups\SelectLevel.cs">
       <SubType>Form</SubType>
@@ -913,11 +1179,54 @@
       <DependentUpon>GUI_SplineViewer.xaml</DependentUpon>
     </Compile>
     <Compile Include="Scripts\CathodeLibExtensions.cs" />
+    <Compile Include="Scripts\ViewportCrashException.cs" />
+    <Compile Include="Scripts\ViewerStartupFailure.cs" />
+    <Compile Include="Scripts\ModelExport\FbxDocument.cs" />
+    <Compile Include="Scripts\ModelExport\FbxExporter.cs" />
+    <Compile Include="Scripts\ModelExport\GltfExporter.cs" />
+    <Compile Include="Scripts\ModelExport\ModelExporter.cs" />
+    <Compile Include="Scripts\ModelIO.cs" />
+    <Compile Include="Scripts\AnimationExport.cs" />
+    <Compile Include="Scripts\AnimationImport.cs" />
+    <Compile Include="Scripts\AnimationRetarget.cs" />
+    <Compile Include="Scripts\ModelImportRig.cs" />
+    <Compile Include="Scripts\CompositeInstanceParameters.cs" />
+    <Compile Include="Scripts\ColourParameters.cs" />
     <Compile Include="Scripts\ComboBoxExtensions.cs" />
     <Compile Include="Scripts\ListViewColumnSorter.cs" />
+    <Compile Include="Scripts\ListViewGroupNavigation.cs" />
+    <Compile Include="Scripts\ModelCompositeBuilder.cs" />
+    <Compile Include="Scripts\Undo\CompositeEdits.cs" />
+    <Compile Include="Scripts\Undo\RefactorEdit.cs" />
+    <Compile Include="Scripts\Undo\EntityEdits.cs" />
+    <Compile Include="Scripts\Undo\PageEdits.cs" />
+    <Compile Include="Scripts\Undo\SessionEdits.cs" />
+    <Compile Include="Scripts\Undo\FlowgraphEdits.cs" />
+    <Compile Include="Scripts\Undo\IEdit.cs" />
+    <Compile Include="Scripts\Undo\ParameterEdits.cs" />
+    <Compile Include="Scripts\Undo\UndoContext.cs" />
+    <Compile Include="Scripts\Undo\UndoKeys.cs" />
+    <Compile Include="Scripts\Undo\UndoLabels.cs" />
+    <Compile Include="Scripts\Undo\UndoStack.cs" />
+    <Compile Include="Scripts\Undo\WinFormsUndoUi.cs" />
+    <Compile Include="CommandsEditor.Undo.cs">
+      <DependentUpon>CommandsEditor.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="CommandsEditor.Mcp.cs">
+      <DependentUpon>CommandsEditor.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\Composite Panels\Flowgraph.Undo.cs">
+      <DependentUpon>Flowgraph.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Scripts\LocalDebug.cs" />
     <Compile Include="Scripts\Logger.cs" />
     <Compile Include="Scripts\NodeUtils.cs" />
+    <Compile Include="Scripts\ZoneColours.cs" />
+    <Compile Include="Scripts\TriggerSequenceMembers.cs" />
+    <Compile Include="Scripts\ProxyParameters.cs" />
     <Compile Include="Popups\AddOrEditResource.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -925,6 +1234,7 @@
       <DependentUpon>AddOrEditResource.cs</DependentUpon>
     </Compile>
     <Compile Include="Scripts\EditorUtils.cs" />
+    <Compile Include="Scripts\EntityParameterVisibility.cs" />
     <Compile Include="Scripts\GlobalEntitySearchHelper.cs" />
     <Compile Include="Scripts\GlobalEntitySearchScopeSettings.cs" />
     <Compile Include="Popups\AddEntity_Variable.cs">
@@ -932,6 +1242,12 @@
     </Compile>
     <Compile Include="Popups\AddEntity_Variable.Designer.cs">
       <DependentUpon>AddEntity_Variable.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\RefactorDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\RefactorDialog.Designer.cs">
+      <DependentUpon>RefactorDialog.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\AddComposite.cs">
       <SubType>Form</SubType>
@@ -957,23 +1273,11 @@
     <Compile Include="Popups\SelectHierarchy.Designer.cs">
       <DependentUpon>SelectHierarchy.cs</DependentUpon>
     </Compile>
-    <Compile Include="Popups\EditMVR.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Popups\EditMVR.Designer.cs">
-      <DependentUpon>EditMVR.cs</DependentUpon>
-    </Compile>
     <Compile Include="Popups\Function Editors\TriggerSequenceEditor.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Popups\Function Editors\TriggerSequenceEditor.Designer.cs">
       <DependentUpon>TriggerSequenceEditor.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Popups\RenameEntity.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Popups\RenameEntity.Designer.cs">
-      <DependentUpon>RenameEntity.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\Resource Editors\EditModel.cs">
       <SubType>Form</SubType>
@@ -989,6 +1293,12 @@
     </Compile>
     <Compile Include="Popups\Resource Editors\ModelImportPreview.Designer.cs">
       <DependentUpon>ModelImportPreview.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\SkeletonPicker.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\SkeletonPicker.Designer.cs">
+      <DependentUpon>SkeletonPicker.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\Resource Editors\EditPAK2.cs">
       <SubType>Form</SubType>
@@ -1020,6 +1330,12 @@
     <Compile Include="Popups\Resource Editors\GUI_ModelViewer.xaml.cs">
       <DependentUpon>GUI_ModelViewer.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Popups\Resource Editors\GUI_AnimationViewer.xaml.cs">
+      <DependentUpon>GUI_AnimationViewer.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\GUI_CubemapViewer.xaml.cs">
+      <DependentUpon>GUI_CubemapViewer.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Popups\UserControls\GUI_Resource_AnimatedModel.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -1031,6 +1347,12 @@
     </Compile>
     <Compile Include="Popups\UserControls\GUI_Resource_CollisionMapping.Designer.cs">
       <DependentUpon>GUI_Resource_CollisionMapping.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\UserControls\GUI_Resource_DynamicPhysicsSystem.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Popups\UserControls\GUI_Resource_DynamicPhysicsSystem.Designer.cs">
+      <DependentUpon>GUI_Resource_DynamicPhysicsSystem.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\UserControls\GUI_Resource_RenderableInstance.cs">
       <SubType>UserControl</SubType>
@@ -1053,6 +1375,18 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="Scripts\ParameterModificationTracker.cs" />
+    <Compile Include="Scripts\PrimaryInstanceLock.cs" />
+    <Compile Include="Scripts\CAGE Animation\AnimationModeSession.cs" />
+    <Compile Include="Scripts\CAGE Animation\CageAnimationCurves.cs" />
+    <Compile Include="Scripts\CAGE Animation\CageAnimationDrivers.cs" />
+    <Compile Include="Scripts\ParameterGrid\EntityParameterProxy.cs" />
+    <Compile Include="Scripts\ParameterGrid\ParameterGridDescriptors.cs" />
+    <Compile Include="Scripts\ParameterGrid\ParameterGridPanel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Scripts\ParameterGrid\ParameterGridValues.cs" />
+    <Compile Include="Scripts\ParameterGrid\GridTabNavigator.cs" />
+    <Compile Include="Scripts\ParameterGrid\ParameterGroupProvider.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\Packet.cs" />
     <Compile Include="Scripts\SmoothNumericUpDown.cs">
       <SubType>Component</SubType>
@@ -1063,11 +1397,24 @@
     <Compile Include="Scripts\SettingsManager.cs" />
     <Compile Include="Scripts\SettingsDefaults.cs" />
     <Compile Include="Scripts\NumericStepSettings.cs" />
+    <Compile Include="Scripts\SnapIncrementSettings.cs" />
     <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\RenderFilterDefinitions.cs">
       <Link>Scripts\RenderFilterDefinitions.cs</Link>
     </Compile>
     <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\TransformSnapDefinitions.cs">
       <Link>Scripts\TransformSnapDefinitions.cs</Link>
+    </Compile>
+    <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\ZoneDefinitions.cs">
+      <Link>Scripts\ZoneDefinitions.cs</Link>
+    </Compile>
+    <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\ZoneMembership.cs">
+      <Link>Scripts\ZoneMembership.cs</Link>
+    </Compile>
+    <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\SyncedZone.cs">
+      <Link>Scripts\Unity Connection\SyncedZone.cs</Link>
+    </Compile>
+    <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\EntityInstancePath.cs">
+      <Link>Scripts\EntityInstancePath.cs</Link>
     </Compile>
     <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\LevelViewerViewportDefinitions.cs">
       <Link>Scripts\LevelViewerViewportDefinitions.cs</Link>
@@ -1084,14 +1431,84 @@
     <Compile Include="Scripts\Unity Connection\ViewerEmbedCoordinator.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerInboundDispatcher.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerViewportModeSync.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerBusy.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerPopulateSync.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerZoneSync.cs" />
     <Compile Include="Scripts\Unity Connection\WebSocketPacketLog.cs" />
     <Compile Include="Scripts\Unity Connection\Send.cs" />
     <Compile Include="Scripts\Unity Connection\Client.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerSelectionSync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerEntitySync.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerEntityCreateSync.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerCompositeDrop.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerFunctionDrop.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerResourceSync.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerScriptResync.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerClipboardSync.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerEntityDuplicateSync.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerUndoSync.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerContextMenu.cs" />
+    <Compile Include="Scripts\EntityClipboard.cs" />
+    <Compile Include="Scripts\InstanceTransform.cs" />
+    <Compile Include="Scripts\CompositeRefactoring.cs" />
+    <Compile Include="Scripts\MCP\McpAssetTools.cs" />
+    <Compile Include="Scripts\MCP\McpAnimationAssetTools.cs" />
+    <Compile Include="Scripts\MCP\McpCageAnimationTools.cs" />
+    <Compile Include="Scripts\MCP\McpEditingTools.cs" />
+    <Compile Include="Scripts\MCP\McpGameDataTools.cs" />
+    <Compile Include="Scripts\MCP\McpLevelTools.cs" />
+    <Compile Include="Scripts\MCP\McpDebugger.cs" />
+    <Compile Include="Scripts\MCP\McpMaterialTools.cs" />
+    <Compile Include="Scripts\MCP\McpPageTools.cs" />
+    <Compile Include="Scripts\MCP\McpResourceTools.cs" />
+    <Compile Include="Scripts\MCP\McpBrowseTools.cs" />
+    <Compile Include="Scripts\MCP\McpEditor.cs" />
+    <Compile Include="Scripts\MCP\McpEditorTools.cs" />
+    <Compile Include="Scripts\MCP\McpFlowgraphTools.cs" />
+    <Compile Include="Scripts\MCP\McpImportTools.cs" />
+    <Compile Include="Scripts\MCP\McpPortingTools.cs" />
+    <Compile Include="Scripts\MCP\McpScript.cs" />
+    <Compile Include="Scripts\MCP\McpScriptEdit.cs" />
+    <Compile Include="Scripts\MCP\McpScriptTools.cs" />
+    <Compile Include="Scripts\MCP\McpServer.cs" />
+    <Compile Include="Scripts\MCP\McpTool.cs" />
+    <Compile Include="Scripts\MCP\McpViewportTools.cs" />
+    <Compile Include="Scripts\MCP\McpZonePlanner.cs" />
+    <Compile Include="Scripts\MCP\McpZonePlanner.Geometry.cs">
+      <DependentUpon>McpZonePlanner.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Scripts\MCP\McpSpatialTools.cs" />
+    <Compile Include="Scripts\MCP\McpNavTools.cs" />
+    <Compile Include="Scripts\MCP\McpPlatformTools.cs" />
+    <Compile Include="Scripts\MCP\McpSoundTools.cs" />
+    <Compile Include="Scripts\MCP\McpCameraTools.cs" />
+    <Compile Include="Scripts\MCP\McpCharacterTools.cs" />
+    <Compile Include="Scripts\MCP\McpLightTools.cs" />
+    <Compile Include="Scripts\MCP\McpUsageTools.cs" />
+    <Compile Include="Scripts\MCP\McpCollision.cs" />
+    <Compile Include="Scripts\MCP\McpRegion.cs" />
+    <Compile Include="Scripts\MCP\McpZoneTools.cs" />
+    <Compile Include="Scripts\MCP\McpZoneTools.Model.cs">
+      <DependentUpon>McpZoneTools.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Scripts\MCP\McpZoneTools.Plan.cs">
+      <DependentUpon>McpZoneTools.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Scripts\CompositeNavigationHistory.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerCreateMode.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerCreateModeKeys.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerMeasureMode.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerStateInfoMode.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerParameterSync.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\Client.cs" />
+    <Compile Include="Scripts\RuntimeUtils Connection\LiveLink.cs" />
+    <Compile Include="Scripts\RuntimeUtils Connection\LiveLinkAnimation.cs" />
+    <Compile Include="Scripts\RuntimeUtils Connection\LiveLinkActivity.cs" />
+    <Compile Include="Scripts\RuntimeUtils Connection\LiveLinkCamera.cs" />
+    <Compile Include="Scripts\RuntimeUtils Connection\LiveLinkDebugger.cs" />
+    <Compile Include="Scripts\RuntimeUtils Connection\LiveLinkErrors.cs" />
+    <Compile Include="Scripts\RuntimeUtils Connection\LiveLinkTrace.cs" />
+    <Compile Include="Scripts\RuntimeUtils Connection\LiveSettings.cs" />
     <Compile Include="Scripts\RuntimeUtils Connection\Send.cs" />
     <Compile Include="Scripts\EntityPaletteRecent.cs" />
     <Compile Include="Scripts\GameDirectorySelector.cs" />
@@ -1102,44 +1519,8 @@
     <Compile Include="UserControls\Base\ParameterUserControl.Designer.cs">
       <DependentUpon>ParameterUserControl.cs</DependentUpon>
     </Compile>
-    <Compile Include="UserControls\Variants\GUI_StringVariant_MappingSelect.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\Variants\GUI_StringVariant_MappingSelect.Designer.cs">
-      <DependentUpon>GUI_StringVariant_MappingSelect.cs</DependentUpon>
-    </Compile>
-    <Compile Include="UserControls\Variants\GUI_StringVariant_AssetDropdown.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\Variants\GUI_StringVariant_AssetDropdown.Designer.cs">
-      <DependentUpon>GUI_StringVariant_AssetDropdown.cs</DependentUpon>
-    </Compile>
-    <Compile Include="UserControls\Variants\GUI_NumericVariant_Slider.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\Variants\GUI_NumericVariant_Slider.Designer.cs">
-      <DependentUpon>GUI_NumericVariant_Slider.cs</DependentUpon>
-    </Compile>
-    <Compile Include="UserControls\Variants\GUI_VectorVariant_Colour.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\Variants\GUI_VectorVariant_Colour.Designer.cs">
-      <DependentUpon>GUI_VectorVariant_Colour.cs</DependentUpon>
-    </Compile>
-    <Compile Include="UserControls\GUI_BoolDataType.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\GUI_BoolDataType.Designer.cs">
-      <DependentUpon>GUI_BoolDataType.cs</DependentUpon>
-    </Compile>
     <Compile Include="UserControls\CompositePathBreadcrumb.cs">
       <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\GUI_EnumDataType.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\GUI_EnumDataType.Designer.cs">
-      <DependentUpon>GUI_EnumDataType.cs</DependentUpon>
     </Compile>
     <Compile Include="UserControls\GUI_Link.cs">
       <SubType>UserControl</SubType>
@@ -1147,41 +1528,11 @@
     <Compile Include="UserControls\GUI_Link.Designer.cs">
       <DependentUpon>GUI_Link.cs</DependentUpon>
     </Compile>
-    <Compile Include="UserControls\GUI_ResourceDataType.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\GUI_ResourceDataType.Designer.cs">
-      <DependentUpon>GUI_ResourceDataType.cs</DependentUpon>
-    </Compile>
-    <Compile Include="UserControls\GUI_NumericDataType.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\GUI_NumericDataType.Designer.cs">
-      <DependentUpon>GUI_NumericDataType.cs</DependentUpon>
-    </Compile>
-    <Compile Include="UserControls\GUI_SplineDataType.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\GUI_SplineDataType.Designer.cs">
-      <DependentUpon>GUI_SplineDataType.cs</DependentUpon>
-    </Compile>
-    <Compile Include="UserControls\GUI_StringDataType.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\GUI_StringDataType.Designer.cs">
-      <DependentUpon>GUI_StringDataType.cs</DependentUpon>
-    </Compile>
     <Compile Include="UserControls\GUI_TransformDataType.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="UserControls\GUI_TransformDataType.Designer.cs">
       <DependentUpon>GUI_TransformDataType.cs</DependentUpon>
-    </Compile>
-    <Compile Include="UserControls\GUI_VectorDataType.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UserControls\GUI_VectorDataType.Designer.cs">
-      <DependentUpon>GUI_VectorDataType.cs</DependentUpon>
     </Compile>
     <EmbeddedResource Include="CommandsEditor.resx">
       <DependentUpon>CommandsEditor.cs</DependentUpon>
@@ -1191,6 +1542,7 @@
     </EmbeddedResource>
     <EmbeddedResource Include="DockPanels\CompositeDisplay.resx">
       <DependentUpon>CompositeDisplay.cs</DependentUpon>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
     <EmbeddedResource Include="DockPanels\CompositeBrowser.resx">
       <DependentUpon>CompositeBrowser.cs</DependentUpon>
@@ -1219,6 +1571,18 @@
     <EmbeddedResource Include="DockPanels\Composite Panels\Flowgraph.resx">
       <DependentUpon>Flowgraph.cs</DependentUpon>
       <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Anim Tree Editor\AnimationNodeEditor.resx">
+      <DependentUpon>AnimationNodeEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Anim Tree Editor\AnimationSets.resx">
+      <DependentUpon>AnimationSets.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Anim Tree Editor\AnimationTreeGraph.resx">
+      <DependentUpon>AnimationTreeGraph.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Anim Tree Editor\AnimTreeEditor.resx">
+      <DependentUpon>AnimTreeEditor.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\Configuration Editors\AlienConfigEditor.resx">
       <DependentUpon>AlienConfigEditor.cs</DependentUpon>
@@ -1358,11 +1722,20 @@
     <EmbeddedResource Include="Popups\Resource Editors\EditMaterialMapping.resx">
       <DependentUpon>EditMaterialMapping.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Resource Editors\EditCollisionProxy.resx">
+      <DependentUpon>EditCollisionProxy.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Resource Editors\EditPhysicsSystem.resx">
+      <DependentUpon>EditPhysicsSystem.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Popups\ExportComposite.resx">
       <DependentUpon>ExportComposite.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Popups\ModifyParameters.resx">
-      <DependentUpon>ModifyParameters.cs</DependentUpon>
+    <EmbeddedResource Include="Popups\ExportCompositeArchive.resx">
+      <DependentUpon>ExportCompositeArchive.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\ImportCompositeArchive.resx">
+      <DependentUpon>ImportCompositeArchive.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\InstanceSelection.resx">
       <DependentUpon>InstanceSelection.cs</DependentUpon>
@@ -1386,6 +1759,9 @@
     <EmbeddedResource Include="Popups\SelectDestinationPin.resx">
       <DependentUpon>SelectDestinationPin.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Popups\ShowConnectedLinks.resx">
+      <DependentUpon>ShowConnectedLinks.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Popups\ManageEntityPins.resx">
       <DependentUpon>ManageEntityPins.cs</DependentUpon>
     </EmbeddedResource>
@@ -1400,12 +1776,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\EditSpline.resx">
       <DependentUpon>EditSpline.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_DeleteParam.resx">
-      <DependentUpon>CAGEAnimation_DeleteParam.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_DeleteEvent.resx">
-      <DependentUpon>CAGEAnimation_DeleteEvent.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\Function Editors\CharacterEditor.resx">
       <DependentUpon>CharacterEditor.cs</DependentUpon>
@@ -1431,17 +1801,11 @@
     <EmbeddedResource Include="Popups\SelectHierarchy.resx">
       <DependentUpon>SelectHierarchy.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Popups\EditMVR.resx">
-      <DependentUpon>EditMVR.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_SelectParameter.resx">
       <DependentUpon>CAGEAnimation_SelectParameter.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\Function Editors\TriggerSequenceEditor.resx">
       <DependentUpon>TriggerSequenceEditor.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Popups\RenameEntity.resx">
-      <DependentUpon>RenameEntity.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\SelectLevel.resx">
       <DependentUpon>SelectLevel.cs</DependentUpon>
@@ -1462,9 +1826,6 @@
     <EmbeddedResource Include="Popups\Resource Editors\EditPAK2.resx">
       <DependentUpon>EditPAK2.cs</DependentUpon>
       <SubType>Designer</SubType>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Popups\SetNodeColours.resx">
-      <DependentUpon>SetNodeColours.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\SetNumericStep.resx">
       <DependentUpon>SetNumericStep.cs</DependentUpon>
@@ -1499,6 +1860,9 @@
     <EmbeddedResource Include="Popups\UserControls\GUI_Resource_CollisionMapping.resx">
       <DependentUpon>GUI_Resource_CollisionMapping.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Popups\UserControls\GUI_Resource_DynamicPhysicsSystem.resx">
+      <DependentUpon>GUI_Resource_DynamicPhysicsSystem.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Popups\UserControls\GUI_Resource_Default.resx">
       <DependentUpon>GUI_Resource_Default.cs</DependentUpon>
     </EmbeddedResource>
@@ -1510,44 +1874,11 @@
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <EmbeddedResource Include="UserControls\Variants\GUI_StringVariant_MappingSelect.resx">
-      <DependentUpon>GUI_StringVariant_MappingSelect.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UserControls\Variants\GUI_StringVariant_AssetDropdown.resx">
-      <DependentUpon>GUI_StringVariant_AssetDropdown.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UserControls\Variants\GUI_NumericVariant_Slider.resx">
-      <DependentUpon>GUI_NumericVariant_Slider.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UserControls\Variants\GUI_VectorVariant_Colour.resx">
-      <DependentUpon>GUI_VectorVariant_Colour.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UserControls\GUI_BoolDataType.resx">
-      <DependentUpon>GUI_BoolDataType.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UserControls\GUI_EnumDataType.resx">
-      <DependentUpon>GUI_EnumDataType.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="UserControls\GUI_Link.resx">
       <DependentUpon>GUI_Link.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="UserControls\GUI_ResourceDataType.resx">
-      <DependentUpon>GUI_ResourceDataType.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UserControls\GUI_NumericDataType.resx">
-      <DependentUpon>GUI_NumericDataType.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UserControls\GUI_SplineDataType.resx">
-      <DependentUpon>GUI_SplineDataType.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UserControls\GUI_StringDataType.resx">
-      <DependentUpon>GUI_StringDataType.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="UserControls\GUI_TransformDataType.resx">
       <DependentUpon>GUI_TransformDataType.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UserControls\GUI_VectorDataType.resx">
-      <DependentUpon>GUI_VectorDataType.cs</DependentUpon>
     </EmbeddedResource>
     <Resource Include="Fonts\Isolation_Isolation.ttf" />
     <Resource Include="Fonts\JixellationBold_Jixellation.ttf" />
@@ -1599,9 +1930,61 @@
     <None Include="Images\Entity Icons\d_Prefab Icon.ico" />
     <None Include="Images\Entity Icons\AnimatorController Icon.ico" />
     <None Include="Images\Entity Icons\LightProbeProxyVolume Gizmo inv.ico" />
+    <Content Include="Resources\Native\tools\texconv.exe">
+      <TargetPath>Native\tools\texconv.exe</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\Native\tools\astcenc.exe">
+      <TargetPath>Native\tools\astcenc.exe</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\Native\win-x64\ogg.dll">
+      <TargetPath>Native\win-x64\ogg.dll</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\Native\win-x64\vorbis.dll">
+      <TargetPath>Native\win-x64\vorbis.dll</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\Native\win-x64\vorbisfile.dll">
+      <TargetPath>Native\win-x64\vorbisfile.dll</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\Native\win-x86\ogg.dll">
+      <TargetPath>Native\win-x86\ogg.dll</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\Native\win-x86\vorbis.dll">
+      <TargetPath>Native\win-x86\vorbis.dll</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\Native\win-x86\vorbisfile.dll">
+      <TargetPath>Native\win-x86\vorbisfile.dll</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <EmbeddedResource Include="Resources\packed_codebooks_aoTuV_603.bin" />
+    <EmbeddedResource Include="Resources\wwise_vorbis_setups.bin" />
+    <EmbeddedResource Include="Resources\Icons\icons_16.png" />
+    <EmbeddedResource Include="Resources\Icons\icons_16_dark.png" />
+    <EmbeddedResource Include="Resources\Icons\icons_32.png" />
+    <EmbeddedResource Include="Resources\Icons\icons_32_dark.png" />
+    <EmbeddedResource Include="Resources\Icons\icons_48.png" />
+    <EmbeddedResource Include="Resources\Icons\icons_48_dark.png" />
+    <EmbeddedResource Include="Resources\Icons\icons_64.png" />
+    <EmbeddedResource Include="Resources\Icons\icons_64_dark.png" />
+    <EmbeddedResource Include="Resources\Icons\icons_128.png" />
+    <EmbeddedResource Include="Resources\Icons\icons_128_dark.png" />
+    <EmbeddedResource Include="Resources\Icons\icons_256.png" />
+    <EmbeddedResource Include="Resources\Icons\icons_256_dark.png" />
     <None Include="Resources\config_backups.dat" />
-    <None Include="Resources\flowgraphs.dat" />
+    <Content Include="Resources\flowgraphs.dat">
+      <TargetPath>flowgraphs.dat</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <None Include="Resources\_2560px_Arrow_east_svg.png" />
+    <None Include="Resources\LiveLink\Resync.png" />
+    <None Include="Resources\LiveLink\ShowActivity.png" />
+    <None Include="Resources\LiveLink\ClearActivity.png" />
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Connected Services\" />
@@ -1611,19 +1994,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Popups\Function Editors\CAGEAnimation\Keyframe.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Popups\Function Editors\CAGEAnimation\Timeline.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Popups\Function Editors\CAGEAnimation\TimeMarker.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Popups\Function Editors\CAGEAnimation\Track.xaml">
+    <Page Include="Popups\Function Editors\CAGEAnimation\CurveEditor.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -1639,6 +2010,14 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Popups\Resource Editors\GUI_AnimationViewer.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Popups\Resource Editors\GUI_CubemapViewer.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Popups\Resource Editors\ModelEditorControlsWPF.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -1650,18 +2029,11 @@
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="..\packages\Fody.6.5.5\build\Fody.targets" Condition="Exists('..\packages\Fody.6.5.5\build\Fody.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\Fody.6.5.5\build\Fody.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Fody.6.5.5\build\Fody.targets'))" />
-    <Error Condition="!Exists('..\packages\Costura.Fody.5.7.0\build\Costura.Fody.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Costura.Fody.5.7.0\build\Costura.Fody.props'))" />
-    <Error Condition="!Exists('..\packages\Costura.Fody.5.7.0\build\Costura.Fody.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Costura.Fody.5.7.0\build\Costura.Fody.targets'))" />
     <Error Condition="!Exists('..\packages\AssimpNet.5.0.0-beta1\build\AssimpNet.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\AssimpNet.5.0.0-beta1\build\AssimpNet.targets'))" />
-    <Error Condition="!Exists('..\packages\Fody.6.5.5\build\Fody.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Fody.6.5.5\build\Fody.targets'))" />
   </Target>
-  <Import Project="..\packages\Costura.Fody.5.7.0\build\Costura.Fody.targets" Condition="Exists('..\packages\Costura.Fody.5.7.0\build\Costura.Fody.targets')" />
   <Import Project="..\packages\AssimpNet.5.0.0-beta1\build\AssimpNet.targets" Condition="Exists('..\packages\AssimpNet.5.0.0-beta1\build\AssimpNet.targets')" />
-  <Import Project="..\packages\Fody.6.5.5\build\Fody.targets" Condition="Exists('..\packages\Fody.6.5.5\build\Fody.targets')" />
 </Project>

@@ -1,0 +1,12 @@
+<UserControl x:Class="OpenCAGE.CurveEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             UseLayoutRounding="True"
+             SnapsToDevicePixels="True"
+             mc:Ignorable="d">
+    <Border x:Name="border" BorderBrush="#FF001263" Background="#FFFAFAFA" BorderThickness="1">
+        <Canvas x:Name="mainCanvas" ClipToBounds="True" Background="Transparent" Cursor="Cross" />
+    </Border>
+</UserControl>

@@ -17,11 +17,12 @@ namespace OpenCAGE.ConfigEditors
     {
         private readonly BML _gblItem;
         private string _ogName;
-        private readonly string[] _creatableTypes = { "object", "weapon", "ammo", "medikit", "ied", "light" };
+        internal static readonly string[] CreatableTypes = { "object", "weapon", "ammo", "medikit", "ied", "light" };
 
         public InventoryItemEditor() : base()
         {
             InitializeComponent();
+            BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/configs/inventory-items/");
             ConfigEditorUtils.ExpandNumericRanges(this.Controls);
 
             _gblItem = new BML(Singleton.PathToAI + @"\DATA\GBL_ITEM.BML");
@@ -66,7 +67,31 @@ namespace OpenCAGE.ConfigEditors
                 listView.Items[0].Selected = true;
 
             this.FormClosing += InventoryItemEditor_FormClosing;
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
+        }
+
+        /// <summary>
+        /// Every item this editor lists (DATA\GBL_ITEM.BML, item_database/objects), as (name, type) - the names InventoryItem and
+        /// PickupSpawner entities take. Read from disk each time, so an item added or renamed here shows straight away. Empty when
+        /// the file can't be read.
+        /// </summary>
+        public static List<KeyValuePair<string, string>> ReadItemNames()
+        {
+            List<KeyValuePair<string, string>> names = new List<KeyValuePair<string, string>>();
+            try
+            {
+                BML gblItem = new BML(Singleton.PathToAI + @"\DATA\GBL_ITEM.BML");
+                foreach (XmlNode node in gblItem.Content["item_database"]["objects"])
+                {
+                    if (node is XmlElement obj && obj.HasAttribute("name"))
+                        names.Add(new KeyValuePair<string, string>(obj.GetAttribute("name"), obj.Name));
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Failed to read inventory items: " + ex.Message);
+            }
+            return names;
         }
 
         private void InventoryItemEditor_FormClosing(object sender, FormClosingEventArgs e)
@@ -176,18 +201,26 @@ namespace OpenCAGE.ConfigEditors
             else
                 ConfigEditorUtils.SetNumericFromText(radial_menu_order_index, selectedElement.GetAttribute("radial_menu_order_index"));
             crafting_resource.Checked = selectedElement.GetAttribute("crafting_resource") == "true";
-            if (selectedElement.GetAttribute("composite") == "")
-                composite.Text = "Required_Assets\\Pickups\\" + name.Text;
-            else
-                composite.Text = "Required_Assets\\Pickups\\" + selectedElement.GetAttribute("composite");
+            string compositeAttr = selectedElement.GetAttribute("composite");
+            composite.Text = string.IsNullOrEmpty(compositeAttr)
+                ? name.Text
+                : StripKnownPrefixes(compositeAttr, "Required_Assets\\Pickups\\", "Pickups\\", "Required_Assets\\");
             special_slot.Text = selectedElement.GetAttribute("special_slot");
             ConfigEditorUtils.Subscribe(baseObject.Controls, Save);
         }
         private void SetHeldInfo(XmlElement selectedElement)
         {
             held.Visible = true;
-            held_object_name.Text = "Required_Assets\\Archetypes\\Equipment\\" + selectedElement.GetAttribute("held_object_name");
-            thrown_object_name.Text = "Required_Assets\\Thrown\\" + selectedElement.GetAttribute("thrown_object_name");
+            held_object_name.Text = StripKnownPrefixes(
+                selectedElement.GetAttribute("held_object_name"),
+                "Required_Assets\\Archetypes\\Equipment\\",
+                "Equipment\\",
+                "Required_Assets\\Archetypes\\");
+            thrown_object_name.Text = StripKnownPrefixes(
+                selectedElement.GetAttribute("thrown_object_name"),
+                "Required_Assets\\Thrown\\",
+                "Thrown\\",
+                "Required_Assets\\");
             droppable_when_held.Checked = selectedElement.GetAttribute("droppable_when_held") == "true";
             drop_when_consume.Checked = selectedElement.GetAttribute("drop_when_consume") == "true";
             consume_when.Text = selectedElement.GetAttribute("consume_when");
@@ -225,47 +258,22 @@ namespace OpenCAGE.ConfigEditors
 
             if (baseObject.Visible)
             {
-                if (!composite.Text.StartsWith("Required_Assets\\Pickups\\"))
-                    composite.Text = "Required_Assets\\Pickups\\";
+                ApplySpecialSlot(doc, selectedElement, special_slot.Text);
 
-                var specialSlots = doc["item_database"]["special_slots"];
-                string oldSpecialSlot = (selectedElement.GetAttribute("special_slot") ?? "").Trim();
-                string newSpecialSlot = (special_slot.Text ?? "").Trim();
-                bool renamedExistingSlot = false;
-                bool newSlotAlreadyExists = false;
-                string slotNodeName = "special_slot";
-                foreach (XmlElement specialSlot in specialSlots)
-                {
-                    slotNodeName = specialSlot.Name;
-
-                    string existingName = (specialSlot.GetAttribute("name") ?? "").Trim();
-                    if (!string.IsNullOrEmpty(newSpecialSlot) && existingName.Equals(newSpecialSlot, StringComparison.OrdinalIgnoreCase))
-                        newSlotAlreadyExists = true;
-
-                    if (!string.IsNullOrEmpty(oldSpecialSlot) && existingName.Equals(oldSpecialSlot, StringComparison.Ordinal))
-                    {
-                        specialSlot.SetAttribute("name", newSpecialSlot);
-                        renamedExistingSlot = true;
-                    }
-                }
-
-                if (!renamedExistingSlot && !string.IsNullOrEmpty(newSpecialSlot) && !newSlotAlreadyExists)
-                {
-                    XmlElement newSpecialSlotElement = doc.CreateElement(slotNodeName);
-                    newSpecialSlotElement.SetAttribute("name", newSpecialSlot);
-                    specialSlots.AppendChild(newSpecialSlotElement);
-                }
+                string compositeLeaf = StripKnownPrefixes(composite.Text, "Required_Assets\\Pickups\\", "Pickups\\", "Required_Assets\\");
+                if (string.IsNullOrWhiteSpace(compositeLeaf))
+                    compositeLeaf = name.Text;
 
                 selectedElement.SetAttribute("name", name.Text); 
                 selectedElement.SetAttribute("localisation_tag", localisation_tag.Text);
                 selectedElement.SetAttribute("keyframe", keyframe.Text);
                 selectedElement.SetAttribute("vanish_when_collected", (!vanish_when_collected.Checked).ToString().ToLower());
-                selectedElement.SetAttribute("default_quantity", default_quantity.Text);
-                selectedElement.SetAttribute("stack_limit", stack_limit.Text);
+                selectedElement.SetAttribute("default_quantity", ConfigEditorUtils.NumberText(default_quantity));
+                selectedElement.SetAttribute("stack_limit", ConfigEditorUtils.NumberText(stack_limit));
                 selectedElement.SetAttribute("display_quantity", display_quantity.Checked.ToString().ToLower());
-                selectedElement.SetAttribute("radial_menu_order_index", radial_menu_order_index.Text);
+                selectedElement.SetAttribute("radial_menu_order_index", ConfigEditorUtils.NumberText(radial_menu_order_index));
                 selectedElement.SetAttribute("crafting_resource", crafting_resource.Checked.ToString().ToLower());
-                selectedElement.SetAttribute("composite", composite.Text.Substring(("Required_Assets\\").Length));
+                selectedElement.SetAttribute("composite", "Pickups\\" + compositeLeaf);
                 selectedElement.SetAttribute("special_slot", special_slot.Text);
             }
             if (weapon.Visible)
@@ -279,33 +287,42 @@ namespace OpenCAGE.ConfigEditors
             }
             if (held.Visible)
             {
-                if (!held_object_name.Text.StartsWith("Required_Assets\\Archetypes\\Equipment\\"))
-                    held_object_name.Text = "Required_Assets\\Archetypes\\Equipment\\";
-                if (!thrown_object_name.Text.StartsWith("Required_Assets\\Thrown\\"))
-                    thrown_object_name.Text = "Required_Assets\\Thrown\\";
+                string heldLeaf = StripKnownPrefixes(
+                    held_object_name.Text,
+                    "Required_Assets\\Archetypes\\Equipment\\",
+                    "Equipment\\",
+                    "Required_Assets\\Archetypes\\");
+                string thrownLeaf = StripKnownPrefixes(
+                    thrown_object_name.Text,
+                    "Required_Assets\\Thrown\\",
+                    "Thrown\\",
+                    "Required_Assets\\");
 
-                if (held_object_name.Text != "Required_Assets\\Archetypes\\Equipment\\")
-                    selectedElement.SetAttribute("held_object_name", held_object_name.Text.Substring(("Required_Assets\\Archetypes\\").Length));
+                if (!string.IsNullOrWhiteSpace(heldLeaf))
+                    selectedElement.SetAttribute("held_object_name", "Equipment\\" + heldLeaf);
+                else
+                    selectedElement.RemoveAttribute("held_object_name");
+
+                if (!string.IsNullOrWhiteSpace(thrownLeaf))
+                    selectedElement.SetAttribute("thrown_object_name", "Thrown\\" + thrownLeaf);
                 else
                     selectedElement.RemoveAttribute("thrown_object_name");
-                if (thrown_object_name.Text != "Required_Assets\\Thrown\\")
-                    selectedElement.SetAttribute("thrown_object_name", thrown_object_name.Text.Substring(("Required_Assets\\").Length));
-                else
-                    selectedElement.RemoveAttribute("thrown_object_name");
+
                 selectedElement.SetAttribute("droppable_when_held", droppable_when_held.Checked.ToString().ToLower());
                 selectedElement.SetAttribute("drop_when_consume", drop_when_consume.Checked.ToString().ToLower());
                 selectedElement.SetAttribute("consume_when", consume_when.Text);
                 selectedElement.SetAttribute("activated_by", activated_by.Text);
-                selectedElement.SetAttribute("cancellable_duration_in_seconds", cancellable_duration_in_seconds.Text);
+                selectedElement.SetAttribute("cancellable_duration_in_seconds", ConfigEditorUtils.NumberText(cancellable_duration_in_seconds));
             }
             if (medikit.Visible)
             {
-                selectedElement.SetAttribute("health_increase_percentage", health_increase_percentage.Text);
-                selectedElement.SetAttribute("upgraded_health_increase_percentage", upgraded_health_increase_percentage.Text);
+                selectedElement.SetAttribute("health_increase_percentage", ConfigEditorUtils.NumberText(health_increase_percentage));
+                selectedElement.SetAttribute("upgraded_health_increase_percentage", ConfigEditorUtils.NumberText(upgraded_health_increase_percentage));
             }
 
             if (name.Text != _ogName)
             {
+                RenameAmmoTargets(doc, _ogName, name.Text);
                 target_weapon.BeginUpdate();
                 target_weapon.Items.Clear();
                 var objects = doc["item_database"]["objects"];
@@ -313,8 +330,6 @@ namespace OpenCAGE.ConfigEditors
                 {
                     if (obj.Name == "weapon")
                         target_weapon.Items.Add(obj.GetAttribute("name"));
-                    if (obj.Name == "ammo" && obj.GetAttribute("target_weapon") == _ogName)
-                        obj.SetAttribute("target_weapon", name.Text);
                 }
                 target_weapon.EndUpdate();
 
@@ -335,10 +350,49 @@ namespace OpenCAGE.ConfigEditors
             Steam.UnlockAchievement(Steam.Achievements.CONFIG_MODIFIED);
         }
 
-        private void helpBtn_Click(object sender, EventArgs e)
+        /// <summary>
+        /// Keep item_database/special_slots in step with an item's new special_slot (call before setting the
+        /// attribute): the slot it had is renamed, or a slot of the new name is added if none exists yet.
+        /// </summary>
+        internal static void ApplySpecialSlot(XmlDocument doc, XmlElement item, string newSlot)
         {
-            Steam.UnlockAchievement(Steam.Achievements.DOCUMENTATION_CHECKED);
-            Process.Start("https://opencage.co.uk/docs/configs/inventory-items");
+            var specialSlots = doc["item_database"]["special_slots"];
+            string oldSpecialSlot = (item.GetAttribute("special_slot") ?? "").Trim();
+            string newSpecialSlot = (newSlot ?? "").Trim();
+            bool renamedExistingSlot = false;
+            bool newSlotAlreadyExists = false;
+            string slotNodeName = "special_slot";
+            foreach (XmlElement specialSlot in specialSlots)
+            {
+                slotNodeName = specialSlot.Name;
+
+                string existingName = (specialSlot.GetAttribute("name") ?? "").Trim();
+                if (!string.IsNullOrEmpty(newSpecialSlot) && existingName.Equals(newSpecialSlot, StringComparison.OrdinalIgnoreCase))
+                    newSlotAlreadyExists = true;
+
+                if (!string.IsNullOrEmpty(oldSpecialSlot) && existingName.Equals(oldSpecialSlot, StringComparison.Ordinal))
+                {
+                    specialSlot.SetAttribute("name", newSpecialSlot);
+                    renamedExistingSlot = true;
+                }
+            }
+
+            if (!renamedExistingSlot && !string.IsNullOrEmpty(newSpecialSlot) && !newSlotAlreadyExists)
+            {
+                XmlElement newSpecialSlotElement = doc.CreateElement(slotNodeName);
+                newSpecialSlotElement.SetAttribute("name", newSpecialSlot);
+                specialSlots.AppendChild(newSpecialSlotElement);
+            }
+        }
+
+        /// <summary>A renamed item: ammo that names it as its target_weapon follows the rename.</summary>
+        internal static void RenameAmmoTargets(XmlDocument doc, string oldName, string newName)
+        {
+            foreach (XmlElement obj in doc["item_database"]["objects"])
+            {
+                if (obj.Name == "ammo" && obj.GetAttribute("target_weapon") == oldName)
+                    obj.SetAttribute("target_weapon", newName);
+            }
         }
 
         private void addItemBtn_Click(object sender, EventArgs e)
@@ -404,7 +458,7 @@ namespace OpenCAGE.ConfigEditors
                 var nameBox = new TextBox() { Left = 108, Top = 15, Width = 255 };
                 var typeLabel = new Label() { Text = "Item Type:", Left = 12, Top = 50, Width = 90 };
                 var typeBox = new ComboBox() { Left = 108, Top = 47, Width = 255, DropDownStyle = ComboBoxStyle.DropDownList };
-                typeBox.Items.AddRange(_creatableTypes);
+                typeBox.Items.AddRange(CreatableTypes);
                 typeBox.SelectedIndex = 0;
 
                 var createButton = new Button() { Text = "Create", Left = 208, Top = 90, Width = 75, DialogResult = DialogResult.OK };
@@ -432,6 +486,32 @@ namespace OpenCAGE.ConfigEditors
 
                 return Tuple.Create(nameBox.Text.Trim(), typeBox.SelectedItem?.ToString() ?? "object");
             }
+        }
+
+        internal static string StripKnownPrefixes(string value, params string[] prefixes)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return "";
+
+            string normalised = value.Trim().Replace('/', '\\').TrimStart('\\');
+            bool stripped;
+            do
+            {
+                stripped = false;
+                for (int i = 0; i < prefixes.Length; i++)
+                {
+                    string prefix = prefixes[i];
+                    if (string.IsNullOrEmpty(prefix))
+                        continue;
+                    if (!normalised.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    normalised = normalised.Substring(prefix.Length).TrimStart('\\');
+                    stripped = true;
+                    break;
+                }
+            } while (stripped && normalised.Length > 0);
+
+            return normalised;
         }
     }
 }

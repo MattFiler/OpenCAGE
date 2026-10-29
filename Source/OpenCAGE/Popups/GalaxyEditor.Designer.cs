@@ -1,4 +1,4 @@
-﻿namespace OpenCAGE.Popups
+namespace OpenCAGE.Popups
 {
     partial class GalaxyEditor
     {
@@ -137,8 +137,11 @@
             this.Controls.Add(this.numericUpDown1);
             this.Controls.Add(this.textBoxName);
             this.Controls.Add(this.labelName);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.SizableToolWindow;
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.Sizable;
+            this.HelpButton = true;
             this.Icon = global::OpenCAGE.SharedFormIcon.Icon;
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
             this.MinimumSize = new System.Drawing.Size(340, 275);
             this.Name = "GalaxyEditor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

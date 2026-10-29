@@ -1,4 +1,4 @@
-using AlienPAK;
+﻿using AlienPAK;
 using CATHODE;
 using CATHODE.Enums;
 using OpenCAGE.Popups.Base;
@@ -23,9 +23,11 @@ namespace OpenCAGE.ConfigEditors
         CustomCharacterAssetData _assetData;
         CustomCharacterAssetData.AssetDefinition _assetDefinition = null;
 
-        public CharacterAssetEditor() : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
+        //The asset sets are game-wide, not the selected entity's: only a level load (its textures) closes this
+        public CharacterAssetEditor() : base(WindowClosesOn.COMMANDS_RELOAD)
         {
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/character-editor/#asset-type");
 
             _assetData = new CustomCharacterAssetData(Singleton.PathToAI + "/DATA/CHR_INFO/CUSTOMCHARACTERASSETDATA.BIN");
 
@@ -40,7 +42,7 @@ namespace OpenCAGE.ConfigEditors
 
             this.Load += EditCharacterAssets_Load;
             this.FormClosing += EditCharacterAssets_FormClosing;
-            Singleton.OnResetConfigs += () => { this.Close(); };
+            CloseOnConfigReset();
         }
 
         private void EditCharacterAssets_Load(object sender, EventArgs e)
@@ -225,6 +227,7 @@ namespace OpenCAGE.ConfigEditors
                 _selectTexture = null;
             }
             _selectTexture = new EditTexture();
+            _selectTexture.CloseWith(this);
             _selectTexture.Show();
             _selectTexture.OnTextureSelected += OnDecalSelected;
         }

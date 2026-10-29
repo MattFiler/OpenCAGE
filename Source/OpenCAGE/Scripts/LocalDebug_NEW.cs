@@ -466,7 +466,7 @@ namespace OpenCAGE.Scripts
 
                     (Composite entCompParent, EntityPath entPathParent) = content.EditorUtils.GetCompositeFromInstanceID(content.Level.Commands, entry.composite_instance_id);
 
-                    string convertedResoureName = "[" + resource_index + "] " + entry.physics_system_index;
+                    string convertedResoureName = "[" + resource_index + "] " + entry.PhysicsSystemIndex;
 
                     if (entComp != null)
                         convertedResoureName += "\n\t Parent Entity Composite: " + entComp.name;

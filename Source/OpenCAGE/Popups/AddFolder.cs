@@ -45,6 +45,12 @@ namespace OpenCAGE
                     return;
                 }
             }
+            string nameProblem = EditorUtils.UnstorableTextProblem(path, "This folder name");
+            if (nameProblem != null)
+            {
+                MessageBox.Show(nameProblem, "Folder path invalid", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
 
             path += "/";
 
@@ -71,6 +77,8 @@ namespace OpenCAGE
             }
 
             Composite comp = _commands.Content.Level.Commands.AddComposite(path.Replace("/", "\\"));
+            DirtyTracker.MarkLevelDataModified();
+            OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.CompositeAddEdit(comp, true, "Add folder " + textBox1.Text));
             OnFolderAdded?.Invoke(comp);
             this.Close();
         }

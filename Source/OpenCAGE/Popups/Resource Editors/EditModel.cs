@@ -1,7 +1,8 @@
-using AlienPAK;
+﻿using AlienPAK;
 using Assimp;
 using CATHODE;
 using CathodeLib;
+using OpenCAGE.ModelExport;
 using OpenCAGE.Popups.Base;
 using OpenCAGE.Popups.UserControls;
 using OpenCAGE;
@@ -34,9 +35,35 @@ namespace OpenCAGE
 
         public Action<Models.CS2.Component> OnModelSelected;
 
-        public EditModel(Models.CS2.Component.LOD.Submesh defaultSubmesh = null, bool showSelectBtn = true) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_ENTITY_SELECTION | WindowClosesOn.NEW_COMPOSITE_SELECTION)
+        /// <summary>
+        /// Raised instead of <see cref="OnModelSelected"/> when the window is picking whole models.
+        /// </summary>
+        public Action<Models.CS2> OnWholeModelSelected;
+
+        /* Some callers want a model, not one of its components. In that mode the tree stops at the
+         * .cs2 and selecting it hands back the whole thing, since picking a single component of a
+         * character is never what's wanted. */
+        private readonly bool _wholeModelsOnly;
+        private readonly Func<Models.CS2, bool> _modelFilter;
+
+        //FBX first: it's the only one of the three that round trips multiple UV channels and skinning
+        private static string ModelFileFilter { get { return OpenCAGE.ModelExport.ModelExporter.Filter(false); } }
+
+        /// <summary>Importing does not need a format chosen, so it opens on everything we read.</summary>
+        private static string ModelImportFilter { get { return OpenCAGE.ModelExport.ModelExporter.ImportFilter(false); } }
+
+        /// <summary>
+        /// Open the model browser. Pass <paramref name="wholeModelsOnly"/> to pick a whole .cs2 rather
+        /// than one component of one, and <paramref name="modelFilter"/> to narrow what's listed.
+        /// </summary>
+        public EditModel(Models.CS2.Component.LOD.Submesh defaultSubmesh = null, bool showSelectBtn = true,
+                         bool wholeModelsOnly = false, Func<Models.CS2, bool> modelFilter = null)
+            : base(EditorOrPicker(showSelectBtn))
         {
+            _wholeModelsOnly = wholeModelsOnly;
+            _modelFilter = modelFilter;
             InitializeComponent();
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/model-editor/");
 
             splitContainer2.FixedPanel = FixedPanel.Panel2;
             splitContainer2.IsSplitterFixed = true;
@@ -67,7 +94,7 @@ namespace OpenCAGE
             selectModelBtn.Visible = showSelectBtn;
 
             this.Disposed += SelectModel_Disposed;
-            FileTree.ImageList = imageList1;
+            FileTree.ImageList = EditorIcons.FileTree;
 
             this.Load += EditModel_LoadSyncPanel2Widths;
         }
@@ -123,8 +150,30 @@ namespace OpenCAGE
             string trimmedFilter = string.IsNullOrWhiteSpace(filter) ? null : filter.Trim();
             List<string> allModelFileNames = new List<string>();
             List<Models.CS2.Component.LOD> allModelTagsModels = new List<Models.CS2.Component.LOD>();
+
+            if (_wholeModelsOnly)
+            {
+                foreach (Models.CS2 mesh in Content.Level.Models.Entries)
+                {
+                    if (_modelFilter != null && !_modelFilter(mesh)) continue;
+                    if (trimmedFilter != null && (mesh.Name ?? "").IndexOf(trimmedFilter, StringComparison.OrdinalIgnoreCase) < 0) continue;
+
+                    //the tree keys off the path, so naming the leaf after the .cs2 stops it at the model
+                    Models.CS2.Component.LOD lod = mesh.Components
+                        .FirstOrDefault(x => x.LODs.Count != 0 && x.LODs[0].Submeshes.Count != 0)?.LODs[0];
+                    if (lod == null) continue;
+
+                    allModelFileNames.Add((mesh.Name ?? "").Replace('\\', '/').TrimStart('/'));
+                    allModelTagsModels.Add(lod);
+                }
+                treeHelper.UpdateFileTree(allModelFileNames, null, null, allModelTagsModels);
+                treeHelper.SelectNode(selectedLOD);
+                return;
+            }
+
             foreach (Models.CS2 mesh in Content.Level.Models.Entries)
             {
+                if (_modelFilter != null && !_modelFilter(mesh)) continue;
                 foreach (Models.CS2.Component component in mesh.Components)
                 {
                     if (component.LODs.Count == 0)
@@ -190,6 +239,7 @@ namespace OpenCAGE
             editGeometryBtn.Enabled = canExportOrEdit;
             deleteBtn.Enabled = canExportOrEdit;
             importModelBtn.Enabled = Content?.Level?.Models != null;
+            exportAllModelsBtn.Enabled = Content?.Level?.Models?.Entries != null && Content.Level.Models.Entries.Count > 0;
             SetRenderFlagCheckboxesEnabled(canExportOrEdit && allSubmeshes.Count > 0);
         }
 
@@ -217,7 +267,9 @@ namespace OpenCAGE
         {
             if (Content?.Level?.Models == null) return;
             OpenFileDialog picker = new OpenFileDialog();
-            picker.Filter = "FBX Model|*.fbx|GLTF Model|*.gltf|OBJ Model|*.obj";
+            picker.Filter = ModelImportFilter;
+            picker.FilterIndex = 1;
+            picker.DefaultExt = "fbx";
             if (picker.ShowDialog() != DialogResult.OK) return;
             Cursor.Current = Cursors.WaitCursor;
             try
@@ -225,9 +277,7 @@ namespace OpenCAGE
                 Scene importScene;
                 using (AssimpContext importer = new AssimpContext())
                 {
-                    importScene = importer.ImportFile(picker.FileName,
-                        PostProcessSteps.Triangulate | PostProcessSteps.FindDegenerates | PostProcessSteps.LimitBoneWeights |
-                        PostProcessSteps.GenerateBoundingBoxes | PostProcessSteps.FlipUVs | PostProcessSteps.FlipWindingOrder | PostProcessSteps.MakeLeftHanded);
+                    importScene = importer.ImportFile(picker.FileName, ModelIO.ImportPostProcessSteps);
                 }
                 if (importScene == null || importScene.MeshCount == 0)
                 {
@@ -235,15 +285,47 @@ namespace OpenCAGE
                     return;
                 }
                 Models.CS2.Component.LOD toSelect = null;
-                using (var previewForm = new ModelImportPreview(importScene, picker.FileName, Content.Level.Materials))
+                bool inParts = false;
+                /* The name, and any folders it should live in, are settled in the preview - and the
+                 * clash is checked there as it's typed, so nothing gets silently renamed after the
+                 * fact any more. */
+                using (var previewForm = new ModelImportPreview(importScene, picker.FileName, Content.Level.Materials,
+                    () => Content.Level.Models.Entries.Select(x => x.Name), Content.Level))
                 {
                     if (previewForm.ShowDialog(this) != DialogResult.OK || previewForm.ResultCs2 == null)
                         return;
+
+                    /* Belt and braces: models are keyed by name when the level is read back, so two
+                     * sharing one would merge into a single entry. */
+                    string requestedName = previewForm.ResultCs2.Name;
+                    previewForm.ResultCs2.Name = MakeModelNameUnique(requestedName);
+                    if (previewForm.ResultCs2.Name != requestedName)
+                        MessageBox.Show("This level already contains a model called '" + requestedName + "', so the import has been named '" + previewForm.ResultCs2.Name + "'.\n\n" +
+                            "Anything already placed in the level still points at the original model - use the entity's Resource to point it at this one.",
+                            "Imported under a new name", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
                     Content.Level.Models.Entries.Add(previewForm.ResultCs2);
+                    EditHistory.AssetChanged(Content.Level, AssetModificationInfoTable.AssetKind.MODEL, previewForm.ResultCs2.Name);
                     if (previewForm.ResultCs2.Components.Count > 0 && previewForm.ResultCs2.Components[0].LODs.Count > 0)
                         toSelect = previewForm.ResultCs2.Components[0].LODs[0];
+                    inParts = previewForm.ResultCs2.Components.Count > 1;
+
+                    /* The skeleton and any animation go into the game's animation data rather than
+                     * this level, so they are added here once the model itself is safely in. */
+                    ApplyImportedRig(previewForm.ResultRig, previewForm.RigSituation, picker.FileName);
+
+                    //Placed in a composite of its own, if asked, so it can be dragged into the level straight away
+                    if (previewForm.CompositeName != null)
+                        CreateCompositeForImport(previewForm.ResultCs2, previewForm.CompositeName, previewForm.CompositeSkeleton);
                 }
                 RebuildModelFileTree(toSelect, modelSearchTextBox.Text);
+
+                /* A file with more meshes than one component can draw comes in split into several (see
+                 * ModelIO.CreateImportPlan), and any one of them alone is a scrap of the model - Sponza's
+                 * first is the arcades with window shutters and rods hanging off nothing, its second the
+                 * walls round the outside. Select the model itself, which shows every part together. */
+                if (inParts && !_wholeModelsOnly && FileTree.SelectedNode?.Parent != null)
+                    FileTree.SelectedNode = FileTree.SelectedNode.Parent;
                 Singleton.OnResourceModified?.Invoke();
             }
             catch (Exception ex)
@@ -256,18 +338,165 @@ namespace OpenCAGE
             }
         }
 
+        /// <summary>
+        /// Build the composite an import asked for. The model is already in the level by now, so a
+        /// failure here is reported rather than fatal.
+        /// </summary>
+        private void CreateCompositeForImport(Models.CS2 model, string compositeName, Skeleton skeleton)
+        {
+            try
+            {
+                Singleton.OnCompositeAddPending?.Invoke();
+                ModelCompositeBuilder.Result result = ModelCompositeBuilder.Create(Content.Level, model, compositeName, skeleton, skeleton?.Name);
+                Singleton.OnCompositeAdded?.Invoke(result.Composite);
+                EditHistory.CompositesChanged(Content.Level.Commands, new[] { result.Composite });
+
+                string message = "Created composite '" + result.Composite.name + "' with " + result.ModelReferences
+                    + (result.ModelReferences == 1 ? " ModelReference" : " ModelReferences") + ".";
+                if (result.Notes.Count != 0)
+                    message += "\r\n\r\n" + string.Join("\r\n", result.Notes);
+                MessageBox.Show(message, "Composite created", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("The model was imported, but its composite could not be created:\r\n\r\n" + ex.Message, "Composite not created", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        /// <summary>
+        /// Add the clips a model import asked for. These live in ANIMATION.PAK, which is shared by
+        /// every level rather than held in this one, so they are written out here rather than left
+        /// for the animation browser - and the model is already in by this point, so a failure here
+        /// is reported rather than fatal.
+        /// </summary>
+        private void ApplyImportedRig(ModelImportRig.Outcome outcome, ModelImportRig.Situation situation, string sourceFile)
+        {
+            if (outcome == null || situation == null) return;
+
+            List<string> report = new List<string>(outcome.Report);
+            string problem = null;
+            int imported = 0;
+            bool written = true;
+            HashSet<string> sets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (outcome.ImportAnimations)
+            {
+                if (Singleton.Animations == null)
+                    problem = "The game's animation data isn't loaded, so nothing could be added to it.";
+                else
+                {
+                    /* One pass of the animation browser's own import window per clip in the file. A
+                     * model import is not a reason to make the same choices a second time somewhere
+                     * worse: this is the window carrying the set, the rig, the frame rate, the root
+                     * handling and the preview, started on whatever the model import already knows. */
+                    Cursor.Current = Cursors.Default;
+                    for (int i = 0; i < situation.Animations.Count; i++)
+                        using (ImportAnimation import = new ImportAnimation(Singleton.Animations, null, sourceFile,
+                                                                            outcome.PreferredRig, i,
+                                                                            situation.Animations[i], outcome.AnimationSetName))
+                        {
+                            if (import.ShowDialog(this) != DialogResult.OK || string.IsNullOrEmpty(import.ImportedName)) continue;
+                            imported++;
+                            sets.Add(import.ImportedSet);
+                            Singleton.RegisterAnimation(import.ImportedSet, import.ImportedName);
+                        }
+                }
+            }
+
+            if (imported != 0)
+            {
+                report.Add("Imported " + imported + " animation" + (imported == 1 ? "" : "s")
+                    + " into '" + string.Join("', '", sets) + "'.");
+                Singleton.OnAnimationsModified?.Invoke();
+
+                /* Written out straight away, the same way the animation browser writes its own
+                 * imports. An import nobody saves has done nothing at all, and leaving it to be saved
+                 * somewhere else is asking someone to finish a job they didn't know they had. */
+                written = SaveAnimations(out string writeProblem);
+                report.Add(written
+                    ? "ANIMATION.PAK has been written."
+                    : "ANIMATION.PAK could not be written, so this is only in memory for now - try saving"
+                      + " from the animation browser.\r\n\r\n" + writeProblem);
+            }
+
+            if (report.Count == 0 && problem == null) return;
+            bool ok = written && problem == null;
+            MessageBox.Show(string.Join("\r\n", report)
+                    + (problem == null ? "" : (report.Count == 0 ? "" : "\r\n\r\n") + problem),
+                ok ? "Model imported" : "Partly imported", MessageBoxButtons.OK,
+                ok ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+        }
+
+        /* Write ANIMATION.PAK back - the same two steps the animation browser takes, giving the mod
+         * services their chance to record what the file looked like before it changed. */
+        private bool SaveAnimations(out string problem)
+        {
+            problem = null;
+            try
+            {
+                //It writes every tree, unsaved edits and all: they must load again, and their node layouts go in with them
+                problem = AnimationPakWrite.SaveWhole(Singleton.Animations, FindForm());
+                return problem == null;
+            }
+            catch (Exception ex)
+            {
+                problem = ex.Message;
+                return false;
+            }
+        }
+
+        private string MakeModelNameUnique(string name)
+        {
+            if (string.IsNullOrEmpty(name) || Content?.Level?.Models == null) return name;
+            if (!Content.Level.Models.Entries.Any(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)))
+                return name;
+
+            string extension = Path.GetExtension(name);
+            string baseName = name.Substring(0, name.Length - extension.Length);
+            for (int i = 1; ; i++)
+            {
+                string candidate = baseName + "_" + i + extension;
+                if (!Content.Level.Models.Entries.Any(x => string.Equals(x.Name, candidate, StringComparison.OrdinalIgnoreCase)))
+                    return candidate;
+            }
+        }
+
         private void exportCs2Btn_Click(object sender, EventArgs e)
         {
             if (!TryGetSelectedCs2(out Models.CS2 cs2)) return;
+
+            /* A skinned model is only half a model without the rig its weights point at, so offer
+             * the skeleton up front - the file dialog is no use to anyone if we get this wrong. */
+            Skeleton skeleton = null;
+            if (Skeleton.RequiredBoneCount(cs2) != 0 && Singleton.Global?.Skeletons != null)
+            {
+                using (SkeletonPicker skeletonPicker = new SkeletonPicker(cs2))
+                {
+                    if (skeletonPicker.ShowDialog(this) != DialogResult.OK) return;
+                    skeleton = skeletonPicker.Result;
+                }
+            }
+
             SaveFileDialog picker = new SaveFileDialog();
-            picker.Filter = "FBX Model|*.fbx|GLTF Model|*.gltf|OBJ Model|*.obj";
-            picker.FileName = Path.GetFileNameWithoutExtension(cs2.Name ?? "model");
+
+            /* FBX and glTF both carry everything we write. Open on whichever was picked last, so a
+             * run of exports doesn't mean choosing the format again every time. */
+            picker.Filter = ModelFileFilter;
+            picker.FilterIndex = ModelExporter.FilterIndex(SettingsManager.GetString(Settings.ModelExportFormat, ".fbx"), false);
+            picker.DefaultExt = "fbx";
+            picker.AddExtension = true;
+            picker.FileName = Path.GetFileNameWithoutExtension(cs2.Name ?? "model") + ".fbx";
             if (picker.ShowDialog() != DialogResult.OK) return;
+
+            SettingsManager.SetString(Settings.ModelExportFormat, ModelExporter.For(picker.FileName).Extension);
             Cursor.Current = Cursors.WaitCursor;
             try
             {
-                cs2.ExportMesh(picker.FileName);
-                MessageBox.Show("Successfully exported file.", "Export complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                cs2.ExportMesh(picker.FileName, skeleton);
+                MessageBox.Show("Successfully exported file.\n\nA '" + ModelIO.SidecarExtension + "' file has been written alongside it, holding the parts of the model the mesh format can't store. " +
+                    "Keep it next to the model (and keep the object names intact) and the model can be imported straight back in." +
+                    (skeleton == null ? "" : "\n\nThe '" + skeleton.Name + "' skeleton has been written in with the mesh bound to it."),
+                    "Export complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
@@ -279,13 +508,147 @@ namespace OpenCAGE
             }
         }
 
+        private void exportAllModelsBtn_Click(object sender, EventArgs e)
+        {
+            List<Models.CS2> models = ListedModels();
+            if (models.Count == 0)
+            {
+                MessageBox.Show("No models are listed. Clear the search to export every model in the level.", "Export All", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (FolderBrowserDialog folder = new FolderBrowserDialog())
+            {
+                folder.Description = "Select folder for exported models";
+                folder.ShowNewFolderButton = true;
+                if (folder.ShowDialog() != DialogResult.OK)
+                    return;
+
+                //Opens on whichever format was used last, the same as exporting one model does
+                IReadOnlyList<ModelExporter.Format> formats = ModelExporter.Formats;
+                int format = BulkExport.AskFormat(this, formats.Select(x => x.Description + " (*" + x.Extension + ")").ToList(),
+                    ModelExporter.FilterIndex(SettingsManager.GetString(Settings.ModelExportFormat, ".fbx"), false) - 1,
+                    models.Count.ToString("N0") + (models.Count == 1 ? " model" : " models") + " will be exported, each with its textures in a folder beside it. " +
+                    "Skinned models are written with the skeleton they were made for, where one can be found.");
+                if (format < 0)
+                    return;
+                SettingsManager.SetString(Settings.ModelExportFormat, formats[format].Extension);
+
+                BulkExport.Result result = ExportModels(models, folder.SelectedPath, formats[format].Extension, out int rigged);
+                System.Diagnostics.Process.Start(folder.SelectedPath);
+                MessageBox.Show(result.Describe("model", "models") +
+                    (rigged == 0 ? "" : "\n\n" + rigged.ToString("N0") + " skinned " + (rigged == 1 ? "model was" : "models were") + " written with " + (rigged == 1 ? "its" : "their") + " skeleton."),
+                    "Models", MessageBoxButtons.OK, result.Failures.Count == 0 ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+            }
+        }
+
+        /// <summary>
+        /// Write each model under <paramref name="folder"/>, in the folders its name gives, as exporting it
+        /// on its own would: textures and sidecar beside it. A skinned model goes out with the rig it was
+        /// built for (the one its previews pose it with), or with none if no rig fits it - the choice
+        /// exporting one model asks about.
+        /// </summary>
+        private BulkExport.Result ExportModels(List<Models.CS2> models, string folder, string extension, out int rigged)
+        {
+            CathodeLib.Animation animations = Singleton.Animations;
+            HashSet<string> taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            int withSkeleton = 0;
+            BulkExport.Result result = BulkExport.Run(this, "Exporting models", models, x => x.Name, cs2 =>
+            {
+                Skeleton skeleton = animations?.RigFor(cs2);
+                cs2.ExportMesh(BulkExport.PathFor(folder, cs2.Name, extension, taken), skeleton);
+                if (skeleton != null) withSkeleton++;
+            });
+            rigged = withSkeleton;
+            return result;
+        }
+
+        /// <summary>The models the tree is showing (all of them, or what the search left), in its order.</summary>
+        private List<Models.CS2> ListedModels()
+        {
+            List<Models.CS2> listed = new List<Models.CS2>();
+            if (Content?.Level?.Models?.Entries == null)
+                return listed;
+
+            //The tree holds each component's first LOD; one lookup back to its model, rather than a search per node
+            Dictionary<Models.CS2.Component.LOD, Models.CS2> owners = new Dictionary<Models.CS2.Component.LOD, Models.CS2>(BulkExport.ByReference<Models.CS2.Component.LOD>.Instance);
+            foreach (Models.CS2 cs2 in Content.Level.Models.Entries)
+                foreach (Models.CS2.Component component in cs2.Components)
+                    foreach (Models.CS2.Component.LOD lod in component.LODs)
+                        if (!owners.ContainsKey(lod))
+                            owners.Add(lod, cs2);
+
+            HashSet<Models.CS2> seen = new HashSet<Models.CS2>(BulkExport.ByReference<Models.CS2>.Instance);
+            AddListed(FileTree.Nodes);
+            return listed;
+
+            void AddListed(TreeNodeCollection nodes)
+            {
+                foreach (TreeNode node in nodes)
+                {
+                    TreeItem item = (TreeItem)node.Tag;
+                    if (item.Item_Type == TreeItemType.EXPORTABLE_FILE && item.Model_Value != null &&
+                        owners.TryGetValue(item.Model_Value, out Models.CS2 cs2) && seen.Add(cs2))
+                        listed.Add(cs2);
+                    AddListed(node.Nodes);
+                }
+            }
+        }
+
         private void deleteBtn_Click(object sender, EventArgs e)
         {
             if (!TryGetSelectedCs2(out Models.CS2 cs2)) return;
+
+            //The engine indexes the required models positionally at the head of the pak, and the
+            //instancing pass points fog volumes, light proxies, particles and decals at them by
+            //that position. Removing one takes the mesh out from under every mover that uses it.
+            if (RequiredModels.IsRequiredEntry(Content.Level.Models, cs2))
+            {
+                MessageBox.Show("'" + cs2.Name + "' is one of the models every level is required to carry. "
+                    + "Fog volumes, light proxies, particles and decals are all drawn with it.",
+                    "Required model", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
             if (MessageBox.Show("Are you sure you want to delete '" + cs2.Name + "'?", "About to delete...", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
+
+            /* Its materials can go with it, and their textures with them - but only the ones nothing
+             * else is left using: a save writes anything still pointing at a removed asset as -1. */
+            List<Materials.Material> materials = AssetUsage.MaterialsOnlyUsedBy(Content.Level, cs2, out int sharedMaterials);
+            List<Textures.TEX4> textures = new List<Textures.TEX4>();
+            bool deleteMaterials = materials.Count != 0 && MessageBox.Show(
+                "Also delete the " + (materials.Count == 1 ? "material" : materials.Count + " materials") + " only '" + cs2.Name + "' uses?\n\n"
+                + AssetUsage.ListNames(materials.Select(o => o.Name))
+                + (sharedMaterials == 0 ? "" : "\n\n" + sharedMaterials + (sharedMaterials == 1 ? " other material it uses is" : " other materials it uses are") + " used elsewhere too, and will be kept."),
+                "Delete associated materials?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
+            if (deleteMaterials)
+            {
+                textures = AssetUsage.TexturesOnlyUsedBy(Content.Level, materials, out int sharedTextures);
+                if (textures.Count != 0 && MessageBox.Show(
+                        "Also delete the " + (textures.Count == 1 ? "texture" : textures.Count + " textures") + " only " + (materials.Count == 1 ? "that material uses" : "those materials use") + "?\n\n"
+                        + AssetUsage.ListNames(textures.Select(o => o.Name))
+                        + (sharedTextures == 0 ? "" : "\n\n" + sharedTextures + (sharedTextures == 1 ? " other texture is" : " other textures are") + " used elsewhere too, and will be kept."),
+                        "Delete associated textures?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                    textures.Clear();
+            }
+
+            EditHistory.AssetChanged(Content.Level, AssetModificationInfoTable.AssetKind.MODEL, cs2.Name);
             Content.Level.Models.Entries.Remove(cs2);
+            if (deleteMaterials)
+            {
+                foreach (Materials.Material material in materials)
+                    EditHistory.AssetChanged(Content.Level, AssetModificationInfoTable.AssetKind.MATERIAL, material.Name);
+                AssetUsage.RemoveByReference(Content.Level.Materials.Entries, materials);
+            }
+            foreach (Textures.TEX4 texture in textures)
+                EditHistory.AssetChanged(Content.Level, AssetModificationInfoTable.AssetKind.TEXTURE, texture.Name);
+            AssetUsage.RemoveByReference(Content.Level.Textures.Entries, textures);
+
+            //The viewport draws from its own copy of the tables, and the preview from the model itself
+            Singleton.OnResourceModified?.Invoke();
             RebuildModelFileTree(filter: modelSearchTextBox.Text);
+            ClearModelPreview();
+            UpdateModelToolsState();
         }
 
         private void editGeometryBtn_Click(object sender, EventArgs e)
@@ -300,7 +663,9 @@ namespace OpenCAGE
             editor.Show(this);
         }
 
-        private void FileTree_AfterSelect(object sender, TreeViewEventArgs e)
+        /* Nothing selected: no submeshes listed, nothing drawn. A tree rebuild drops the selection
+         * without raising AfterSelect, so whatever was showing has to be taken down by hand. */
+        private void ClearModelPreview()
         {
             ClearSubmeshCheckboxes();
             selectModelBtn.Enabled = false;
@@ -308,6 +673,11 @@ namespace OpenCAGE
             modelPreviewArea.Text = "";
             modelViewer.ShowModel(new List<GUI_ModelViewer.Model>());
             ResetRenderFlagCheckboxes();
+        }
+
+        private void FileTree_AfterSelect(object sender, TreeViewEventArgs e)
+        {
+            ClearModelPreview();
 
             try
             {
@@ -319,8 +689,23 @@ namespace OpenCAGE
                 {
                     case TreeItemType.EXPORTABLE_FILE:
                         {
-                            AddComponent(Content.Level.Models.FindModelComponent(lod));
-                            modelPreviewArea.Text = CreateTagForMesh(lod);
+                            if (_wholeModelsOnly)
+                            {
+                                //the leaf is the whole model here, so show all of it at once
+                                Models.CS2 whole = Content.Level.Models.FindModel(lod);
+                                int at = 0;
+                                foreach (Models.CS2.Component c in whole.Components)
+                                {
+                                    AddComponent(c, at);
+                                    at += c.LODs.Count;
+                                }
+                                modelPreviewArea.Text = whole.Name.Replace('\\', '/');
+                            }
+                            else
+                            {
+                                AddComponent(Content.Level.Models.FindModelComponent(lod));
+                                modelPreviewArea.Text = CreateTagForMesh(lod);
+                            }
                             selectModelBtn.Enabled = true;
                         }
                         break;
@@ -366,11 +751,29 @@ namespace OpenCAGE
                 {
                     allSubmeshes[component.LODs[x].Submeshes[y]] = new GUI_ModelViewer.Model(component.LODs[x].Submeshes[y]);
 
-                    bool isEnabled = (x == 0);
+                    /* Only the first LOD shows by default, and not the collision hull even then -
+                     * it's bound to the same rig as the body and sits right on top of it. */
+                    bool isEnabled = (x == 0) && !IsCollisionMesh(component.LODs[x], component.LODs[x].Submeshes[y]);
                     CreateSubmeshCheckbox(component.LODs[x].Submeshes[y], x + baseIndex, y, component.LODs[x].Submeshes.Count, isEnabled, yOffset);
                     yOffset += 25;
                 }
             }
+        }
+
+        /* CA name their collision meshes and the materials on them "COL_" - the COL_MALE hull on
+         * every human character, COL_ANDROID on the androids. Nothing else uses the prefix. */
+        private static bool IsCollisionMesh(Models.CS2.Component.LOD lod, Models.CS2.Component.LOD.Submesh submesh)
+        {
+            return HasCollisionPrefix(lod?.Name) || HasCollisionPrefix(submesh?.Material?.Name);
+        }
+
+        private static bool HasCollisionPrefix(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return false;
+
+            string last = name.Substring(name.LastIndexOfAny(new[] { '\\', '/' }) + 1);
+            return last.StartsWith("COL_", StringComparison.OrdinalIgnoreCase)
+                || last.IndexOf("_COL_", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private void ClearSubmeshCheckboxes()
@@ -620,7 +1023,9 @@ namespace OpenCAGE
 
         private void selectModel_Click(object sender, EventArgs e)
         {
-            OnModelSelected?.Invoke(Content.Level.Models.FindModelComponent(((TreeItem)FileTree.SelectedNode.Tag).Model_Value));
+            Models.CS2.Component.LOD lod = ((TreeItem)FileTree.SelectedNode.Tag).Model_Value;
+            if (_wholeModelsOnly) OnWholeModelSelected?.Invoke(Content.Level.Models.FindModel(lod));
+            else OnModelSelected?.Invoke(Content.Level.Models.FindModelComponent(lod));
             this.Close();
         }
 
@@ -805,6 +1210,8 @@ namespace OpenCAGE
                     submesh.RenderFlags &= ~changedPair.flag;
             }
 
+            if (TryGetSelectedCs2(out Models.CS2 changedModel))
+                EditHistory.AssetChanged(Content.Level, AssetModificationInfoTable.AssetKind.MODEL, changedModel.Name);
             Singleton.OnResourceModified?.Invoke();
         }
     }

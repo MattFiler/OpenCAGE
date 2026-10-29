@@ -8,7 +8,7 @@ if (file_exists('../keys.php')) {
     exit;
 }
 
-$conn = new mysqli("localhost", $username, $password, "OpenCAGE");
+$conn = new mysqli("127.0.0.1", $username, $password, "OpenCAGE");
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
