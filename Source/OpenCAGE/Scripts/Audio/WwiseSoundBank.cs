@@ -19,10 +19,11 @@ namespace OpenCAGE.Audio
     /// front of all of it. Measured across every bank in the game, the parent id resolves for 100% of
     /// containers and 100% of sounds, so the inverted map is a complete tree with none of the risk.
     ///
-    /// Two bank generations exist in the wild: the PC builds are uniformly version 88, the Switch
-    /// build uniformly 134 (Wwise 2019.1). The framing is identical; what moved between them is the
-    /// handful of fields read below, and each difference was pinned by measuring which candidate
-    /// layout makes the ids resolve - see the version notes on each parse method.
+    /// Two bank generations exist in the wild: the PC builds are uniformly version 88 (and the Mac and
+    /// Linux builds ship the PC's sound files byte for byte), the Switch and iOS builds uniformly 134
+    /// (Wwise 2019.1). The framing is identical; what moved between them is the handful of fields read
+    /// below, and each difference was pinned by measuring which candidate layout makes the ids resolve -
+    /// see the version notes on each parse method.
     /// </summary>
     public sealed class WwiseSoundBank
     {
@@ -258,9 +259,10 @@ namespace OpenCAGE.Audio
             {
                 //v134 slimmed AkBankSourceData right down: the stream type is one byte, the separate
                 //file id is gone (media is addressed by source id alone), and what remains is fixed at
-                //14 bytes - except for source plugins, which append a u32-length parameter block.
-                //Measured over the Switch build: every codec sound's source id lands on real media,
-                //and every parent id that can resolve does.
+                //14 bytes - except for source plugins (plugin type 2: tone, silence), which append a
+                //u32-length parameter block. A sound with no source at all (plugin id 0, a few dialogue
+                //placeholders) carries none. Measured over the Switch and iOS builds: every codec sound's
+                //source id lands on real media, and all 131,291 sounds end exactly where their layout says.
                 if (body.Length < 14)
                     return result;
 
@@ -270,7 +272,7 @@ namespace OpenCAGE.Audio
                 result.FileId = result.SourceId;
 
                 int sourceDataLength = 14;
-                if ((result.PluginId & 0x0F) != 1 && body.Length >= 18)
+                if ((result.PluginId & 0x0F) == 2 && body.Length >= 18)
                 {
                     uint parameterLength = BitConverter.ToUInt32(body, 14);
                     if (parameterLength < 0x1000)

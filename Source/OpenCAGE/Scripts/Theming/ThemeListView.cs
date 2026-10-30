@@ -22,6 +22,11 @@ namespace OpenCAGE.Theming
     /// Deliberately NOT used: ListView.OwnerDraw. It is a control-wide switch that takes row, selection
     /// and hot-track painting away from commctrl. The column header is handled instead by subclassing its
     /// own window - see <see cref="ThemeListViewHeader"/>.
+    ///
+    /// Two things commctrl paints in COLOR_BTNFACE whatever the theme or the LVM colours say, both measured
+    /// at (240,240,240): grid lines, and the whole list while it is disabled (the Backup Manager disables
+    /// its list for as long as a backup takes, and it went white). Dark mode takes both over - see the
+    /// watcher's grid lines and disabled state below.
     /// </summary>
     internal static class ThemeListView
     {
@@ -53,6 +58,8 @@ namespace OpenCAGE.Theming
         private const int LVM_SETBKCOLOR = LVM_FIRST + 4;
         private const int LVM_SETTEXTBKCOLOR = LVM_FIRST + 38;
         private const int LVM_SETTEXTCOLOR = LVM_FIRST + 36;
+        private const int LVM_SETEXTENDEDLISTVIEWSTYLE = LVM_FIRST + 54;
+        private const int LVS_EX_GRIDLINES = 0x1;
 
         /// <summary>Sent with the LVM colour messages to go back to the control's own defaults.</summary>
         private static readonly IntPtr ColourDefault = (IntPtr)(-1);
@@ -125,6 +132,12 @@ namespace OpenCAGE.Theming
                 ThemeListViewHeader.Detach(listView);
                 ItemColourWatcher.Detach(listView);
             }
+
+            //commctrl's own grid lines are COLOR_BTNFACE, bright white on the dark rows, and nothing recolours them:
+            //in dark mode they are switched off underneath WinForms (its GridLines stays as it was) and the watcher
+            //draws them instead. Back in light mode commctrl draws them again, if the list has them.
+            SendMessage(listView.Handle, LVM_SETEXTENDEDLISTVIEWSTYLE, (IntPtr)LVS_EX_GRIDLINES,
+                !dark && listView.GridLines ? (IntPtr)LVS_EX_GRIDLINES : IntPtr.Zero);
 
             listView.Invalidate(true);
             RedrawWindow(listView.Handle, IntPtr.Zero, IntPtr.Zero,
@@ -221,6 +234,9 @@ namespace OpenCAGE.Theming
         /// long after their window was themed - which is why some of them still had white rows while
         /// others looked right. Watching the insert and clear messages catches every one of them without
         /// each call site having to remember to ask.
+        ///
+        /// Being the dark theme's hook on the list's window, it also paints the parts commctrl only draws
+        /// in COLOR_BTNFACE: the grid lines, and the disabled state.
         /// </summary>
         private sealed class ItemColourWatcher : NativeWindow
         {
@@ -229,7 +245,66 @@ namespace OpenCAGE.Theming
             private const int LVM_DELETEITEM = LVM_FIRST + 8;
             private const int LVM_DELETEALLITEMS = LVM_FIRST + 9;
             private const int LVM_GETGROUPRECT = LVM_FIRST + 98;
+            private const int LVM_GETITEMCOUNT = LVM_FIRST + 4;
+            private const int LVM_GETITEMRECT = LVM_FIRST + 14;
+            private const int LVM_GETTOPINDEX = LVM_FIRST + 39;
+            private const int LVM_APPROXIMATEVIEWRECT = LVM_FIRST + 64;
+            private const int LVM_ISGROUPVIEWENABLED = LVM_FIRST + 175;
+            private const int HDM_GETITEMCOUNT = 0x1200;
+            private const int HDM_GETITEMRECT = 0x1200 + 7;
             private const int WM_PAINT = 0x000F;
+            private const int WM_ERASEBKGND = 0x0014;
+            private const int SB_HORZ = 0;
+
+            //Custom draw, as WinForms reflects it back to the list
+            private const int WM_REFLECT_NOTIFY = 0x2000 + 0x004E;
+            private const int NM_CUSTOMDRAW = -12;
+            private const int CDDS_PREPAINT = 0x00000001;
+            private const int CDDS_POSTPAINT = 0x00000002;
+            private const int CDDS_ITEMPREPAINT = 0x00010001;
+            private const int CDDS_SUBITEM = 0x00020000;
+            private const int CDRF_NOTIFYPOSTPAINT = 0x00000010;
+
+            [StructLayout(LayoutKind.Sequential)]
+            private struct NMHDR
+            {
+                public IntPtr hwndFrom;
+                public IntPtr idFrom;
+                public int code;
+            }
+
+            [StructLayout(LayoutKind.Sequential)]
+            private struct NMLVCUSTOMDRAW
+            {
+                public NMHDR hdr;
+                public int dwDrawStage;
+                public IntPtr hdc;
+                public RECT rc;
+                public IntPtr dwItemSpec;
+                public int uItemState;
+                public IntPtr lItemlParam;
+                public int clrText;
+                public int clrTextBk;
+            }
+
+            private static readonly int CodeOffset = Marshal.OffsetOf(typeof(NMHDR), "code").ToInt32();
+            private static readonly int TextOffset = Marshal.OffsetOf(typeof(NMLVCUSTOMDRAW), "clrText").ToInt32();
+            private static readonly int TextBackOffset = Marshal.OffsetOf(typeof(NMLVCUSTOMDRAW), "clrTextBk").ToInt32();
+
+            [DllImport("user32.dll")]
+            private static extern bool GetClientRect(IntPtr window, out RECT rect);
+
+            [DllImport("user32.dll")]
+            private static extern bool GetWindowRect(IntPtr window, out RECT rect);
+
+            [DllImport("user32.dll")]
+            private static extern int MapWindowPoints(IntPtr from, IntPtr to, ref RECT points, int count);
+
+            [DllImport("user32.dll")]
+            private static extern bool IsWindowVisible(IntPtr window);
+
+            [DllImport("user32.dll")]
+            private static extern int GetScrollPos(IntPtr window, int bar);
 
             /// <summary>Ask LVM_GETGROUPRECT for the header strip rather than the whole group.</summary>
             private const int LVGGR_HEADER = 1;
@@ -268,6 +343,7 @@ namespace OpenCAGE.Theming
                     watcher = new ItemColourWatcher(listView);
                     _watchers.Add(listView, watcher);
                     listView.Disposed += watcher.OnListDisposed;
+                    listView.EnabledChanged += watcher.OnListEnabledChanged;
                 }
 
                 watcher.AssignHandle(listView.Handle);
@@ -294,6 +370,7 @@ namespace OpenCAGE.Theming
                     return;
 
                 listView.Disposed -= watcher.OnListDisposed;
+                listView.EnabledChanged -= watcher.OnListEnabledChanged;
                 watcher.ReleaseHandle();
                 _watchers.Remove(listView);
             }
@@ -303,8 +380,39 @@ namespace OpenCAGE.Theming
                 Detach(sender as ListView);
             }
 
+            /// <summary>
+            /// The disabled colours follow the list's Enabled, which a disabled parent turns off too. commctrl
+            /// repaints when its own window is enabled or disabled, but nothing repaints it for a parent's.
+            /// </summary>
+            private void OnListEnabledChanged(object sender, EventArgs e)
+            {
+                if (ThemeManager.IsDark && _listView != null && !_listView.IsDisposed)
+                    _listView.Invalidate();
+            }
+
             protected override void WndProc(ref Message m)
             {
+                if (ThemeManager.IsDark)
+                {
+                    //Never let commctrl turn its own grid lines back on: WinForms sends every extended style
+                    //again whenever one of them changes (CheckBoxes, FullRowSelect...)
+                    if (m.Msg == LVM_SETEXTENDEDLISTVIEWSTYLE)
+                    {
+                        int mask = (int)m.WParam;
+                        if (mask == 0 || (mask & LVS_EX_GRIDLINES) != 0)
+                            m.LParam = (IntPtr)((int)m.LParam & ~LVS_EX_GRIDLINES);
+                    }
+                    else if (m.Msg == WM_ERASEBKGND && !_listView.Enabled)
+                    {
+                        //A disabled list erases in COLOR_BTNFACE, whatever LVM_SETBKCOLOR said
+                        RECT client;
+                        if (GetClientRect(Handle, out client))
+                            Fill(m.WParam, Rectangle.FromLTRB(client.Left, client.Top, client.Right, client.Bottom), ThemeColours.InputDisabled);
+                        m.Result = (IntPtr)1;
+                        return;
+                    }
+                }
+
                 base.WndProc(ref m);
 
                 if (_applying || !ThemeManager.IsDark)
@@ -315,6 +423,12 @@ namespace OpenCAGE.Theming
                     //After commctrl has drawn, not instead of it - only the group header strips are
                     //repainted, so rows, selection and hot tracking are untouched
                     PaintGroupHeaders();
+                    return;
+                }
+
+                if (m.Msg == WM_REFLECT_NOTIFY)
+                {
+                    OnCustomDraw(ref m);
                     return;
                 }
 
@@ -338,6 +452,148 @@ namespace OpenCAGE.Theming
                     //Handle went away between the message and the post
                     _pending = false;
                 }
+            }
+
+            /// <summary>
+            /// After WinForms has handled a reflected custom draw (it always asks commctrl for item notifications).
+            ///
+            /// Disabled: WinForms gives a disabled list's rows no colours at all, and commctrl then fills them,
+            /// and everything behind them, with COLOR_BTNFACE - so the rows get the theme's disabled colours here,
+            /// and the background at pre-paint, which is where a double-buffered list paints it (into its buffer,
+            /// where WM_ERASEBKGND can't reach).
+            ///
+            /// Grid lines: drawn at post-paint, into commctrl's own DC, so they land in its back buffer when it has
+            /// one and in WM_PRINTCLIENT (DrawToBitmap) as well as on screen.
+            /// </summary>
+            private void OnCustomDraw(ref Message m)
+            {
+                if (m.LParam == IntPtr.Zero || Marshal.ReadInt32(m.LParam, CodeOffset) != NM_CUSTOMDRAW)
+                    return;
+
+                NMLVCUSTOMDRAW draw = (NMLVCUSTOMDRAW)Marshal.PtrToStructure(m.LParam, typeof(NMLVCUSTOMDRAW));
+                if (draw.hdr.hwndFrom != Handle || _listView == null || _listView.IsDisposed)
+                    return;
+
+                switch (draw.dwDrawStage)
+                {
+                    case CDDS_PREPAINT:
+                        if (!_listView.Enabled)
+                            Fill(draw.hdc, Rectangle.FromLTRB(draw.rc.Left, draw.rc.Top, draw.rc.Right, draw.rc.Bottom), ThemeColours.InputDisabled);
+                        if (HasGridLines())
+                            m.Result = (IntPtr)((int)m.Result | CDRF_NOTIFYPOSTPAINT);
+                        break;
+
+                    case CDDS_POSTPAINT:
+                        if (HasGridLines())
+                            PaintGridLines(draw.hdc);
+                        break;
+
+                    case CDDS_ITEMPREPAINT:
+                    case CDDS_ITEMPREPAINT | CDDS_SUBITEM:
+                        if (_listView.Enabled)
+                            break;
+                        Marshal.WriteInt32(m.LParam, TextOffset, ColorTranslator.ToWin32(ThemeColours.TextDisabled));
+                        Marshal.WriteInt32(m.LParam, TextBackOffset, ColorTranslator.ToWin32(ThemeColours.InputDisabled));
+                        break;
+                }
+            }
+
+            private static void Fill(IntPtr hdc, Rectangle area, Color colour)
+            {
+                if (hdc == IntPtr.Zero || area.Width <= 0 || area.Height <= 0)
+                    return;
+
+                using (Graphics graphics = Graphics.FromHdc(hdc))
+                using (SolidBrush brush = new SolidBrush(colour))
+                    graphics.FillRectangle(brush, area);
+            }
+
+            /// <summary>
+            /// Whether the list wants grid lines where commctrl would draw them: report view only. A list
+            /// showing groups gets none - commctrl lays its rows out around the group headers, and no list
+            /// here has both.
+            /// </summary>
+            private bool HasGridLines()
+            {
+                return _listView.GridLines && _listView.View == View.Details
+                    && SendMessage(Handle, LVM_ISGROUPVIEWENABLED, IntPtr.Zero, IntPtr.Zero) == IntPtr.Zero;
+            }
+
+            /// <summary>
+            /// The grid lines commctrl would draw, in the theme's divider colour, at exactly its positions
+            /// (checked pixel for pixel, scrolled both ways): along the bottom pixel row of every row, carried
+            /// on at the same pitch down the empty space below the last one, and down the first pixel past the
+            /// right-hand edge of every column.
+            /// </summary>
+            private void PaintGridLines(IntPtr hdc)
+            {
+                RECT client;
+                if (hdc == IntPtr.Zero || !GetClientRect(Handle, out client))
+                    return;
+
+                int top = client.Top;
+                IntPtr header = SendMessage(Handle, LVM_GETHEADER, IntPtr.Zero, IntPtr.Zero);
+                if (header != IntPtr.Zero && IsWindowVisible(header))
+                {
+                    RECT headerRect;
+                    GetWindowRect(header, out headerRect);
+                    MapWindowPoints(IntPtr.Zero, Handle, ref headerRect, 2);
+                    top = Math.Max(top, headerRect.Bottom);
+                }
+
+                //The row pitch from the top row, or with no rows from how much taller one more row makes the list
+                int first = top, pitch;
+                if ((int)SendMessage(Handle, LVM_GETITEMCOUNT, IntPtr.Zero, IntPtr.Zero) > 0)
+                {
+                    RECT row = new RECT(); //Left = LVIR_BOUNDS
+                    IntPtr topIndex = SendMessage(Handle, LVM_GETTOPINDEX, IntPtr.Zero, IntPtr.Zero);
+                    if (SendMessageRect(Handle, LVM_GETITEMRECT, topIndex, ref row) == IntPtr.Zero)
+                        return;
+                    first = row.Top;
+                    pitch = row.Bottom - row.Top;
+                }
+                else
+                {
+                    pitch = ApproximateHeight(2) - ApproximateHeight(1);
+                }
+                if (pitch <= 0)
+                    return;
+
+                try
+                {
+                    using (Graphics graphics = Graphics.FromHdc(hdc))
+                    using (Pen pen = new Pen(ThemeColours.Border))
+                    {
+                        graphics.IntersectClip(Rectangle.FromLTRB(client.Left, top, client.Right, client.Bottom));
+
+                        for (int y = first + pitch - 1; y < client.Bottom; y += pitch)
+                            graphics.DrawLine(pen, client.Left, y, client.Right, y);
+
+                        if (header == IntPtr.Zero)
+                            return;
+
+                        //Header item rects are in column display order, and start at 0 however far the list is scrolled
+                        int scrolled = GetScrollPos(Handle, SB_HORZ);
+                        int columns = (int)SendMessage(header, HDM_GETITEMCOUNT, IntPtr.Zero, IntPtr.Zero);
+                        for (int i = 0; i < columns; i++)
+                        {
+                            RECT column = new RECT();
+                            if (SendMessageRect(header, HDM_GETITEMRECT, (IntPtr)i, ref column) == IntPtr.Zero)
+                                continue;
+                            int x = column.Right - scrolled;
+                            graphics.DrawLine(pen, x, top, x, client.Bottom);
+                        }
+                    }
+                }
+                catch
+                {
+                    //Cosmetic - a list that won't give up its geometry just goes without
+                }
+            }
+
+            private int ApproximateHeight(int rows)
+            {
+                return ((int)SendMessage(Handle, LVM_APPROXIMATEVIEWRECT, (IntPtr)rows, (IntPtr)(-1)) >> 16) & 0xFFFF;
             }
 
             /// <summary>
@@ -370,7 +626,8 @@ namespace OpenCAGE.Theming
                             if (!TryGetHeaderRect(group, out bounds) || bounds.Height <= 0 || bounds.Width <= 0)
                                 continue;
 
-                            using (SolidBrush brush = new SolidBrush(ThemeColours.Input))
+                            //On the disabled list's colours while it is disabled (see OnCustomDraw)
+                            using (SolidBrush brush = new SolidBrush(_listView.Enabled ? ThemeColours.Input : ThemeColours.InputDisabled))
                                 graphics.FillRectangle(brush, bounds);
 
                             Rectangle text = bounds;
@@ -381,7 +638,7 @@ namespace OpenCAGE.Theming
                                 group.Header,
                                 _listView.Font,
                                 text,
-                                ThemeColours.Text,
+                                _listView.Enabled ? ThemeColours.Text : ThemeColours.TextDisabled,
                                 TextFormatFlags.Left | TextFormatFlags.VerticalCenter
                                     | TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine);
 

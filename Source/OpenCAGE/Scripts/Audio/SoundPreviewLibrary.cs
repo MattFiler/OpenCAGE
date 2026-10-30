@@ -31,11 +31,87 @@ namespace OpenCAGE.Audio
                     return null;
 
                 //The Switch build keeps its Wwise content in DATA/SOUND_SWITCH (and its banks
-                //are a newer Wwise generation - v134 vs the PC builds' v88).
+                //are a newer Wwise generation - v134 vs the PC builds' v88). The iOS build has the
+                //newer generation too, in the usual folder; the Mac and Linux builds ship the PC's
+                //sound files byte for byte.
                 if (CathodeLib.PatchManager.GetPlatform(Singleton.PathToAI) == CathodeLib.PatchManager.Platform.SWITCH)
                     return Path.Combine(Singleton.PathToAI, "DATA", "SOUND_SWITCH");
 
                 return Path.Combine(Singleton.PathToAI, "DATA", "SOUND");
+            }
+        }
+
+        private static readonly object _formatLock = new object();
+        private static string _formatFor;
+        private static uint _bankVersion;
+        private static bool _narrowPackageNames;
+
+        /// <summary>
+        /// The Wwise bank version of the game's own soundbanks - 88 on PC, Mac and Linux, 134 on iOS and Switch - or 0 when none
+        /// could be read. Everything the editor writes for this game is laid out for it.
+        /// </summary>
+        public static uint BankVersion
+        {
+            get { ReadFormat(); return _bankVersion; }
+        }
+
+        /// <summary>
+        /// Whether this game is the newer Wwise generation (2019.1, bank version 134: iOS and Switch): its sound objects, its
+        /// audio's channel layout field and the Vorbis setups it has shipped differ from the PC's - see the writers.
+        /// </summary>
+        public static bool Modern
+        {
+            get { return BankVersion >= 134; }
+        }
+
+        /// <summary>
+        /// Whether this game's file packages name their languages in 8-bit strings (iOS, Switch) rather than UTF-16 (PC, Mac,
+        /// Linux) - read from a package it ships, else assumed from the bank generation.
+        /// </summary>
+        public static bool NarrowPackageNames
+        {
+            get { ReadFormat(); return _narrowPackageNames; }
+        }
+
+        private static void ReadFormat()
+        {
+            string directory = SoundDirectory;
+            lock (_formatLock)
+            {
+                if (string.Equals(_formatFor, directory ?? "", StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                _formatFor = directory ?? "";
+                _bankVersion = 0;
+                _narrowPackageNames = false;
+                if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+                    return;
+
+                try
+                {
+                    string any = Directory.EnumerateFiles(directory, "*.bnk").FirstOrDefault();
+                    if (any != null)
+                    {
+                        byte[] header = new byte[12];
+                        using (FileStream stream = new FileStream(any, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            if (stream.Read(header, 0, 12) == 12 && header[0] == 'B' && header[1] == 'K' && header[2] == 'H' && header[3] == 'D')
+                                _bankVersion = BitConverter.ToUInt32(header, 8);
+                    }
+                }
+                catch
+                {
+                }
+
+                _narrowPackageNames = _bankVersion >= 134;
+                try
+                {
+                    string package = Directory.EnumerateFiles(directory, "*.pck").FirstOrDefault();
+                    if (package != null)
+                        _narrowPackageNames = WwiseFilePackage.Load(package).NarrowNames;
+                }
+                catch
+                {
+                }
             }
         }
 

@@ -25,10 +25,13 @@ namespace OpenCAGE.Audio
 
         private static readonly Dictionary<long, bool> _encodable = new Dictionary<long, bool>();
 
-        /// <summary>Whether the encoder can write audio of this layout in a form the game decodes. Asked once per layout.</summary>
-        public static bool CanEncode(int channels, int sampleRate)
+        /// <summary>
+        /// Whether the encoder can write audio of this layout in a form the game decodes. Asked once per layout. <paramref name="modern"/>
+        /// asks it of the setups the iOS and Switch builds ship rather than the PC's.
+        /// </summary>
+        public static bool CanEncode(int channels, int sampleRate, bool modern = false)
         {
-            long key = ((long)channels << 32) | (uint)sampleRate;
+            long key = ((long)channels << 32) | (uint)sampleRate | (modern ? 1L << 40 : 0);
             lock (_encodable)
             {
                 bool known;
@@ -36,7 +39,7 @@ namespace OpenCAGE.Audio
                     return known;
             }
 
-            bool can = VorbisEncoder.CanEncode(channels, sampleRate);
+            bool can = VorbisEncoder.CanEncode(channels, sampleRate, modern);
             lock (_encodable)
                 _encodable[key] = can;
             return can;
@@ -46,15 +49,15 @@ namespace OpenCAGE.Audio
         /// The sample rate to encode at, given the one wanted: that rate when the encoder can do it, else the nearest
         /// standard rate above it that it can - capped at <see cref="HighestRate"/>.
         /// </summary>
-        public static int EncodableRate(int channels, int wanted)
+        public static int EncodableRate(int channels, int wanted, bool modern = false)
         {
             if (wanted > HighestRate)
                 wanted = HighestRate;
-            if (wanted >= 8000 && CanEncode(channels, wanted))
+            if (wanted >= 8000 && CanEncode(channels, wanted, modern))
                 return wanted;
 
             foreach (int rate in StandardRates)
-                if (rate >= wanted && CanEncode(channels, rate))
+                if (rate >= wanted && CanEncode(channels, rate, modern))
                     return rate;
 
             return HighestRate;

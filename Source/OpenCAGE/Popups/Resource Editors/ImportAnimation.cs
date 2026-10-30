@@ -316,11 +316,11 @@ namespace OpenCAGE
         {
             string name = nameBox.Text.Trim(), path = pathBox.Text.Trim();
             bool added;
-            string problem;
+            string problem, note = null;
             try
             {
                 added = _replacing != null
-                    ? AnimationImport.Replace(_animations, _replacing, _reading, _options, out problem)
+                    ? AnimationImport.Replace(_animations, _replacing, _reading, _options, out problem, out note)
                     : AnimationImport.Add(_animations, _set, _reading, name, path, _options, out problem);
             }
             catch (Exception ex)
@@ -333,6 +333,8 @@ namespace OpenCAGE
                 MessageBox.Show(problem, _replacing != null ? "Replace" : "Import", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+            if (note != null)
+                MessageBox.Show(note, "Replace", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
             ImportedName = name;            ImportedSet = _set.Name;
             DialogResult = DialogResult.OK;

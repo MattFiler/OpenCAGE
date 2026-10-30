@@ -368,10 +368,14 @@ namespace OpenCAGE.Audio
                 reading.SourceSampleRate = audio.SampleRate;
 
                 /* The game picks its decoder from the sound object in the bank, not from the media, so
-                 * the replacement has to be the codec the original already was. Everything on PC is
-                 * Vorbis; the Switch build also stores some sounds as Wwise ADPCM and a few as PCM. */
+                 * the replacement has to be the codec the original already was. Everything on PC (and on
+                 * Mac, Linux and iOS) is Vorbis; the Switch build also stores some sounds as Wwise ADPCM
+                 * and a few as PCM. The iOS and Switch builds are a later Wwise, whose Vorbis header
+                 * differs slightly and which ships setups of its own - the encoder writes for whichever
+                 * this game is. */
                 ushort codec = ExistingCodec(original);
-                Conform(audio, options, reading, codec == WwiseVorbisConverter.FormatVorbis);
+                bool modern = SoundPreviewLibrary.Modern;
+                Conform(audio, options, reading, codec == WwiseVorbisConverter.FormatVorbis, modern);
                 Shape(audio, options, reading);
                 reading.Channels = audio.Channels;
                 reading.SampleRate = audio.SampleRate;
@@ -394,7 +398,7 @@ namespace OpenCAGE.Audio
                         break;
 
                     default:
-                        VorbisEncoder.Result encoded = VorbisEncoder.Encode(audio.Samples, audio.SampleRate, options.Quality);
+                        VorbisEncoder.Result encoded = VorbisEncoder.Encode(audio.Samples, audio.SampleRate, options.Quality, modern);
                         reading.Quality = encoded.Quality;
                         if (encoded.Note != null)
                             reading.Notes.Add(encoded.Note);
@@ -543,7 +547,7 @@ namespace OpenCAGE.Audio
         /// layout the game's Vorbis decoder is set up for where that one isn't. What was done is noted, along with anything
         /// of the original's (a loop region, markers) the new audio can't carry.
         /// </summary>
-        private static void Conform(WaveFile.Audio audio, Options options, Reading reading, bool vorbis)
+        private static void Conform(WaveFile.Audio audio, Options options, Reading reading, bool vorbis, bool modern)
         {
             MediaLayout original = reading.Original;
             bool matchChannels = options.Channels <= 0 && options.MatchOriginalChannels && original != null;
@@ -555,7 +559,7 @@ namespace OpenCAGE.Audio
             int wanted = options.SampleRate > 0 ? options.SampleRate
                 : matchRate ? original.SampleRate
                 : audio.SampleRate;
-            int rate = vorbis ? AudioConform.EncodableRate(channels, wanted) : wanted;
+            int rate = vorbis ? AudioConform.EncodableRate(channels, wanted, modern) : wanted;
 
             if (audio.Channels != channels)
             {

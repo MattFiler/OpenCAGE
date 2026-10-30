@@ -468,7 +468,7 @@ namespace OpenCAGE.Audio
             if (modern)
             {
                 //Version 134: plugin id, a stream-type byte, source id, the media's in-memory size,
-                //and a flag byte - fourteen bytes flat, with source plugins appending a
+                //and a flag byte - fourteen bytes flat, with source plugins (type 2) appending a
                 //length-prefixed parameter block. Only the size is stored, so only it needs fixing.
                 if (available < 14)
                     return 0;
@@ -477,7 +477,10 @@ namespace OpenCAGE.Audio
                 byte streamByte = hirc[at + 4];
                 uint modernSource = BitConverter.ToUInt32(hirc, at + 5);
 
-                if ((modernPlugin & 0x0F) != 1)
+                if ((modernPlugin & 0x0F) != 1 && (modernPlugin & 0x0F) != 2)
+                    return 14; //no source at all (plugin id 0): nothing to point anywhere
+
+                if ((modernPlugin & 0x0F) == 2)
                 {
                     if (available < 18)
                         return 0;

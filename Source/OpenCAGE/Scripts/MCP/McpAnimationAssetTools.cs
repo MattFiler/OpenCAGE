@@ -1772,11 +1772,13 @@ namespace OpenCAGE.MCP
                         throw new McpError(McpErrorCodes.Refused, stale + " Nothing was imported.");
                     foreach (ClipPlan plan in ready)
                     {
-                        string problem;
+                        string problem, note = null;
                         bool done = replace
-                            ? AnimationImport.Replace(animations, plan.Existing, plan.Reading, plan.Options, out problem)
+                            ? AnimationImport.Replace(animations, plan.Existing, plan.Reading, plan.Options, out problem, out note)
                             : AnimationImport.Add(animations, set, plan.Reading, plan.Name, plan.StoredPath, plan.Options, out problem);
                         if (!done) { failed.Add("'" + plan.Name + "': " + problem); plan.Problems.Add(problem); continue; }
+                        //the Linux and Mac builds' own pre-converted copy of the clip, which the rebuild can't reach
+                        if (note != null) call.Note("'" + plan.Name + "': " + note);
                         //The pick lists are built once at startup, so they are told about the new clip
                         Singleton.RegisterAnimation(set.Name, plan.Name);
                     }

@@ -16,6 +16,13 @@ namespace OpenCAGE.Audio
     /// A stream whose setup isn't in the table cannot be written safely: the runtime would size its
     /// decoder from a guess. That is reported rather than approximated, and the encoder is steered at a
     /// setup that is in the table - see <see cref="VorbisEncoder"/>.
+    ///
+    /// The table has two sections: the setups the PC game ships (which the Mac and Linux builds ship too),
+    /// then those the Wwise 2019.1 builds - iOS and Switch - ship, which were encoded at lower qualities and
+    /// add thirteen setups of their own. The figures are a property of the setup alone, not of the Wwise
+    /// version: every setup two builds have in common carries the same three figures in both (10 shared by
+    /// PC and iOS, 11 by iOS and Switch, 13 by PC and Switch - 27 setups, no disagreement). Each game is
+    /// still only written the setups it ships itself.
     /// </summary>
     internal static class WwiseVorbisSetups
     {
@@ -40,8 +47,9 @@ namespace OpenCAGE.Audio
 
         private static readonly object _lock = new object();
         private static List<Decoder> _known;
+        private static List<Decoder> _modern;
 
-        /// <summary>Every setup the game uses, most common first.</summary>
+        /// <summary>Every setup the PC game uses, most common first.</summary>
         public static IList<Decoder> All
         {
             get
@@ -49,17 +57,33 @@ namespace OpenCAGE.Audio
                 lock (_lock)
                 {
                     if (_known == null)
-                        _known = Load();
+                        Load();
 
                     return _known;
                 }
             }
         }
 
+        /// <summary>Every setup the Wwise 2019.1 builds (iOS, Switch) use, most common first.</summary>
+        public static IList<Decoder> Modern
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    if (_modern == null)
+                        Load();
+
+                    return _modern;
+                }
+            }
+        }
+
         /// <summary>
-        /// The decoder figures for a packed setup packet, or null when the game has never seen it.
+        /// The decoder figures for a packed setup packet, or null when the game has never seen it. <paramref name="modern"/>
+        /// looks among the setups the iOS and Switch builds ship rather than the PC's.
         /// </summary>
-        public static Decoder Find(byte[] setupPacket)
+        public static Decoder Find(byte[] setupPacket, bool modern = false)
         {
             if (setupPacket == null)
                 return null;
@@ -70,7 +94,7 @@ namespace OpenCAGE.Audio
             if (wanted == null)
                 return null;
 
-            foreach (Decoder candidate in All)
+            foreach (Decoder candidate in modern ? Modern : All)
             {
                 if (candidate.Canonical == null || candidate.Canonical.Length != wanted.Length)
                     continue;
@@ -122,9 +146,9 @@ namespace OpenCAGE.Audio
         }
 
         /// <summary>As <see cref="Find"/>, but refuses to carry on rather than guessing.</summary>
-        public static Decoder For(byte[] setupPacket, int channels, int blocksize0Pow, int blocksize1Pow)
+        public static Decoder For(byte[] setupPacket, int channels, int blocksize0Pow, int blocksize1Pow, bool modern = false)
         {
-            Decoder found = Find(setupPacket);
+            Decoder found = Find(setupPacket, modern);
             if (found != null)
                 return found;
 
@@ -134,7 +158,8 @@ namespace OpenCAGE.Audio
                 + "Importing it at a different quality or sample rate normally lands on one it knows.");
         }
 
-        private static List<Decoder> Load()
+        /// <summary>Both sections of the table: the PC's, then - when the table has one - the iOS and Switch builds'.</summary>
+        private static void Load()
         {
             byte[] file;
             using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(ResourceName))
@@ -153,24 +178,29 @@ namespace OpenCAGE.Audio
                 }
             }
 
-            List<Decoder> result = new List<Decoder>();
             using (BinaryReader reader = new BinaryReader(new MemoryStream(file)))
             {
-                int count = reader.ReadInt32();
-                for (int i = 0; i < count; i++)
-                {
-                    Decoder decoder = new Decoder
-                    {
-                        AllocSize32 = reader.ReadUInt32(),
-                        AllocSize64 = reader.ReadUInt32(),
-                        SetupHash = reader.ReadUInt32(),
-                    };
-                    decoder.Setup = reader.ReadBytes(reader.ReadInt32());
-                    decoder.Canonical = Canonicalise(decoder.Setup);
-                    result.Add(decoder);
-                }
+                _known = ReadSection(reader);
+                _modern = reader.BaseStream.Position < reader.BaseStream.Length ? ReadSection(reader) : new List<Decoder>();
             }
+        }
 
+        private static List<Decoder> ReadSection(BinaryReader reader)
+        {
+            List<Decoder> result = new List<Decoder>();
+            int count = reader.ReadInt32();
+            for (int i = 0; i < count; i++)
+            {
+                Decoder decoder = new Decoder
+                {
+                    AllocSize32 = reader.ReadUInt32(),
+                    AllocSize64 = reader.ReadUInt32(),
+                    SetupHash = reader.ReadUInt32(),
+                };
+                decoder.Setup = reader.ReadBytes(reader.ReadInt32());
+                decoder.Canonical = Canonicalise(decoder.Setup);
+                result.Add(decoder);
+            }
             return result;
         }
     }

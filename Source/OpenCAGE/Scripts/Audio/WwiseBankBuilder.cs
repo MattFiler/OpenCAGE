@@ -20,12 +20,19 @@ namespace OpenCAGE.Audio
     /// as the game's banks carry them - each mixer listing only the children in this bank, and children ahead of their parents.
     /// A bank built here can be added to later: its objects are read back and the new events added beside them.
     ///
+    /// The iOS and Switch builds are a later Wwise (2019.1, bank version 134), and a bank for one of them is laid out as theirs
+    /// are: the same chunks and the same three objects per event, in that generation's object layout - measured over every
+    /// sound and actor-mixer those two builds ship (131,291 and 10,351), each of which ends exactly where the layout below says.
+    /// What moved is noted where it is read or written; the biggest is that an attenuation is no longer part of the positioning
+    /// block but a property beside the volume and pitch, set on the same object as the positioning it goes with.
+    ///
     /// The game finds a sound event a script names in its level's sound event table (WORLD/SOUNDEVENTDATA.DAT), not in the
     /// bank - so the events made here also go in that table (see <see cref="LevelSoundOverride"/>), and a SoundLoadBank loads
     /// the bank by name like any other: the game registers a bank it has no entry for as it's first asked for.
     /// </summary>
     internal static class WwiseBankBuilder
     {
+        /// <summary>The bank version written when the game's own can't be read: the PC's.</summary>
         public const uint Version = 88;
         private const uint VorbisPlugin = 0x00040001;
 
@@ -59,6 +66,10 @@ namespace OpenCAGE.Audio
         {
             public byte[] Bank;
             public uint BankId;
+
+            /// <summary>The Wwise bank version it was laid out for - the game's own.</summary>
+            public uint Version;
+
             public List<EventInfo> Events = new List<EventInfo>();
             public List<string> Notes = new List<string>();
         }
@@ -71,21 +82,141 @@ namespace OpenCAGE.Audio
             public byte[] Body;
         }
 
+        /// <summary>
+        /// What differs between the two bank generations the game ships, for everything here that reads or writes objects.
+        /// </summary>
+        private sealed class Format
+        {
+            public uint Version;
+
+            /// <summary>Version 134 (Wwise 2019.1: iOS, Switch) rather than 88 (PC, Mac, Linux).</summary>
+            public bool Modern;
+
+            public static Format For(uint version)
+            {
+                if (version != 88 && version != 134)
+                    throw new InvalidDataException("This game's soundbanks are version " + version + ", which a soundbank can't be made for here (only 88, the PC's, Mac's and Linux's, and 134, the iOS and Switch builds').");
+                return new Format { Version = version, Modern = version >= 134 };
+            }
+
+            /// <summary>The loop count property: 7 in version 88; 0x3A in 134, where 7 is the priority.</summary>
+            public byte LoopProperty
+            {
+                get { return Modern ? (byte)0x3A : (byte)7; }
+            }
+
+            /// <summary>Version 134's attenuation property: the attenuation object's id, on the object whose positioning it goes with.</summary>
+            public const byte AttenuationProperty = 0x46;
+
+            /// <summary>Whether a property adds to the one below it: volume, pitch and low-pass in both; high-pass too in 134.</summary>
+            public bool Additive(byte property)
+            {
+                return property == 0 || property == 2 || property == 3 || (Modern && property == 4);
+            }
+
+            /// <summary>
+            /// The kinds of object a sound's or mixer's settings point at that the bank carries along: attenuations, effects and
+            /// auxiliary busses. Version 134 numbers them differently - effect share sets 16, custom effects 17, aux busses 18 -
+            /// where 88 had effects 18 and aux busses 19 (measured: every reference 134's objects make lands on one of these).
+            /// </summary>
+            public bool Carried(byte type)
+            {
+                if (type == (byte)WwiseObjectType.Attenuation)
+                    return true;
+                return Modern ? type == 16 || type == 17 || type == 18 : type == (byte)WwiseObjectType.Effect || type == (byte)WwiseObjectType.AuxBus;
+            }
+
+            /// <summary>
+            /// How long a sound's source record is. Version 88: a plugin source 11 bytes, streamed audio 17, audio in a bank 25.
+            /// Version 134: 14 bytes flat, a source plugin (type 2) adding a u32-length parameter block.
+            /// </summary>
+            public int SourceLength(byte[] body)
+            {
+                uint plugin = BitConverter.ToUInt32(body, 0);
+                if (Modern)
+                {
+                    if ((plugin & 0x0F) == 2 && body.Length >= 18)
+                    {
+                        uint parameters = BitConverter.ToUInt32(body, 14);
+                        if (parameters < 0x1000)
+                            return 18 + (int)parameters;
+                    }
+                    return 14;
+                }
+
+                uint stream = BitConverter.ToUInt32(body, 4);
+                return (plugin & 0x0F) != 1 ? 11 : stream == (uint)WwiseStreamType.Streamed ? 17 : 25;
+            }
+
+            /// <summary>A sound's source id: 8 bytes in in version 88, 5 in 134 (whose stream type is a single byte).</summary>
+            public uint SourceId(byte[] body)
+            {
+                return BitConverter.ToUInt32(body, Modern ? 5 : 8);
+            }
+
+            /// <summary>An event's actions: a u32 count in version 88, a u8 count in 134.</summary>
+            public IEnumerable<uint> Actions(HircObject ev)
+            {
+                int header = Modern ? 1 : 4;
+                if (ev.Body.Length < header)
+                    yield break;
+                uint count = Modern ? ev.Body[0] : BitConverter.ToUInt32(ev.Body, 0);
+                for (int i = 0; i < count && header + 4 * i + 4 <= ev.Body.Length; i++)
+                    yield return BitConverter.ToUInt32(ev.Body, header + 4 * i);
+            }
+
+            /// <summary>An event playing one action.</summary>
+            public byte[] Event(uint actionId)
+            {
+                byte[] ev = new byte[Modern ? 5 : 8];
+                if (Modern)
+                    ev[0] = 1;
+                else
+                    Put32(ev, 0, 1);
+                Put32(ev, Modern ? 1 : 4, actionId);
+                return ev;
+            }
+
+            /// <summary>Whether this object sets the positioning it (and what's under it) plays with, rather than inheriting it.</summary>
+            public bool OverridesPositioning(byte[] body, Node n)
+            {
+                return Modern ? (body[n.Positioning] & 1) != 0 : body[n.Positioning] != 0;
+            }
+
+            /// <summary>Whether this object sets its own auxiliary sends (game-defined or user-defined), or lists aux busses of its own.</summary>
+            public bool SetsAux(byte[] body, Node n)
+            {
+                return Modern ? (body[n.Aux] & 0x0D) != 0 : body[n.Aux] != 0 || body[n.Aux + 2] != 0;
+            }
+        }
+
         #region BUILDING
 
         /// <summary>
         /// A soundbank named <paramref name="bankName"/> holding <paramref name="add"/> - and, given the bytes of one built here
         /// before (<paramref name="existing"/>), its events but those in <paramref name="drop"/>. <paramref name="names"/> gives
-        /// the existing events' names by id (the level's sound event table has them; the bank has only their hashes).
+        /// the existing events' names by id (the level's sound event table has them; the bank has only their hashes). It is laid
+        /// out for the game's own bank version (<paramref name="version"/>, or the game's when 0).
         /// </summary>
-        public static Result Build(string bankName, IList<NewEvent> add, WwiseSoundLibrary library, byte[] existing, IDictionary<uint, string> names, ICollection<uint> drop)
+        public static Result Build(string bankName, IList<NewEvent> add, WwiseSoundLibrary library, byte[] existing, IDictionary<uint, string> names, ICollection<uint> drop, uint version = 0)
         {
             uint bankId = CathodeLib.Utilities.SoundHashedString(bankName);
-            Result result = new Result { BankId = bankId };
+
+            //Laid out as the bank already is, else as the game's own are
+            if (existing != null && existing.Length >= 16 && Encoding.ASCII.GetString(existing, 0, 4) == "BKHD")
+                version = BitConverter.ToUInt32(existing, 8);
+            if (version == 0)
+                version = SoundPreviewLibrary.BankVersion;
+            if (version == 0)
+                version = Version;
+            Format format = Format.For(version);
+
+            Result result = new Result { BankId = bankId, Version = version };
 
             Dictionary<uint, HircObject> objects = new Dictionary<uint, HircObject>();
             Dictionary<uint, byte[]> media = new Dictionary<uint, byte[]>();
             List<uint> events = new List<uint>();
+            byte[] header = existing != null ? HeaderAfterLanguage(existing) : null;
 
             //--- what the bank already holds ---
             if (existing != null)
@@ -126,13 +257,15 @@ namespace OpenCAGE.Audio
                 if (objects.ContainsKey(eventId))
                     objects.Remove(eventId);
 
-                Template template = FindTemplate(library, e.TemplateSourceId, templateBanks);
+                Template template = FindTemplate(library, e.TemplateSourceId, templateBanks, format);
+                if (header == null)
+                    header = template.Header;
                 uint soundId = NewId(bankName + "/" + e.Name + "/sound", library, taken);
                 uint sourceId = NewId(bankName + "/" + e.Name + "/audio", library, taken);
                 uint actionId = NewId(bankName + "/" + e.Name + "/play", library, taken);
 
                 //The sound: the template's, with the new audio, hung off the template's actor-mixer
-                objects[soundId] = new HircObject { Type = (byte)WwiseObjectType.Sound, Id = soundId, Body = SoundBody(template, sourceId, bankId, e.Loop) };
+                objects[soundId] = new HircObject { Type = (byte)WwiseObjectType.Sound, Id = soundId, Body = SoundBody(template, sourceId, bankId, e.Loop, format) };
                 media[sourceId] = e.Wem;
 
                 //The mixers above it and the curves and effects they use, as the template's bank has them
@@ -140,7 +273,8 @@ namespace OpenCAGE.Audio
                     if (!objects.ContainsKey(o.Id))
                         objects[o.Id] = o;
 
-                //Play it: the action names the bank its target is in, as the game's own do
+                //Play it: the action names the bank its target is in, as the game's own do. The same fourteen bytes in both
+                //generations (type, target, not a bus, no properties, no ranged ones, the fade curve, the bank)
                 byte[] play = new byte[14];
                 Put16(play, 0, 0x0403);
                 Put32(play, 2, soundId);
@@ -148,10 +282,7 @@ namespace OpenCAGE.Audio
                 Put32(play, 10, bankId);
                 objects[actionId] = new HircObject { Type = (byte)WwiseObjectType.Action, Id = actionId, Body = play };
 
-                byte[] ev = new byte[8];
-                Put32(ev, 0, 1);
-                Put32(ev, 4, actionId);
-                objects[eventId] = new HircObject { Type = (byte)WwiseObjectType.Event, Id = eventId, Body = ev };
+                objects[eventId] = new HircObject { Type = (byte)WwiseObjectType.Event, Id = eventId, Body = format.Event(actionId) };
                 events.Add(eventId);
                 allNames[eventId] = e.Name;
 
@@ -160,26 +291,26 @@ namespace OpenCAGE.Audio
             }
 
             //--- only what the events still reach, then laid out ---
-            Dictionary<uint, HircObject> kept = Reachable(objects, events);
+            Dictionary<uint, HircObject> kept = Reachable(objects, events, format);
             foreach (uint id in events)
             {
                 if (result.Events.Any(o => o.EventId == id))
                     continue;
                 string name;
                 EventInfo info = new EventInfo { Name = allNames.TryGetValue(id, out name) ? name : null, EventId = id };
-                HircObject action = Actions(objects[id]).Select(a => kept.ContainsKey(a) ? kept[a] : null).FirstOrDefault(a => a != null);
+                HircObject action = format.Actions(objects[id]).Select(a => kept.ContainsKey(a) ? kept[a] : null).FirstOrDefault(a => a != null);
                 if (action != null)
                 {
                     info.SoundId = BitConverter.ToUInt32(action.Body, 2);
                     HircObject sound;
                     if (kept.TryGetValue(info.SoundId, out sound) && sound.Type == (byte)WwiseObjectType.Sound)
-                        info.SourceId = BitConverter.ToUInt32(sound.Body, 8);
+                        info.SourceId = format.SourceId(sound.Body);
                 }
                 result.Events.Add(info);
             }
 
-            HashSet<uint> sources = new HashSet<uint>(kept.Values.Where(o => o.Type == (byte)WwiseObjectType.Sound).Select(o => BitConverter.ToUInt32(o.Body, 8)));
-            result.Bank = Write(bankName, bankId, kept, media.Where(m => sources.Contains(m.Key)).ToDictionary(m => m.Key, m => m.Value));
+            HashSet<uint> sources = new HashSet<uint>(kept.Values.Where(o => o.Type == (byte)WwiseObjectType.Sound).Select(o => format.SourceId(o.Body)));
+            result.Bank = Write(bankName, bankId, kept, media.Where(m => sources.Contains(m.Key)).ToDictionary(m => m.Key, m => m.Value), format, header);
             return result;
         }
 
@@ -187,7 +318,7 @@ namespace OpenCAGE.Audio
         /// The events and the objects they reach: their actions, the sounds those play, the mixers above the sounds, and the
         /// attenuations and effects any of them use. Each mixer's child list is made again from the children kept.
         /// </summary>
-        private static Dictionary<uint, HircObject> Reachable(Dictionary<uint, HircObject> objects, List<uint> events)
+        private static Dictionary<uint, HircObject> Reachable(Dictionary<uint, HircObject> objects, List<uint> events, Format format)
         {
             Dictionary<uint, HircObject> kept = new Dictionary<uint, HircObject>();
             Queue<uint> todo = new Queue<uint>(events);
@@ -202,19 +333,19 @@ namespace OpenCAGE.Audio
                 switch ((WwiseObjectType)o.Type)
                 {
                     case WwiseObjectType.Event:
-                        foreach (uint a in Actions(o)) todo.Enqueue(a);
+                        foreach (uint a in format.Actions(o)) todo.Enqueue(a);
                         break;
                     case WwiseObjectType.Action:
                         todo.Enqueue(BitConverter.ToUInt32(o.Body, 2));
                         break;
                     case WwiseObjectType.Sound:
                     case WwiseObjectType.ActorMixer:
-                        Node node = Node.Parse(o.Body, o.Type == (byte)WwiseObjectType.Sound ? SourceLength(o.Body) : 0, o.Type);
+                        Node node = Node.Parse(o.Body, o.Type == (byte)WwiseObjectType.Sound ? format.SourceLength(o.Body) : 0, o.Type, format);
                         if (node == null)
                             break;
                         uint parent = BitConverter.ToUInt32(o.Body, node.Parent);
                         if (parent != 0) todo.Enqueue(parent);
-                        foreach (uint r in node.References(o.Body)) todo.Enqueue(r);
+                        foreach (uint r in node.References(o.Body, format)) todo.Enqueue(r);
                         break;
                 }
             }
@@ -222,10 +353,10 @@ namespace OpenCAGE.Audio
             //Each mixer lists the children this bank holds, sorted, as the game's banks do
             foreach (HircObject mixer in kept.Values.Where(o => o.Type == (byte)WwiseObjectType.ActorMixer).ToList())
             {
-                Node node = Node.Parse(mixer.Body, 0, mixer.Type);
+                Node node = Node.Parse(mixer.Body, 0, mixer.Type, format);
                 if (node == null)
                     continue;
-                List<uint> children = kept.Values.Where(o => (o.Type == (byte)WwiseObjectType.Sound || o.Type == (byte)WwiseObjectType.ActorMixer) && o != mixer && ParentOf(o) == mixer.Id).Select(o => o.Id).OrderBy(o => o).ToList();
+                List<uint> children = kept.Values.Where(o => (o.Type == (byte)WwiseObjectType.Sound || o.Type == (byte)WwiseObjectType.ActorMixer) && o != mixer && ParentOf(o, format) == mixer.Id).Select(o => o.Id).OrderBy(o => o).ToList();
                 byte[] body = new byte[node.Children + 4 + 4 * children.Count];
                 Array.Copy(mixer.Body, body, node.Children);
                 Put32(body, node.Children, (uint)children.Count);
@@ -236,16 +367,9 @@ namespace OpenCAGE.Audio
             return kept;
         }
 
-        private static IEnumerable<uint> Actions(HircObject ev)
+        private static uint ParentOf(HircObject o, Format format)
         {
-            uint count = BitConverter.ToUInt32(ev.Body, 0);
-            for (int i = 0; i < count && 4 + 4 * i + 4 <= ev.Body.Length; i++)
-                yield return BitConverter.ToUInt32(ev.Body, 4 + 4 * i);
-        }
-
-        private static uint ParentOf(HircObject o)
-        {
-            Node node = Node.Parse(o.Body, o.Type == (byte)WwiseObjectType.Sound ? SourceLength(o.Body) : 0, o.Type);
+            Node node = Node.Parse(o.Body, o.Type == (byte)WwiseObjectType.Sound ? format.SourceLength(o.Body) : 0, o.Type, format);
             return node == null ? 0 : BitConverter.ToUInt32(o.Body, node.Parent);
         }
 
@@ -279,27 +403,38 @@ namespace OpenCAGE.Audio
             public byte[] Aux;
             public Dictionary<byte, float> AddedProps = new Dictionary<byte, float>();
 
+            /// <summary>
+            /// Version 134: the positioning came from a container above the sound, and with it this attenuation (0 for none) -
+            /// which that generation keeps in a property of the object the positioning is set on.
+            /// </summary>
+            public bool PositioningInherited;
+            public uint Attenuation;
+
             /// <summary>Objects that go in the bank with it: the mixers above it, and the attenuations and effects used.</summary>
             public List<HircObject> Carry = new List<HircObject>();
+
+            /// <summary>The header fields of the template's bank that follow its language, which every bank of the game shares.</summary>
+            public byte[] Header;
 
             public float MaxAttenuation = 1024;
             public string Description;
             public List<string> Notes = new List<string>();
         }
 
-        private static Template FindTemplate(WwiseSoundLibrary library, uint sourceId, Dictionary<string, Dictionary<uint, HircObject>> cache)
+        private static Template FindTemplate(WwiseSoundLibrary library, uint sourceId, Dictionary<string, Dictionary<uint, HircObject>> cache, Format format)
         {
             if (library == null)
                 throw new InvalidOperationException("The game's soundbanks aren't indexed.");
 
             //Each bank's copy of the sound object can differ (a different parent): take one whose bank holds it parseably,
             //preferring the game's own soundbank files over a level's package
-            List<WwiseSound> copies = library.SoundsWithSource(sourceId).Where(o => o.HasMedia && o.Bank != null && o.Bank.Version == Version)
+            List<WwiseSound> copies = library.SoundsWithSource(sourceId).Where(o => o.HasMedia && o.Bank != null && o.Bank.Version == format.Version)
                 .OrderBy(o => string.Equals(Path.GetExtension(o.Bank.FilePath), ".bnk", StringComparison.OrdinalIgnoreCase) ? 0 : 1).ToList();
             if (copies.Count == 0)
                 throw new InvalidDataException("No soundbank the game ships plays that sound, so there's nothing to borrow from it - pick another.");
 
             string problem = null;
+            Dictionary<string, byte[]> headers = new Dictionary<string, byte[]>();
             foreach (WwiseSound copy in copies)
             {
                 Dictionary<uint, HircObject> bank;
@@ -308,6 +443,8 @@ namespace OpenCAGE.Audio
                 {
                     byte[] bytes = BankBytes(copy.Bank);
                     bank = bytes == null ? new Dictionary<uint, HircObject>() : ReadHirc(bytes).GroupBy(o => o.Id).ToDictionary(g => g.Key, g => g.First());
+                    if (bytes != null)
+                        headers[key] = HeaderAfterLanguage(bytes);
                     cache[key] = bank;
                 }
 
@@ -315,9 +452,12 @@ namespace OpenCAGE.Audio
                 if (!bank.TryGetValue(copy.Id, out sound))
                     continue;
 
-                Template template = Borrow(sound, bank, out problem);
+                Template template = Borrow(sound, bank, format, out problem);
                 if (template == null)
                     continue;
+
+                byte[] header;
+                template.Header = headers.TryGetValue(key, out header) ? header : null;
 
                 //How far away it can be heard: what the level's sound data says for an event that plays it
                 foreach (SoundNames.Use use in SoundNames.Playing(library, sourceId))
@@ -337,17 +477,17 @@ namespace OpenCAGE.Audio
         }
 
         /// <summary>The template's sound and what it needs; null with a reason when its hierarchy can't be read.</summary>
-        private static Template Borrow(HircObject sound, Dictionary<uint, HircObject> bank, out string problem)
+        private static Template Borrow(HircObject sound, Dictionary<uint, HircObject> bank, Format format, out string problem)
         {
             problem = null;
-            int source = SourceLength(sound.Body);
+            int source = format.SourceLength(sound.Body);
             if (BitConverter.ToUInt32(sound.Body, 0) != VorbisPlugin)
             {
                 problem = "it isn't Vorbis audio";
                 return null;
             }
 
-            Node node = Node.Parse(sound.Body, source, sound.Type);
+            Node node = Node.Parse(sound.Body, source, sound.Type, format);
             if (node == null)
             {
                 problem = "its sound object doesn't lay out as expected";
@@ -366,7 +506,7 @@ namespace OpenCAGE.Audio
                 HircObject o;
                 if (!bank.TryGetValue(parent, out o))
                     break;
-                Node n = Node.Parse(o.Body, 0, o.Type);
+                Node n = Node.Parse(o.Body, 0, o.Type, format);
                 if (n == null)
                     break;
                 chain.Add(new KeyValuePair<HircObject, Node>(o, n));
@@ -385,12 +525,30 @@ namespace OpenCAGE.Audio
                 Node n = link.Value;
                 if (template.Bus == 0 && BitConverter.ToUInt32(body, n.Bus) != 0)
                     template.Bus = BitConverter.ToUInt32(body, n.Bus);
-                if (template.Positioning == null && body[n.Positioning] != 0)
+                if (template.Positioning == null && format.OverridesPositioning(body, n))
+                {
                     template.Positioning = Slice(body, n.Positioning, n.Aux);
-                if (template.Aux == null && (body[n.Aux] != 0 || body[n.Aux + 2] != 0))
+                    if (format.Modern && link.Key != sound)
+                    {
+                        //The attenuation goes with the positioning: a property of the object it was set on (measured - every
+                        //attenuation property in the iOS and Switch builds sits on an object that overrides its positioning)
+                        template.PositioningInherited = true;
+                        foreach (KeyValuePair<byte, uint> prop in n.Props(body))
+                            if (prop.Key == Format.AttenuationProperty)
+                                template.Attenuation = prop.Value;
+                    }
+                }
+                if (template.Aux == null && format.SetsAux(body, n))
+                {
                     template.Aux = Slice(body, n.Aux, n.Advanced);
+
+                    //Version 134: aux busses listed by a container at the top of a hierarchy apply without the override flag,
+                    //but on a sound under a mixer they only apply with it
+                    if (format.Modern && link.Key != sound && (template.Aux[0] & 0x08) != 0)
+                        template.Aux[0] |= 0x04;
+                }
             }
-            if (template.Positioning != null && template.Positioning[0] == 0)
+            if (template.Positioning != null && !format.OverridesPositioning(template.Positioning, new Node()))
                 template.Positioning = null;
 
             //Volume, pitch and filtering set on the skipped containers add to the sound's own
@@ -401,7 +559,7 @@ namespace OpenCAGE.Audio
                 Node n = chain[i].Value;
                 foreach (KeyValuePair<byte, uint> prop in n.Props(body))
                 {
-                    if (prop.Key != 0 && prop.Key != 2 && prop.Key != 3)
+                    if (!format.Additive(prop.Key))
                         continue;
                     float value = BitConverter.ToSingle(BitConverter.GetBytes(prop.Value), 0);
                     float sum;
@@ -422,15 +580,20 @@ namespace OpenCAGE.Audio
                     carried.Add(chain[i].Key.Id);
                 }
             }
-            List<uint> references = node.References(sound.Body).ToList();
-            if (template.Positioning != null)
+            List<uint> references = node.References(sound.Body, format).ToList();
+            if (template.Positioning != null && !format.Modern)
                 references.AddRange(PositioningReferences(template.Positioning));
+            if (template.Attenuation != 0)
+                references.Add(template.Attenuation);
+            if (template.Aux != null && format.Modern && (template.Aux[0] & 0x08) != 0)
+                for (int i = 0; i < 4; i++)
+                    references.Add(BitConverter.ToUInt32(template.Aux, 1 + 4 * i));
             foreach (HircObject mixer in template.Carry.ToList())
-                references.AddRange(Node.Parse(mixer.Body, 0, mixer.Type).References(mixer.Body));
+                references.AddRange(Node.Parse(mixer.Body, 0, mixer.Type, format).References(mixer.Body, format));
             foreach (uint id in references.Distinct())
             {
                 HircObject o;
-                if (id != 0 && !carried.Contains(id) && bank.TryGetValue(id, out o) && (o.Type == (byte)WwiseObjectType.Attenuation || o.Type == (byte)WwiseObjectType.Effect || o.Type == (byte)WwiseObjectType.AuxBus))
+                if (id != 0 && !carried.Contains(id) && bank.TryGetValue(id, out o) && format.Carried(o.Type))
                 {
                     template.Carry.Insert(0, o);
                     carried.Add(id);
@@ -440,7 +603,7 @@ namespace OpenCAGE.Audio
         }
 
         /// <summary>The new sound's object: the template's, with the new audio, the template's mixer, bus, positioning and sends.</summary>
-        private static byte[] SoundBody(Template template, uint sourceId, uint bankId, bool loop)
+        private static byte[] SoundBody(Template template, uint sourceId, uint bankId, bool loop, Format format)
         {
             byte[] body = template.Sound.Body;
             Node n = template.SoundNode;
@@ -449,18 +612,30 @@ namespace OpenCAGE.Audio
             {
                 //Source: Vorbis audio in this bank's data - where and how long is filled in once the bank is laid out
                 writer.Write(VorbisPlugin);
-                writer.Write((uint)WwiseStreamType.Embedded);
-                writer.Write(sourceId);
-                writer.Write(bankId);
-                writer.Write(0u);
-                writer.Write(0u);
-                writer.Write((byte)0);
+                if (format.Modern)
+                {
+                    //Version 134: a one-byte stream type (0, in the bank), the source id, its size in memory, a flag byte
+                    //(0 for every in-bank sound the iOS and Switch builds ship)
+                    writer.Write((byte)0);
+                    writer.Write(sourceId);
+                    writer.Write(0u);
+                    writer.Write((byte)0);
+                }
+                else
+                {
+                    writer.Write((uint)WwiseStreamType.Embedded);
+                    writer.Write(sourceId);
+                    writer.Write(bankId);
+                    writer.Write(0u);
+                    writer.Write(0u);
+                    writer.Write((byte)0);
+                }
 
                 //Effects as the sound's own, then the bus and the mixer
                 writer.Write(body, n.Start, n.Bus - n.Start);
                 writer.Write(template.Bus);
                 writer.Write(template.Mixer);
-                writer.Write(body, n.Parent + 4, 2); //priority override and distance factor
+                writer.Write(body, n.Parent + 4, n.PropsAt - (n.Parent + 4)); //priority override and distance factor
 
                 //Properties: the sound's own and what the skipped containers added (volume, pitch, filtering), the loop as asked
                 Dictionary<byte, uint> props = new Dictionary<byte, uint>();
@@ -471,9 +646,16 @@ namespace OpenCAGE.Audio
                     float own = props.ContainsKey(added.Key) ? BitConverter.ToSingle(BitConverter.GetBytes(props[added.Key]), 0) : 0;
                     props[added.Key] = BitConverter.ToUInt32(BitConverter.GetBytes(own + added.Value), 0);
                 }
-                props.Remove(7);
+                if (template.PositioningInherited)
+                {
+                    //The positioning comes from a container above, and the attenuation set beside it with it
+                    props.Remove(Format.AttenuationProperty);
+                    if (template.Attenuation != 0)
+                        props[Format.AttenuationProperty] = template.Attenuation;
+                }
+                props.Remove(format.LoopProperty);
                 if (loop)
-                    props[7] = 0; //loop count: 0 is for ever
+                    props[format.LoopProperty] = 0; //loop count: 0 is for ever
                 List<byte> ids = props.Keys.OrderBy(o => o).ToList();
                 writer.Write((byte)ids.Count);
                 foreach (byte id in ids) writer.Write(id);
@@ -489,6 +671,7 @@ namespace OpenCAGE.Audio
             }
         }
 
+        /// <summary>Version 88: the attenuation a positioning block names.</summary>
         private static IEnumerable<uint> PositioningReferences(byte[] positioning)
         {
             //override, 2D, 3D, [panner], [3D type u32, attenuation u32, ...]
@@ -505,10 +688,17 @@ namespace OpenCAGE.Audio
         #region LAYOUT
 
         /// <summary>
-        /// Where the parts of a sound's or a container's NodeBaseParams sit in its body (Wwise v88, measured over every object
-        /// the game ships - 40,048 sounds and 4,243 actor-mixers end exactly where this says): effects, bus, parent, priority,
-        /// properties, ranged modifiers, positioning, sends, advanced settings, states, game-parameter curves, then a u32 (the
-        /// motion bus, 0) - and for an actor-mixer its child list.
+        /// Where the parts of a sound's or a container's NodeBaseParams sit in its body: effects, bus, parent, priority,
+        /// properties, ranged modifiers, positioning, sends, advanced settings, states, game-parameter curves - and for an
+        /// actor-mixer its child list.
+        ///
+        /// Version 88 measured over every object the PC game ships (40,048 sounds and 4,243 actor-mixers end exactly where this
+        /// says), with a u32 (the motion bus, 0) after the curves. Version 134 measured over the iOS and Switch builds (131,291
+        /// sounds, 10,351 actor-mixers, all exact): one byte (attachment override) between the effects and the bus, the two
+        /// priority bytes folded into one bit field, positioning as a bit field with a 3D byte and an optional automation path,
+        /// sends as a bit field (bit 3: four aux busses follow), six bytes of advanced settings, state properties (three bytes
+        /// each) ahead of the state groups with their counts as variable-length integers, curves with a type, accumulation and
+        /// variable-length parameter id - and no motion bus.
         /// </summary>
         private sealed class Node
         {
@@ -517,23 +707,41 @@ namespace OpenCAGE.Audio
             /// <summary>Whether the object ends exactly where its last part does - always checkable for sounds and mixers.</summary>
             public bool Exact;
 
-            public static Node Parse(byte[] b, int start, byte type)
+            public static Node Parse(byte[] b, int start, byte type, Format format)
             {
                 try
                 {
+                    bool modern = format.Modern;
                     Node n = new Node { Start = start };
                     int p = start + 1;
                     int fx = b[p++];
                     if (fx > 0) p += 1 + 7 * fx;
+                    if (modern) p += 1; //override attachment params
                     n.Bus = p;
                     n.Parent = p + 4;
-                    p += 8 + 2;
+                    p += 8 + (modern ? 1 : 2);
                     n.PropsAt = p;
                     int count = b[p++]; p += count + 4 * count;
                     n.Ranged = p;
                     count = b[p++]; p += count + 8 * count;
                     n.Positioning = p;
-                    if (b[p++] != 0)
+                    if (modern)
+                    {
+                        //Override (bit 0), listener-relative routing - 3D - (bit 1), the 3D position type in bits 5-6
+                        byte bits = b[p++];
+                        if ((bits & 1) != 0 && (bits & 2) != 0)
+                        {
+                            p++; //3D bits
+                            if (((bits >> 5) & 3) != 0)
+                            {
+                                //An automation path: its mode and transition time, vertices, then play-list items and their ranges
+                                p += 1 + 4;
+                                int vertices = BitConverter.ToInt32(b, p); p += 4 + 16 * vertices;
+                                int items = BitConverter.ToInt32(b, p); p += 4 + 8 * items + 12 * items;
+                            }
+                        }
+                    }
+                    else if (b[p++] != 0)
                     {
                         int has2d = b[p++], has3d = b[p++];
                         if (has2d != 0) p++;
@@ -545,23 +753,43 @@ namespace OpenCAGE.Audio
                         }
                     }
                     n.Aux = p;
-                    p += 3 + (b[p + 2] != 0 ? 16 : 0);
+                    if (modern)
+                        p += 1 + ((b[p] & 0x08) != 0 ? 16 : 0);
+                    else
+                        p += 3 + (b[p + 2] != 0 ? 16 : 0);
                     n.Advanced = p;
-                    p += 14;
+                    p += modern ? 6 : 14;
                     n.States = p;
-                    uint groups = BitConverter.ToUInt32(b, p); p += 4;
-                    if (groups > 64)
-                        return null;
-                    for (int g = 0; g < groups; g++) { p += 5; int states = BitConverter.ToUInt16(b, p); p += 2 + 8 * states; }
+                    if (modern)
+                    {
+                        int stateProps = Var(b, ref p);
+                        for (int i = 0; i < stateProps; i++) { Var(b, ref p); p += 2; }
+                        int groups = Var(b, ref p);
+                        if (groups > 64)
+                            return null;
+                        for (int g = 0; g < groups; g++) { p += 5; int states = Var(b, ref p); p += 8 * states; }
+                    }
+                    else
+                    {
+                        uint groups = BitConverter.ToUInt32(b, p); p += 4;
+                        if (groups > 64)
+                            return null;
+                        for (int g = 0; g < groups; g++) { p += 5; int states = BitConverter.ToUInt16(b, p); p += 2 + 8 * states; }
+                    }
                     n.Rtpc = p;
                     int curves = BitConverter.ToUInt16(b, p); p += 2;
-                    for (int c = 0; c < curves; c++) { int points = BitConverter.ToUInt16(b, p + 13); p += 15 + 12 * points; }
+                    for (int c = 0; c < curves; c++)
+                    {
+                        if (modern) { p += 6; Var(b, ref p); p += 5; }
+                        else p += 13;
+                        int points = BitConverter.ToUInt16(b, p); p += 2 + 12 * points;
+                    }
                     n.Tail = p;
-                    n.Children = p + 4;
+                    n.Children = modern ? p : p + 4;
                     if (type == (byte)WwiseObjectType.Sound)
-                        n.Exact = p + 4 == b.Length;
+                        n.Exact = n.Children == b.Length;
                     else if (type == (byte)WwiseObjectType.ActorMixer)
-                        n.Exact = p + 8 <= b.Length && p + 8 + 4 * (long)BitConverter.ToUInt32(b, p + 4) == b.Length;
+                        n.Exact = n.Children + 4 <= b.Length && n.Children + 4 + 4 * (long)BitConverter.ToUInt32(b, n.Children) == b.Length;
                     else
                         n.Exact = p <= b.Length;
                     if (n.Tail > b.Length || ((type == (byte)WwiseObjectType.Sound || type == (byte)WwiseObjectType.ActorMixer) && !n.Exact))
@@ -578,6 +806,20 @@ namespace OpenCAGE.Audio
                 }
             }
 
+            /// <summary>A variable-length integer (seven bits a byte, the top bit saying another follows), as version 134 counts with.</summary>
+            private static int Var(byte[] b, ref int p)
+            {
+                int value = 0, shift = 0;
+                while (true)
+                {
+                    byte next = b[p++];
+                    value |= (next & 0x7F) << shift;
+                    if ((next & 0x80) == 0 || shift > 21)
+                        return value;
+                    shift += 7;
+                }
+            }
+
             public IEnumerable<KeyValuePair<byte, uint>> Props(byte[] b)
             {
                 int count = b[PropsAt];
@@ -586,25 +828,27 @@ namespace OpenCAGE.Audio
             }
 
             /// <summary>The attenuation and effects this object uses, by id.</summary>
-            public IEnumerable<uint> References(byte[] b)
+            public IEnumerable<uint> References(byte[] b, Format format)
             {
                 int fx = b[Start + 1];
                 for (int i = 0; i < fx; i++)
                     yield return BitConverter.ToUInt32(b, Start + 3 + 7 * i + 1);
+                if (format.Modern)
+                {
+                    foreach (KeyValuePair<byte, uint> prop in Props(b))
+                        if (prop.Key == Format.AttenuationProperty)
+                            yield return prop.Value;
+                    if ((b[Aux] & 0x08) != 0)
+                        for (int i = 0; i < 4; i++)
+                            yield return BitConverter.ToUInt32(b, Aux + 1 + 4 * i);
+                    yield break;
+                }
                 foreach (uint id in PositioningReferences(Slice(b, Positioning, Aux)))
                     yield return id;
                 if (b[Aux + 2] != 0)
                     for (int i = 0; i < 4; i++)
                         yield return BitConverter.ToUInt32(b, Aux + 3 + 4 * i);
             }
-        }
-
-        /// <summary>How long a sound's source record is: a plugin source 11 bytes, streamed audio 17, audio in a bank 25.</summary>
-        private static int SourceLength(byte[] body)
-        {
-            uint plugin = BitConverter.ToUInt32(body, 0);
-            uint stream = BitConverter.ToUInt32(body, 4);
-            return (plugin & 0x0F) != 1 ? 11 : stream == (uint)WwiseStreamType.Streamed ? 17 : 25;
         }
 
         #endregion
@@ -639,6 +883,19 @@ namespace OpenCAGE.Audio
             return objects;
         }
 
+        /// <summary>
+        /// The header fields after a bank's version, id and language - the same in every bank one build ships: on PC a flag (1)
+        /// and the project id (0x2B), on iOS an alignment field (0) and the project id (0x2BF). Null when it has none.
+        /// </summary>
+        private static byte[] HeaderAfterLanguage(byte[] bank)
+        {
+            if (bank.Length < 28 || Encoding.ASCII.GetString(bank, 0, 4) != "BKHD" || BitConverter.ToInt32(bank, 4) < 20)
+                return null;
+            byte[] fields = new byte[8];
+            Array.Copy(bank, 20, fields, 0, 8);
+            return fields;
+        }
+
         /// <summary>A bank's bytes, from its own file or the package it's packed in.</summary>
         private static byte[] BankBytes(WwiseSoundBank bank)
         {
@@ -669,9 +926,9 @@ namespace OpenCAGE.Audio
         /// <summary>
         /// The bank written out: BKHD, DIDX, DATA, HIRC, STID - the order the game's banks have. Objects go children first, as
         /// they do there (and actions ahead of the events that list them), and each sound's source record points at where its
-        /// audio ended up.
+        /// audio ended up. The header is padded, as every bank of the game's is, so the audio starts on a sixteen byte boundary.
         /// </summary>
-        private static byte[] Write(string bankName, uint bankId, Dictionary<uint, HircObject> objects, Dictionary<uint, byte[]> media)
+        private static byte[] Write(string bankName, uint bankId, Dictionary<uint, HircObject> objects, Dictionary<uint, byte[]> media, Format format, byte[] headerFields)
         {
             //--- the audio ---
             const int Alignment = 16;
@@ -695,17 +952,21 @@ namespace OpenCAGE.Audio
                 data = stream.ToArray();
             }
 
-            const int HeaderLength = 24;
-            long dataBody = (8 + HeaderLength) + (sources.Count == 0 ? 0 : (8 + didx.Length) + 8);
+            //The header's fields take 20 bytes; the game's banks pad it so that the data chunk's body (behind the header, the
+            //directory and the data chunk's own tag and size) lands on a sixteen byte boundary - 20, 24, 28 or 32 bytes, measured
+            //over every bank with audio on PC and iOS - and a bank without audio has 24
+            int headerLength = 24;
+            if (sources.Count != 0)
+                headerLength = 20 + (int)((Alignment - (8 + 20 + 8 + didx.Length + 8) % Alignment) % Alignment);
+            long dataBody = (8 + headerLength) + (sources.Count == 0 ? 0 : (8 + didx.Length) + 8);
 
             //--- the hierarchy, children first ---
             Func<HircObject, int> rank = o =>
             {
+                if (o.Type == (byte)WwiseObjectType.Attenuation || format.Carried(o.Type))
+                    return 0;
                 switch ((WwiseObjectType)o.Type)
                 {
-                    case WwiseObjectType.Attenuation:
-                    case WwiseObjectType.Effect:
-                    case WwiseObjectType.AuxBus: return 0;
                     case WwiseObjectType.Sound: return 1;
                     case WwiseObjectType.ActorMixer: return 2;
                     case WwiseObjectType.Action: return 4;
@@ -722,7 +983,7 @@ namespace OpenCAGE.Audio
                 if (depth.TryGetValue(o.Id, out h)) return h;
                 depth[o.Id] = 0;
                 h = 0;
-                foreach (HircObject child in objects.Values.Where(c => c.Type == (byte)WwiseObjectType.ActorMixer && c != o && ParentOf(c) == o.Id))
+                foreach (HircObject child in objects.Values.Where(c => c.Type == (byte)WwiseObjectType.ActorMixer && c != o && ParentOf(c, format) == o.Id))
                     h = Math.Max(h, height(child) + 1);
                 depth[o.Id] = h;
                 return h;
@@ -737,10 +998,16 @@ namespace OpenCAGE.Audio
                 foreach (HircObject o in ordered)
                 {
                     byte[] body = o.Body;
-                    if (o.Type == (byte)WwiseObjectType.Sound && SourceLength(body) == 25 && BitConverter.ToUInt32(body, 4) == (uint)WwiseStreamType.Embedded)
+                    KeyValuePair<uint, uint> at;
+                    if (o.Type == (byte)WwiseObjectType.Sound && (BitConverter.ToUInt32(body, 0) & 0x0F) == 1 && placed.TryGetValue(format.SourceId(body), out at))
                     {
-                        KeyValuePair<uint, uint> at;
-                        if (placed.TryGetValue(BitConverter.ToUInt32(body, 8), out at))
+                        if (format.Modern && body[4] == 0)
+                        {
+                            //Version 134 keeps only the size in memory - the directory says where the audio is
+                            body = (byte[])body.Clone();
+                            Put32(body, 9, at.Value);
+                        }
+                        else if (!format.Modern && format.SourceLength(body) == 25 && BitConverter.ToUInt32(body, 4) == (uint)WwiseStreamType.Embedded)
                         {
                             body = (byte[])body.Clone();
                             Put32(body, 16, (uint)(dataBody + at.Key));
@@ -767,12 +1034,20 @@ namespace OpenCAGE.Audio
             Array.Copy(name, 0, stid, 13, name.Length);
 
             //--- the header: version, id, language (none: sound effects), and the rest as the game's banks have them ---
-            byte[] header = new byte[HeaderLength];
-            Put32(header, 0, Version);
+            //Sound effects are language 0 in version 88; version 134 names every language by its name's hash, "sfx" too
+            byte[] header = new byte[headerLength];
+            Put32(header, 0, format.Version);
             Put32(header, 4, bankId);
-            Put32(header, 8, 0);
-            Put32(header, 12, 1);
-            Put32(header, 16, 0x2B);
+            Put32(header, 8, format.Modern ? CathodeLib.Utilities.SoundHashedString("sfx") : 0);
+            if (headerFields != null)
+                Array.Copy(headerFields, 0, header, 12, 8);
+            else if (format.Modern)
+                Put32(header, 16, 0x2BF);
+            else
+            {
+                Put32(header, 12, 1);
+                Put32(header, 16, 0x2B);
+            }
 
             using (MemoryStream output = new MemoryStream())
             {

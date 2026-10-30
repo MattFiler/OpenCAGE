@@ -62,19 +62,23 @@ namespace OpenCAGE.Audio
         {
         }
 
-        /// <summary>A package with nothing in it yet, listing "sfx" alone - as the shipped overrides that carry no dialogue do.</summary>
-        public static WwiseFilePackageBuilder Create()
+        /// <summary>
+        /// A package with nothing in it yet, listing "sfx" alone - as the shipped overrides that carry no dialogue do. The name is
+        /// UTF-16 as the PC (and Mac and Linux) packages have it, or with <paramref name="narrowNames"/> 8-bit, as the iOS and Switch
+        /// ones do (see <see cref="WwiseFilePackage.NarrowNames"/>).
+        /// </summary>
+        public static WwiseFilePackageBuilder Create(bool narrowNames = false)
         {
             WwiseFilePackageBuilder package = new WwiseFilePackageBuilder();
 
-            //One entry - the name's offset from the start of the map, and its id - then the name, null terminated UTF-16
+            //One entry - the name's offset from the start of the map, and its id - then the name, null terminated
             using (MemoryStream map = new MemoryStream())
             using (BinaryWriter writer = new BinaryWriter(map))
             {
                 writer.Write(1u);
                 writer.Write(12u);
                 writer.Write(0u);
-                writer.Write(Encoding.Unicode.GetBytes("sfx\0"));
+                writer.Write(narrowNames ? Encoding.ASCII.GetBytes("sfx\0") : Encoding.Unicode.GetBytes("sfx\0"));
                 package._languageMap = map.ToArray();
             }
 

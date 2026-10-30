@@ -50,6 +50,12 @@ namespace OpenCAGE.Audio
             /// it), or -1 to loop all of it - which is what all but a few of the game's sounds do.
             /// </summary>
             public long LoopStart = -1, LoopEnd = -1;
+
+            /// <summary>
+            /// Written for the Wwise 2019.1 builds (iOS, Switch) rather than the PC's: the format chunk's channel layout is
+            /// Wwise's own channel config, and only setups those builds ship are used.
+            /// </summary>
+            public bool Modern;
         }
 
         /// <summary>
@@ -93,7 +99,7 @@ namespace OpenCAGE.Audio
             //they differ only where the codebook table repeats a book and we picked a different index for
             //it - but writing the bytes the game already ships means anything the runtime checks against
             //them, the setup hash included, still holds.
-            WwiseVorbisSetups.Decoder decoder = WwiseVorbisSetups.For(setupPacket, stream.Channels, blocksize0Pow, blocksize1Pow);
+            WwiseVorbisSetups.Decoder decoder = WwiseVorbisSetups.For(setupPacket, stream.Channels, blocksize0Pow, blocksize1Pow, stream.Modern);
             setupPacket = decoder.Setup;
 
             //--- the data chunk: setup packet, then the audio, each behind its own length ---
@@ -225,7 +231,7 @@ namespace OpenCAGE.Audio
             Put16(format, 0x0E, 0); //bits per sample - likewise
             Put16(format, 0x10, FormatLength - 18); //the extension's own length
             Put16(format, 0x12, 0);
-            Put32(format, 0x14, ChannelMask(stream.Channels));
+            Put32(format, 0x14, stream.Modern ? ChannelConfig(stream.Channels) : ChannelMask(stream.Channels));
 
             int vorb = 0x18;
             Put32(format, vorb + 0x00, stream.SampleCount);
@@ -291,6 +297,17 @@ namespace OpenCAGE.Audio
                 case 8: return 0x63F;//7.1
                 default: return 0;
             }
+        }
+
+        /// <summary>
+        /// The speaker layout as the Wwise 2019.1 builds write it: Wwise's AkChannelConfig - the channel count in the low byte,
+        /// the config type (1, standard) in the next four bits, then the speaker mask - rather than the plain mask. Measured on
+        /// iOS and Switch: every mono sound has 0x4101, every stereo one 0x3102, and their 5.1 0x60F106 (with side surrounds).
+        /// </summary>
+        private static uint ChannelConfig(int channels)
+        {
+            uint mask = channels == 6 ? 0x60F : ChannelMask(channels);
+            return (mask << 12) | (1u << 8) | (uint)channels;
         }
 
         private static void Put16(byte[] target, int offset, ushort value)

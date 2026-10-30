@@ -40,12 +40,41 @@ namespace OpenCAGE.Audio
                 if (content == null || content.Level == null || string.IsNullOrEmpty(content.Level.Filepath))
                     return null;
 
-                return Path.GetFullPath(content.Level.Filepath + (content.Level.Patched ? "_PATCH" : "") + "/WORLD/" + FileName);
+                string world = Path.GetFullPath(content.Level.Filepath + (content.Level.Patched ? "_PATCH" : "") + "/WORLD");
+                return Path.Combine(world, NameIn(world));
             }
             catch
             {
                 return null;
             }
+        }
+
+        /// <summary>
+        /// The package's file name in a level's WORLD folder: the one already there, whatever its case - else in the case the
+        /// level's own files are in. The Mac, Linux and iOS builds ship every file in lower case and run on file systems that
+        /// can tell the difference, so a package made for one of them has to be called level_sound_override.pck to be found.
+        /// </summary>
+        private static string NameIn(string world)
+        {
+            try
+            {
+                if (Directory.Exists(world))
+                {
+                    string existing = Directory.EnumerateFiles(world, FileName).Select(Path.GetFileName).FirstOrDefault(o => string.Equals(o, FileName, StringComparison.OrdinalIgnoreCase));
+                    if (existing != null)
+                        return existing;
+
+                    //The level's files say which case it uses: the WORLD folder itself, as it is on disk
+                    DirectoryInfo folder = new DirectoryInfo(world);
+                    string actual = folder.Parent == null ? null : folder.Parent.EnumerateDirectories(folder.Name).Select(o => o.Name).FirstOrDefault();
+                    if (actual != null && actual == actual.ToLowerInvariant())
+                        return FileName.ToLowerInvariant();
+                }
+            }
+            catch
+            {
+            }
+            return FileName;
         }
 
         public static void RaiseChanged()
@@ -667,7 +696,7 @@ namespace OpenCAGE.Audio
         private static WwiseFilePackageBuilder Open(string package, Plan plan)
         {
             plan.Existed = File.Exists(package);
-            WwiseFilePackageBuilder builder = plan.Existed ? WwiseFilePackageBuilder.Load(package) : WwiseFilePackageBuilder.Create();
+            WwiseFilePackageBuilder builder = plan.Existed ? WwiseFilePackageBuilder.Load(package) : WwiseFilePackageBuilder.Create(SoundPreviewLibrary.NarrowPackageNames);
             plan.SizeBefore = plan.Existed ? new FileInfo(package).Length : 0;
             return builder;
         }
@@ -853,27 +882,10 @@ namespace OpenCAGE.Audio
             return BitConverter.ToUInt32(bank, 12);
         }
 
-        /// <summary>The version of the game's own soundbanks - 88 on PC, 134 on Switch - or 0 if none could be read.</summary>
+        /// <summary>The version of the game's own soundbanks - 88 on PC, Mac and Linux, 134 on iOS and Switch - or 0 if none could be read.</summary>
         private static uint ExpectedBankVersion()
         {
-            try
-            {
-                string directory = SoundPreviewLibrary.SoundDirectory;
-                string any = directory == null ? null : Directory.EnumerateFiles(directory, "*.bnk").FirstOrDefault();
-                if (any == null)
-                    return 0;
-
-                byte[] header = new byte[12];
-                using (FileStream stream = new FileStream(any, FileMode.Open, FileAccess.Read, FileShare.Read))
-                    if (stream.Read(header, 0, 12) != 12)
-                        return 0;
-
-                return BitConverter.ToUInt32(header, 8);
-            }
-            catch
-            {
-                return 0;
-            }
+            return SoundPreviewLibrary.BankVersion;
         }
 
         private static readonly object _baseBanksLock = new object();

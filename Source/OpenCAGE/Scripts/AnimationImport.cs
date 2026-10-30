@@ -559,18 +559,47 @@ namespace OpenCAGE
         public static bool Replace(CathodeLib.Animation animations, CathodeLib.Animation.ClipReference clip,
                                    Reading reading, Options options, out string problem)
         {
+            return Replace(animations, clip, reading, options, out problem, out _);
+        }
+
+        /// <summary>
+        /// As <see cref="Replace(CathodeLib.Animation, CathodeLib.Animation.ClipReference, Reading, Options, out string)"/>, with
+        /// <paramref name="note"/> saying anything the rebuild can't reach: on the Linux and Mac builds, a copy of the clip
+        /// converted ahead of time in DATA\HAVOK that the game may play instead (see <see cref="PreconvertedNote"/>).
+        /// </summary>
+        public static bool Replace(CathodeLib.Animation animations, CathodeLib.Animation.ClipReference clip,
+                                   Reading reading, Options options, out string problem, out string note)
+        {
             problem = null;
+            note = null;
             if (animations == null || clip == null) { problem = "There is no clip to replace."; return false; }
             if (reading == null || !reading.Ok) { problem = reading?.Problem ?? "Nothing was read from the file."; return false; }
             try
             {
-                return animations.ReplaceClip(clip, options.Rig, TrackToBone(reading), reading.Poses, reading.FrameDuration, options.Additive, out problem);
+                //asked first: once rebuilt, the section no longer matches the copy made of what it was
+                List<string> copies = animations.PreconvertedCopiesOf(clip.Section);
+                bool replaced = animations.ReplaceClip(clip, options.Rig, TrackToBone(reading), reading.Poses, reading.FrameDuration, options.Additive, out problem);
+                if (replaced) note = PreconvertedNote(copies);
+                return replaced;
             }
             catch (Exception ex)
             {
                 problem = "The clip could not be rebuilt: " + ex.Message;
                 return false;
             }
+        }
+
+        /// <summary>
+        /// What to tell someone who rebuilt a clip the Linux or Mac build also keeps pre-converted in DATA\HAVOK, or null
+        /// when it keeps none. That build's own copy is named by a key that can't be worked out from the data, so it can't
+        /// be rewritten to match, and whether the game prefers it to ANIMATION.PAK can only be seen by running that build.
+        /// </summary>
+        public static string PreconvertedNote(List<string> copies)
+        {
+            if (copies == null || copies.Count == 0) return null;
+            return "The Linux and Mac builds also keep a copy of this animation converted ahead of time, in DATA\\HAVOK ("
+                + string.Join(", ", copies.Select(Path.GetFileName)) + "). If the game plays that copy rather than ANIMATION.PAK, "
+                + "it will keep playing the original animation; this hasn't been tested on those builds.";
         }
 
         /* Track i drives bone i. A third of a rig's clips ship with some other permutation and the

@@ -32,6 +32,12 @@ namespace OpenCAGE.Audio
         /// <summary>Language id to name. "sfx" is the entry used for everything not voiced.</summary>
         public Dictionary<uint, string> Languages = new Dictionary<uint, string>();
 
+        /// <summary>
+        /// Whether the language names are 8-bit strings rather than UTF-16. Wwise writes them in the platform's own character
+        /// type: the PC packages (which the Mac and Linux builds ship too) use UTF-16, the iOS and Switch ones single bytes.
+        /// </summary>
+        public bool NarrowNames { get; private set; }
+
         private WwiseFilePackage()
         {
         }
@@ -100,15 +106,24 @@ namespace OpenCAGE.Audio
                 ids[i] = reader.ReadUInt32();
             }
 
+            //A UTF-16 name's first character has a zero high byte; an 8-bit name's second character never does (every
+            //language name is longer than one letter)
+            if (count != 0)
+            {
+                reader.BaseStream.Position = mapStart + offsets[0];
+                byte[] first = reader.ReadBytes(2);
+                NarrowNames = first.Length == 2 && first[0] != 0 && first[1] != 0;
+            }
+
             for (uint i = 0; i < count; i++)
             {
-                //Offsets are relative to the start of the map, and the names are null terminated UTF-16
+                //Offsets are relative to the start of the map, and the names are null terminated
                 reader.BaseStream.Position = mapStart + offsets[i];
 
                 StringBuilder name = new StringBuilder();
-                while (true)
+                while (name.Length < 256)
                 {
-                    char c = (char)reader.ReadUInt16();
+                    char c = NarrowNames ? (char)reader.ReadByte() : (char)reader.ReadUInt16();
                     if (c == '\0')
                         break;
                     name.Append(c);

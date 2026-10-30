@@ -37,9 +37,10 @@ namespace OpenCAGE.Audio
 
         /// <summary>
         /// Encode interleaved audio. <paramref name="samples"/> holds one array per channel, each the
-        /// same length, with values in -1..1.
+        /// same length, with values in -1..1. <paramref name="modern"/> encodes for the Wwise 2019.1 builds
+        /// (iOS, Switch): only setups they ship are landed on, and the stream is marked to be written their way.
         /// </summary>
-        public static Result Encode(float[][] samples, int sampleRate, float quality)
+        public static Result Encode(float[][] samples, int sampleRate, float quality, bool modern = false)
         {
             if (samples == null || samples.Length == 0 || samples[0] == null || samples[0].Length == 0)
                 throw new InvalidDataException("There are no samples to encode.");
@@ -51,7 +52,7 @@ namespace OpenCAGE.Audio
             int channels = samples.Length;
             float chosen;
             string note;
-            if (!ChooseQuality(channels, sampleRate, quality, out chosen, out note))
+            if (!ChooseQuality(channels, sampleRate, quality, modern, out chosen, out note))
                 throw new NotSupportedException(
                     "This audio cannot be encoded into a form the game can play - no quality setting produced "
                     + "a Vorbis setup it knows. " + channels + " channel audio at " + sampleRate + " Hz is the "
@@ -59,6 +60,7 @@ namespace OpenCAGE.Audio
 
             Result result = new Result { Quality = chosen, Note = note };
             result.Stream = Run(samples, sampleRate, channels, chosen);
+            result.Stream.Modern = modern;
             return result;
         }
 
@@ -66,7 +68,7 @@ namespace OpenCAGE.Audio
         /// Whether audio of this layout can be encoded into a form the game plays at any quality on the ladder. Nothing is
         /// encoded: only the encoder's setup for each quality is asked for.
         /// </summary>
-        public static bool CanEncode(int channels, int sampleRate)
+        public static bool CanEncode(int channels, int sampleRate, bool modern = false)
         {
             if (channels < 1 || sampleRate < 8000 || sampleRate > 192000)
                 return false;
@@ -74,7 +76,7 @@ namespace OpenCAGE.Audio
             VorbisNative.EnsureLoaded();
             float chosen;
             string note;
-            return ChooseQuality(channels, sampleRate, Ladder[0], out chosen, out note);
+            return ChooseQuality(channels, sampleRate, Ladder[0], modern, out chosen, out note);
         }
 
         /// <summary>
@@ -82,15 +84,21 @@ namespace OpenCAGE.Audio
         /// Nothing is encoded here - the setup is settled by the encoder's own configuration, which is
         /// available as soon as it has been initialised.
         /// </summary>
-        private static bool ChooseQuality(int channels, int sampleRate, float wanted, out float chosen, out string note)
+        private static bool ChooseQuality(int channels, int sampleRate, float wanted, bool modern, out float chosen, out string note)
         {
             chosen = wanted;
             note = null;
 
+            //Up from the quality asked for first; then, if nothing above it lands on a setup the game knows, down from it - a
+            //lower quality the game plays beats none. The iOS and Switch builds need that for mono below 32 kHz: their setups
+            //cover it only up to quality 0.5 (the PC's one setup for it above that is the one setup they don't ship)
             List<float> order = new List<float>();
             foreach (float step in Ladder)
                 if (step >= wanted - 0.0001f)
                     order.Add(step);
+            for (int i = Ladder.Length - 1; i >= 0; i--)
+                if (Ladder[i] < wanted - 0.0001f)
+                    order.Add(Ladder[i]);
 
             foreach (float step in order)
             {
@@ -98,11 +106,11 @@ namespace OpenCAGE.Audio
                 try { setup = PackedSetupFor(channels, sampleRate, step); }
                 catch { continue; }
 
-                if (WwiseVorbisSetups.Find(setup) == null)
+                if (WwiseVorbisSetups.Find(setup, modern) == null)
                     continue;
 
                 chosen = step;
-                if (step > wanted + 0.0001f)
+                if (Math.Abs(step - wanted) > 0.0001f)
                     note = "Encoded at quality " + step.ToString("0.0") + " rather than " + wanted.ToString("0.0")
                         + ", which is the nearest setting the game's decoder is set up for.";
                 return true;
