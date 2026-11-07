@@ -1163,6 +1163,12 @@ namespace OpenCAGE.RuntimeUtilsConnection
             foreach ((ShortGuid id, ParameterVariant variant, DataType type) in commands.Utils.GetAllParameters(entity, composite))
                 if (variant == ParameterVariant.METHOD_PIN && !methods.Contains(id))
                     methods.Add(id);
+            //A TriggerSequence's own methods (its Triggers: lgt_all_ON...) are not in the function's parameter database: they are
+            //the input pins the flowgraph gives it, from its method list and its proxies' (issue 754). The game calls them as it
+            //calls any other method, by id.
+            foreach (TriggerSequence.MethodEntry method in NodeUtils.CollectTriggerSequenceMethods(entity, composite, commands))
+                if (!methods.Contains(method.method))
+                    methods.Add(method.method);
             return methods;
         }
         #endregion

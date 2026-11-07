@@ -100,6 +100,27 @@ namespace OpenCAGE
             return entity != null && entity.variant == EntityVariant.FUNCTION && !target.Is(entity);
         }
 
+        /* The steps from the open composite down to what an entity in it puts in the sequence: the entity itself, or - for an
+           alias - the entity it points at, through the instances on its path. A Deep selection in the viewport of something
+           inside a composite placed here (a level's geometry under its ENVIRONMENT composite's sections) comes as such an
+           alias, made only for the selection and let go of afterwards, so the entry names what it points at, as the
+           sequence's editor would (issue 755). Null when it can't go in: what it points at must be a function or a composite
+           instance too. */
+        private static List<ShortGuid> EntryBelow(Target target, Composite composite, Entity entity)
+        {
+            if (!(entity is AliasEntity alias))
+                return CanBeEntry(target, entity) ? new List<ShortGuid>() { entity.shortGUID } : null;
+
+            List<ShortGuid> path = alias.alias?.path?.Where(o => o != ShortGuid.Invalid).ToList();
+            Commands commands = Commands;
+            if (path == null || path.Count == 0 || commands?.Utils == null)
+                return null;
+            (Composite pointedComposite, Entity pointed) = commands.Utils.GetResolvedTarget(commands.Utils.ResolveAlias(alias, composite));
+            if (pointed == null || pointed.variant != EntityVariant.FUNCTION || (pointedComposite == target.Composite && target.Is(pointed)))
+                return null;
+            return path;
+        }
+
         /// <summary>An entity as it would be written into the sequence, and the two ways of saying where it is.</summary>
         private sealed class Candidate
         {
@@ -124,11 +145,14 @@ namespace OpenCAGE
 
             foreach (Entity entity in entities.Distinct())
             {
-                if (!CanBeEntry(target, entity) || display.Composite.GetEntityByID(entity.shortGUID) != entity)
+                if (entity == null || display.Composite.GetEntityByID(entity.shortGUID) != entity)
+                    continue;
+                List<ShortGuid> below = EntryBelow(target, display.Composite, entity);
+                if (below == null)
                     continue;
 
                 List<ShortGuid> entry = steps.Select(o => o.shortGUID).ToList();
-                entry.Add(entity.shortGUID);
+                entry.AddRange(below);
                 Candidate candidate = new Candidate()
                 {
                     Entity = entity,
@@ -138,7 +162,7 @@ namespace OpenCAGE
                 if (fromLevelRoot)
                 {
                     candidate.FromRoot = display.Path.AllEntities.Select(o => o.shortGUID.AsUInt32).ToList();
-                    candidate.FromRoot.Add(entity.shortGUID.AsUInt32);
+                    candidate.FromRoot.AddRange(below.Select(o => o.AsUInt32));
                 }
                 candidates.Add(candidate);
             }
