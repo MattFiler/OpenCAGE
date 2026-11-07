@@ -866,7 +866,7 @@ namespace
 		if (nodeCount == 0)
 		{
 			ImGui::PushTextWrapPos(0.0f);
-			ImGui::TextDisabled("No nodes yet: turn the camera on, fly to the first shot and add one (F1 while flying).");
+			ImGui::TextDisabled("No nodes yet: turn the camera on, fly to the first shot and add one (Add a track node in the Keys tab, F1 by default, while flying).");
 			ImGui::PopTextWrapPos();
 		}
 		else if (ImGui::BeginListBox("##nodes", ImVec2(260.0f * DEBUG_MENU::Scale(), ImGui::GetTextLineHeightWithSpacing() * (std::min)(8, nodeCount + 1))))
@@ -887,7 +887,7 @@ namespace
 			RunAndNote("cinematic.track_add", "");
 			g_selectedNode = nodeCount;
 		}
-		Tooltip("A node where the camera is, the node gap after the last (F1 while flying).");
+		Tooltip("A node where the camera is, the node gap after the last (its key in the Keys tab, F1 by default, while flying).");
 		ImGui::SameLine();
 		ImGui::BeginDisabled(nodeCount == 0);
 		if (ImGui::Button("Update node"))
@@ -926,7 +926,7 @@ namespace
 		if (ImGui::Button(playing ? "Stop" : "Play"))
 			RunAndNote(playing ? "cinematic.track_stop" : "cinematic.track_play", "");
 		ImGui::EndDisabled();
-		Tooltip("Plays the chosen track (turning the camera on); F3 while flying.");
+		Tooltip("Plays the chosen track (turning the camera on); its key in the Keys tab (F3 by default) while flying.");
 		ImGui::SameLine();
 		ImGui::BeginDisabled(nodeCount == 0 || playing);
 		if (ImGui::Button("To start"))

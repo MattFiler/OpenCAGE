@@ -11,18 +11,18 @@
 	in for Cinematic Tools' camera (and for the game's own free camera the Tools tab once turned on). Its camera and track
 	behaviour is ported from Cinematic Tools, by Hattiwatti.
 
-	It is flown with the debug menu's window closed: its key (CinematicCameraKey in OpenCAGE.RuntimeUtils.ini, F8 by
-	default) turns it on and off, as does the Free Camera tab's checkbox and the switch "cinematic.camera". It starts where the
-	frame was drawn from, looking the same way, with the same field of view (or where it was left, in the same level, unless
-	"Start from the game camera" is ticked). While it is on:
+	It is flown with the debug menu's window closed: its key (F8 by default) turns it on and off, as does the Free Camera
+	tab's checkbox and the switch "cinematic.camera". It starts where the frame was drawn from, looking the same way, with
+	the same field of view (or where it was left, in the same level, unless "Start from the game camera" is ticked). Its keys
+	are CINEMATIC_KEYS' (Cinematic > Keys sets them again); by default, while it is on:
 	- W/A/S/D fly it, Space and Ctrl take it up and down (along the world's up), Shift goes four times faster, Page Up and
 	  Page Down change its speed; the mouse and the arrow keys turn it, Q and E roll it, the mouse wheel and the numeric pad's + and -
 	  change its field of view; the numeric pad's 6/5, 8/9 and 3/2 change the depth of field's focus distance, focal length
 	  and f-number (with the Visuals tab's depth of field on); F1 adds a track node where it is, F2 deletes the last one,
-	  F3 plays or stops the track; Home hides the HUD; Delete pauses the game and End steps it one frame while paused (the
-	  game's own pause and step, from the Game group). These are Cinematic Tools' keys, bar Q/E, Shift, Page Up/Down, End and the wheel.
-	  Any of the camera's keys that the ini gives another helper too (the debug menu, Possess, Unlock Mouse, hot reload) is
-	  left out, with a line in the log.
+	  F3 plays or stops the track; End steps the game one frame while paused (the Game group's step). Freeze time (Delete)
+	  and hide the HUD (Home) act any time, not only while it flies (CINEMATIC_KEYS). These are Cinematic Tools' keys, bar
+	  Q/E, Shift, Page Up/Down, End and the wheel. A key the ini gives another helper too (the debug menu, Possess, Unlock
+	  Mouse, hot reload) does nothing here.
 	- A gamepad (XInput) flies it too, as in Cinematic Tools: the left stick moves, the triggers go up and down, the right
 	  stick turns, the shoulder buttons roll, the stick clicks change the field of view, the d-pad's up and down change how
 	  fast it turns and B and Y how fast it moves.
@@ -100,12 +100,17 @@ namespace CINEMATIC_CAMERA
 	// Locks the camera to a character by its unique id (0 unlocks), from the camera's next frame. Any thread.
 	void LockTo(uint32_t characterId);
 
-	// Whether a key is one the ini gives another helper (the debug menu, Possess, Unlock Mouse, hot reload). The camera's
-	// keys and the screenshot key are read straight from the keyboard, so one of those would act twice: it is left out.
+	// Whether a key is one the ini gives another helper (the debug menu, Possess, Unlock Mouse, hot reload). The Cinematic
+	// keys are read straight from the keyboard, so one of those would act twice: it is left out. TakenBy names that helper
+	// (nullptr when none has it).
 	bool TakenKey(int key);
+	const char* TakenBy(int key);
 
-	// The key that turns the camera on and off (CinematicCameraKey; 0, no key, when it is another helper's).
+	// The key that turns the camera on and off (CINEMATIC_KEYS' ToggleCamera; 0, no key, when it is another helper's).
 	int ToggleKey();
+
+	// Whether the game's pause menu or game over screen is up (any thread; guarded reads).
+	bool GameMenuUp();
 
 	// Turns the camera on behind a character (where it stands, its facing as a yaw in radians: forward = sin, 0, cos),
 	// looking at it. Any thread.

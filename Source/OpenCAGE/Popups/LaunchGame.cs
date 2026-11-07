@@ -40,10 +40,54 @@ namespace OpenCAGE
         internal const string DefaultPossessKey = "F6";
         internal const string DefaultDebugMenuKey = "F7";
 
-        /* Keys the Debug Menu's free camera uses: F8 turns it on and off and F9 takes a screenshot (unless CinematicCameraKey and
-           CinematicScreenshotKey in the runtime utils config name others), the rest act while it flies. The game leaves any of
-           them another helper has to that helper, so the camera loses what that key does. */
-        internal static readonly string[] CinematicCameraKeys = { "F8", "F9", "F1", "F2", "F3", "HOME", "DELETE", "END", "PAGEUP", "PAGEDOWN" };
+        /* The Debug Menu's Cinematic keys among those a helper can be given, by default (Cinematic Tools' keys; the Keys tab in
+           game sets them again, into OpenCAGE.CinematicKeys.ini next to AI.exe, which CinematicKeysInUse reads): what each does.
+           The game leaves any of them another helper has to that helper, so the Cinematic group loses what that key does. */
+        internal static readonly (string Action, string Key, string Use)[] CinematicDefaultKeys =
+        {
+            ("ToggleCamera", "F8", "turns the Debug Menu's free camera on and off"),
+            ("FreezeTime", "DELETE", "freezes time (the Debug Menu's Cinematic keys)"),
+            ("HideHud", "HOME", "hides the HUD (the Debug Menu's Cinematic keys)"),
+            ("FreezeNpcs", "F5", "freezes the NPCs (the Debug Menu's Cinematic keys)"),
+            ("Screenshot", "F9", "takes the Debug Menu's screenshots"),
+            ("TrackAddNode", "F1", "adds a track node while the Debug Menu's free camera flies"),
+            ("TrackDeleteNode", "F2", "deletes a track node while the Debug Menu's free camera flies"),
+            ("TrackPlay", "F3", "plays a camera track while the Debug Menu's free camera flies"),
+            ("StepFrame", "END", "steps the paused game a frame while the Debug Menu's free camera flies"),
+            ("SpeedUp", "PAGEUP", "speeds the Debug Menu's free camera up while it flies"),
+            ("SpeedDown", "PAGEDOWN", "slows the Debug Menu's free camera down while it flies"),
+        };
+
+        /* What a key does among the Cinematic keys a helper could be given (null: nothing): the keys in the game folder's
+           OpenCAGE.CinematicKeys.ini where it sets them (its [Keys] Action=KEY lines), the defaults otherwise. */
+        private static string CinematicKeyUse(string key)
+        {
+            Dictionary<string, string> set = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                string file = Path.Combine(Singleton.PathToAI ?? "", "OpenCAGE.CinematicKeys.ini");
+                if (File.Exists(file))
+                {
+                    bool inKeys = false;
+                    foreach (string raw in File.ReadAllLines(file))
+                    {
+                        string line = raw.Trim();
+                        if (line.StartsWith("[")) { inKeys = line.Equals("[Keys]", StringComparison.OrdinalIgnoreCase); continue; }
+                        int equals = line.IndexOf('=');
+                        if (inKeys && equals > 0 && !line.StartsWith(";"))
+                            set[line.Substring(0, equals).Trim()] = line.Substring(equals + 1).Trim();
+                    }
+                }
+            }
+            catch { }
+            foreach ((string Action, string Key, string Use) cinematic in CinematicDefaultKeys)
+            {
+                string bound = set.TryGetValue(cinematic.Action, out string value) && value != "" ? value : cinematic.Key;
+                if (string.Equals(bound, key, StringComparison.OrdinalIgnoreCase))
+                    return key + " " + cinematic.Use;
+            }
+            return null;
+        }
 
         //Frame rates Cap FPS offers (the runtime utils ASI's CapFps)
         internal static readonly string[] CapFpsRates = new string[] { "30", "60", "90", "120" };
@@ -820,13 +864,10 @@ namespace OpenCAGE
                 return false;
             }
 
-            if (enableDebugMenu.Checked && CinematicCameraKeys.Contains(key))
+            string cinematicUse = enableDebugMenu.Checked ? CinematicKeyUse(key) : null;
+            if (cinematicUse != null)
             {
-                string use;
-                if (key == "F8") use = "F8 turns the Debug Menu's free camera on and off (unless CinematicCameraKey in OpenCAGE.RuntimeUtils.ini names another key)";
-                else if (key == "F9") use = "F9 takes the Debug Menu's screenshots (unless CinematicScreenshotKey in OpenCAGE.RuntimeUtils.ini names another key)";
-                else use = key + " is one of the keys the Debug Menu's free camera uses while it flies";
-                MessageBox.Show(use + ".\n\nWith " + feature + " on " + key + " too, the game leaves the key to " + feature + " and the free camera goes without it.", "Free camera key", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(cinematicUse + ".\n\nWith " + feature + " on " + key + " too, the game leaves the key to " + feature + " and the Debug Menu goes without it (its Cinematic > Keys tab in game can move it to another key).", "Debug Menu key", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             return true;
         }

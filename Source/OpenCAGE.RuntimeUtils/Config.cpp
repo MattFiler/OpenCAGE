@@ -20,6 +20,15 @@ namespace
 		{ "NUMPAD0", VK_NUMPAD0 }, { "NUMPAD1", VK_NUMPAD1 }, { "NUMPAD2", VK_NUMPAD2 }, { "NUMPAD3", VK_NUMPAD3 },
 		{ "NUMPAD4", VK_NUMPAD4 }, { "NUMPAD5", VK_NUMPAD5 }, { "NUMPAD6", VK_NUMPAD6 }, { "NUMPAD7", VK_NUMPAD7 },
 		{ "NUMPAD8", VK_NUMPAD8 }, { "NUMPAD9", VK_NUMPAD9 },
+		// The rest of what the Debug Menu's Cinematic keys can be set to (its Keys tab names a key by the first name here)
+		{ "ADD", VK_ADD }, { "SUBTRACT", VK_SUBTRACT }, { "MULTIPLY", VK_MULTIPLY }, { "DIVIDE", VK_DIVIDE }, { "DECIMAL", VK_DECIMAL },
+		{ "LEFT", VK_LEFT }, { "RIGHT", VK_RIGHT }, { "UP", VK_UP }, { "DOWN", VK_DOWN },
+		{ "CTRL", VK_CONTROL }, { "CONTROL", VK_CONTROL }, { "SHIFT", VK_SHIFT }, { "ALT", VK_MENU },
+		{ "ENTER", VK_RETURN }, { "CAPSLOCK", VK_CAPITAL }, { "NUMLOCK", VK_NUMLOCK },
+		{ "SEMICOLON", VK_OEM_1 }, { "EQUALS", VK_OEM_PLUS }, { "COMMA", VK_OEM_COMMA }, { "MINUS", VK_OEM_MINUS },
+		{ "PERIOD", VK_OEM_PERIOD }, { "SLASH", VK_OEM_2 }, { "BACKQUOTE", VK_OEM_3 }, { "LBRACKET", VK_OEM_4 },
+		{ "BACKSLASH", VK_OEM_5 }, { "RBRACKET", VK_OEM_6 }, { "QUOTE", VK_OEM_7 },
+		{ "MOUSE4", VK_XBUTTON1 }, { "MOUSE5", VK_XBUTTON2 }, { "MIDDLEMOUSE", VK_MBUTTON },
 	};
 
 	// Accepts a key name from the table, a single letter/digit, or a virtual-key code (decimal or 0x-prefixed hex).
@@ -31,6 +40,8 @@ namespace
 				value += static_cast<char>(toupper(static_cast<unsigned char>(c)));
 		if (value.empty())
 			return fallback;
+		if (value == "NONE")
+			return 0;
 
 		for (const NamedKey& key : kNamedKeys)
 			if (value == key.name)
@@ -123,6 +134,11 @@ std::string Config::IniString(const char* key, const char* fallback)
 int Config::IniKey(const char* key, int fallback)
 {
 	return ParseKey(IniString(key, ""), fallback);
+}
+
+int Config::ParseKeyText(const std::string& text, int fallback)
+{
+	return ParseKey(text, fallback);
 }
 
 bool Config::AnyDebug()

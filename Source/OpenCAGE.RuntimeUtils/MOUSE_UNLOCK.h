@@ -24,8 +24,10 @@
 
 	A cubemap capture holds the cursor free the same way while it runs (Hold), whether Unlock Mouse is on or not, so
 	clicking into the game to watch one doesn't hand the game the mouse; afterwards it is as it was. So does the debug
-	menu while it is open. The hooks are in for that whenever captures can be asked for (the live link's camera sync
-	on) or the debug menu is on, and only pass through otherwise.
+	menu while it is open. While held, the cursor is shown whatever the game wants: the game hides it whenever its own
+	input is off (a cutscene), not only while it grabs it, which left the debug menu without a visible cursor in cutscenes
+	(issue 750). The hooks are in for that whenever captures can be asked for (the live link's camera sync on) or the
+	debug menu is on, and only pass through otherwise.
 */
 namespace MOUSE_UNLOCK
 {

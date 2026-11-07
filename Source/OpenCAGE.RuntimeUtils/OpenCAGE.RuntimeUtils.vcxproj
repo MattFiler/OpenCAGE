@@ -77,6 +77,7 @@
     <ClCompile Include="CINEMATIC_VISUALS.cpp" />
     <ClCompile Include="CINEMATIC_TOOLS.cpp" />
     <ClCompile Include="CINEMATIC_CAPTURE.cpp" />
+    <ClCompile Include="CINEMATIC_KEYS.cpp" />
     <ClCompile Include="LIVE_SETTINGS.cpp" />
     <ClCompile Include="DEBUG_MENU.cpp" />
     <ClCompile Include="BT_DEBUG.cpp" />
@@ -198,6 +199,7 @@
     <ClInclude Include="DEBUG_MENU.h" />
     <ClInclude Include="TABLE_ORDER.h" />
     <ClInclude Include="CINEMATIC_CAPTURE.h" />
+    <ClInclude Include="CINEMATIC_KEYS.h" />
     <ClInclude Include="BT_DEBUG.h" />
     <ClInclude Include="AI_DEBUG.h" />
     <ClInclude Include="AI_STATE.h" />

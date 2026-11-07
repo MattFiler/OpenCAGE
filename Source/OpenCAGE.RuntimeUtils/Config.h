@@ -82,4 +82,8 @@ namespace Config
 	int IniInt(const char* key, int fallback);
 	std::string IniString(const char* key, const char* fallback);
 	int IniKey(const char* key, int fallback);
+
+	// A key named as HotReloadKey's are (NONE: no key, 0), the fallback when the text names none; for files of keys other
+	// than this one (the Debug Menu's OpenCAGE.CinematicKeys.ini).
+	int ParseKeyText(const std::string& text, int fallback);
 }

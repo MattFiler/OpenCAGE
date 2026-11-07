@@ -123,6 +123,9 @@
     <ClCompile Include="CINEMATIC_CAPTURE.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CINEMATIC_KEYS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="LIVE_SETTINGS.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -459,6 +462,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="CINEMATIC_CAPTURE.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CINEMATIC_KEYS.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="BT_DEBUG.h">

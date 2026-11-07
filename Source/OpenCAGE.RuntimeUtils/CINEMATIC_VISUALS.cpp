@@ -813,7 +813,7 @@ namespace
 		bool hide = g_hideHud;
 		if (ImGui::Checkbox("Hide the HUD", &hide))
 			g_hideHud = hide;
-		Tooltip("Hides the in-game HUD and the weapon HUD (Cinematic Tools' Hide HUD), and in a challenge map its objectives, score and timer (with the box under it ticked). Home toggles it while the camera flies. Other layers below can be hidden one by one.");
+		Tooltip("Hides the in-game HUD and the weapon HUD (Cinematic Tools' Hide HUD), and in a challenge map its objectives, score and timer (with the box under it ticked). Its key (Home by default, Cinematic > Keys) toggles it any time a level is played. Other layers below can be hidden one by one.");
 		if (g_hudHidden)
 		{
 			ImGui::SameLine();

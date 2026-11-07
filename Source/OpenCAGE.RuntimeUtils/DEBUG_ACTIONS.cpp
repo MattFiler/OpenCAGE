@@ -981,7 +981,7 @@ namespace
 		bool on = g_freeCamera;
 		if (ImGui::Checkbox("Free camera", &on))
 			g_freeCamera = on;
-		Tooltip("The Cinematic group's free camera: starts where the game camera is, the player frozen meanwhile. Close this window to fly it (the window keeps the keyboard and mouse while open); its key (CinematicCameraKey, F8 by default) turns it on and off, with this window open or closed. A level change turns it off.");
+		Tooltip("The Cinematic group's free camera: starts where the game camera is, the player frozen meanwhile. Close this window to fly it (the window keeps the keyboard and mouse while open); its key (F8 by default; the Cinematic group's Keys tab sets it) turns it on and off, with this window open or closed. A level change turns it off.");
 		ImGui::SameLine();
 		if (ImGui::SmallButton("Free Camera tab"))
 			DEBUG_MENU::ShowTab("Free Camera");

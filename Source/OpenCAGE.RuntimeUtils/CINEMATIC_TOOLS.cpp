@@ -1,5 +1,6 @@
 #include "AI_STATE.h"
 #include "CINEMATIC_CAMERA.h"
+#include "CINEMATIC_KEYS.h"
 #include "CINEMATIC_VISUALS.h"
 #include "Config.h"
 #include "DEBUG_MENU.h"
@@ -27,7 +28,7 @@
 	The Cinematic group's Cast and Screenshots tabs.
 
 	Cast (Cinematic Tools' character tools): the characters other than the player held still ("Freeze NPCs", Cinematic
-	Tools' key F7) and let go of again; the player made invisible to the AI (the Game group's switch, which Cinematic
+	Tools' Freeze characters; its key is F5 by default, as F7 is the Debug Menu's here) and let go of again; the player made invisible to the AI (the Game group's switch, which Cinematic
 	Tools' invisibility stood for); the camera taken behind a character or locked to it, and the player moved to the camera
 	(the Free Camera tab's, here too).
 
@@ -46,7 +47,7 @@
 	Screenshots: the frame as the game drew it - without this window, its overlays or anything else RuntimeUtils draws -
 	written as a .bmp into a Screenshots folder in the game folder (next to OpenCAGE.RuntimeUtils.ini), named after the
 	level and the time. With "Hide the HUD for the shot" the in-game HUD is hidden for the frames it takes (the HUD tab's
-	layers), then shown again. Its key (CinematicScreenshotKey, F9 by default) takes one with the window closed or open.
+	layers), then shown again. Its key (Cinematic > Keys, F9 by default) takes one with the window closed or open.
 */
 namespace
 {
@@ -480,18 +481,10 @@ namespace
 		return g_shot.id;
 	}
 
-	// The screenshot key: none (0) when it is another helper's key or the free camera's, as both would act on it
+	// The screenshot key (Cinematic > Keys): none (0) when it has none, or it is another helper's key, as both would act on it
 	int ScreenshotKey()
 	{
-		static const int key = []()
-		{
-			const int wanted = Config::IniKey("CinematicScreenshotKey", VK_F9);
-			if (!wanted || (!CINEMATIC_CAMERA::TakenKey(wanted) && wanted != CINEMATIC_CAMERA::ToggleKey()))
-				return wanted;
-			DevTools::Log("Debug menu: screenshot: CinematicScreenshotKey is the same as another helper's key: set another");
-			return 0;
-		}();
-		return key;
+		return CINEMATIC_KEYS::Key(CINEMATIC_KEYS::Screenshot);
 	}
 
 	bool GameHasFocus()
@@ -512,7 +505,7 @@ namespace
 		g_level = LIVE_LINK::RunningLevelName();
 		const int key = ScreenshotKey();
 		const bool down = key && (GetAsyncKeyState(key) & 0x8000) != 0;
-		if (down && !g_keyWasDown && GameHasFocus())
+		if (down && !g_keyWasDown && !CINEMATIC_KEYS::Capturing() && !DEBUG_MENU::TypingInWindow() && GameHasFocus())
 		{
 			std::string path;
 			if (ShotPath("", g_level, path))
@@ -649,7 +642,8 @@ namespace
 	{
 		ImGui::SeparatorText("Characters");
 		bool freeze = g_freezeNpcs;
-		if (ImGui::Checkbox("Freeze NPCs", &freeze))
+		const std::string freezeLabel = "Freeze NPCs (" + CINEMATIC_KEYS::KeyText(CINEMATIC_KEYS::FreezeNpcs) + ")###freezenpcs";
+		if (ImGui::Checkbox(freezeLabel.c_str(), &freeze))
 			g_freezeNpcs = freeze;
 		Tooltip("Every character but the player stands idle where it is, newly spawned ones too, until turned off (Cinematic Tools' Freeze characters). People through the force idle motivation (their behaviour trees' idle branch runs ahead of everything else, scripted orders included); the alien and androids through their trees' debug switches (AI > Tree Switches: Disable All Aliens, Force Android Idle). Their senses keep running and they still react to being hurt; an android following a script's orders carries on with them, and facehuggers have nothing to idle them. Turned off, only what this turned on is turned off again. The game keeps force idle in its saves: a checkpoint saved while this is on brings people back idle (let go of when this is turned off if it was still on as they came back, otherwise only by hand in Characters > Control), so tick Game > Saves' \"Don't write saves\" while using it. For a world that stops altogether, freeze time in the Free Camera tab.");
 		ImGui::SameLine();
@@ -677,7 +671,8 @@ namespace
 		if (invisible)
 			DEBUG_MENU::GetSwitch(invisible, hidden);
 		ImGui::BeginDisabled(!invisible);
-		if (ImGui::Checkbox("Player invisible to the AI", &hidden) && invisible)
+		const std::string invisibleLabel = "Player invisible to the AI (" + CINEMATIC_KEYS::KeyText(CINEMATIC_KEYS::Invisibility) + ")###invisible";
+		if (ImGui::Checkbox(invisibleLabel.c_str(), &hidden) && invisible)
 			DEBUG_MENU::SetSwitch(invisible, hidden);
 		ImGui::EndDisabled();
 		Tooltip("Characters > Player's switch (tools.invisible): the AI's senses no longer pick up the player (what Cinematic Tools' invisibility was for; it never hid the player's model).");
@@ -746,8 +741,8 @@ namespace
 		if (ScreenshotKey())
 			ImGui::TextDisabled("or %s, with this window closed or open", Config::KeyName(ScreenshotKey()));
 		else
-			ImGui::TextDisabled("(no key: CinematicScreenshotKey is another helper's key)");
-		ImGui::TextWrapped("The frame as the game drew it, without this window or anything else RuntimeUtils draws, as a .bmp in the Screenshots folder of the game folder (CinematicScreenshotKey in OpenCAGE.RuntimeUtils.ini changes the key).");
+			ImGui::TextDisabled("(no key: set one in the Keys tab)");
+		ImGui::TextWrapped("The frame as the game drew it, without this window or anything else RuntimeUtils draws, as a .bmp in the Screenshots folder of the game folder (the Keys tab changes the key).");
 		std::lock_guard<std::mutex> lock(g_shotMutex);
 		if (!g_lastShot.empty())
 		{

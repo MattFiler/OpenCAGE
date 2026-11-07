@@ -1,4 +1,5 @@
 #include "CINEMATIC_CAMERA.h"
+#include "CINEMATIC_KEYS.h"
 #include "CINEMATIC_TRACKS.h"
 #include "CINEMATIC_VISUALS.h"
 #include "Config.h"
@@ -462,32 +463,30 @@ namespace
 		return key && (GetAsyncKeyState(key) & 0x8000) != 0;
 	}
 
-	// Edges of the keys that do something once per press (the camera task only)
+	// A Cinematic key held down now (CINEMATIC_KEYS: none while a key is being set in its tab)
+	bool KeyDown(CINEMATIC_KEYS::Action action)
+	{
+		return !CINEMATIC_KEYS::Capturing() && CINEMATIC_KEYS::Down(action);
+	}
+
+	// Edges of the keys that do something once per press (the camera task only). Freeze time and hiding the HUD act any
+	// time a level is played, so CINEMATIC_KEYS has those.
 	struct KeyEdge
 	{
-		int key;
+		CINEMATIC_KEYS::Action action;
 		bool was;
 	};
 	KeyEdge g_edges[] = {
-		{ 0, false },          // the camera's own key (filled in when first read)
-		{ VK_F1, false }, { VK_F2, false }, { VK_F3, false }, { VK_HOME, false }, { VK_DELETE, false }, { VK_END, false },
-		{ VK_PRIOR, false }, { VK_NEXT, false },
+		{ CINEMATIC_KEYS::ToggleCamera, false }, { CINEMATIC_KEYS::TrackAddNode, false }, { CINEMATIC_KEYS::TrackDeleteNode, false },
+		{ CINEMATIC_KEYS::TrackPlay, false }, { CINEMATIC_KEYS::StepFrame, false }, { CINEMATIC_KEYS::SpeedUp, false },
+		{ CINEMATIC_KEYS::SpeedDown, false },
 	};
-	enum EdgeIndex { EdgeToggle, EdgeAddNode, EdgeDeleteNode, EdgePlay, EdgeHud, EdgePause, EdgeStep, EdgeFaster, EdgeSlower, kEdgeCount };
-	bool g_keysChecked = false; // camera task: the keys filled in, any another helper has left out
+	enum EdgeIndex { EdgeToggle, EdgeAddNode, EdgeDeleteNode, EdgePlay, EdgeStep, EdgeFaster, EdgeSlower, kEdgeCount };
 
-	// The camera's key: none (0) when it is another helper's key, as both would act on it
+	// The camera's key: none (0) when it has none, or it is another helper's key, as both would act on it
 	int CameraKey()
 	{
-		static const int key = []()
-		{
-			const int wanted = Config::IniKey("CinematicCameraKey", VK_F8);
-			if (!CINEMATIC_CAMERA::TakenKey(wanted))
-				return wanted;
-			DevTools::Log("Debug menu: cinematic camera: CinematicCameraKey is the same as another helper's key: set another");
-			return 0;
-		}();
-		return key;
+		return CINEMATIC_KEYS::Key(CINEMATIC_KEYS::ToggleCamera);
 	}
 
 	// A key's name for the tabs and notes ("no key" for none)
@@ -496,14 +495,15 @@ namespace
 		return key ? Config::KeyName(key) : "no key";
 	}
 
-	// Pressed since the last frame (each key's edge is followed every frame, whether or not it is acted on)
+	// Pressed since the last frame (each key's edge is followed every frame, whether or not it is acted on - while a key
+	// is being set too, so the key just set, still held as the setting ends, doesn't act)
 	bool Pressed(int index, bool allowed)
 	{
 		KeyEdge& edge = g_edges[index];
-		const bool down = Down(edge.key);
+		const bool down = CINEMATIC_KEYS::Down(edge.action);
 		const bool pressed = down && !edge.was;
 		edge.was = down;
-		return pressed && allowed;
+		return pressed && allowed && !CINEMATIC_KEYS::Capturing();
 	}
 
 	// XInput, from whichever version the game loaded (else the first there is)
@@ -617,13 +617,6 @@ namespace
 			else if (!result.ok)
 				DevTools::Log("Debug menu: cinematic camera: %s: %s", name.c_str(), result.message.c_str());
 		}).detach();
-	}
-
-	void ToggleSwitch(const char* name)
-	{
-		bool value = false;
-		if (DEBUG_MENU::GetSwitch(name, value))
-			DEBUG_MENU::SetSwitch(name, !value);
 	}
 
 	// ---- The player frozen while it flies (entity thread) ----
@@ -773,25 +766,10 @@ bool CINEMATIC_CAMERA::CameraPose(Pose& out, bool mayApply)
 		return false;
 	const float dt = FrameSeconds();
 
-	// The camera's keys, the first time: any that another helper has too is left out (no key, never pressed)
-	if (!g_keysChecked)
-	{
-		g_keysChecked = true;
-		g_edges[EdgeToggle].key = CameraKey();
-		for (int i = EdgeAddNode; i < kEdgeCount; i++)
-			if (TakenKey(g_edges[i].key))
-			{
-				DevTools::Log("Debug menu: cinematic camera: %s is another helper's key: the camera leaves it alone", Config::KeyName(g_edges[i].key));
-				g_edges[i].key = 0;
-			}
-	}
-
-	// The camera's key, every frame (the window open or not); the focus is only looked at while it is on or wanted, or its
-	// key was just pressed
+	// The camera's key, every frame (the window open or not, but not while a text box in it is typed in); the focus is
+	// only looked at while it is on or wanted, or its key was just pressed
 	const bool active = g_active;
-	const bool toggleDown = Down(g_edges[EdgeToggle].key);
-	const bool togglePressed = toggleDown && !g_edges[EdgeToggle].was;
-	g_edges[EdgeToggle].was = toggleDown;
+	const bool togglePressed = Pressed(EdgeToggle, !DEBUG_MENU::TypingInWindow());
 	const bool focus = (active || g_wanted || togglePressed) ? GameHasFocus() : false;
 	if (togglePressed && focus)
 		g_wanted = !g_wanted;
@@ -808,16 +786,12 @@ bool CINEMATIC_CAMERA::CameraPose(Pose& out, bool mayApply)
 		const bool addNode = Pressed(EdgeAddNode, flyingKeys);
 		const bool deleteNode = Pressed(EdgeDeleteNode, flyingKeys);
 		const bool play = Pressed(EdgePlay, flyingKeys);
-		const bool hud = Pressed(EdgeHud, flyingKeys);
-		const bool pause = Pressed(EdgePause, flyingKeys);
 		const bool step = Pressed(EdgeStep, flyingKeys);
 		const bool faster = Pressed(EdgeFaster, flyingKeys);
 		const bool slower = Pressed(EdgeSlower, flyingKeys);
 		if (addNode) CINEMATIC_TRACKS::AddNodeHere();
 		if (deleteNode) CINEMATIC_TRACKS::DeleteLastNode();
 		if (play) CINEMATIC_TRACKS::TogglePlay();
-		if (hud) ToggleSwitch("cinematic.hide_hud");
-		if (pause) ToggleSwitch("game.paused");
 		if (step) RunCommandAsync("game.step", "");
 		if (faster) g_moveSpeed = (std::min)(100.0f, g_moveSpeed * 1.25f);
 		if (slower) g_moveSpeed = (std::max)(0.05f, g_moveSpeed / 1.25f);
@@ -897,17 +871,19 @@ bool CINEMATIC_CAMERA::CameraPose(Pose& out, bool mayApply)
 			const bool input = mayApply && focus && !windowOpen && !pauseMenu && g_keepInput;
 			if (input)
 			{
-				target[MoveX] = (Down('D') ? 1.0f : 0.0f) - (Down('A') ? 1.0f : 0.0f);
-				target[MoveY] = (Down(VK_SPACE) ? 1.0f : 0.0f) - (Down(VK_CONTROL) ? 1.0f : 0.0f);
-				target[MoveZ] = (Down('W') ? 1.0f : 0.0f) - (Down('S') ? 1.0f : 0.0f);
-				target[TurnYaw] = (Down(VK_RIGHT) ? 1.0f : 0.0f) - (Down(VK_LEFT) ? 1.0f : 0.0f);
-				target[TurnPitch] = (Down(VK_DOWN) ? 1.0f : 0.0f) - (Down(VK_UP) ? 1.0f : 0.0f);
-				target[Roll] = (Down('Q') ? 1.0f : 0.0f) - (Down('E') ? 1.0f : 0.0f);
-				target[Zoom] = (Down(VK_ADD) ? 1.0f : 0.0f) - (Down(VK_SUBTRACT) ? 1.0f : 0.0f);
-				dofFocus = (Down(VK_NUMPAD6) ? 1.0f : 0.0f) - (Down(VK_NUMPAD5) ? 1.0f : 0.0f);
-				dofFocal = (Down(VK_NUMPAD8) ? 1.0f : 0.0f) - (Down(VK_NUMPAD9) ? 1.0f : 0.0f);
-				dofFnumber = (Down(VK_NUMPAD3) ? 1.0f : 0.0f) - (Down(VK_NUMPAD2) ? 1.0f : 0.0f);
-				if (Down(VK_SHIFT))
+				using namespace CINEMATIC_KEYS;
+				auto axis = [](Action plus, Action minus) { return (KeyDown(plus) ? 1.0f : 0.0f) - (KeyDown(minus) ? 1.0f : 0.0f); };
+				target[MoveX] = axis(MoveRight, MoveLeft);
+				target[MoveY] = axis(MoveUp, MoveDown);
+				target[MoveZ] = axis(MoveForward, MoveBackward);
+				target[TurnYaw] = axis(LookRight, LookLeft);
+				target[TurnPitch] = axis(LookDown, LookUp);
+				target[Roll] = axis(RollLeft, RollRight);
+				target[Zoom] = axis(FovWider, FovNarrower);
+				dofFocus = axis(FocusFarther, FocusNearer);
+				dofFocal = axis(FocalLonger, FocalShorter);
+				dofFnumber = axis(FNumberHigher, FNumberLower);
+				if (KeyDown(MoveFaster))
 					for (int axis : { MoveX, MoveY, MoveZ })
 						target[axis] *= 4.0f;
 			}
@@ -1172,14 +1148,33 @@ void CINEMATIC_CAMERA::LockTo(uint32_t characterId)
 
 bool CINEMATIC_CAMERA::TakenKey(int key)
 {
+	return TakenBy(key) != nullptr;
+}
+
+const char* CINEMATIC_CAMERA::TakenBy(int key)
+{
 	const Config::Settings& config = Config::Get();
-	return key != 0 && (key == config.debugMenuKey || (config.possess && key == config.possessKey) ||
-		(config.unlockMouse && key == config.unlockMouseKey) || (config.hotReload && key == config.hotReloadKey));
+	if (key == 0)
+		return nullptr;
+	if (key == config.debugMenuKey)
+		return "the Debug Menu's key";
+	if (config.possess && key == config.possessKey)
+		return "Possess's key";
+	if (config.unlockMouse && key == config.unlockMouseKey)
+		return "Unlock Mouse's key";
+	if (config.hotReload && key == config.hotReloadKey)
+		return "Hot Reload's key";
+	return nullptr;
 }
 
 int CINEMATIC_CAMERA::ToggleKey()
 {
 	return CameraKey();
+}
+
+bool CINEMATIC_CAMERA::GameMenuUp()
+{
+	return GameMenuOpen();
 }
 
 __declspec(noinline)
@@ -1362,14 +1357,22 @@ namespace
 			"\nfov=" + Number(pose.fov, 2);
 	}
 
-	const char* kKeysText =
-		"W/A/S/D fly, Space/Ctrl up/down, Shift x4 faster, Page Up/Down change the speed\n"
-		"Mouse or arrows turn, Q/E roll, wheel or numpad +/- field of view\n"
-		"Numpad 6/5 focus distance, 8/9 focal length, 3/2 f-number (depth of field on)\n"
-		"F1 add a track node, F2 delete the last, F3 play/stop the track\n"
-		"Home hide the HUD, Delete pause the game, End step one frame while paused\n"
-		"Pad: left stick flies, triggers up/down, right stick turns, LB/RB roll,\n"
-		"stick clicks field of view, d-pad up/down turn speed, B/Y move speed";
+	// The keys as set now (Cinematic > Keys sets them), then the mouse and a pad's, which don't change
+	std::string KeysText()
+	{
+		using namespace CINEMATIC_KEYS;
+		auto k = [](Action action) { return std::string(CINEMATIC_KEYS::KeyText(action)); };
+		return k(MoveForward) + "/" + k(MoveLeft) + "/" + k(MoveBackward) + "/" + k(MoveRight) + " fly, " + k(MoveUp) + "/" + k(MoveDown) +
+			" up/down, " + k(MoveFaster) + " x4 faster, " + k(SpeedUp) + "/" + k(SpeedDown) + " change the speed\n"
+			"Mouse or " + k(LookLeft) + "/" + k(LookRight) + "/" + k(LookUp) + "/" + k(LookDown) + " turn, " + k(RollLeft) + "/" + k(RollRight) +
+			" roll, wheel or " + k(FovWider) + "/" + k(FovNarrower) + " field of view\n" +
+			k(FocusFarther) + "/" + k(FocusNearer) + " focus distance, " + k(FocalLonger) + "/" + k(FocalShorter) + " focal length, " +
+			k(FNumberHigher) + "/" + k(FNumberLower) + " f-number (depth of field on)\n" +
+			k(TrackAddNode) + " add a track node, " + k(TrackDeleteNode) + " delete the last, " + k(TrackPlay) + " play/stop the track\n" +
+			k(StepFrame) + " step one frame while paused; any time: " + k(FreezeTime) + " freeze time, " + k(HideHud) + " hide the HUD\n"
+			"Pad: left stick flies, triggers up/down, right stick turns, LB/RB roll,\n"
+			"stick clicks field of view, d-pad up/down turn speed, B/Y move speed";
+	}
 
 	void Name()
 	{
@@ -1530,9 +1533,9 @@ namespace
 				text += name + "\n";
 			return DEBUG_MENU::CommandResult{ true, text };
 		});
-		DEBUG_MENU::AddCommand("cinematic.keys", "the cinematic camera's keys", [](const std::string&)
+		DEBUG_MENU::AddCommand("cinematic.keys", "the Cinematic group's keys as set now (Cinematic > Keys), a line each: action=key, then which act any time", [](const std::string&)
 		{
-			return DEBUG_MENU::CommandResult{ true, std::string("toggle: ") + KeyText(CameraKey()) + "\n" + kKeysText };
+			return DEBUG_MENU::CommandResult{ true, CINEMATIC_KEYS::Describe() };
 		});
 	}
 
@@ -1622,13 +1625,13 @@ namespace
 		ImGui::BeginDisabled(!havePause);
 		if (ImGui::Checkbox("Freeze time (pause the game)", &paused))
 			DEBUG_MENU::SetSwitch("game.paused", paused);
-		Tooltip("The game's own pause (game.paused): the world stops, the camera still flies. Nothing streams in while paused, so fly where you want before pausing. Delete toggles it while the camera flies.");
+		Tooltip("The game's own pause (game.paused): the world stops, the camera still flies. Nothing streams in while paused, so fly where you want before pausing. Its key (the Keys tab) toggles it any time a level is played.");
 		ImGui::SameLine();
 		ImGui::BeginDisabled(!paused);
 		if (ImGui::Button("Step one frame"))
 			RunCommandAsync("game.step", "");
 		ImGui::EndDisabled();
-		Tooltip("The game moves on one frame and pauses again (game.step). End does this while the camera flies.");
+		Tooltip((std::string("The game moves on one frame and pauses again (game.step). ") + CINEMATIC_KEYS::KeyText(CINEMATIC_KEYS::StepFrame) + " does this while the camera flies.").c_str());
 		ImGui::EndDisabled();
 		ImGui::BeginDisabled(!haveSpeed);
 		ImGui::SetNextItemWidth(220.0f * DEBUG_MENU::Scale());
@@ -1693,7 +1696,7 @@ namespace
 		sprintf_s(label, "Cinematic camera (%s)", KeyText(CameraKey()));
 		if (ImGui::Checkbox(label, &on))
 			g_wanted = on;
-		Tooltip("Turns the free camera on and off; its key does too, with this window open or closed (CinematicCameraKey in OpenCAGE.RuntimeUtils.ini). Close this window to fly it - the window has the keys and mouse while it is open - or tick \"Fly with this window open\" below.");
+		Tooltip("Turns the free camera on and off; its key does too, with this window open or closed (set in the Keys tab). Close this window to fly it - the window has the keys and mouse while it is open - or tick \"Fly with this window open\" below.");
 		ImGui::SameLine();
 		ImGui::PushTextWrapPos(0.0f);
 		ImGui::TextDisabled("%s", StatusText().c_str());
@@ -1736,12 +1739,12 @@ namespace
 
 		ImGui::SeparatorText("Lens");
 		SliderValue("Field of view", g_fov, kFovMin, kFovMax, "%.1f deg");
-		Tooltip("Vertical, in degrees. The mouse wheel and the numeric pad's + and - change it while flying.");
+		Tooltip((std::string("Vertical, in degrees. The mouse wheel and ") + CINEMATIC_KEYS::KeyText(CINEMATIC_KEYS::FovWider) + " / " + CINEMATIC_KEYS::KeyText(CINEMATIC_KEYS::FovNarrower) + " change it while flying.").c_str());
 		SliderValue("Roll", g_roll, -180.0f, 180.0f, "%.1f deg");
 		ImGui::SameLine();
 		if (ImGui::Button("Level"))
 			g_roll = 0.0f;
-		Tooltip("Q and E roll it while flying.");
+		Tooltip((std::string(CINEMATIC_KEYS::KeyText(CINEMATIC_KEYS::RollLeft)) + " and " + CINEMATIC_KEYS::KeyText(CINEMATIC_KEYS::RollRight) + " roll it while flying.").c_str());
 
 		ImGui::SeparatorText("Lock to a character");
 		// (no label: the choice shows "Character: N" itself, under this heading)
@@ -1815,9 +1818,10 @@ namespace
 			if (CameraKey())
 				ImGui::Text("%s turns it on and off.", Config::KeyName(CameraKey()));
 			else
-				ImGui::TextWrapped("No key turns it on and off: CinematicCameraKey is another helper's key (set another in OpenCAGE.RuntimeUtils.ini).");
+				ImGui::TextWrapped("No key turns it on and off: set one in the Keys tab.");
 			ImGui::PushTextWrapPos(0.0f);
-			ImGui::TextUnformatted(kKeysText);
+			ImGui::TextUnformatted(KeysText().c_str());
+			ImGui::TextDisabled("The Cinematic group's Keys tab changes any of these.");
 			ImGui::PopTextWrapPos();
 		}
 		if (!g_tabNote.empty())

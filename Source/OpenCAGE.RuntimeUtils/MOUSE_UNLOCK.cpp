@@ -140,7 +140,11 @@ bool MOUSE_UNLOCK::OnWindowMessage(HWND window, UINT message, WPARAM wParam, LPA
 	const bool free = Free();
 	const bool grabWanted = g_grabWanted;
 
-	const bool show = free && grabWanted;
+	// Shown while free and the game wants the mouse (it hides the cursor while it grabs it), and always while held free (the
+	// debug menu open): the game also hides the cursor while it isn't grabbing, whenever its own input is off - in a
+	// cutscene, say (PCWindow::process_messages shows it only in its menus) - which left the debug menu with an invisible
+	// cursor there (issue 750). ShowCursor counts, so one more show from here never hides what the game shows.
+	const bool show = (free && grabWanted) || held;
 	if (show != g_shown)
 	{
 		ShowCursor(show ? TRUE : FALSE);
