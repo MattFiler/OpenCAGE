@@ -1059,6 +1059,7 @@
     <Compile Include="Scripts\Modding\ModPackage.cs" />
     <Compile Include="Scripts\Modding\ModExportBuilder.cs" />
     <Compile Include="Scripts\Modding\PakParts.cs" />
+    <Compile Include="Scripts\Modding\TextParts.cs" />
     <Compile Include="Scripts\Modding\ModInstaller.cs" />
     <Compile Include="Scripts\Modding\LevelMerge.cs" />
     <Compile Include="Scripts\Modding\LevelPart.cs" />

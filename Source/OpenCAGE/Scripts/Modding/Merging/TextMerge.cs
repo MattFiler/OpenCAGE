@@ -189,7 +189,7 @@ namespace OpenCAGE.Modding.Merging
                 string record = records[i].Text;
                 //A record that was last in its own file may lack the blank line the next one needs
                 if (i < records.Count - 1 && !record.EndsWith("\n"))
-                    record += "\n\n";
+                    record += record.Contains("\r\n") ? "\r\n\r\n" : "\n\n";
                 text.Append(record);
             }
             return text.ToString();
@@ -198,11 +198,38 @@ namespace OpenCAGE.Modding.Merging
         public static MergeOutcome Merge(string target, byte[] vanilla, IList<Contribution> versions)
         {
             string baseText = Decode(vanilla, out Encoding encoding);
+            List<KeyedListMerge.Record> baseRecords = Parse(baseText);
+            string newline = baseText.Contains("\r\n") || !baseText.Contains("\n") ? "\r\n" : "\n";
             KeyedListMerge merge = new KeyedListMerge(target, key => "string " + key);
-            List<KeyedListMerge.Record> merged = merge.Merge(Parse(baseText),
-                versions.Select(o => (o.ModName, Parse(Decode(o.Bytes, out _)))).ToList());
+            List<KeyedListMerge.Record> merged = merge.Merge(baseRecords,
+                versions.Select(o => (o.ModName, InLayoutOf(Parse(Decode(o.Bytes, out _)), baseRecords, newline))).ToList());
             return new MergeOutcome() { Bytes = Encode(Write(merged), encoding), Conflicts = merge.Conflicts };
         }
+
+        /* How a string is laid out - CRLF or LF, the blank lines after it - is no change to it: the game's files are LF,
+           OpenCAGE's editor writes CRLF, and a mod that re-saved the whole file would otherwise change every string in it
+           and clash with every other mod. So a mod's string that says what the game's does takes the game's text, and one
+           that changes it goes in the game's newlines with the game's blank lines after it */
+        private static List<KeyedListMerge.Record> InLayoutOf(List<KeyedListMerge.Record> records, List<KeyedListMerge.Record> baseRecords, string newline)
+        {
+            Dictionary<string, KeyedListMerge.Record> game = new Dictionary<string, KeyedListMerge.Record>();
+            foreach (KeyedListMerge.Record record in baseRecords)
+                if (record.Key != null && !game.ContainsKey(record.Key))
+                    game[record.Key] = record;
+            return records.Select(o =>
+            {
+                if (o.Key == null)
+                    return o;
+                string body = Body(o.Text);
+                if (!game.TryGetValue(o.Key, out KeyedListMerge.Record shipped))
+                    return new KeyedListMerge.Record() { Key = o.Key, Text = body.Replace("\n", newline) + newline + newline };
+                if (Body(shipped.Text) == body)
+                    return new KeyedListMerge.Record() { Key = o.Key, Text = shipped.Text };
+                return new KeyedListMerge.Record() { Key = o.Key, Text = body.Replace("\n", newline) + shipped.Text.Substring(shipped.Text.TrimEnd('\r', '\n', ' ', '\t').Length) };
+            }).ToList();
+        }
+
+        private static string Body(string text) => text.Replace("\r\n", "\n").TrimEnd('\r', '\n', ' ', '\t');
 
         public static string Decode(byte[] bytes, out Encoding encoding)
         {

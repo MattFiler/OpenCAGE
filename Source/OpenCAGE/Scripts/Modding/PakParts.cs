@@ -20,7 +20,8 @@ namespace OpenCAGE.Modding
         public string Change;           //"changed", "new" or "removed"
         public string Key;              //what it is inside the file
         public long Size;               //its size where that means something, else 0
-        internal Func<Builder, bool> Apply;   //puts it into a build of the original; false when it can't
+        public string Tooltip;          //more about it for its row (a string's old and new text), or null
+        internal Func<Builder, bool> Apply;   //puts it into a build of the original; false when it can't (archives: TextParts builds text its own way)
         internal string ClipPath;       //an animation's path, for the parts that go with it
 
         public override string ToString() => Title;
@@ -74,6 +75,9 @@ namespace OpenCAGE.Modding
         /// </summary>
         public static List<PakPart> Find(string normalisedPath, byte[] original, byte[] current)
         {
+            //The game's text: string by string (TextParts)
+            if (TextParts.Handles(normalisedPath))
+                return TextParts.Find(normalisedPath, original, current);
             if (!IsArchive(original) || !IsArchive(current))
                 return null;
             try
@@ -92,6 +96,8 @@ namespace OpenCAGE.Modding
         /// <summary>The original with only the chosen parts put in, as the archive's bytes; null when that can't be done.</summary>
         public static byte[] Build(string normalisedPath, byte[] original, byte[] current, IEnumerable<PakPart> chosen)
         {
+            if (TextParts.Handles(normalisedPath))
+                return TextParts.Build(normalisedPath, original, current, chosen);
             try
             {
                 PAK2 a = new PAK2(original), b = new PAK2(current);

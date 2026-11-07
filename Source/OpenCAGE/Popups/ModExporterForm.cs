@@ -43,6 +43,7 @@ namespace OpenCAGE.Popups
             public List<CompositeRow> Composites = new List<CompositeRow>();
             public List<AssetRow> Assets = new List<AssetRow>();
             public List<string> LooseFiles = new List<string>(); //Files its save doesn't write (its text, its sound package)
+            public Dictionary<string, List<PakPart>> LooseParts = new Dictionary<string, List<PakPart>>(); //Its text files' changes, string by string (TextParts)
             public bool HasHistory => Composites.Count != 0 || Assets.Count != 0;
             public bool Whole => New || UnderMods;
         }
@@ -71,6 +72,14 @@ namespace OpenCAGE.Popups
         {
             public LevelChanges Level;
             public string Path;
+        }
+
+        /* One change in a level's text file - a string, or a text database it loads - under the file's row: all of them
+           ticked, the file goes as the user has it; else the file as it shipped with the ticked ones in it */
+        private class LooseStringRow
+        {
+            public LooseRow Loose;
+            public PakPart Part;
         }
 
         /* Everything else the user changed in a level - with the rest of its rows, the whole level as it is now */
@@ -629,14 +638,15 @@ namespace OpenCAGE.Popups
         }
 
         /* The changes inside each archive among the files (UI.PAK, ANIMATION.PAK...) that can be taken apart, against the
-           archive as it shipped; one that can't goes whole, as it always has */
+           archive as it shipped - and inside each of the game's text files, string by string (TextParts); one that can't goes
+           whole, as it always has */
         private Dictionary<string, List<PakPart>> ReadArchives(List<string> files)
         {
             Dictionary<string, List<PakPart>> archives = new Dictionary<string, List<PakPart>>();
-            List<string> candidates = files.Where(o => !_deleted.Contains(o) && o.EndsWith(".PAK", StringComparison.OrdinalIgnoreCase) && StartsAsArchive(o)).ToList();
+            List<string> candidates = files.Where(o => !_deleted.Contains(o) && ((o.EndsWith(".PAK", StringComparison.OrdinalIgnoreCase) && StartsAsArchive(o)) || TextParts.Handles(o))).ToList();
             if (candidates.Count == 0 || ModServices.Installer == null)
                 return archives;
-            using (BusyDialog busy = new BusyDialog("Reading what you've changed inside the game's archives..."))
+            using (BusyDialog busy = new BusyDialog("Reading what you've changed inside the game's archives and text..."))
             {
                 busy.Work = report =>
                 {
@@ -692,7 +702,9 @@ namespace OpenCAGE.Popups
                 {
                     TreeNode row = parent.Nodes.Add(part.Title + "  -  " + part.Change + (part.Size > 0 ? ", " + ModExportBuilder.PrettySize(part.Size) : ""));
                     row.Tag = part;
-                    if (part.Key.EndsWith("|layout"))
+                    if (part.Tooltip != null)
+                        row.ToolTipText = part.Tooltip;
+                    else if (part.Key.EndsWith("|layout"))
                         row.ToolTipText = "Its layout in the Animation Tree Editor goes with it.";
                     else if (part.Group == PakParts.ClipGroup)
                         row.ToolTipText = "Its animation data and its entry in the game's clip index go with it.";
@@ -703,6 +715,10 @@ namespace OpenCAGE.Popups
         /* What a change inside an archive is, said once and more than once */
         private static (string One, string Many) PartNoun(PakPart part)
         {
+            if (part.Key != null && part.Key.StartsWith(TextParts.StringPrefix))
+                return ("string of text", "strings of text");
+            if (part.Key != null && part.Key.StartsWith(TextParts.DatabasePrefix))
+                return ("text database a level loads", "text databases levels load");
             switch (part.Group)
             {
                 case PakParts.TreeGroup: return ("animation tree", "animation trees");
@@ -740,6 +756,19 @@ namespace OpenCAGE.Popups
                 if (changes.Whole)
                     return changes;
                 changes.LooseFiles = files.Where(o => o.Contains("/TEXT/") || ModToolkit.IsLevelSoundPackage(o)).ToList();
+                //Its text, string by string, against the files as they shipped (one with no original kept goes whole)
+                foreach (string loose in changes.LooseFiles.Where(TextParts.Handles))
+                {
+                    try
+                    {
+                        byte[] original = ModServices.Installer?.VanillaBytes(loose);
+                        byte[] current = original == null ? null : ModExportBuilder.UsersVersion(ModServices.GameRoot, ModServices.Installer, loose);
+                        List<PakPart> parts = current == null ? null : TextParts.Find(loose, original, current);
+                        if (parts != null && parts.Count != 0)
+                            changes.LooseParts[loose] = parts;
+                    }
+                    catch { }
+                }
 
                 //A Nostromo level keeps its scripts (and their history) in its _PATCH folder
                 string commandsPath = ModToolkit.Denormalise(ModServices.GameRoot, ModToolkit.LevelFolder(level + "_PATCH") + "WORLD/COMMANDS.PAK");
@@ -808,7 +837,20 @@ namespace OpenCAGE.Popups
                 foreach (string loose in level.LooseFiles)
                 {
                     DateTime? edited = EditHistory.SharedFileEdited(ModServices.GameRoot, loose);
-                    AddPart(levelNode.Nodes.Add((ModToolkit.IsLevelSoundPackage(loose) ? "Sound package: " : "Text: ") + ShortName(loose) + (edited.HasValue ? "  -  " + EditedText(edited.Value) : "")), new LooseRow() { Level = level, Path = loose }, level);
+                    LooseRow looseRow = new LooseRow() { Level = level, Path = loose };
+                    TreeNode looseNode = levelNode.Nodes.Add((ModToolkit.IsLevelSoundPackage(loose) ? "Sound package: " : TextParts.IsDatabaseList(loose) ? "Text databases it loads: " : "Text: ") + ShortName(loose) + (edited.HasValue ? "  -  " + EditedText(edited.Value) : ""));
+                    AddPart(looseNode, looseRow, level);
+                    //Its strings (or the databases it loads), each a row of its own
+                    if (level.LooseParts.TryGetValue(loose, out List<PakPart> strings))
+                    {
+                        looseNode.ToolTipText = loose + (TextParts.IsDatabaseList(loose) ? "\nUntick databases in it to leave those changes out of your mod." : "\nUntick strings in it to put only the rest in your mod.");
+                        foreach (PakPart part in strings)
+                        {
+                            TreeNode row = looseNode.Nodes.Add(part.Title + "  -  " + part.Change);
+                            row.Tag = new LooseStringRow() { Loose = looseRow, Part = part };
+                            row.ToolTipText = part.Tooltip;
+                        }
+                    }
                 }
                 TreeNode rest = levelNode.Nodes.Add(level.HasHistory
                     ? "The whole level - every change in it, including any from before OpenCAGE kept a history"
@@ -1072,6 +1114,7 @@ namespace OpenCAGE.Popups
                 case CompositeRow composite: return composite.Level;
                 case AssetRow asset: return asset.Level;
                 case LooseRow loose: return loose.Level;
+                case LooseStringRow text: return text.Loose.Level;
                 default: return null;
             }
         }
@@ -1094,7 +1137,11 @@ namespace OpenCAGE.Popups
                 Check(rest, value);
             if (_partNodes.TryGetValue(level, out List<TreeNode> parts))
                 foreach (TreeNode part in parts)
+                {
                     Check(part, value);
+                    //(A text file's strings under it: RefreshTicks makes its row what they are)
+                    SetChildren(part, value);
+                }
         }
 
         private static void Check(TreeNode node, bool value)
@@ -1145,7 +1192,8 @@ namespace OpenCAGE.Popups
             if (settingCount != 0) counts.Add(settingCount + " setting" + (settingCount == 1 ? "" : "s"));
             if (treeCount != 0) counts.Add(treeCount + " behaviour tree" + (treeCount == 1 ? "" : "s"));
             if (otherCount != 0) counts.Add(otherCount + " other file" + (otherCount == 1 ? "" : "s"));
-            foreach (IGrouping<(string One, string Many), PakPart> kind in archiveParts.Values.SelectMany(o => o).GroupBy(PartNoun))
+            //(Strings of a level's text count with the rest of the text's)
+            foreach (IGrouping<(string One, string Many), PakPart> kind in archiveParts.Values.SelectMany(o => o).Concat(parts.Values.SelectMany(o => o.LooseParts.Values.SelectMany(p => p))).GroupBy(PartNoun))
                 counts.Add(kind.Count() + " " + (kind.Count() == 1 ? kind.Key.One : kind.Key.Many));
             _summary.Text = counts.Count == 0 ? "Nothing ticked yet." : "In your mod: " + string.Join(", ", counts) + ".";
             _exportButton.Enabled = counts.Count != 0;
@@ -1258,7 +1306,16 @@ namespace OpenCAGE.Popups
                         part.Composites.Add(composite.Id);
                         break;
                     case LooseRow loose:
+                        //(Ticked only when all its strings are, if it has any: the file goes as the user has it)
                         part.LooseFiles.Add(loose.Path);
+                        break;
+                    case LooseStringRow text:
+                        //Some of a text file's strings: the file as it shipped with these in it (built at export)
+                        if (node.Parent != null && node.Parent.Checked)
+                            break;
+                        if (!part.LooseParts.TryGetValue(text.Loose.Path, out List<PakPart> chosenStrings))
+                            part.LooseParts[text.Loose.Path] = chosenStrings = new List<PakPart>();
+                        chosenStrings.Add(text.Part);
                         break;
                     case AssetRow asset:
                         switch (asset.Kind)
@@ -1390,6 +1447,20 @@ namespace OpenCAGE.Popups
                         foreach (KeyValuePair<LevelChanges, LevelPart> part in parts.OrderBy(o => o.Key.Level))
                         {
                             string level = part.Key.Level;
+                            //Its text files only some of whose strings are ticked: each as it shipped with those strings in it
+                            foreach (KeyValuePair<string, List<PakPart>> text in part.Value.LooseParts)
+                            {
+                                byte[] original = ModServices.Installer.VanillaBytes(text.Key);
+                                byte[] current = ModExportBuilder.UsersVersion(ModServices.GameRoot, ModServices.Installer, text.Key);
+                                byte[] built = original == null || current == null ? null : TextParts.Build(text.Key, original, current, text.Value);
+                                if (built == null)
+                                {
+                                    part.Value.LooseFiles.Add(text.Key);
+                                    notes.Add(ModToolkit.LevelName(level) + ": the strings you chose in " + ShortName(text.Key) + " couldn't be put in on their own, so the whole file went in.");
+                                }
+                                else if (!built.AsSpan().SequenceEqual(original))
+                                    part.Value.LooseContent[text.Key] = built;
+                            }
                             string folder = merger.Extract(ModServices.GameRoot, level, root => ModServices.Installer.WriteOriginalLevel(level, root), part.Value, report, notes);
                             if (folder == null)
                                 continue;

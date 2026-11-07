@@ -22,10 +22,18 @@ namespace OpenCAGE.Modding
         public HashSet<string> StandaloneData = new HashSet<string>();
         /// <summary>Files of the level folder a level save doesn't write (its text), taken as they are: game-relative paths.</summary>
         public HashSet<string> LooseFiles = new HashSet<string>();
+        /// <summary>The level's text files only some of whose strings go in (Create a Mod's choice): game-relative path -> those strings (<see cref="TextParts"/>).</summary>
+        public Dictionary<string, List<PakPart>> LooseParts = new Dictionary<string, List<PakPart>>();
+        /// <summary>
+        /// Those files as they go in - each as it shipped with only the chosen strings in it (<see cref="TextParts.Build"/>), made
+        /// before <see cref="ModLevelMerger.Extract"/> runs, which writes them as it copies <see cref="LooseFiles"/>.
+        /// </summary>
+        public Dictionary<string, byte[]> LooseContent = new Dictionary<string, byte[]>();
         /// <summary>Build the result as Save &amp; Build does (the user's level was built), rather than only save it.</summary>
         public bool Build;
 
-        public bool IsEmpty => Composites.Count == 0 && Textures.Count == 0 && Models.Count == 0 && Materials.Count == 0 && StandaloneData.Count == 0 && LooseFiles.Count == 0;
+        public bool IsEmpty => Composites.Count == 0 && Textures.Count == 0 && Models.Count == 0 && Materials.Count == 0 && StandaloneData.Count == 0 && LooseFiles.Count == 0
+            && LooseParts.Count == 0 && LooseContent.Count == 0;
     }
 
     /// <summary>

@@ -211,7 +211,7 @@ namespace OpenCAGE.Modding
                     if (!merger.TakenAssets.Contains(asset))
                         notes.Add(name + ": the " + asset + " didn't go in on its own - it's new (it goes in with what uses it), deleted (only the whole level carries that), or as the level shipped it.");
 
-                if (merger.ChangedComposites.Count == 0 && merger.TakenAssets.Count == 0 && part.LooseFiles.Count == 0)
+                if (merger.ChangedComposites.Count == 0 && merger.TakenAssets.Count == 0 && part.LooseFiles.Count == 0 && part.LooseContent.Count == 0)
                 {
                     //(Changes since undone, say) - saving it anyway would only give the level as it shipped, re-saved
                     notes.Add(name + ": nothing you ticked in it differs from the original level, so it was left out.");
@@ -276,7 +276,8 @@ namespace OpenCAGE.Modding
             }
         }
 
-        /* The level folder's files a save doesn't write (its text), as the user has them */
+        /* The level folder's files a save doesn't write (its text), as the user has them - and its text files only some of
+           whose strings were chosen, as they shipped with those strings in (LevelPart.LooseContent) */
         private static void CopyLooseFiles(string gameRoot, string work, LevelPart part)
         {
             foreach (string loose in part.LooseFiles)
@@ -285,6 +286,13 @@ namespace OpenCAGE.Modding
                 if (!File.Exists(from)) continue;
                 Directory.CreateDirectory(Path.GetDirectoryName(to));
                 File.Copy(from, to, true);
+            }
+            foreach (KeyValuePair<string, byte[]> built in part.LooseContent)
+            {
+                if (part.LooseFiles.Contains(built.Key)) continue;
+                string to = ModToolkit.Denormalise(work, built.Key);
+                Directory.CreateDirectory(Path.GetDirectoryName(to));
+                File.WriteAllBytes(to, built.Value);
             }
         }
 
