@@ -1187,7 +1187,8 @@ namespace OpenCAGE.MCP
                 ["attributes"] = attributes,
                 ["editable"] = new JArray(ItemBaseAttributes.Concat(TypeAttributes(item.Name))),
                 ["choices"] = choices,
-                ["about"] = "Attributes as GBL_ITEM.BML holds them (vanish_when_collected is the file's value; the editor's checkbox shows its inverse). ammo_type is shown and set by name.",
+                ["about"] = "Attributes as GBL_ITEM.BML holds them (vanish_when_collected is the file's value; the editor's checkbox shows its inverse). ammo_type is shown and set by name. " +
+                    "held_object_name and thrown_object_name are bare composite names (flare_held, flare): the game looks for them in Equipment\\ and Thrown\\ itself, and a folder given in front is dropped. composite keeps its Pickups\\ folder: the game takes it as written.",
             };
         }
 
@@ -1341,17 +1342,12 @@ namespace OpenCAGE.MCP
                             break;
                         }
                     case "held_object_name":
-                        {
-                            string leaf = InventoryItemEditor.StripKnownPrefixes(value, "Required_Assets\\Archetypes\\Equipment\\", "Equipment\\", "Required_Assets\\Archetypes\\");
-                            if (string.IsNullOrWhiteSpace(leaf)) item.RemoveAttribute(attribute);
-                            else item.SetAttribute(attribute, "Equipment\\" + leaf);
-                            break;
-                        }
                     case "thrown_object_name":
                         {
-                            string leaf = InventoryItemEditor.StripKnownPrefixes(value, "Required_Assets\\Thrown\\", "Thrown\\", "Required_Assets\\");
+                            //Bare names, as the editor writes them: the game puts Equipment\ and Thrown\ in front itself (issue 752)
+                            string leaf = attribute == "held_object_name" ? InventoryItemEditor.HeldName(value) : InventoryItemEditor.ThrownName(value);
                             if (string.IsNullOrWhiteSpace(leaf)) item.RemoveAttribute(attribute);
-                            else item.SetAttribute(attribute, "Thrown\\" + leaf);
+                            else item.SetAttribute(attribute, leaf);
                             break;
                         }
                     case "ammo_type":
@@ -1365,6 +1361,13 @@ namespace OpenCAGE.MCP
             }
             if (renamedFrom != null)
                 call.Note("Renamed from '" + renamedFrom + "': ammo whose target_weapon named it follows. Scripts or other configs naming the old name do not.");
+            //Held and thrown names an older OpenCAGE wrote with their folder in front, put right with this write (as the editor does on open)
+            List<string> repaired = InventoryItemEditor.RepairHeldNames(document);
+            if (repaired.Count > 0)
+            {
+                result["repaired_held_names"] = new JArray(repaired);
+                call.Note("Also fixed the held/thrown names of " + string.Join(", ", repaired) + ": an older OpenCAGE wrote them with Equipment\\ or Thrown\\ in front, which the game adds itself, so those items couldn't be held.");
+            }
 
             result["name"] = itemName;
             result["type"] = item.Name;

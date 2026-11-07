@@ -27,6 +27,22 @@ namespace OpenCAGE.ConfigEditors
 
             _gblItem = new BML(Singleton.PathToAI + @"\DATA\GBL_ITEM.BML");
 
+            //Held and thrown names an older OpenCAGE wrote with their folder in front can't be found by the game, so the items
+            //can't be held (issue 752): put them right straight away, and say so once the window is up
+            {
+                XmlDocument doc = _gblItem.Content;
+                List<string> repaired = RepairHeldNames(doc);
+                if (repaired.Count > 0)
+                {
+                    _gblItem.Content = doc;
+                    _gblItem.Save();
+                    this.Shown += (s, ev) => MessageBox.Show(this,
+                        "Fixed the held and thrown composite names of " + repaired.Count + " inventory item" + (repaired.Count == 1 ? "" : "s") + " (" + string.Join(", ", repaired) + ").\n\n" +
+                        "Earlier versions of OpenCAGE saved these names with their folder in front (Equipment\\flare_held instead of flare_held). The game adds the folder itself, so it couldn't find them, and those items couldn't be held in game.",
+                        "Inventory Items Fixed", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+
             weapon_type.BeginUpdate();
             foreach (WEAPON_TYPE type in Enum.GetValues(typeof(WEAPON_TYPE)))
             {
@@ -211,16 +227,8 @@ namespace OpenCAGE.ConfigEditors
         private void SetHeldInfo(XmlElement selectedElement)
         {
             held.Visible = true;
-            held_object_name.Text = StripKnownPrefixes(
-                selectedElement.GetAttribute("held_object_name"),
-                "Required_Assets\\Archetypes\\Equipment\\",
-                "Equipment\\",
-                "Required_Assets\\Archetypes\\");
-            thrown_object_name.Text = StripKnownPrefixes(
-                selectedElement.GetAttribute("thrown_object_name"),
-                "Required_Assets\\Thrown\\",
-                "Thrown\\",
-                "Required_Assets\\");
+            held_object_name.Text = HeldName(selectedElement.GetAttribute("held_object_name"));
+            thrown_object_name.Text = ThrownName(selectedElement.GetAttribute("thrown_object_name"));
             droppable_when_held.Checked = selectedElement.GetAttribute("droppable_when_held") == "true";
             drop_when_consume.Checked = selectedElement.GetAttribute("drop_when_consume") == "true";
             consume_when.Text = selectedElement.GetAttribute("consume_when");
@@ -287,24 +295,17 @@ namespace OpenCAGE.ConfigEditors
             }
             if (held.Visible)
             {
-                string heldLeaf = StripKnownPrefixes(
-                    held_object_name.Text,
-                    "Required_Assets\\Archetypes\\Equipment\\",
-                    "Equipment\\",
-                    "Required_Assets\\Archetypes\\");
-                string thrownLeaf = StripKnownPrefixes(
-                    thrown_object_name.Text,
-                    "Required_Assets\\Thrown\\",
-                    "Thrown\\",
-                    "Required_Assets\\");
+                //Bare names: the game puts Equipment\ and Thrown\ in front itself (see HeldName)
+                string heldLeaf = HeldName(held_object_name.Text);
+                string thrownLeaf = ThrownName(thrown_object_name.Text);
 
                 if (!string.IsNullOrWhiteSpace(heldLeaf))
-                    selectedElement.SetAttribute("held_object_name", "Equipment\\" + heldLeaf);
+                    selectedElement.SetAttribute("held_object_name", heldLeaf);
                 else
                     selectedElement.RemoveAttribute("held_object_name");
 
                 if (!string.IsNullOrWhiteSpace(thrownLeaf))
-                    selectedElement.SetAttribute("thrown_object_name", "Thrown\\" + thrownLeaf);
+                    selectedElement.SetAttribute("thrown_object_name", thrownLeaf);
                 else
                     selectedElement.RemoveAttribute("thrown_object_name");
 
@@ -486,6 +487,49 @@ namespace OpenCAGE.ConfigEditors
 
                 return Tuple.Create(nameBox.Text.Trim(), typeBox.SelectedItem?.ToString() ?? "object");
             }
+        }
+
+        /* held_object_name and thrown_object_name are names INSIDE the game's Equipment and Thrown folders: the game puts the
+           folder in front itself (INVENTORY::DATABASE::read_holdable_item_info_from_xml formats "Equipment\%s" and "Thrown\%s"),
+           as vanilla's bare names (flare_held, flare) expect. OpenCAGE wrote them with the folder in front for years, which the
+           game then looked for as Equipment\Equipment\flare_held - so an item saved here could no longer be held (issue 752).
+           These give the bare name from any spelling the editor ever wrote or shows. (composite is the other way round: the game
+           takes it as written, Pickups\ included, and only builds Pickups\<name> when it is missing - so it keeps its folder.) */
+        internal static string HeldName(string value) => StripKnownPrefixes(value, "Required_Assets\\Archetypes\\Equipment\\", "Equipment\\", "Required_Assets\\Archetypes\\");
+        internal static string ThrownName(string value) => StripKnownPrefixes(value, "Required_Assets\\Thrown\\", "Thrown\\", "Required_Assets\\");
+
+        /// <summary>
+        /// Every item's held and thrown names put back to the bare names the game wants (see HeldName): what an older OpenCAGE
+        /// wrote with the folder in front. Returns the names of the items changed.
+        /// </summary>
+        internal static List<string> RepairHeldNames(XmlDocument doc)
+        {
+            List<string> repaired = new List<string>();
+            XmlElement objects = doc?["item_database"]?["objects"];
+            if (objects == null)
+                return repaired;
+            foreach (XmlNode node in objects.ChildNodes)
+            {
+                if (!(node is XmlElement item))
+                    continue;
+                bool changed = RepairName(item, "held_object_name", HeldName);
+                changed |= RepairName(item, "thrown_object_name", ThrownName);
+                if (changed)
+                    repaired.Add(item.GetAttribute("name"));
+            }
+            return repaired;
+        }
+
+        private static bool RepairName(XmlElement item, string attribute, Func<string, string> bare)
+        {
+            if (!item.HasAttribute(attribute))
+                return false;
+            string value = item.GetAttribute(attribute);
+            string name = bare(value);
+            if (name.Length == 0 || name == value)
+                return false;
+            item.SetAttribute(attribute, name);
+            return true;
         }
 
         internal static string StripKnownPrefixes(string value, params string[] prefixes)
