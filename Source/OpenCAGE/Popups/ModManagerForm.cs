@@ -1400,12 +1400,21 @@ namespace OpenCAGE.Popups
         public Action<Action<string>> Work;
 
         private readonly Label _label;
+        private bool _finished;
 
         public BusyDialog(string message)
         {
             Text = "OpenCAGE";
+            Icon = SharedFormIcon.Icon;
             FormBorderStyle = FormBorderStyle.FixedDialog;
-            ControlBox = false;
+            //The control box stays (the title bar only shows the icon with it), with its close button greyed out: the work can't be stopped part way
+            MinimizeBox = false;
+            MaximizeBox = false;
+            FormClosing += (s, e) =>
+            {
+                if (!_finished && e.CloseReason == CloseReason.UserClosing)
+                    e.Cancel = true;
+            };
             StartPosition = FormStartPosition.CenterParent;
             Size = new Size(460, 130);
 
@@ -1422,11 +1431,22 @@ namespace OpenCAGE.Popups
                 Thread thread = new Thread(() =>
                 {
                     try { Work?.Invoke(Report); }
-                    finally { BeginInvoke((Action)Close); }
+                    finally { BeginInvoke((Action)(() => { _finished = true; Close(); })); }
                 });
                 thread.IsBackground = true;
                 thread.Start();
             };
+        }
+
+        /* The close button greyed out, and Close taken off the window menu (CS_NOCLOSE) */
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                CreateParams parameters = base.CreateParams;
+                parameters.ClassStyle |= 0x200;
+                return parameters;
+            }
         }
 
         private void Report(string step)
