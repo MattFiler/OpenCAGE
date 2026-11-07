@@ -90,6 +90,8 @@ namespace OpenCAGE
             public Textures.TEX4 Existing;         //a level texture of that name to reuse instead of importing
             public string Problem;                 //why this one cannot be used, or null
             public bool Usable => Problem == null;
+            public Textures.TextureFormat? FormatOverride; //set by CompactTextures
+            public Textures.TextureFormat Format => FormatOverride ?? Role.Format;
         }
 
         /// <summary>Where a cut-out material's alpha comes from, or None for a solid one.</summary>
@@ -123,6 +125,15 @@ namespace OpenCAGE
             /// the same to be tuned apart afterwards.
             /// </summary>
             public bool AlwaysCreateNew;
+
+            /// <summary>
+            /// Encode the colour-type maps (diffuse, specular, dirt, AO) as DXT1 - DXT5 for a diffuse
+            /// whose alpha cuts the surface out - instead of BC7. Half the memory, which is how the
+            /// game's own world textures mostly ship; for a whole imported level, where BC7 everywhere
+            /// overflows the texture streaming heap (a 512 MB heap held 602 MB of a level's maps) and
+            /// whatever is left over is never streamed in. Normal maps stay DXN.
+            /// </summary>
+            public bool CompactTextures;
 
             public bool CanGenerate => Error == null;
             public IEnumerable<PlannedTexture> UsableTextures => Textures.Where(o => o.Usable);
@@ -887,11 +898,16 @@ namespace OpenCAGE
             if (existing != null)
                 return existing;
 
+            if (plan.CompactTextures)
+                foreach (PlannedTexture planned in plan.UsableTextures)
+                    if (planned.Role.Format == Textures.TextureFormat.BC7 && planned.Role.Sampler != "SEPARATE_ALPHA_MAP")
+                        planned.FormatOverride = planned.Role.Sampler == "DIFFUSE_MAP" && plan.CutOut == CutOutSource.BaseColourAlpha ? Textures.TextureFormat.DXT5 : Textures.TextureFormat.DXT1;
+
             //Textures first: a half-made material with no maps is worse than no material at all
             Dictionary<PlannedTexture, Textures.TEX4> imported = new Dictionary<PlannedTexture, Textures.TEX4>();
             foreach (PlannedTexture planned in plan.UsableTextures)
             {
-                Textures.TEX4 texture = planned.Existing ?? ImportTexture(planned, level, out error);
+                Textures.TEX4 texture = planned.Existing ?? AlreadyImported(planned, level) ?? ImportTexture(planned, level, out error);
                 if (texture == null)
                 {
                     error = "Could not import " + planned.Role.Description.ToLower() + ": " + (error ?? "unknown reason");
@@ -997,7 +1013,7 @@ namespace OpenCAGE
                     if (sourceFile == null) return null;
                 }
 
-                byte[] dds = TextureConverter.Convert(sourceFile, planned.Role.Format, 0, out error);
+                byte[] dds = TextureConverter.Convert(sourceFile, planned.Format, 0, out error);
                 if (dds == null) return null;
 
                 Textures.TEX4 texture = new Textures.TEX4
@@ -1015,7 +1031,7 @@ namespace OpenCAGE
                     return null;
                 }
 
-                texture.Format = planned.Role.Format;
+                texture.Format = planned.Format;
                 texture.StateFlags = state;
                 texture.UsageFlags = usage;
 
@@ -1047,6 +1063,8 @@ namespace OpenCAGE
                 }
 
                 level.Textures.Entries.Add(texture);
+                if (planned.SourcePath != null)
+                    _importedFrom.GetOrCreateValue(level)[ImportKey(planned)] = texture;
                 return texture;
             }
             finally
@@ -1054,6 +1072,25 @@ namespace OpenCAGE
                 if (scratch != null)
                     try { File.Delete(scratch); } catch { }
             }
+        }
+
+        /* Every material of a model is planned before any is generated, so two materials sharing one image both planned
+         * an import (the texture was not in the level yet) and the second came in again as "name_1": a whole map's
+         * material library imported 849 textures twice, a third of its 891 MB of streamed texture data. What has
+         * been imported from a file, in a format, is remembered per level and handed to the next material that wants
+         * the same file in the same format. Embedded images have no file to key on and import as before. */
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Level, Dictionary<string, Textures.TEX4>> _importedFrom =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<Level, Dictionary<string, Textures.TEX4>>();
+
+        private static string ImportKey(PlannedTexture planned) =>
+            Path.GetFullPath(planned.SourcePath).ToLowerInvariant() + "|" + planned.Format + "|" + planned.Role.SRGB;
+
+        private static Textures.TEX4 AlreadyImported(PlannedTexture planned, Level level)
+        {
+            if (planned.SourcePath == null || !_importedFrom.TryGetValue(level, out Dictionary<string, Textures.TEX4> imported))
+                return null;
+            //Only while it is still in the level: a texture deleted since must not come back through here
+            return imported.TryGetValue(ImportKey(planned), out Textures.TEX4 texture) && level.Textures.Entries.Contains(texture) ? texture : null;
         }
 
         /* texconv reads files, so an image that only exists inside the model has to land on disk

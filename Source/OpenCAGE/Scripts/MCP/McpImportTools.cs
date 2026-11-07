@@ -31,6 +31,7 @@ namespace OpenCAGE.MCP
                     ["family"] = new JObject() { ["type"] = "string", ["description"] = "Shader family, e.g. CA_ENVIRONMENT or CA_CHARACTER." },
                     ["name"] = new JObject() { ["type"] = "string", ["description"] = "The generated material's name." },
                     ["always_new"] = new JObject() { ["type"] = "boolean", ["description"] = "Build a new material even if an identical one is already in the level." },
+                    ["compact_textures"] = new JObject() { ["type"] = "boolean", ["description"] = "Encode its colour and specular maps as DXT1 (DXT5 when the diffuse alpha cuts it out) instead of BC7: half the texture memory, for importing a whole level whose maps would overflow the streaming heap." },
                 },
             };
             yield return new McpTool()
@@ -379,8 +380,8 @@ namespace OpenCAGE.MCP
                             if (!(entry.Value is JObject options))
                                 throw new McpError("generate." + entry.Name + " has to be an object: {\"family\": ..., \"name\": ..., \"always_new\": ...}.");
                             foreach (JProperty option in options.Properties())
-                                if (option.Name != "family" && option.Name != "name" && option.Name != "always_new")
-                                    throw new McpError("generate." + entry.Name + "." + option.Name + " is not an option (family, name, always_new).");
+                                if (option.Name != "family" && option.Name != "name" && option.Name != "always_new" && option.Name != "compact_textures")
+                                    throw new McpError("generate." + entry.Name + "." + option.Name + " is not an option (family, name, always_new, compact_textures).");
                             overrides[index] = options;
                         }
                     }
@@ -396,7 +397,7 @@ namespace OpenCAGE.MCP
                         Mesh mesh = scene.Meshes[submesh.MeshIndex];
                         SHADER_LIST family = MaterialGenerator.SuggestFamily(mesh, creatable);
                         string materialName = string.IsNullOrWhiteSpace(source.Name) || source.Name == "DefaultMaterial" ? sourceName : AssetName.Sanitise(sourceName + "\\" + source.Name);
-                        bool alwaysNew = false;
+                        bool alwaysNew = false, compact = false;
                         if (overrides.TryGetValue(index, out JObject options))
                         {
                             if (options["family"] != null)
@@ -413,9 +414,11 @@ namespace OpenCAGE.MCP
                                 if (problem != null) throw new McpError("generate." + source.Name + ".name: " + problem);
                             }
                             if (options["always_new"] != null) alwaysNew = McpValues.ReadBool(options["always_new"], "always_new");
+                            if (options["compact_textures"] != null) compact = McpValues.ReadBool(options["compact_textures"], "compact_textures");
                         }
                         MaterialGenerator.Plan materialPlan = MaterialGenerator.Describe(scene, source, mesh, path, plan.HasMetadata, level, family, materialName, Singleton.PathToAI);
                         materialPlan.AlwaysCreateNew = alwaysNew;
+                        materialPlan.CompactTextures = compact;
                         plans[index] = materialPlan;
                     }
                     foreach (int index in overrides.Keys.Where(o => !plans.ContainsKey(o)))
