@@ -330,8 +330,8 @@ namespace OpenCAGE
             }
 
             ListViewGroup general = Group("Shader");
-            Row(general, "Name", shader.Technique);
-            Row(general, "Number", index + " of " + ShaderFile.Entries.Count + " (the engine asks for it by this)");
+            Row(general, "Name", shader.Technique + " (the engine asks for it by this)");
+            Row(general, "Number", index + " of " + ShaderFile.Entries.Count);
             Row(general, "Stages", string.Join(", ", Stages(shader).Select(StageName)));
             List<Stage> changed = Changed(index).ToList();
             Row(general, "Changed", changed.Count == 0 ? "No" : "Yes: " + string.Join(", ", changed.Select(StageName)) + (Shipped != null ? " (from the game's own)" : " (since this window opened)"));
