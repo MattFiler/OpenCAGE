@@ -167,6 +167,7 @@ namespace OpenCAGE
             this.skipRadiosityRebuildToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.cubemapCaptureSizeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.hideLiveLinkLabelToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.dontShowLevelSelectOnStartupToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.cubemapCaptureSizeReplacedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.cubemapCaptureSizeToolStripSeparator = new System.Windows.Forms.ToolStripSeparator();
             this.cubemapCaptureSize64ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -1267,6 +1268,7 @@ namespace OpenCAGE
             this.resetRenderFiltersOnLoadToolStripMenuItem,
             this.cubemapCaptureSizeToolStripMenuItem,
             this.hideLiveLinkLabelToolStripMenuItem,
+            this.dontShowLevelSelectOnStartupToolStripMenuItem,
             this.allowAiAssistantsToolStripMenuItem});
             this.miscToolStripMenuItem.Name = "miscToolStripMenuItem";
             this.miscToolStripMenuItem.Size = new System.Drawing.Size(210, 22);
@@ -1388,6 +1390,15 @@ namespace OpenCAGE
             this.hideLiveLinkLabelToolStripMenuItem.ToolTipText = "If enabled, the game doesn\'t show \"OpenCAGE Live Link\" in its top-right corner while connected (notes such as the " +
     "last edit sent still show for a few seconds).";
             this.hideLiveLinkLabelToolStripMenuItem.Click += new System.EventHandler(this.hideLiveLinkLabelToolStripMenuItem_Click);
+            //
+            // dontShowLevelSelectOnStartupToolStripMenuItem
+            //
+            this.dontShowLevelSelectOnStartupToolStripMenuItem.Name = "dontShowLevelSelectOnStartupToolStripMenuItem";
+            this.dontShowLevelSelectOnStartupToolStripMenuItem.Size = new System.Drawing.Size(254, 22);
+            this.dontShowLevelSelectOnStartupToolStripMenuItem.Text = "Don\'t Show Level Select On Startup";
+            this.dontShowLevelSelectOnStartupToolStripMenuItem.ToolTipText = "If enabled, OpenCAGE starts without the Select Level window: open a level from File > Load Level. It never opens " +
+    "when OpenCAGE is started by opening a package file (.ocp or .omp).";
+            this.dontShowLevelSelectOnStartupToolStripMenuItem.Click += new System.EventHandler(this.dontShowLevelSelectOnStartupToolStripMenuItem_Click);
             //
             // cubemapCaptureSizeReplacedToolStripMenuItem
             //
@@ -1784,6 +1795,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem skipRadiosityRebuildToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem cubemapCaptureSizeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem hideLiveLinkLabelToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem dontShowLevelSelectOnStartupToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem cubemapCaptureSizeReplacedToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator cubemapCaptureSizeToolStripSeparator;
         private System.Windows.Forms.ToolStripMenuItem cubemapCaptureSize64ToolStripMenuItem;

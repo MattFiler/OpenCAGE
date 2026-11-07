@@ -143,6 +143,13 @@ namespace OpenCAGE
             catch { return false; }
         }
 
+        /// <summary>A stash TakeStashed would hand over: not empty, and not left from a launch an hour ago that never happened.</summary>
+        public static bool HasFreshStash()
+        {
+            try { return HasStash() && DateTime.UtcNow - File.GetLastWriteTimeUtc(StashPath) < StashLifetime; }
+            catch { return false; }
+        }
+
         private static List<string> ReadStashLines()
         {
             try

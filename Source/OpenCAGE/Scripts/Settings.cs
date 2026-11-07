@@ -105,6 +105,8 @@ namespace OpenCAGE
         public const string CubemapCaptureSize = "CubemapCaptureSize";
         //Options > Misc > Hide Live Link Label In-Game: the game doesn't show "OpenCAGE Live Link" in its top-right corner
         public const string HideLiveLinkLabel = "HideLiveLinkLabel";
+        //Options > Misc > Don't Show Level Select On Startup: OpenCAGE starts without the Select Level window (File > Load Level opens it)
+        public const string DontShowLevelSelectOnStartup = "DontShowLevelSelectOnStartup";
         public const string LaunchChildrenWithoutViewport = "LaunchChildrenWithoutViewport";
         public const string ViewportEnabled = "ViewportEnabled";
         public const string LevelViewerHighlightMode = "LevelViewerHighlightMode";

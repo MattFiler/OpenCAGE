@@ -213,7 +213,9 @@ namespace OpenCAGE
                 else
                     OnLevelSelected(startupLevel);
             }
-            else
+            //The Select Level window, unless the launch was to open a package (its own window comes up instead, and the picker
+            //drew over it) or Options > Misc > Don't Show Level Select On Startup is ticked: File > Load Level opens it then
+            else if (!PackageFiles.LaunchedToOpenPackage() && !SettingsManager.GetBool(Settings.DontShowLevelSelectOnStartup))
                 loadLevel_Click(null, null);
         }
 
@@ -2617,6 +2619,11 @@ namespace OpenCAGE
             ToggleBoolSetting(Settings.HideLiveLinkLabel);
         }
 
+        private void dontShowLevelSelectOnStartupToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.DontShowLevelSelectOnStartup);
+        }
+
         /* Options > Misc > Hide Live Link Label In-Game, told to a connected game straight away (a launch writes it into the
            game's ini too, and each new connection is told it again). An older runtime utils doesn't know the request: it keeps
            its label until the next launch. */
@@ -3071,6 +3078,8 @@ namespace OpenCAGE
                 hideLiveLinkLabelToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.HideLiveLinkLabel);
                 SendLiveLinkLabelSetting();
             }
+            if (ShouldApplySetting(Settings.DontShowLevelSelectOnStartup, changedKeys))
+                dontShowLevelSelectOnStartupToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.DontShowLevelSelectOnStartup);
         }
 
         /* Render Planets and Use Planar Reflections each hang off the option above them. Planets are drawn in the galaxy's sky,

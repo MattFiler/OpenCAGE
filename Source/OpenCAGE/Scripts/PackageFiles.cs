@@ -32,6 +32,19 @@ namespace OpenCAGE
         //The composite import window that is open, if one is: the next package waits for it to close
         private static Form _activeImport;
 
+        /// <summary>
+        /// Whether this process was started to open a package: the file it was launched with, or one waiting in the stash for
+        /// it (a shipped build is relaunched by Steam without its arguments, the file parked in the stash first). The editor
+        /// then starts without the Select Level window, which would sit over the package's own window - and loading a level
+        /// from it while an .ocp import window is up turns that import away.
+        /// </summary>
+        public static bool LaunchedToOpenPackage()
+        {
+            if (IsPackage(PendingOpen))
+                return true;
+            return PrimaryInstanceLock.IsHeld && PackageHandover.HasFreshStash();
+        }
+
         public static bool IsPackage(string path)
         {
             if (string.IsNullOrWhiteSpace(path))
