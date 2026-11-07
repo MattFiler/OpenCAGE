@@ -4256,6 +4256,22 @@ namespace OpenCAGE
             _editUiPak = null;
         }
 
+        BespokeShaderEditor _bespokeShaders = null;
+        private void bespokeShadersToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            //Brought forward if it's open: it may hold HLSL being edited
+            if (_bespokeShaders != null && !_bespokeShaders.IsDisposed)
+            {
+                if (_bespokeShaders.WindowState == FormWindowState.Minimized)
+                    _bespokeShaders.WindowState = FormWindowState.Normal;
+                _bespokeShaders.Activate();
+                return;
+            }
+            _bespokeShaders = new BespokeShaderEditor();
+            _bespokeShaders.FormClosed += (s, args) => _bespokeShaders = null;
+            _bespokeShaders.Show();
+        }
+
         EditAnimations _editAnimations = null;
         private void animationsToolStripMenuItem_Click(object sender, EventArgs e)
         {

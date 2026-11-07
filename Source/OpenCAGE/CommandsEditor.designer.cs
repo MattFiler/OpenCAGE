@@ -54,6 +54,7 @@ namespace OpenCAGE
             this.galaxyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.soundEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.uIToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.bespokeShadersToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.animationsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.blendSetsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.animationTreesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -357,6 +358,7 @@ namespace OpenCAGE
             this.soundEditorToolStripMenuItem,
             this.toolStripSeparator6,
             this.uIToolStripMenuItem,
+            this.bespokeShadersToolStripMenuItem,
             this.toolStripSeparator5,
             this.animationsToolStripMenuItem,
             this.blendSetsToolStripMenuItem,
@@ -446,7 +448,15 @@ namespace OpenCAGE
             this.uIToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
             this.uIToolStripMenuItem.Text = "UI Editor";
             this.uIToolStripMenuItem.Click += new System.EventHandler(this.uIToolStripMenuItem_Click);
-            // 
+            //
+            // bespokeShadersToolStripMenuItem
+            //
+            this.bespokeShadersToolStripMenuItem.Name = "bespokeShadersToolStripMenuItem";
+            this.bespokeShadersToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
+            this.bespokeShadersToolStripMenuItem.Text = "Bespoke Shader Editor";
+            this.bespokeShadersToolStripMenuItem.ToolTipText = "The game's one-off shaders (the interaction highlight, anti-aliasing, particles...): decompile, edit and recompile them";
+            this.bespokeShadersToolStripMenuItem.Click += new System.EventHandler(this.bespokeShadersToolStripMenuItem_Click);
+            //
             // animationsToolStripMenuItem
             // 
             this.animationsToolStripMenuItem.Name = "animationsToolStripMenuItem";
@@ -1674,6 +1684,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem galaxyToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem soundEditorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem uIToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem bespokeShadersToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem animationsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem blendSetsToolStripMenuItem;
         private System.Windows.Forms.ToolStripButton launchGameBtn;

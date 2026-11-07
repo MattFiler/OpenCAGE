@@ -1235,6 +1235,10 @@
       <DependentUpon>AddOrEditResource.cs</DependentUpon>
     </Compile>
     <Compile Include="Scripts\EditorUtils.cs" />
+    <Compile Include="Scripts\ShaderTools\D3DCompiler.cs" />
+    <Compile Include="Scripts\ShaderTools\DxbcAssembly.cs" />
+    <Compile Include="Scripts\ShaderTools\DxbcReflection.cs" />
+    <Compile Include="Scripts\ShaderTools\HlslDecompiler.cs" />
     <Compile Include="Scripts\EntityParameterVisibility.cs" />
     <Compile Include="Scripts\GlobalEntitySearchHelper.cs" />
     <Compile Include="Scripts\GlobalEntitySearchScopeSettings.cs" />
@@ -1300,6 +1304,18 @@
     </Compile>
     <Compile Include="Popups\Resource Editors\SkeletonPicker.Designer.cs">
       <DependentUpon>SkeletonPicker.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\BespokeShaderEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\BespokeShaderEditor.Designer.cs">
+      <DependentUpon>BespokeShaderEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\BespokeShaderStageView.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\BespokeShaderStageView.Designer.cs">
+      <DependentUpon>BespokeShaderStageView.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\Resource Editors\EditPAK2.cs">
       <SubType>Form</SubType>
@@ -1823,6 +1839,12 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\Resource Editors\ModelImportPreview.resx">
       <DependentUpon>ModelImportPreview.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Resource Editors\BespokeShaderEditor.resx">
+      <DependentUpon>BespokeShaderEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Resource Editors\BespokeShaderStageView.resx">
+      <DependentUpon>BespokeShaderStageView.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\Resource Editors\EditPAK2.resx">
       <DependentUpon>EditPAK2.cs</DependentUpon>
