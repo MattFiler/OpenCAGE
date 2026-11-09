@@ -145,6 +145,37 @@ namespace OpenCAGE
             return material.TextureReferences[reference]?.Texture != null;
         }
 
+        /// <summary>
+        /// Put a material's environment map index in step with its ENVIRONMENT_MAPPING feature, as every shipped
+        /// material has it: with the feature on, the index names the texture slot its ENVIRONMENT_MAP sampler reads;
+        /// with it off, 255. Changing features or binding textures never touched the index, so a material given
+        /// environment mapping that way kept 255 - and the game drew it with a black albedo, lit by its reflection
+        /// and specular alone (9 Nov 2026: about 130 generated materials a level in the Hadley's Hope rebuild -
+        /// terrain, walls - drew black in the albedo debug view). An index that already names a slot is kept: retail
+        /// sometimes points it at a slot no sampler reads. Families that reflect a shared cube are left alone.
+        /// True when the index changed.
+        /// </summary>
+        public static bool SyncEnvironmentMapIndex(Materials.Material material)
+        {
+            if (material?.Shader == null) return false;
+            SHADER_LIST family = material.Shader.Ubershader;
+            if (SkipEnvironmentMapRule.Contains(family)) return false;
+            int? feature = ShaderUtility.GetShaderFunctionalityIndex(family, ShaderIndexType.FEATURES, "ENVIRONMENT_MAPPING");
+            if (feature == null) return false;
+
+            int before = material.EnvironmentMapIndex;
+            bool on = (material.Shader.UbershaderFeatureFlags & (1L << feature.Value)) != 0;
+            if (!on)
+                material.EnvironmentMapIndex = 255;
+            else if (before == 255 || before >= material.TextureReferences.Count)
+            {
+                int? sampler = ShaderUtility.GetShaderFunctionalityIndex(family, ShaderIndexType.SAMPLERS, "ENVIRONMENT_MAP");
+                if (sampler != null && IsBound(material, family, "ENVIRONMENT_MAP"))
+                    material.EnvironmentMapIndex = material.Shader.SamplerRemaps[sampler.Value];
+            }
+            return material.EnvironmentMapIndex != before;
+        }
+
         /// <summary>"SECONDARY_NORMAL_MAP" as "secondary normal map".</summary>
         private static string Pretty(string sampler)
         {

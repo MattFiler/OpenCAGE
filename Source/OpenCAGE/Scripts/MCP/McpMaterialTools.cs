@@ -684,6 +684,15 @@ namespace OpenCAGE.MCP
                         result["textures"] = new JObject(binds.Select(o => new JProperty(o.sampler, o.texture == null ? null : o.global ? "GLOBAL: " + o.texture.Name : o.texture.Name)));
                     }
 
+                    //Then the environment map index, which every shipped material keeps in step with ENVIRONMENT_MAPPING: with the
+                    //feature on it names the slot ENVIRONMENT_MAP reads, and left at 255 the game draws the material black
+                    int environmentBefore = material.EnvironmentMapIndex;
+                    if (MaterialConsistency.SyncEnvironmentMapIndex(material))
+                    {
+                        previous["environment_map_index"] = environmentBefore;
+                        result["environment_map_index"] = material.EnvironmentMapIndex;
+                    }
+
                     //3. Parameters, into whichever stage carries each one (as generated materials are written)
                     if (writes.Count != 0)
                     {

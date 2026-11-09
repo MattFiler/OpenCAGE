@@ -2894,6 +2894,7 @@ namespace OpenCAGE.MCP
         public List<TexturePtr> Textures;
         public List<float> Pixel, Vertex;
         public int Priority;
+        public int EnvironmentMapIndex;
         public string Name;
 
         public static McpMaterialState Of(Materials.Material material) => new McpMaterialState()
@@ -2905,6 +2906,7 @@ namespace OpenCAGE.MCP
             Pixel = new List<float>(material.PixelShaderConstants ?? new List<float>()),
             Vertex = new List<float>(material.VertexShaderConstants ?? new List<float>()),
             Priority = material.Priority,
+            EnvironmentMapIndex = material.EnvironmentMapIndex,
             Name = material.Name,
         };
 
@@ -2922,6 +2924,7 @@ namespace OpenCAGE.MCP
             Material.PixelShaderConstants = new List<float>(Pixel);
             Material.VertexShaderConstants = new List<float>(Vertex);
             Material.Priority = Priority;
+            Material.EnvironmentMapIndex = EnvironmentMapIndex;
             Material.Name = Name;
         }
 

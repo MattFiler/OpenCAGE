@@ -150,6 +150,8 @@ namespace OpenCAGE
                 _samplerInfo[samplerTabIndex] = new Tuple<string, int, int>(samplerInfo.Item1, samplerIndex, textureRefIndex);
             }
 
+            //Binding ENVIRONMENT_MAP gives an environment-mapped material its index (see MaterialConsistency)
+            MaterialConsistency.SyncEnvironmentMapIndex(material);
             EditHistory.AssetChanged(Content?.Level, AssetKind.MATERIAL, material.Name);
             Singleton.OnResourceModified?.Invoke();
             materialList_SelectedIndexChanged(null, EventArgs.Empty);
@@ -967,6 +969,8 @@ namespace OpenCAGE
          * what happened. Say it here instead. */
         private void WarnIfInconsistent(Materials.Material material)
         {
+            //The environment map index follows ENVIRONMENT_MAPPING on its own (left at 255 the game draws the material black)
+            MaterialConsistency.SyncEnvironmentMapIndex(material);
             List<MaterialConsistency.Problem> problems = MaterialConsistency.Check(material);
             if (problems.Count == 0)
                 return;
