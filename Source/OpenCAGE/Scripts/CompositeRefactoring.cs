@@ -114,6 +114,8 @@ namespace OpenCAGE
             List<Entity> chosen = selection?.Where(o => o != null && parent.GetEntityByID(o.shortGUID) == o).ToList() ?? new List<Entity>();
             if (chosen.Count == 0)
                 return;
+            //A collision pair's ballistic half goes into the new composite with its entity
+            chosen = CollisionPairs.WithHalves(commands, parent, chosen);
 
             display.SaveAllFlowgraphs();
             CreateCompositePlan plan;

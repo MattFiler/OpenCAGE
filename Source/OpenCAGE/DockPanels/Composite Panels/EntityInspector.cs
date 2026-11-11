@@ -1401,9 +1401,21 @@ namespace OpenCAGE.DockPanels
                 {
                     cResource closed = (cResource)OpenCAGE.Undo.ParameterValues.Clone(resourceParam);
                     bool changed = !hadParameter || opened.shortGUID != closed.shortGUID || !OpenCAGE.Undo.ResourceSessionEdit.ReferencesEqual(opened.value, closed.value);
-                    if (changed && composite != null)
-                        OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.ResourceSessionEdit(composite, functionEntity, parameter, hadParameter, index, beforeContent, beforeVariant, closed,
-                            "Edit resources of " + OpenCAGE.Undo.UndoLabels.Entity(composite, functionEntity)));
+                    if (composite == null)
+                        return;
+                    //Collision removed here takes its pair's ballistic half with it, in the same undo step (CollisionPairs) - unless the
+                    //window closed because the level went (or the composite left it)
+                    LevelContent content = Content;
+                    bool live = content?.Level?.Commands != null && content.Level.Commands.Entries.Contains(composite) && composite.GetEntityByID(functionEntity.shortGUID) == functionEntity;
+                    FunctionEntity half = live ? CollisionPairs.HalfLeftBehind(content.Level.Commands, composite, functionEntity) : null;
+                    string label = "Edit resources of " + OpenCAGE.Undo.UndoLabels.Entity(composite, functionEntity);
+                    using (OpenCAGE.Undo.UndoStack.Current.BeginGroup(label))
+                    {
+                        if (changed)
+                            OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.ResourceSessionEdit(composite, functionEntity, parameter, hadParameter, index, beforeContent, beforeVariant, closed, label));
+                        if (half != null)
+                            CollisionPairs.RemoveHalf(composite, half, CollisionPairs.Undoable(content.Level, label));
+                    }
                 };
             }
             else

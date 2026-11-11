@@ -114,6 +114,13 @@ namespace OpenCAGE
         public IReadOnlyList<string> LastWarnings { get; private set; }
 
         /// <summary>
+        /// What the last instanced save found in the level itself that will crash the game - an alien that can spawn with no
+        /// backstage vent node to break out to (<see cref="AlienBackstageCheck"/>). The save went ahead all the same: the
+        /// level is as it was asked to be, and it is the user's to fix.
+        /// </summary>
+        public IReadOnlyList<string> LastLevelWarnings { get; private set; }
+
+        /// <summary>
         /// Which bakers an instanced save runs. One left out keeps what that system already has on disk
         /// (which may no longer match the geometry) - except radiosity, whose files are cleared, since
         /// they would light the wrong movers.
@@ -182,8 +189,13 @@ namespace OpenCAGE
             ModelIO.RepairSkinnedBounds(Level, Singleton.AnimationsLoaded ? Singleton.Animations : null);
             //Materials whose samplers were cleared or features changed are laid out as the game reads them (texture slots in sampler order)
             Level.Materials?.NormaliseSamplerSlots();
+            //A collision pair's ballistic half follows its entity: placed, switched, hidden, attached and overridden as it is, renamed
+            //with it, gone with it. A failure here only loses that (logged), never the save
+            try { CollisionPairs.KeepHalvesInStep(Level); }
+            catch (Exception e) { Debug.Log("LevelContent", "Keeping the collision pairs' ballistic halves in step failed: " + e); }
             LastBakeWarnings = null;
             LastWarnings = null;
+            LastLevelWarnings = null;
             LastRadiosityResult = null;
             LastSaveFailures = new CathodeFile.SaveFailure[0];
             LastSaveWritten = false;
@@ -254,6 +266,10 @@ namespace OpenCAGE
             if (treeProblems.Count != 0)
                 LastWarnings = (LastWarnings ?? new List<string>()).Concat(treeProblems).ToList();
 
+            //What in the level as it now is will crash the game: said by a build, never stopping it (the save is done)
+            if (doInstancing)
+                LastLevelWarnings = CheckLevel();
+
             //A build regenerates what the game derives from the script: from here it matches the script again
             List<string> skipped = new List<string>();
             if (doInstancing && bakers != null)
@@ -268,6 +284,24 @@ namespace OpenCAGE
             BuildTracker.Saved(this, doInstancing, skipped);
 
             IsVanilla = false;
+        }
+
+        /* The checks a build runs of the level's script for what will crash the game: their warnings, or null for none. A
+           check that throws only loses its own warning (logged), never the save. */
+        private List<string> CheckLevel()
+        {
+            List<string> found = new List<string>();
+            try
+            {
+                string alien = AlienBackstageCheck.Warning(Level.Commands);
+                if (alien != null)
+                    found.Add(alien);
+            }
+            catch (Exception e)
+            {
+                Debug.Log("LevelContent", "Checking " + Level.Name + " for an alien without backstage nodes failed: " + e);
+            }
+            return found.Count == 0 ? null : found;
         }
 
         /* A file the save wrote straight to disk, put back as it was before it: the save was not swapped in */

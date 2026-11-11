@@ -66,7 +66,8 @@ namespace OpenCAGE.MCP
                     McpSchema.String("family", "Shader family for a new material (default CA_ENVIRONMENT; list_material_permutations with no arguments lists them)."),
                     McpSchema.String("mask", "Permutation mask to start on, e.g. '0x1A0' (list_material_permutations); default the family's most-used one."),
                     McpSchema.String("copy_from", "Duplicate this material instead (its textures, parameters and priority)."),
-                    McpSchema.Boolean("seed_parameters", "New material: copy parameters from the level's closest material of the family (default true); false leaves them at zero.")),
+                    McpSchema.Boolean("seed_parameters", "New material: copy parameters from the level's closest material of the family (default true); false leaves them at zero."),
+                    McpSchema.Any("physical_material", PhysicalMaterialText)),
                 Run = CreateMaterial,
             };
 
@@ -84,7 +85,8 @@ namespace OpenCAGE.MCP
                     McpSchema.String("mask", "A whole permutation mask instead (e.g. '0x1A0', from list_material_permutations); enable/disable apply on top."),
                     McpSchema.Boolean("sync_features", "Turn a sampler's gating feature on/off with its texture (default true), as every shipped material has it."),
                     McpSchema.Map("parameters", "Parameter name to a number or [x, y, z(, w)]: {\"DIFFUSE_TINT\": [1, 0.5, 0.5, 1], \"SPECULAR_POWER\": 0.8}."),
-                    McpSchema.Integer("priority", "Render priority 0-255: 70 world (lit, opaque), 52 translucent, 39 unlit, 31 untextured overlay.")),
+                    McpSchema.Integer("priority", "Render priority 0-255: 70 world (lit, opaque), 52 translucent, 39 unlit, 31 untextured overlay."),
+                    McpSchema.Any("physical_material", PhysicalMaterialText)),
                 Run = EditMaterialTool,
             };
 
@@ -230,6 +232,7 @@ namespace OpenCAGE.MCP
                 ["index"] = level.Materials.Entries.FindIndex(o => ReferenceEquals(o, material)),
             };
             if (!string.Equals(material.Name, names.Display(material), StringComparison.Ordinal)) result["stored_name"] = material.Name;
+            result["physical_material"] = DescribePhysicalMaterial(material.PhysicalMaterialIndex);
             Shaders.Shader shader = material.Shader;
             if (shader == null)
             {
@@ -430,6 +433,7 @@ namespace OpenCAGE.MCP
                 {
                     Level level = McpEditor.RequireLevel().Level;
                     McpEditor.RequireUndoIdle();
+                    int? physical = ReadPhysicalMaterial(call);
                     List<Shaders.Shader> poolBefore = new List<Shaders.Shader>(level.Shaders.Entries);
                     int materialCount = level.Materials.Entries.Count;
                     Materials.Material material;
@@ -460,6 +464,8 @@ namespace OpenCAGE.MCP
                         if (call.Bool("seed_parameters", true))
                             MaterialGenerator.SeedConstantsFromDonor(material, level.Materials, family);
                     }
+                    if (physical != null)
+                        material.PhysicalMaterialIndex = physical.Value;
                     Singleton.OnResourceModified?.Invoke();
 
                     //Undo takes the material (and the shader entries made for it) back out
@@ -490,6 +496,67 @@ namespace OpenCAGE.MCP
                 });
             }
         }
+
+        #region Physical material
+        private const string PhysicalMaterialText = "The physical material collision drawn with this material reads - footsteps, impacts, bullet holes: a name from MATERIALS.BML " +
+            "(get_game_data physical_materials lists them, e.g. METAL_SOLID, LV426_ROCK, COLLISION_ONLY) or its index, or 'none' (255: the engine's default, metal). " +
+            "Collision proxies name the material by its index (import_collision_proxy / set_collision 'material'), and a save gives them the index it is written at - also for a material made this session.";
+
+        /// <summary>The physical materials of the game's MATERIALS.BML, in index order (the engine looks them up by index).</summary>
+        private static List<string> PhysicalMaterialNames()
+        {
+            string path = System.IO.Path.Combine(Singleton.PathToAI, "DATA", "MATERIAL_DATA", "MATERIALS.BML");
+            if (!System.IO.File.Exists(path))
+                throw new McpError("The game has no DATA\\MATERIAL_DATA\\MATERIALS.BML to read the physical materials from.");
+            System.Xml.XmlNode list = new BML(path).Content?["Materials"] ?? throw new McpError("MATERIALS.BML has no Materials list.");
+            return list.ChildNodes.OfType<System.Xml.XmlElement>().Select(o => o.GetAttribute("name")).ToList();
+        }
+
+        /// <summary>'physical_material' as an index into MATERIALS.BML (255 for none), or null when not given. Checked before anything changes.</summary>
+        private static int? ReadPhysicalMaterial(McpCall call)
+        {
+            if (!call.Has("physical_material"))
+                return null;
+            JToken token = call.Token("physical_material");
+            string text = (token.Type == JTokenType.String ? (string)token : token.ToString()).Trim();
+            if (string.Equals(text, "none", StringComparison.OrdinalIgnoreCase) || text == "255")
+                return 255;
+            List<string> names = PhysicalMaterialNames();
+            int limit = Math.Min(names.Count, 255);
+            int index;
+            if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int given))
+            {
+                if (given < 0 || given >= limit)
+                    throw new McpError("physical_material " + given + " is not one of MATERIALS.BML's (0-" + (limit - 1) + "), or 255 / 'none' for the engine's default.");
+                index = given;
+            }
+            else
+            {
+                index = names.FindIndex(o => string.Equals(o, text, StringComparison.OrdinalIgnoreCase));
+                if (index < 0)
+                    throw new McpError("'" + text + "' is not a physical material in MATERIALS.BML." + Suggest(names, text));
+                if (index >= limit)
+                    throw new McpError(text + " is entry " + index + " of MATERIALS.BML, past the 255 a material can name.");
+            }
+            return index;
+        }
+
+        /// <summary>A material's physical material: {index, name}.</summary>
+        private static JObject DescribePhysicalMaterial(int index)
+        {
+            string name = index == 255 ? "none" : null;
+            if (name == null)
+            {
+                try
+                {
+                    List<string> names = PhysicalMaterialNames();
+                    if (index >= 0 && index < names.Count) name = names[index];
+                }
+                catch (McpError) { }
+            }
+            return new JObject() { ["index"] = index, ["name"] = name };
+        }
+        #endregion
 
         private static string NewMaterialName(Level level, string requested)
         {
@@ -522,12 +589,13 @@ namespace OpenCAGE.MCP
         {
             JObject textures = call.Object("textures");
             JObject parameters = call.Object("parameters");
-            bool anything = (textures != null && textures.Count != 0) || (parameters != null && parameters.Count != 0) || call.Has("enable") || call.Has("disable") || call.Has("mask") || call.Has("priority");
+            bool anything = (textures != null && textures.Count != 0) || (parameters != null && parameters.Count != 0) || call.Has("enable") || call.Has("disable") || call.Has("mask") || call.Has("priority") || call.Has("physical_material");
             if (!anything)
-                throw new McpError("Give textures, enable/disable, mask, parameters and/or priority (describe_material shows what the material has).");
+                throw new McpError("Give textures, enable/disable, mask, parameters, priority and/or physical_material (describe_material shows what the material has).");
             int? priority = call.Has("priority") ? call.Int("priority") : (int?)null;
             if (priority != null && (priority < 0 || priority > 255))
                 throw new McpError("'priority' is 0-255 (70 is the world pass).");
+            int? physical = ReadPhysicalMaterial(call);
 
             using (McpEditorTools.Heartbeat(call, "Editing material"))
             {
@@ -713,6 +781,14 @@ namespace OpenCAGE.MCP
                         previous["priority"] = material.Priority;
                         material.Priority = priority.Value;
                         result["priority"] = material.Priority;
+                    }
+
+                    //5. Physical material: what collision drawn with it reads (footsteps, impacts)
+                    if (physical != null && physical != material.PhysicalMaterialIndex)
+                    {
+                        previous["physical_material"] = DescribePhysicalMaterial(material.PhysicalMaterialIndex);
+                        material.PhysicalMaterialIndex = physical.Value;
+                        result["physical_material"] = DescribePhysicalMaterial(material.PhysicalMaterialIndex);
                     }
 
                     Singleton.OnResourceModified?.Invoke();

@@ -990,6 +990,9 @@ namespace OpenCAGE.MCP
             if (composite.GetEntityByID(entity.shortGUID) != entity)
                 return new List<string>();
             List<string> alsoRemoved = new List<string>();
+            //A collision pair's entity takes its ballistic half (the entity holding its BALLISTIC row) with it
+            FunctionEntity half = CollisionPairs.HalfGoingWith(Commands, composite, entity);
+            string halfName = half == null ? null : McpScript.EntityName(Commands, composite, half);
             //Found while it is still there: a stored path resolves only through what exists
             List<Reach> reaching = ReachingThrough(composite, entity);
             if (CompositePreviewManager.CanChangeLook(entity))
@@ -1053,6 +1056,12 @@ namespace OpenCAGE.MCP
                             break;
                         }
                 }
+            }
+
+            if (half != null && composite.GetEntityByID(half.shortGUID) == half)
+            {
+                alsoRemoved.Add(halfName + " (its ballistic half: the collision-only entity holding its BALLISTIC row)");
+                alsoRemoved.AddRange(Delete(composite, half, leftDead));
             }
 
             //As the editor's Delete does: composites elsewhere that reached into it are purged again on their next open

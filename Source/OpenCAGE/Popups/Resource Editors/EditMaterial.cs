@@ -1036,6 +1036,76 @@ namespace OpenCAGE
             return row;
         }
 
+        /// <summary>
+        /// The physical material collision drawn with this material reads - footsteps, impacts - by index into the game's
+        /// MATERIALS.BML (255: none, the engine's default). Collision proxies name this material by its index, so rows using
+        /// it pick a change up from the next save.
+        /// </summary>
+        private WpfStackPanel BuildPhysicalMaterialRow(Materials.Material material)
+        {
+            var row = new WpfStackPanel { Orientation = WpfOrientation.Horizontal, Margin = new System.Windows.Thickness(0, 4, 0, 0) };
+            row.Children.Add(new WpfTextBlock
+            {
+                Text = "Physical material:",
+                VerticalAlignment = System.Windows.VerticalAlignment.Center,
+                Margin = new System.Windows.Thickness(0, 0, 6, 0)
+            });
+            List<string> names = PhysicalMaterialNames();
+            var box = new System.Windows.Controls.ComboBox
+            {
+                Width = 200,
+                ToolTip = "What collision drawn with this material sounds and reacts like (MATERIALS.BML) - footsteps, impacts, bullet holes. "
+                        + "'none' leaves it to the engine's default."
+            };
+            box.Items.Add("none");
+            for (int i = 0; i < names.Count && i < 255; i++)
+                box.Items.Add(i + ": " + names[i]);
+            int current = material.PhysicalMaterialIndex;
+            if (current >= 0 && current < names.Count && current < 255)
+                box.SelectedIndex = current + 1;
+            else if (current == 255)
+                box.SelectedIndex = 0;
+            else
+                box.Items.Add(current + ": (not in MATERIALS.BML)");
+            if (box.SelectedIndex < 0)
+                box.SelectedIndex = box.Items.Count - 1;
+            box.SelectionChanged += (s, e) =>
+            {
+                if (box.SelectedIndex < 0 || box.SelectedIndex > Math.Min(names.Count, 255))
+                    return;
+                int value = box.SelectedIndex == 0 ? 255 : box.SelectedIndex - 1;
+                if (value == material.PhysicalMaterialIndex) return;
+                material.PhysicalMaterialIndex = value;
+                EditHistory.AssetChanged(Content?.Level, AssetKind.MATERIAL, material.Name);
+                Singleton.OnResourceModified?.Invoke();
+            };
+            row.Children.Add(box);
+            return row;
+        }
+
+        //MATERIALS.BML's names in index order, read once per game folder
+        private static string _physicalNamesPath;
+        private static List<string> _physicalNames;
+        private static List<string> PhysicalMaterialNames()
+        {
+            string path = System.IO.Path.Combine(Singleton.PathToAI ?? "", "DATA", "MATERIAL_DATA", "MATERIALS.BML");
+            if (_physicalNames != null && string.Equals(_physicalNamesPath, path, StringComparison.OrdinalIgnoreCase))
+                return _physicalNames;
+            List<string> names = new List<string>();
+            try
+            {
+                if (System.IO.File.Exists(path))
+                    names = new BML(path).Content?["Materials"]?.ChildNodes.OfType<System.Xml.XmlElement>().Select(o => o.GetAttribute("name")).ToList() ?? names;
+            }
+            catch (Exception e)
+            {
+                Debug.Log("EditMaterial", "Could not read " + path + ": " + e.Message);
+            }
+            _physicalNamesPath = path;
+            _physicalNames = names;
+            return names;
+        }
+
         private WpfStackPanel BuildFeatureHeader(Materials.Material material)
         {
             var panel = new WpfStackPanel { Margin = new System.Windows.Thickness(0, 0, 0, 10) };
@@ -1047,6 +1117,7 @@ namespace OpenCAGE
             };
             panel.Children.Add(maskText);
             panel.Children.Add(BuildPriorityRow(material));
+            panel.Children.Add(BuildPhysicalMaterialRow(material));
 
             /* Stays up for as long as the material is inconsistent, not just at the moment it is made
              * so - a material can be left in this state, saved, and opened again days later, and the

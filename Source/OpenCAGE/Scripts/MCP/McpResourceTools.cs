@@ -67,7 +67,9 @@ namespace OpenCAGE.MCP
             {
                 Name = "set_collision",
                 Title = "Set collision",
-                Description = "Give an entity collision or change it - one entity, several ('entities'), or every ModelReference in the composite: the collision proxy it uses (index from list_collision_proxies; 'model' for the proxy its model's submeshes name, as retail pairs them; 'from_model' to import one from its own renderable; 'none'), its physics material (footsteps, impacts), material mapping and flags; or remove it. One undo step (an imported proxy stays in the level); other entities sharing the old mapping keep it. Every placement of the composite changes (the result says how many). Reaches the game after save_level build=true.",
+                Description = "Give an entity collision or change it - one entity, several ('entities'), or every ModelReference in the composite: the collision proxy it uses (index from list_collision_proxies; 'model' for the proxy its model's submeshes name, as retail pairs them; 'from_model' to import one from its own renderable; 'none'), its physics material (footsteps, impacts), material mapping and flags; or remove it. " +
+                    "Collision that is both WORLD and BALLISTIC (the default for new collision) is made as retail makes it, as two rows on two entities: the entity keeps the WORLD row (walked on, blocks movement) and a collision-only sibling ModelReference '<name>_Ballistic' at the same place gets the BALLISTIC row (bullets, footstep sounds, and the zone the player is in) on its own copy of the proxy; later calls on the entity keep the sibling in step (the result's ballistic_half). " +
+                    "One undo step (an imported or copied proxy stays in the level); other entities sharing the old mapping keep it. Every placement of the composite changes (the result says how many). Reaches the game after save_level build=true.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("composite", "The composite holding the entity (path or id).", required: true),
                     McpSchema.String("entity", "The entity's id or name."),
@@ -76,10 +78,25 @@ namespace OpenCAGE.MCP
                     McpSchema.Any("proxy", "A proxy index, 'model' (the proxy the drawn model's submeshes name), 'from_model' (make a new proxy from the entity's own renderable, LOD0 triangles), or 'none' to clear it."),
                     McpSchema.String("material", "The physics material (footsteps, impacts): a level material (list_materials' names, name#index when repeated)."),
                     McpSchema.String("material_mapping", "A material mapping name from the level, or 'none'."),
-                    McpSchema.Any("flags", "Collision flags replacing the current ones: names such as ['WORLD','BALLISTIC'] (the default for new collision), or a number."),
-                    McpSchema.Boolean("remove", "Remove the entity's collision instead.")),
+                    McpSchema.Any("flags", "Collision flags replacing the current ones: names such as ['WORLD','BALLISTIC'] (the default for new collision: the WORLD row here plus the '<name>_Ballistic' sibling's BALLISTIC row), ['WORLD'] or ['BALLISTIC'] for one row alone (dropping that sibling), or a number. An entity whose one row still asks for both (made before pairs were) is paired by set_collision with nothing else given; all_model_references does a whole composite."),
+                    McpSchema.Boolean("remove", "Remove the entity's collision instead (and its '<name>_Ballistic' sibling).")),
                 Destructive = true,
                 Run = SetCollision,
+            };
+
+            yield return new McpTool()
+            {
+                Name = "pair_collision",
+                Title = "Pair collision made before pairs",
+                Description = "Collision whose one row asks for WORLD and BALLISTIC storage - as OpenCAGE made it before November 2026 - builds as a WORLD row only: walked on, but no bullet hits, footstep sounds or zones (save_level build warns, naming them). " +
+                    "This gives every such ModelReference its ballistic half as retail has it, as set_collision does for one: the entity keeps the WORLD row, and a collision-only '<name>_Ballistic' sibling at its place gets the BALLISTIC row on a copy of its proxy; an entity sharing a row gets a half of its own. " +
+                    "The whole level, or one composite. dry_run lists what would be paired and how many proxies would be copied, changing nothing. One undo step (copied proxies stay in the level's collision files, unused after an undo).",
+                InputSchema = McpSchema.Object(
+                    McpSchema.String("composite", "Only this composite (path or id). Default: the whole level."),
+                    McpSchema.Boolean("dry_run", "Only list what would be paired."),
+                    McpSchema.Integer("limit", "At most this many entities listed in the result (default 50).")),
+                Destructive = true,
+                Run = PairCollision,
             };
 
             yield return new McpTool()
@@ -126,7 +143,7 @@ namespace OpenCAGE.MCP
                     McpSchema.Deprecated(McpSchema.Integer("component", "The same as 'part'.")),
                     McpSchema.Number("scale", "Scale applied to the mesh (default 1)."),
                     McpSchema.String("material", "The physics material its triangles carry (a level material name), as the collision row that will use it."),
-                    McpSchema.String("collision_type", "'world' (walkable, the default) or 'ballistic' (bullets only).", options: new[] { "world", "ballistic" }),
+                    McpSchema.String("collision_type", "'world' (walkable, the default) or 'ballistic' (bullets, footstep sounds and zones; not walked on). set_collision makes the ballistic copy of a world proxy itself when it pairs WORLD + BALLISTIC collision.", options: new[] { "world", "ballistic" }),
                     McpSchema.Boolean("dry_run", "Read the mesh and report it, without writing anything.")),
                 Run = ImportCollisionProxy,
             };
@@ -933,6 +950,61 @@ namespace OpenCAGE.MCP
         #region set_collision
         private static readonly CollisionMaps.CollisionFlags DefaultFlags = CollisionMaps.CollisionFlags.WORLD | CollisionMaps.CollisionFlags.BALLISTIC;
 
+        private static object PairCollision(McpCall call)
+        {
+            return McpEditor.UI(() =>
+            {
+                Level level = McpEditor.RequireLevel().Level;
+                Commands commands = level.Commands;
+                Composite only = call.Has("composite") ? McpScript.FindComposite(commands, call.Str("composite")) : null;
+                List<(Composite composite, FunctionEntity entity, CollisionMaps.COLLISION_MAPPING row)> unpaired = CollisionPairs.FindUnpaired(commands, only);
+                int limit = Math.Max(1, call.Int("limit", 50));
+                JObject result = new JObject()
+                {
+                    ["unpaired"] = unpaired.Count,
+                    ["composites"] = unpaired.Select(o => o.composite).Distinct().Count(),
+                    ["proxies"] = unpaired.Select(o => o.row.CollisionProxy).Distinct().Count(),
+                    ["entities"] = new JArray(unpaired.Take(limit).Select(o => new JObject()
+                    {
+                        ["entity"] = McpScript.Brief(commands, o.composite, o.entity),
+                        ["proxy"] = o.row.CollisionProxy.ProxyIndex,
+                        ["material"] = o.row.Material?.Name,
+                    })),
+                };
+                if (unpaired.Count > limit)
+                    result["listed"] = limit;
+                if (unpaired.Count == 0)
+                {
+                    call.Note("Nothing to pair: no ModelReference" + (only != null ? " in " + only.name : "") + " has a row asking for WORLD and BALLISTIC storage with a proxy.");
+                    return result;
+                }
+                if (call.Bool("dry_run"))
+                {
+                    result["dry_run"] = true;
+                    call.Note("Pairing makes up to one copy of each proxy listed ('proxies'), for the ballistic halves, unless one made earlier is reused.");
+                    return result;
+                }
+
+                McpEditor.RequireUndoIdle();
+                string label = "AI: Pair collision of " + UndoLabels.Count(unpaired.Count, "entity", "entities");
+                CollisionPairs.PairAllResult done;
+                using (McpEditorTools.Heartbeat(call, "Giving " + unpaired.Count + " collision entities their ballistic halves"))
+                using (UndoStack.Current.BeginGroup(label))
+                    done = CollisionPairs.PairAll(level, unpaired, CollisionPairs.Undoable(level, label));
+                result["paired"] = done.Entities;
+                result["halves_created"] = done.HalvesCreated;
+                if (done.HalvesUpdated != 0) result["halves_updated"] = done.HalvesUpdated;
+                result["proxies_copied"] = done.TwinsCopied;
+                if (done.Failures.Count != 0)
+                    result["failed"] = new JArray(done.Failures.Take(limit));
+                call.Note(PairNote);
+                if (done.TwinsCopied != 0)
+                    call.Note("The copied proxies are in the level's collision files in memory: undo takes the pairs back but not the proxies, which stay unused (list_collision_proxies unused:true) until the level is reloaded without saving.");
+                call.Note("Reaches the game after save_level build=true.");
+                return result;
+            });
+        }
+
         private static object SetCollision(McpCall call)
         {
             return McpEditor.UI(() =>
@@ -941,6 +1013,18 @@ namespace OpenCAGE.MCP
                 McpEditor.RequireUndoIdle();
                 List<Target> targets = Targets(level, call, ResourceType.COLLISION_MAPPING);
                 bool changes = call.Has("proxy") || call.Has("material") || call.Has("material_mapping") || call.Has("flags");
+
+                //The ballistic half of a pair follows its entity: among several targets it is left out (its entity brings it along)
+                if (targets.Count > 1)
+                {
+                    CollisionPairs.Names names = new CollisionPairs.Names(level.Commands, targets[0].Composite);
+                    List<Target> halves = targets.Where(o => CollisionPairs.FindOriginal(level.Commands, o.Composite, o.Entity, names) != null).ToList();
+                    if (halves.Count != 0 && halves.Count < targets.Count)
+                    {
+                        targets = targets.Except(halves).ToList();
+                        call.Note(halves.Count + " of them are the ballistic halves of collision pairs (" + string.Join(", ", halves.Take(5).Select(o => o.Name)) + (halves.Count > 5 ? ", ..." : "") + "), left to follow their entities.");
+                    }
+                }
                 string label = LabelFor(targets);
 
                 if (call.Bool("remove"))
@@ -948,12 +1032,25 @@ namespace OpenCAGE.MCP
                     if (changes)
                         throw McpError.Invalid("'remove' cannot be combined with proxy, material, material_mapping or flags.");
                     List<Target> having = targets.Where(o => o.Find(ResourceType.COLLISION_MAPPING) != null).ToList();
-                    if (having.Count == 0)
+                    //Found before the collision goes: an entity with no row names no half
+                    List<(Target target, FunctionEntity half)> paired = targets.Select(o => (o, CollisionPairs.FindSibling(level.Commands, o.Composite, o.Entity))).Where(o => o.Item2 != null).ToList();
+                    if (having.Count == 0 && paired.Count == 0)
                         throw new McpError(McpErrorCodes.NotFound, (targets.Count == 1 ? targets[0].Name : "None of them") + " has no collision to remove.");
+                    JArray halvesRemoved = new JArray();
                     using (UndoStack.Current.BeginGroup("AI: Remove collision of " + label))
+                    {
                         foreach (Target target in having)
                             Commit(target, "AI: Remove collision of " + target.Label, list => list.RemoveAll(o => o != null && o.resource_type == ResourceType.COLLISION_MAPPING));
+                        //Removing collision removes both halves of a pair
+                        foreach ((Target target, FunctionEntity half) in paired)
+                        {
+                            CollisionPairs.Outcome gone = CollisionPairs.RemoveHalf(target.Composite, half, CollisionPairs.Undoable(level, "AI: Remove collision of " + target.Label));
+                            if (gone != null) halvesRemoved.Add(McpScript.Brief(level.Commands, target.Composite, gone.Sibling));
+                        }
+                    }
                     JObject removed = new JObject() { ["removed"] = "COLLISION_MAPPING", ["entities"] = new JArray(having.Select(EntityBrief)) };
+                    if (halvesRemoved.Count != 0)
+                        removed["ballistic_halves_removed"] = halvesRemoved;
                     Reach(call, removed, level, targets[0].Composite, null);
                     return removed;
                 }
@@ -976,16 +1073,25 @@ namespace OpenCAGE.MCP
                 {
                     result["entity"] = EntityBrief(plans[0].Target);
                     result["collision"] = DescribeMapping(level, plans[0].Target.Find(ResourceType.COLLISION_MAPPING)?.CollisionMapping, null);
+                    JObject half = DescribeHalf(level, plans[0]);
+                    if (half != null) result["ballistic_half"] = half;
                 }
                 else
-                    result["entities"] = new JArray(plans.Select(o => new JObject() { ["entity"] = EntityBrief(o.Target), ["collision"] = DescribeMapping(level, o.Target.Find(ResourceType.COLLISION_MAPPING)?.CollisionMapping, null) }));
+                    result["entities"] = new JArray(plans.Select(o =>
+                    {
+                        JObject item = new JObject() { ["entity"] = EntityBrief(o.Target), ["collision"] = DescribeMapping(level, o.Target.Find(ResourceType.COLLISION_MAPPING)?.CollisionMapping, null) };
+                        JObject half = DescribeHalf(level, o);
+                        if (half != null) item["ballistic_half"] = half;
+                        return item;
+                    }));
+                if (plans.Any(o => o.Half != null && (o.Half.Created || o.Half.Updated)))
+                    call.Note(PairNote);
                 if (plans.Count < targets.Count)
                     call.Note((targets.Count - plans.Count) + " of them already had collision and nothing to change was given for them; they were left alone.");
                 if (imported.Count != 0)
-                {
                     result["imported_proxy"] = imported.Count == 1 ? imported[0] : imported;
+                if (imported.Count != 0 || plans.Any(o => o.Half != null && o.Half.TwinCreated))
                     call.Note("A new proxy is in the level's collision files in memory: undo takes the assignment back but not the proxy, which stays unused (list_collision_proxies unused:true) until the level is reloaded without saving.");
-                }
                 int sharers = plans.Sum(o => o.Sharers);
                 if (sharers > 0)
                     call.Note(sharers + " other reference(s) shared the old collision row(s); they keep them unchanged.");
@@ -1027,6 +1133,36 @@ namespace OpenCAGE.MCP
             public int Sharers;
             public string Label;
             public List<string> Notes = new List<string>();
+            /// <summary>WORLD + BALLISTIC: <see cref="Row"/> is the WORLD row, and the '_Ballistic' sibling gets the BALLISTIC one (<see cref="CollisionPairs"/>).</summary>
+            public bool Pair;
+            /// <summary>One storage was asked for explicitly, so the sibling holding the other goes.</summary>
+            public bool DropSibling;
+            /// <summary>The proxy given has the wrong collision type on its own instances for the row: a copy with this one is used.</summary>
+            public uint? ConvertFilter;
+            /// <summary>The physics material given is not the one the proxy carries (its userData): a copy carrying it is used, as retail's proxies carry their row's.</summary>
+            public bool ConvertUserData;
+            /// <summary>What happened to the ballistic half, once applied.</summary>
+            public CollisionPairs.Outcome Half;
+        }
+
+        private const string PairNote = "Collision that is walked on and shot at is two rows in the game, as retail has it: the entity keeps the WORLD row (walking, the Alien's paths) and its '<name>_Ballistic' sibling, " +
+            "a collision-only ModelReference with the same placement, holds the BALLISTIC row on its own copy of the proxy (bullets, footstep sounds, and the zone the player is in). " +
+            "set_collision on the entity keeps the sibling's row in step; flags ['WORLD'] alone, or remove: true, drop it. Each save makes the sibling follow the entity: its placement and switches, " +
+            "relay links from the entity (hidden -> hide, shown -> show, enabled -> enable, disabled -> disable, so whatever hides or disables the entity reaches it), its attachment, and a copy of each alias overriding it; " +
+            "deleting the entity (delete_entities, the editor) deletes the sibling too.";
+
+        private static JObject DescribeHalf(Level level, CollisionPlan plan)
+        {
+            CollisionPairs.Outcome half = plan.Half;
+            if (half?.Sibling == null)
+                return null;
+            JObject described = new JObject() { ["entity"] = McpScript.Brief(level.Commands, plan.Target.Composite, half.Sibling) };
+            described["change"] = half.Removed ? "removed" : half.Created ? "created" : half.Updated ? "updated" : "unchanged";
+            if (!half.Removed)
+                described["collision"] = DescribeMapping(level, half.Row, null);
+            if (half.TwinCreated && half.Twin != null)
+                described["proxy_copied"] = new JObject() { ["proxy"] = half.Twin.ProxyIndex, ["from"] = plan.Row?.CollisionProxy?.ProxyIndex ?? -1, ["collision_type"] = "BALLISTICS" };
+            return described;
         }
 
         /// <summary>
@@ -1037,7 +1173,10 @@ namespace OpenCAGE.MCP
         {
             ResourceReference existing = target.Find(ResourceType.COLLISION_MAPPING);
             CollisionMaps.COLLISION_MAPPING current = existing?.CollisionMapping;
-            if (!request.Any && existing != null)
+            //A row asking for WORLD + BALLISTIC on its own (made before the pair was) needs nothing more said: it is made the pair below
+            bool unpaired = current != null && current.CollisionProxy != null && target.Function == FunctionType.ModelReference && CollisionPairs.IsPair(current.Flags)
+                && CollisionPairs.FindOriginal(level.Commands, target.Composite, target.Entity) == null;
+            if (!request.Any && existing != null && !unpaired)
             {
                 if (!existingIsError) return null;
                 throw new McpError(McpErrorCodes.Conflict, target.Name + " already has collision. Say what to change: proxy, material, material_mapping, flags - or remove: true.");
@@ -1106,6 +1245,44 @@ namespace OpenCAGE.MCP
             if (material == null)
                 notes.Add("The mapping has no physics material (footsteps and impacts sound default): give 'material'.");
 
+            /* WORLD + BALLISTIC on one row is not something the game can use (no retail row has both storage bits; the host is
+               picked from them and 0xC0 picks none): it is made as retail's pair (CollisionPairs) - this entity's WORLD row and a
+               '_Ballistic' sibling's BALLISTIC row. An entity that already has the sibling keeps it while no flags are given;
+               flags of one storage drop it. The sibling itself only ever holds a BALLISTIC row. */
+            Commands commands = level.Commands;
+            bool pair = false, dropSibling = false;
+            if (target.Function == FunctionType.ModelReference)
+            {
+                CollisionPairs.Names names = new CollisionPairs.Names(commands, target.Composite);
+                FunctionEntity owner = CollisionPairs.FindOriginal(commands, target.Composite, target.Entity, names);
+                if (owner != null)
+                {
+                    string ownerName = McpScript.EntityName(commands, target.Composite, owner);
+                    if (CollisionPairs.IsPair(flags))
+                        throw McpError.Invalid(target.Name + " is the ballistic half of " + ownerName + "'s collision pair: set WORLD + BALLISTIC collision on " + ownerName + " instead (it keeps this entity in step).");
+                    notes.Add(target.Name + " is the ballistic half of " + ownerName + "'s collision pair: a later set_collision on " + ownerName + " sets it again.");
+                }
+                else
+                {
+                    FunctionEntity sibling = CollisionPairs.FindSibling(commands, target.Composite, target.Entity, names);
+                    pair = CollisionPairs.IsPair(flags) || (!request.HasFlags && sibling != null && CollisionPairs.IsWorldOnly(flags));
+                    dropSibling = !pair && sibling != null && request.HasFlags;
+                    //Nothing to pair yet: the flags stay as asked, and the pair is made when the entity is given a proxy
+                    if (pair && proxy == null && fromModel == null && sibling == null)
+                    {
+                        pair = false;
+                        notes.Add("With no proxy there is nothing for a ballistic half to collide with yet: the WORLD + BALLISTIC pair is made when " + target.Name + " is given one (set_collision 'proxy').");
+                    }
+                    if (pair)
+                        flags = CollisionPairs.WorldHalf(flags);
+                }
+            }
+            //A proxy keeps the collision type its own instances were made with: one that does not suit the row is used as a copy that does
+            uint? convertFilter = proxy != null && fromModel == null && !CollisionPairs.Suits(proxy, flags) ? CollisionPairs.FilterFor(flags) : (uint?)null;
+            //...and the physics material given goes on the proxy as its userData (what the game reads a hit's material from), as on
+            //retail's: a copy that carries it when this one carries another. (A pair's ballistic half gets its own copy carrying it.)
+            bool convertUserData = request.HasMaterial && proxy != null && fromModel == null && CollisionPairs.UserData(level, material, proxy) != CollisionPairs.UserDataOf(proxy);
+
             //A new row for this entity, rather than writing into one other entities may share: the undo step then
             //holds the old row untouched, and the others keep it
             CollisionMaps.COLLISION_MAPPING row = new CollisionMaps.COLLISION_MAPPING()
@@ -1128,6 +1305,10 @@ namespace OpenCAGE.MCP
                 Sharers = current == null ? 0 : AllReferences(level.Commands).Count(o => ReferenceEquals(o.Item3.CollisionMapping, current)) - 1,
                 Label = (existing == null ? "AI: Add collision to " : "AI: Set collision of ") + target.Label,
                 Notes = notes,
+                Pair = pair,
+                DropSibling = dropSibling,
+                ConvertFilter = convertFilter,
+                ConvertUserData = convertUserData,
             };
         }
 
@@ -1150,22 +1331,76 @@ namespace OpenCAGE.MCP
                 plan.Row.CollisionProxy = proxy;
                 imported = new JObject() { ["proxy"] = proxy.ProxyIndex, ["triangles"] = plan.FromModel.TriangleCount, ["from"] = plan.FromModel.Name };
                 if (reused) imported["reused"] = true;
+
+                //The ballistic half's proxy from the same triangles, rather than copied back out of the one just written
+                if (plan.Pair)
+                {
+                    HavokPackfile.StaticCompoundShape twin;
+                    try
+                    {
+                        using (McpEditorTools.Heartbeat(call, "Building the ballistic collision proxy from " + plan.FromModel.Name))
+                            twin = ImportProxyOnce(level, plan.FromModel, CollisionPairs.UserData(level, plan.Row.Material, proxy), CollisionPairs.BallisticsFilter, out bool _);
+                    }
+                    catch (Exception e) when (!(e is McpError)) { throw new McpError(McpErrorCodes.Failed, "The ballistic collision proxy could not be created: " + e.Message); }
+                    CollisionPairs.RememberTwin(proxy, twin);
+                    imported["ballistic_proxy"] = twin.ProxyIndex;
+                }
+            }
+            else if (plan.ConvertFilter.HasValue && plan.Row.CollisionProxy != null)
+            {
+                HavokPackfile.StaticCompoundShape given = plan.Row.CollisionProxy;
+                bool made;
+                try { plan.Row.CollisionProxy = CollisionPairs.ProxyFor(level, given, plan.ConvertFilter.Value, CollisionPairs.UserData(level, plan.Row.Material, given), CollisionPairs.Undoable(level, plan.Label), out made); }
+                catch (Exception e) when (!(e is McpError)) { throw new McpError(McpErrorCodes.Failed, "Proxy " + given.ProxyIndex + " could not be copied with the collision type the row needs: " + e.Message); }
+                string type = plan.ConvertFilter.Value == CollisionPairs.BallisticsFilter ? "BALLISTICS (9)" : "STANDARD (3)";
+                plan.Notes.Add("Proxy " + given.ProxyIndex + " was made for " + (plan.ConvertFilter.Value == CollisionPairs.BallisticsFilter ? "WORLD" : "BALLISTIC") + " collision; a " + (plan.ConvertFilter.Value == CollisionPairs.BallisticsFilter ? "BALLISTIC" : "WORLD") + " row uses " +
+                    (made ? "a copy of it" : "its copy") + " whose own instances are " + type + ", proxy " + plan.Row.CollisionProxy.ProxyIndex + ", as retail's are.");
+                if (made)
+                    imported = new JObject() { ["proxy"] = plan.Row.CollisionProxy.ProxyIndex, ["copy_of"] = given.ProxyIndex, ["collision_type"] = type };
+            }
+            else if (plan.ConvertUserData && plan.Row.CollisionProxy != null)
+            {
+                HavokPackfile.StaticCompoundShape given = plan.Row.CollisionProxy;
+                int own = CollisionPairs.UniformFilter(given);
+                uint userData = CollisionPairs.UserData(level, plan.Row.Material, given);
+                bool made;
+                try { plan.Row.CollisionProxy = CollisionPairs.ProxyFor(level, given, own >= 0 ? (uint)own : CollisionPairs.FilterFor(plan.Row.Flags), userData, CollisionPairs.Undoable(level, plan.Label), out made); }
+                catch (Exception e) when (!(e is McpError)) { throw new McpError(McpErrorCodes.Failed, "Proxy " + given.ProxyIndex + " could not be copied to carry the physics material: " + e.Message); }
+                plan.Notes.Add("Proxy " + given.ProxyIndex + " carries physics material #" + CollisionPairs.UserDataOf(given) + " (its userData, what the game reads a hit's material from); the row uses " + (made ? "a copy of it" : "its copy") +
+                    " carrying " + plan.Row.Material?.Name + " (#" + userData + "), proxy " + plan.Row.CollisionProxy.ProxyIndex + ", as retail's proxies carry their row's material.");
+                if (made)
+                    imported = new JObject() { ["proxy"] = plan.Row.CollisionProxy.ProxyIndex, ["copy_of"] = given.ProxyIndex, ["user_data"] = userData };
             }
 
             Target target = plan.Target;
             ShortGuid resourceId = target.ResourceId;
             CollisionMaps.COLLISION_MAPPING row = plan.Row;
             McpLevelListEdit<CollisionMaps.COLLISION_MAPPING> addRow = new McpLevelListEdit<CollisionMaps.COLLISION_MAPPING>(l => l.CollisionMaps?.Entries, row, level.CollisionMaps.Entries.Count, true, plan.Label, target.Composite, target.Entity);
-            Commit(target, plan.Label, list =>
+            using (UndoStack.Current.BeginGroup(plan.Label))
             {
-                ResourceReference reference = list.FirstOrDefault(o => o != null && o.resource_type == ResourceType.COLLISION_MAPPING);
-                if (reference == null)
+                Commit(target, plan.Label, list =>
                 {
-                    reference = new ResourceReference(ResourceType.COLLISION_MAPPING) { resource_id = resourceId };
-                    list.Add(reference);
+                    ResourceReference reference = list.FirstOrDefault(o => o != null && o.resource_type == ResourceType.COLLISION_MAPPING);
+                    if (reference == null)
+                    {
+                        reference = new ResourceReference(ResourceType.COLLISION_MAPPING) { resource_id = resourceId };
+                        list.Add(reference);
+                    }
+                    reference.CollisionMapping = row;
+                }, addRow);
+
+                //Retail's pair: the '_Ballistic' sibling gets (or keeps in step) the BALLISTIC row; one storage asked for drops it
+                try
+                {
+                    if (plan.Pair)
+                        plan.Half = CollisionPairs.SyncSibling(level, target.Composite, target.Entity, row, CollisionPairs.Undoable(level, plan.Label));
+                    else if (plan.DropSibling)
+                        plan.Half = CollisionPairs.RemoveSibling(level, target.Composite, target.Entity, CollisionPairs.Undoable(level, plan.Label));
                 }
-                reference.CollisionMapping = row;
-            }, addRow);
+                catch (Exception e) when (!(e is McpError)) { throw new McpError(McpErrorCodes.Failed, "The ballistic half of " + target.Name + "'s collision could not be " + (plan.Pair ? "made" : "removed") + ": " + e.Message); }
+                if (plan.Half != null)
+                    plan.Notes.AddRange(plan.Half.Notes);
+            }
             return imported;
         }
 
@@ -1183,6 +1418,12 @@ namespace OpenCAGE.MCP
             foreach (string note in plan.Notes) call.Note(note);
             JObject described = (JObject)DescribeMapping(level, target.Find(ResourceType.COLLISION_MAPPING)?.CollisionMapping, null);
             if (imported != null) described["imported_proxy"] = imported;
+            JObject half = DescribeHalf(level, plan);
+            if (half != null)
+            {
+                described["ballistic_half"] = half;
+                if (plan.Half.Created || plan.Half.Updated) call.Note(PairNote);
+            }
             return described;
         }
 
@@ -1290,7 +1531,7 @@ namespace OpenCAGE.MCP
         /// <summary>What retail stores as a new proxy's Havok userData: the write index of the row's physics material.</summary>
         private static uint UserData(Level level, Materials.Material material)
         {
-            int index = material != null && level.Materials != null ? level.Materials.GetWriteIndex(material) : -1;
+            int index = material != null && level.Materials != null ? level.Materials.GetWriteIndexOrPending(material) : -1;
             return index >= 0 ? (uint)index : 0u;
         }
         #endregion

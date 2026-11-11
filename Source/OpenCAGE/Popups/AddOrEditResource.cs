@@ -84,7 +84,7 @@ namespace OpenCAGE
                     case ResourceType.COLLISION_MAPPING:
                         if (resources[i].CollisionMapping == null)
                             continue;
-                        resourceGroup = new GUI_Resource_CollisionMapping();
+                        resourceGroup = new GUI_Resource_CollisionMapping() { HostComposite = _entDisplay?.Composite, HostEntity = _entity };
                         break;
                     case ResourceType.DYNAMIC_PHYSICS_SYSTEM:
                         resourceGroup = new GUI_Resource_DynamicPhysicsSystem() { HostComposite = _entDisplay?.Composite, HostEntity = _entity };
@@ -158,6 +158,7 @@ namespace OpenCAGE
             
             if (newReference.resource_type == ResourceType.COLLISION_MAPPING)
             {
+                //Walked on and shot at: once it has a proxy, the mapping group makes this retail's pair (CollisionPairs)
                 newReference.CollisionMapping = new CollisionMaps.COLLISION_MAPPING();
                 newReference.CollisionMapping.Flags = CollisionMaps.CollisionFlags.WORLD | CollisionMaps.CollisionFlags.BALLISTIC;
                 Content.Level.CollisionMaps.Entries.Add(newReference.CollisionMapping);
@@ -178,7 +179,13 @@ namespace OpenCAGE
             }
             else
             {
-                if (MessageBox.Show("You are about to remove resource reference for type " + type + ".\nThis is a destructive action - are you sure?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                /* Removing a collision pair's mapping removes its ballistic half too (the sibling entity holding the BALLISTIC row):
+                   when this window closes, in the one undo step that records what was changed in it (EntityInspector), so undo brings
+                   the mapping and the half back together */
+                Composite composite = _entDisplay?.Composite;
+                FunctionEntity half = type == ResourceType.COLLISION_MAPPING && composite != null ? CollisionPairs.FindSibling(Content.Level.Commands, composite, _entity) : null;
+                string also = half == null ? "" : "\n\nIts ballistic half, " + Content.Level.Commands.Utils.GetEntityName(composite, half) + " (the entity holding the BALLISTIC collision row), is deleted with it when this window closes.";
+                if (MessageBox.Show("You are about to remove resource reference for type " + type + ".\nThis is a destructive action - are you sure?" + also, "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                 {
                     ((_parameter != null) ? _parameter.value : _entity.resources).Remove(reference);
                     RefreshUI();

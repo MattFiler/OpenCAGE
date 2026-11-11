@@ -141,7 +141,7 @@ namespace OpenCAGE.MCP
                     McpSchema.String("space", "'composite' (default): position and look_at are in the composite's space; 'world': in the level's (converted for the composite).", options: new[] { "composite", "world" }),
                     McpSchema.Integer("placement", "With space 'world' in a composite placed more than once: which placement (0-based, as get_placements lists them)."),
                     McpSchema.Any("collision", "'model' (default when the model's submeshes name a proxy), a proxy index (list_collision_proxies), 'from_model' (a new proxy from its triangles) or 'none' (default when the model names none)."),
-                    McpSchema.Any("collision_flags", "Collision flags: names such as ['WORLD','BALLISTIC'] (default: as the level's own placements of the proxy, else WORLD+BALLISTIC), or a number."),
+                    McpSchema.Any("collision_flags", "Collision flags: names such as ['WORLD','BALLISTIC'] (default: as the level's own placements of the proxy, else WORLD+BALLISTIC, made as set_collision makes it: the WORLD row on the part and the BALLISTIC row on a '<name>_Ballistic' sibling), or a number."),
                     McpSchema.String("physics_material", "The physics material its collision makes footsteps and impacts with (list_materials' names); default as the level's own placements of the proxy."),
                     McpSchema.String("name", "A name for the entity (numbered per part).")),
                 Run = PlaceModel,
@@ -2895,6 +2895,7 @@ namespace OpenCAGE.MCP
         public List<float> Pixel, Vertex;
         public int Priority;
         public int EnvironmentMapIndex;
+        public int PhysicalMaterialIndex;
         public string Name;
 
         public static McpMaterialState Of(Materials.Material material) => new McpMaterialState()
@@ -2907,6 +2908,7 @@ namespace OpenCAGE.MCP
             Vertex = new List<float>(material.VertexShaderConstants ?? new List<float>()),
             Priority = material.Priority,
             EnvironmentMapIndex = material.EnvironmentMapIndex,
+            PhysicalMaterialIndex = material.PhysicalMaterialIndex,
             Name = material.Name,
         };
 
@@ -2925,6 +2927,7 @@ namespace OpenCAGE.MCP
             Material.VertexShaderConstants = new List<float>(Vertex);
             Material.Priority = Priority;
             Material.EnvironmentMapIndex = EnvironmentMapIndex;
+            Material.PhysicalMaterialIndex = PhysicalMaterialIndex;
             Material.Name = Name;
         }
 

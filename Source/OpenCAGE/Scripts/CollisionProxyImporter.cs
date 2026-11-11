@@ -220,6 +220,14 @@ namespace OpenCAGE
                     throw new InvalidOperationException("The new proxy landed at ordinal " + p32.ProxyIndex + " in COLLISION.HKX but " + p64.ProxyIndex + " in COLLISION.HKX64.");
                 if (ordinals32 != null) CheckOrdinals(hk32, ordinals32, p32, "COLLISION.HKX");
                 if (ordinals64 != null) CheckOrdinals(hk64, ordinals64, p64, "COLLISION.HKX64");
+                /* userData is the material's index - for a material made this session, where the next save will write it
+                   (Materials.GetWriteIndexOrPending). Bound to the material itself too, so the save writes whatever index it really
+                   gets, however the material list changes before then. */
+                Materials.Material material = userData > int.MaxValue ? null : level.Materials?.GetAtWriteIndex((int)userData) ?? (level.Materials != null && userData < (uint)level.Materials.Entries.Count ? level.Materials.Entries[(int)userData] : null);
+                foreach ((HavokPackfile hkx, HavokPackfile.StaticCompoundShape proxy) in new[] { (hk32, p32), (hk64, p64) })
+                    if (hkx != null && proxy != null && material != null)
+                        for (int slot = 0; slot < proxy.Instances.Count; slot++)
+                            hkx.BindTemplateMaterial(proxy, slot, material);
                 return level.Collision == hk32 ? p32 : p64 ?? p32;
             }
             catch

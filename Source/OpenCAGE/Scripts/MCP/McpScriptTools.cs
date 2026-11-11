@@ -2244,6 +2244,8 @@ namespace OpenCAGE.MCP
                     display?.SaveAllFlowgraphs();
                 }
                 List<Entity> selection = call.StrList("entities", required: true).Select(o => McpScript.FindEntity(commands, parent, o)).Distinct().ToList();
+                //A collision pair's ballistic half goes into the new composite with its entity
+                selection = CollisionPairs.WithHalves(commands, parent, selection);
                 string name = call.Str("name") ?? DefaultGroupName(commands, parent);
                 CreateCompositePlan plan = CreateCompositePlan.Plan(commands, parent, selection, McpScript.NormalisePath(name));
                 if (dryRun)

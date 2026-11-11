@@ -1921,6 +1921,11 @@ namespace OpenCAGE
                     return;
             }
 
+            //The user's own Save & Build (a tool's passes successMsg false) is offered the ballistic halves that collision made
+            //before pairs still lacks, once a session per level - as one undo step, before the build
+            if (doInstancing && successMsg && allowLaunchGame)
+                CollisionPairs.OfferBeforeBuild(this, _compositeBrowser.Content);
+
             //Close alien down if it's open, it conflicts with our write locks! Only this install's: another install's game holds
             //none of the files a save writes
             EditorUtils.CloseAI(thisInstallOnly: true);
@@ -2042,6 +2047,12 @@ namespace OpenCAGE
                             " the build could not do as asked:\n  " + string.Join("\n  ", warnings);
                 MessageBox.Show(text, "Some data was not regenerated", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
+
+            //What the level itself will crash the game on (an alien with no backstage vent to break out to): the save went
+            //ahead, but this has to be seen before the level is played - before the game is launched below, too
+            IReadOnlyList<string> levelWarnings = _compositeBrowser.Content.LastLevelWarnings;
+            if (levelWarnings != null && levelWarnings.Count != 0)
+                MessageBox.Show("The level saved, but the game will crash in it:\n\n" + string.Join("\n\n", levelWarnings), "The game will crash in this level", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
 #if !DEBUG
             PatchManager.PatchFileIntegrityCheck(Singleton.Platform, Singleton.PathToAI);

@@ -279,6 +279,8 @@ namespace OpenCAGE.MCP
                 Commands commands = edit.Commands;
                 edit.UsePage(destination, call.Str("page"));
                 List<Entity> sources = wanted.Select(o => McpScript.FindEntity(commands, source, o)).Distinct().ToList();
+                //A collision pair's entity is copied with its ballistic half (the entity holding its BALLISTIC row), as it is deleted with it
+                sources = CollisionPairs.WithHalves(commands, source, sources);
                 edit.TouchContents(destination);
                 edit.Tx.TouchPins(destination);
                 for (int set = 0; set < count; set++)
@@ -413,6 +415,13 @@ namespace OpenCAGE.MCP
                     else if (offset != null && set == 0)
                         skipped.Add(McpScript.EntityName(commands, destination, copy) + " has no position, so the offset did not move it");
                 }
+
+                //...and the copy of a half is named after the copy of its entity ("<copy>_Ballistic"), which keeps the two a pair
+                CollisionPairs.Names pairNames = new CollisionPairs.Names(commands, source);
+                foreach (KeyValuePair<Entity, Entity> copied in copies.ToList())
+                    if (copied.Key is FunctionEntity sourceEntity && source.GetEntityByID(sourceEntity.shortGUID) == sourceEntity && pairNames.HalfOf(sourceEntity) is FunctionEntity half
+                        && copies.TryGetValue(half, out Entity halfCopy) && copied.Value is FunctionEntity entityCopy && destination.GetEntityByID(halfCopy.shortGUID) == halfCopy)
+                        commands.Utils.SetEntityName(halfCopy, CollisionPairs.SiblingName(commands, destination, entityCopy));
 
                 //The links that ran between the copied entities, onto the copies
                 bool AddCopiedLink(Entity owner, EntityConnector link, Entity target)

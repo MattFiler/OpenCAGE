@@ -451,15 +451,17 @@ namespace OpenCAGE.MCP
             bool worldStorage, ballisticStorage;
             bool sound = material == "AudioCollision->AudioCollision";
             bool seeThrough = material == "WindowCollision->WindowCollision" || (CollisionMaps.CollisionType)((uint)template.Flags & (uint)CollisionMaps.CollisionFlags.COLLISION_TYPE_MASK) == CollisionMaps.CollisionType.TRANSPARENT;
+            //A row asking for both storages is built as the WORLD row alone, as no retail row has both (Instancing; retail's
+            //surfaces that are walked on and shot at are two entities, see CollisionPairs)
             if (storage != 0)
             {
                 worldStorage = (storage & CollisionMaps.CollisionFlags.WORLD) != 0;
-                ballisticStorage = (storage & CollisionMaps.CollisionFlags.BALLISTIC) != 0;
+                ballisticStorage = !worldStorage && (storage & CollisionMaps.CollisionFlags.BALLISTIC) != 0;
             }
             else if (material == "Collision->Collision" || material == "WindowCollision->WindowCollision" || material == "COLLISION_ONLY")
             {
                 worldStorage = true;
-                ballisticStorage = true;
+                ballisticStorage = false;
             }
             else if (sound)
             {

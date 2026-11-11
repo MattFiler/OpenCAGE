@@ -160,7 +160,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "save_level",
                 Title = "Save level",
-                Description = "Write the open level to the game install. A plain save writes the script and assets: enough for logic changes (links, triggers, parameters of logic entities, CAGEAnimations of cameras). build=true is Save & Build: it also regenerates what the game derives from the script - the movers that draw models and lights, collision and physics, zone membership, navmesh, cover, job positions, sound networks, radiosity - needed after placing, moving or deleting models, lights, collision, zones, navigation or sound entities, or composites holding them. build='auto' builds only when get_editor_state's level.build says it is needed (and says why). 'bakers' can skip slow ones. Takes seconds (plain) to minutes (build). Closes the game if it runs, as the editor's Save does (closed_game says so; Live Link drops). Not undoable.",
+                Description = "Write the open level to the game install. A plain save writes the script and assets: enough for logic changes (links, triggers, parameters of logic entities, CAGEAnimations of cameras). build=true is Save & Build: it also regenerates what the game derives from the script - the movers that draw models and lights, collision and physics, zone membership, navmesh, cover, job positions, sound networks, radiosity - needed after placing, moving or deleting models, lights, collision, zones, navigation or sound entities, or composites holding them. build='auto' builds only when get_editor_state's level.build says it is needed (and says why). 'bakers' can skip slow ones. A build also checks the level for what will crash the game and says so in level_warnings (an alien that can spawn with no PathfindingAlienBackstageNode crashes the game the first time it retreats or despawns: add vent composites such as Archetypes\\Jobs\\VentTraversalMarker6M); it saves all the same. Takes seconds (plain) to minutes (build). Closes the game if it runs, as the editor's Save does (closed_game says so; Live Link drops). Not undoable.",
                 InputSchema = McpSchema.Object(
                     McpSchema.Any("build", "true: Save & Build; false (default): a plain save; 'auto': build only if the level needs it (get_editor_state level.build)."),
                     McpSchema.Nested("bakers", "With build: which bakers run (default all). Skipping radiosity CLEARS the baked lighting - on a level still carrying its original lighting that loses it for good, as later bakes then regenerate it from scratch; skipped navmesh/cover/jobs/sound keep their old data. To build faster while KEEPING the lighting instead, turn on editor_options skip_radiosity_rebuild (Options > Save/Build > Don't Rebuild Radiosity).", BakersSchema)),
@@ -177,7 +177,7 @@ namespace OpenCAGE.MCP
                     McpSchema.String("level", "The level to start in, as list_levels names it. Defaults to the open level; 'menu' for the main menu."),
                     McpSchema.String("save", "Save the open level first when it is the one launched: none (default), save, build (Save & Build), or auto (build if it needs one, else save if it has unsaved changes).", options: new[] { "none", "save", "build", "auto" }),
                     McpSchema.Boolean("skip_frontend", "Deprecated, ignored: the title screen is skipped whenever a level is launched, never at the main menu (it is implied by level)."),
-                    McpSchema.String("wait_for", "none (default: return once started), process (AI.exe is running), level (the level has loaded) or playing (its scripts are running). level and playing need Live Link.", options: new[] { "none", "process", "level", "playing" }),
+                    McpSchema.String("wait_for", "none (default: return once started), process (AI.exe is running), level (the level has loaded) or playing (its scripts are running). level and playing need Live Link. Should AI.exe close or crash during the wait, it stops at once with an error giving its exit code and any crash dump Windows wrote.", options: new[] { "none", "process", "level", "playing" }),
                     McpSchema.Integer("timeout_seconds", "With wait_for: how long to wait (default 180, at most 600)."),
                     McpSchema.Boolean("allow_stale_build", "Launch even though the level has changes only a Save & Build gives the game (it runs the older data)."),
                     McpSchema.Boolean("dry_run", "Report what would be launched and written (level, AI.exe patches, the build check), launching and writing nothing.")),
@@ -1504,6 +1504,7 @@ namespace OpenCAGE.MCP
                 LevelContent content = Singleton.Editor.CompositeBrowser?.Content;
                 if (content?.LastBakeWarnings?.Count > 0) result["build_warnings"] = new JArray(content.LastBakeWarnings);
                 if (content?.LastWarnings?.Count > 0) result["warnings"] = new JArray(content.LastWarnings);
+                if (content?.LastLevelWarnings?.Count > 0) result["level_warnings"] = new JArray(content.LastLevelWarnings);
             });
             if (!build)
             {
@@ -1685,16 +1686,29 @@ namespace OpenCAGE.MCP
                 call.Note("Connect to Game (the Live Link button) was turned on so OpenCAGE connects once the game is up.");
             }
             Stopwatch launched = Stopwatch.StartNew();
+            //GOG and Epic start AI.exe from here, and wait_for watches that process (Steam starts the game itself)
+            Process started = null;
             if (platform == PatchManager.Platform.STEAM)
                 Process.Start("steam://rungameid/214490");
             else
-                Process.Start(new ProcessStartInfo() { FileName = Singleton.PathToAI + "/AI.exe", WorkingDirectory = Singleton.PathToAI });
+                started = Process.Start(new ProcessStartInfo() { FileName = Singleton.PathToAI + "/AI.exe", WorkingDirectory = Singleton.PathToAI });
 
             result["launched"] = true;
             result["level"] = menu ? "menu" : level;
             result["skip_frontend"] = skipFrontend;
-            if (waitFor != "none")
-                result["wait"] = WaitForGame(call, waitFor, TimeSpan.FromSeconds(timeoutSeconds), launched, launchesOpen);
+            using (GameWatch watch = new GameWatch(started, launched, platform == PatchManager.Platform.EPIC_GAMES_STORE))
+            {
+                if (waitFor != "none")
+                {
+                    JObject wait = WaitForGame(call, waitFor, TimeSpan.FromSeconds(timeoutSeconds), launched, launchesOpen, watch);
+                    //The game closed or crashed while it was waited for: an error at once, which still says what the call did before the launch
+                    if (watch.Gone)
+                        throw new McpError(McpErrorCodes.Failed, watch.Describe(waitFor, (string)wait["reached"]) +
+                            (result["saved"] is JObject savedFirst ? " " + level + " was saved" + ((bool?)savedFirst["build"] == true ? " and built" : "") + " before the launch." : "") +
+                            (call.Notes.Count != 0 ? "\nNotes: " + string.Join(" ", call.Notes) : ""));
+                    result["wait"] = wait;
+                }
+            }
             result["scripting_helpers"] = global::OpenCAGE.LaunchGame.AnyHelperOn() && runtimeUtilsProblem == null;
             result["possess_characters"] = SettingsManager.GetBool(Settings.PossessCharacters) && global::OpenCAGE.LaunchGame.ScriptingHelpersAvailable() && runtimeUtilsProblem == null;
             result["debug_menu"] = SettingsManager.GetBool(Settings.DebugMenu) && global::OpenCAGE.LaunchGame.ScriptingHelpersAvailable() && runtimeUtilsProblem == null;
@@ -1735,8 +1749,11 @@ namespace OpenCAGE.MCP
             }
         }
 
-        /// <summary>launch_game's wait_for: poll the process, then (Live Link) the level and its scripts, until reached or the timeout.</summary>
-        private static JObject WaitForGame(McpCall call, string waitFor, TimeSpan timeout, Stopwatch launched, bool launchesOpen)
+        /// <summary>
+        /// launch_game's wait_for: poll the process, then (Live Link) the level and its scripts, until reached or the timeout -
+        /// or until the game closes or crashes (<see cref="GameWatch.Gone"/>), which ends the wait at once.
+        /// </summary>
+        private static JObject WaitForGame(McpCall call, string waitFor, TimeSpan timeout, Stopwatch launched, bool launchesOpen, GameWatch watch)
         {
             JObject wait = new JObject() { ["for"] = waitFor };
             string reached = "nothing";
@@ -1746,7 +1763,10 @@ namespace OpenCAGE.MCP
             {
                 call.ThrowIfCancelled();
                 int second = (int)launched.Elapsed.TotalSeconds;
-                if (EditorUtils.ThisInstallsGameRunning())
+                bool running = watch.Running();
+                if (watch.Gone)
+                    break;
+                if (running)
                 {
                     if (reached == "nothing") reached = "process";
                     if (waitFor == "process") break;
@@ -1760,6 +1780,8 @@ namespace OpenCAGE.MCP
                             if (asked.Wait(TimeSpan.FromSeconds(3)) && asked.Result.Reply.Ok)
                             {
                                 global::OpenCAGE.RuntimeUtilsConnection.LiveLink.GameStatus status = asked.Result;
+                                //Each answer whole: nothing kept from an earlier one that this one no longer says
+                                ForgetGameState(wait, false);
                                 wait["level_running"] = status.LevelRunning;
                                 wait["playing"] = status.Playing;
                                 if (!string.IsNullOrEmpty(status.RootCompositeName)) wait["running_root_composite"] = status.RootCompositeName;
@@ -1772,23 +1794,270 @@ namespace OpenCAGE.MCP
                         }
                         catch (Exception) { }
                     }
+                    else
+                        ForgetGameState(wait, false);
                 }
+                //Not started yet, or between the Epic Games launcher's restart of it: no Live Link state from a process that has gone
+                else
+                    ForgetGameState(wait, true);
                 if (second != lastSecond && second % 5 == 0)
                 {
                     lastSecond = second;
                     call.Progress("Waiting for the game: " + reached + " so far (" + second + " s)", second, timeout.TotalSeconds);
                 }
-                Thread.Sleep(1000);
+                //Returns early should the game close, so a crash ends the wait within moments
+                watch.Wait(1000);
             }
+            bool done = reached == waitFor || (waitFor == "level" && reached == "playing");
+            //A game that closed in the wait's last second has closed: that, not the timeout, is what to say
+            if (!done && !watch.Gone)
+                watch.Running();
+            if (watch.Gone)
+                ForgetGameState(wait, true);
             wait["reached"] = reached;
             wait["seconds"] = Math.Round(launched.Elapsed.TotalSeconds, 1);
-            bool done = reached == waitFor || (waitFor == "level" && reached == "playing");
             wait["done"] = done;
-            if (!done)
+            if (!done && !watch.Gone)
                 call.Note("The game had reached '" + reached + "' after " + (int)timeout.TotalSeconds + " s, not '" + waitFor + "'" +
-                    (reached == "nothing" ? (Singleton.Platform == PatchManager.Platform.STEAM ? " (AI.exe never started: is Steam running and signed in?)" : " (AI.exe never started)") : reached == "process" ? " (Live Link did not answer yet, or the level is still loading)" : " (its scripts are paused: the frontend, a loading screen or the pause menu)") +
+                    (watch.Restarting ? " (AI.exe closed itself to restart through the Epic Games launcher, which has not started it again)" : reached == "nothing" ? (Singleton.Platform == PatchManager.Platform.STEAM ? " (AI.exe never started: is Steam running and signed in?)" : " (AI.exe never started)") : reached == "process" ? " (Live Link did not answer yet, or the level is still loading)" : " (its scripts are paused: the frontend, a loading screen or the pause menu)") +
                     ". get_editor_state's game block and runtime_utils game_status show how it gets on.");
             return wait;
+        }
+
+        /// <summary>Drop what Live Link last said of the game (and, with <paramref name="connection"/>, whether it was connected) once it no longer holds.</summary>
+        private static void ForgetGameState(JObject wait, bool connection)
+        {
+            foreach (string key in new[] { "level_running", "playing", "running_root_composite", "running_level_open_here", "loading" })
+                wait.Remove(key);
+            if (connection)
+                wait.Remove("live_link_connected");
+        }
+
+        /// <summary>
+        /// launch_game's watch on the game while it waits: the AI.exe it started (GOG, Epic), else this install's AI.exe found by
+        /// its path (Steam starts it; Epic's launcher restarts it). Its handle is held from when it is first seen, so its exit
+        /// shows at once and its exit code and time can still be read once it has gone.
+        /// </summary>
+        private sealed class GameWatch : IDisposable
+        {
+            private readonly Process _started;
+            private readonly DateTime _launchedUtc;
+            private readonly bool _epic;
+            private Process _game;
+            private int _gamePid = -1;
+            private bool _seen;
+            //The last watched AI.exe's exit (code and time null when they could not be read)
+            private int? _exitCode;
+            private DateTime? _exitUtc;
+            private int _exitPid = -1;
+            private bool _exitWasStarted;
+
+            /// <summary>The game ran and has closed, and none of this install's AI.exe runs after it.</summary>
+            public bool Gone { get; private set; }
+
+            /// <summary>Epic: the AI.exe started here closed to restart itself through the Epic Games launcher, which has not started it yet.</summary>
+            public bool Restarting { get; private set; }
+
+            public GameWatch(Process started, Stopwatch launched, bool epic)
+            {
+                _started = started;
+                _game = started;
+                _seen = started != null;
+                if (started != null) _gamePid = Read(() => started.Id, -1);
+                _launchedUtc = DateTime.UtcNow - launched.Elapsed;
+                _epic = epic;
+            }
+
+            /// <summary>Whether this install's game runs now: false before it has started, and once it has gone (<see cref="Gone"/>).</summary>
+            public bool Running()
+            {
+                if (_game != null)
+                {
+                    if (!HasExited(_game))
+                        return true;
+                    Process exited = _game;
+                    _exitWasStarted = exited == _started;
+                    _exitPid = _gamePid;
+                    _exitCode = Read<int?>(() => exited.ExitCode, null);
+                    _exitUtc = Read<DateTime?>(() => exited.ExitTime.ToUniversalTime(), null);
+                    _game = null;
+                    _gamePid = -1;
+                    exited.Dispose();
+                }
+
+                //Another of this install's AI.exe (the one Steam starts, or the game restarted by Epic's launcher) is watched from now on.
+                //One that has exited is still listed while anything holds a handle to it (Windows Error Reporting, say): only live ones count
+                bool any = false;
+                foreach (Process process in EditorUtils.ThisInstallsGameProcesses())
+                {
+                    if (Ended(process, _exitPid))
+                    {
+                        process.Dispose();
+                        continue;
+                    }
+                    any = true;
+                    if (_game == null && Hold(process))
+                    {
+                        _game = process;
+                        _gamePid = process.Id;
+                    }
+                    else
+                        process.Dispose();
+                }
+                if (any)
+                {
+                    _seen = true;
+                    Restarting = false;
+                    _exitCode = null;
+                    _exitUtc = null;
+                    _exitPid = -1;
+                    _exitWasStarted = false;
+                    return true;
+                }
+
+                //None runs: the game has gone, unless it has yet to start, or closed to restart through the Epic Games launcher
+                //(the AI.exe started here does that within a second; a crash is never that)
+                if (_seen)
+                {
+                    Restarting = _epic && _exitWasStarted && (!_exitCode.HasValue || CrashName(_exitCode.Value) == null) &&
+                        (_exitUtc ?? DateTime.UtcNow) - _launchedUtc < TimeSpan.FromSeconds(15);
+                    Gone = !Restarting;
+                }
+                return false;
+            }
+
+            /// <summary>Wait up to the time given, returning as soon as the watched AI.exe closes.</summary>
+            public void Wait(int milliseconds)
+            {
+                Process game = _game;
+                if (game != null)
+                {
+                    try
+                    {
+                        game.WaitForExit(milliseconds);
+                        return;
+                    }
+                    catch (Exception) { }
+                }
+                Thread.Sleep(milliseconds);
+            }
+
+            /// <summary>launch_game's error once the game has gone: closed or crashed, how long after the launch, its exit code, and Windows' crash dump of it.</summary>
+            public string Describe(string waitFor, string reached)
+            {
+                string crash = _exitCode.HasValue ? CrashName(_exitCode.Value) : null;
+                string seconds = Math.Round(((_exitUtc ?? DateTime.UtcNow) - _launchedUtc).TotalSeconds, 1).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+                string text = "The game " + (crash != null ? "crashed " : "closed ") + (_exitUtc.HasValue ? "" : "by ") + seconds + " s after it was launched (AI.exe " +
+                    (_exitCode.HasValue ? "exit code " + ExitCodeText(_exitCode.Value) + (crash != null ? ": " + crash : "") : "exit code unknown: it could not be read") +
+                    "), before reaching '" + waitFor + "'" + (reached != "nothing" ? " (it had reached '" + reached + "')" : "") + ", so the wait stopped there.";
+                if (crash == null)
+                    return text;
+                //Windows Error Reporting writes the dump before it ends the process, but give it a moment should it still be writing
+                string dump = CrashDump(out List<string> folders);
+                for (int tries = 0; dump == null && tries < 6; tries++)
+                {
+                    Thread.Sleep(500);
+                    dump = CrashDump(out folders);
+                }
+                text += dump != null ? " Windows wrote a crash dump: " + dump + "." : " Windows wrote no crash dump of it since the launch (looked in " + string.Join(", ", folders) + ").";
+                return text + " The Windows Application log (Application Error, event 1000) names the module it crashed in.";
+            }
+
+            /// <summary>
+            /// The crash dump Windows Error Reporting wrote of this AI.exe since the launch, in its LocalDumps folder (the registry's
+            /// DumpFolder, else %LOCALAPPDATA%\CrashDumps). Only the one named for its process id when that is known: another
+            /// install's game can crash meanwhile. Null when none was.
+            /// </summary>
+            private string CrashDump(out List<string> folders)
+            {
+                folders = new List<string>();
+                foreach (string key in new[] { @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\AI.exe", @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps" })
+                {
+                    try
+                    {
+                        if (Microsoft.Win32.Registry.GetValue(key, "DumpFolder", null) is string folder && folder.Trim() != "")
+                            folders.Add(Path.GetFullPath(Environment.ExpandEnvironmentVariables(folder.Trim())));
+                    }
+                    catch (Exception) { }
+                }
+                folders.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CrashDumps"));
+                folders = folders.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+                string ours = "AI.exe." + _exitPid + ".dmp";
+                List<FileInfo> dumps = new List<FileInfo>();
+                foreach (string folder in folders)
+                {
+                    try
+                    {
+                        if (Directory.Exists(folder))
+                            dumps.AddRange(new DirectoryInfo(folder).GetFiles("AI.exe*.dmp").Where(o => o.LastWriteTimeUtc >= _launchedUtc.AddSeconds(-5)));
+                    }
+                    catch (Exception) { }
+                }
+                return dumps.Where(o => _exitPid == -1 || string.Equals(o.Name, ours, StringComparison.OrdinalIgnoreCase)).OrderByDescending(o => o.LastWriteTimeUtc).FirstOrDefault()?.FullName;
+            }
+
+            /// <summary>What a Windows exception status the game exited with means (it crashed), or null for an ordinary exit code.</summary>
+            private static string CrashName(int code)
+            {
+                switch ((uint)code)
+                {
+                    case 0xC0000005: return "access violation";
+                    case 0xC0000006: return "in-page error (a file it had mapped could not be read)";
+                    case 0xC0000017: return "out of memory";
+                    case 0xC000001D: return "illegal instruction";
+                    case 0xC000007B: return "bad executable or DLL image";
+                    case 0xC0000094: return "integer divide by zero";
+                    case 0xC0000096: return "privileged instruction";
+                    case 0xC00000FD: return "stack overflow";
+                    case 0xC0000135: return "a DLL it needs was not found";
+                    case 0xC0000139: return "a DLL lacks an entry point it needs";
+                    case 0xC0000142: return "a DLL failed to initialise";
+                    case 0xC0000374: return "heap corruption";
+                    case 0xC0000409: return "stack buffer overrun or fail fast";
+                    case 0xC0000420: return "assertion failure";
+                    case 0xE06D7363: return "unhandled C++ exception";
+                    case 0x80000003: return "breakpoint";
+                    //Ctrl+C or its console closing: ended, not crashed
+                    case 0xC000013A: return null;
+                }
+                return ((uint)code & 0xF0000000) == 0xC0000000 ? "Windows exception" : null;
+            }
+
+            private static string ExitCodeText(int code) => code >= 0 && code < 0x10000 ? code.ToString() : "0x" + ((uint)code).ToString("X8");
+
+            /// <summary>Open the process's handle while it runs, so its exit code and time stay readable once it has gone.</summary>
+            private static bool Hold(Process process)
+            {
+                try { return process.Handle != IntPtr.Zero && !process.HasExited; }
+                catch (Exception) { return false; }
+            }
+
+            private static bool HasExited(Process process)
+            {
+                try { return process.HasExited; }
+                catch (Exception) { return true; }
+            }
+
+            /// <summary>Whether a listed AI.exe has exited. One that cannot be asked counts as running, unless it is the one that exited.</summary>
+            private static bool Ended(Process process, int exitedPid)
+            {
+                try { return process.HasExited; }
+                catch (Exception) { return process.Id == exitedPid; }
+            }
+
+            private static T Read<T>(Func<T> read, T otherwise)
+            {
+                try { return read(); }
+                catch (Exception) { return otherwise; }
+            }
+
+            public void Dispose()
+            {
+                _game?.Dispose();
+                _started?.Dispose();
+                _game = null;
+            }
         }
 
         private static string NormaliseLevel(string level) => (level ?? "").Replace('\\', '/').Trim().Trim('/').ToUpperInvariant();

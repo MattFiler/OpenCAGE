@@ -2283,7 +2283,10 @@ namespace OpenCAGE.DockPanels
             if (entity == null || Composite == null || Composite.GetEntityByID(entity.shortGUID) == null)
                 return;
             Composite composite = Composite;
-            if (ask && MessageBox.Show("Are you sure you want to remove this entity?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+            //A collision pair's entity takes its ballistic half (the entity holding its BALLISTIC row) with it
+            FunctionEntity half = ask ? CollisionPairs.HalfGoingWith(Content.Level.Commands, composite, entity) : null;
+            string also = half == null ? "" : "\n\nIts ballistic half, " + Content.Level.Commands.Utils.GetEntityName(composite, half) + " (the entity holding its BALLISTIC collision row), is removed with it.";
+            if (ask && MessageBox.Show("Are you sure you want to remove this entity?" + also, "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
             //The box pumps messages: while it was up the entity may have gone (a second Delete from the viewport, an
             //undo) or the display moved on - applying the delete then threw "no longer in the composite"
             if (Composite != composite || composite.GetEntityByID(entity.shortGUID) == null)
@@ -2292,8 +2295,8 @@ namespace OpenCAGE.DockPanels
             //The removal itself - the dictionary entry, every link into the entity, the trigger and
             //animation references that went through it, its nodes on saved and open pages - is the
             //edit, which is what puts each piece back on undo. The inspector and the entity list follow
-            //OnEntityDeleted as they do for any other removal.
-            UndoStack.Current.Apply(new EntityDeleteEdit(Composite, entity, "Delete " + UndoLabels.Entity(Composite, entity)));
+            //OnEntityDeleted as they do for any other removal. A collision pair's ballistic half goes in the same step.
+            CollisionPairs.DeleteWithHalf(Content.Level.Commands, Composite, entity, "Delete " + UndoLabels.Entity(Composite, entity));
         }
 
         /// <summary>
@@ -2456,6 +2459,23 @@ namespace OpenCAGE.DockPanels
             if (clonesBySourceId.Count == 0)
                 return results;
 
+            //A collision pair's entity is copied with its ballistic half (the entity holding its BALLISTIC row), as it is deleted with it
+            CollisionPairs.Names pairNames = new CollisionPairs.Names(Content.Level.Commands, sourceComposite);
+            foreach (uint sourceId in clonesBySourceId.Keys.ToList())
+            {
+                if (!(sourceComposite.GetEntityByID(new ShortGuid(sourceId)) is FunctionEntity sourceEntity) || !(pairNames.HalfOf(sourceEntity) is FunctionEntity half)
+                    || clonesBySourceId.ContainsKey(half.shortGUID.AsUInt32))
+                    continue;
+                Entity halfClone = CloneEntityForPaste(sourceComposite, half);
+                if (halfClone == null)
+                    continue;
+                //Where the copy of its entity went (each save makes the rest of it follow, as for any pair)
+                ParameterData placed = clonesBySourceId[sourceId].GetParameter(ShortGuids.position)?.content;
+                if (placed != null)
+                    halfClone.AddParameter(ShortGuids.position, (ParameterData)placed.Clone(), ParameterVariant.PARAMETER);
+                clonesBySourceId.Add(half.shortGUID.AsUInt32, halfClone);
+            }
+
             //Restore the links that ran between the copied entities, remapped onto the clones
             if (restoreInternalLinks)
             {
@@ -2481,6 +2501,11 @@ namespace OpenCAGE.DockPanels
                 if (source != null) copiedFromSource[source] = pair.Value;
             }
             RemapCopiedReferences(Content.Level.Commands, sourceComposite, Composite, copiedFromSource);
+
+            //...and the copy of a half is named after the copy of its entity ("<copy>_Ballistic"), which keeps the two a pair
+            foreach (KeyValuePair<Entity, Entity> copied in copiedFromSource)
+                if (copied.Key is FunctionEntity sourceEntity && pairNames.HalfOf(sourceEntity) is FunctionEntity half && copiedFromSource.TryGetValue(half, out Entity halfClone) && copied.Value is FunctionEntity entityClone)
+                    Content.Level.Commands.Utils.SetEntityName(halfClone, CollisionPairs.SiblingName(Content.Level.Commands, Composite, entityClone));
 
             Content.EditorUtils.GenerateCompositeInstances(Content.Level.Commands);
             using (UndoStack.Current.BeginGroup("Paste " + UndoLabels.Count(clonesBySourceId.Count, "entity", "entities")))

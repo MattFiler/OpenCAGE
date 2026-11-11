@@ -57,7 +57,7 @@ namespace OpenCAGE.MCP
                     McpSchema.String("space", "With place_in: 'composite' (default: position/rotation are in place_in's own space; the root's is world) or 'world' (converted for place_in's placement). " + McpSchema.SpaceText, options: new[] { "composite", "world" }),
                     McpSchema.Integer("placement", "With space 'world' and a place_in placed more than once: which placement (0-based, get_placements order)."),
                     McpSchema.String("instance_name", "With place_in: the instance's name (default numbered after the composite)."),
-                    McpSchema.String("collision", "Give the new composite's parts collision made from their own triangles (as set_collision proxy 'from_model'): none (default), solid (WORLD and BALLISTIC: walked on, blocks bullets), world (blocks movement only) or ballistic (bullets only).", options: new[] { "none", "solid", "world", "ballistic" })),
+                    McpSchema.String("collision", "Give the new composite's parts collision made from their own triangles (as set_collision proxy 'from_model'): none (default), solid (WORLD and BALLISTIC: walked on, blocks bullets, gives footstep sounds and zones; made as retail's pair, the WORLD row on each part and the BALLISTIC row on a '<part>_Ballistic' sibling), world (blocks movement only) or ballistic (bullets, footstep sounds and zones; not walked on).", options: new[] { "none", "solid", "world", "ballistic" })),
                 Run = ImportModel,
             };
 
@@ -568,6 +568,7 @@ namespace OpenCAGE.MCP
                 });
                 JArray flags = collision == "world" ? new JArray("WORLD") : collision == "ballistic" ? new JArray("BALLISTIC") : new JArray("WORLD", "BALLISTIC");
                 JArray proxies = new JArray();
+                JArray halves = new JArray();
                 int triangles = 0;
                 foreach (string part in parts)
                 {
@@ -579,8 +580,13 @@ namespace OpenCAGE.MCP
                         proxies.Add(proxy["proxy"]);
                         triangles += (int?)proxy["triangles"] ?? 0;
                     }
+                    //'solid': each part's BALLISTIC row is on its '_Ballistic' sibling (set_collision's pair)
+                    if (done["ballistic_half"] is JObject half && half["entity"] != null)
+                        halves.Add(half["entity"]);
                 }
                 imported["collision"] = new JObject() { ["parts"] = parts.Count, ["proxies"] = proxies, ["triangles"] = triangles, ["flags"] = flags };
+                if (halves.Count != 0)
+                    ((JObject)imported["collision"])["ballistic_halves"] = halves;
             }
             if (place)
             {

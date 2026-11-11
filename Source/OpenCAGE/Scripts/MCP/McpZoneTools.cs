@@ -1662,7 +1662,16 @@ namespace OpenCAGE.MCP
             plan.Through = chains[0];
             plan.Frame = McpRegion.Walker(commands).Evaluate(from, plan.Through).World ?? new cTransform(Vector3.Zero, Vector3.Zero);
 
-            foreach (Entity entity in entities.Distinct())
+            //A collision pair's ballistic half goes where its entity goes (it is placed as the entity is, and follows it)
+            List<Entity> asked = entities.Distinct().ToList();
+            foreach (Entity entity in asked.ToList())
+            {
+                FunctionEntity half = CollisionPairs.HalfGoingWith(commands, from, entity);
+                if (half != null && !asked.Contains(half))
+                    asked.Add(half);
+            }
+
+            foreach (Entity entity in asked)
             {
                 string name = McpScript.EntityName(commands, from, entity);
                 if (!(entity is FunctionEntity function))

@@ -1,5 +1,6 @@
 using CATHODE;
 using CATHODE.Scripting;
+using OpenCAGE.Undo;
 using System;
 using System.Windows.Forms;
 using static CATHODE.CollisionMaps;
@@ -13,6 +14,10 @@ namespace OpenCAGE.Popups.UserControls
         private EditMaterial _matEditor;
         private EditMaterialMapping _mappingEditor;
         private EditCollisionProxy _proxyEditor;
+
+        /// <summary>The entity whose resources these are, and its composite: a ModelReference's "WORLD + BALLISTIC" row is made as retail's pair (<see cref="CollisionPairs"/>).</summary>
+        public Composite HostComposite;
+        public FunctionEntity HostEntity;
 
         public GUI_Resource_CollisionMapping() : base()
         {
@@ -66,7 +71,7 @@ namespace OpenCAGE.Popups.UserControls
             //A proxy imported from the picker carries what retail gives one for this row: the physics material's
             //write index as its userData, and the collision type its storage class implies
             LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
-            int material = _currentCollisionMapping.Material != null && content?.Level?.Materials != null ? content.Level.Materials.GetWriteIndex(_currentCollisionMapping.Material) : -1;
+            int material = _currentCollisionMapping.Material != null && content?.Level?.Materials != null ? content.Level.Materials.GetWriteIndexOrPending(_currentCollisionMapping.Material) : -1;
             _proxyEditor.DefaultUserData = material >= 0 ? (uint)material : 0u;
             _proxyEditor.DefaultFilterInfo = (_currentCollisionMapping.Flags & CollisionFlags.WORLD) != 0 ? 3u : 9u;
             _proxyEditor.FormClosed += (s, args) => _proxyEditor = null;
@@ -86,10 +91,34 @@ namespace OpenCAGE.Popups.UserControls
             _currentCollisionMapping.CollisionProxy = proxy;
             // Template rows don't own a world-host instance slot — clear any stale binding.
             _currentCollisionMapping.CollisionInstance = null;
+            MakePair("Set collision proxy of ");
             RefreshDisplay();
             NotifyModified();
             BringToFront();
             Focus();
+        }
+
+        /* The row a new Collision Mapping gets asks for WORLD and BALLISTIC storage, which the game cannot use on one row:
+           once it has a proxy it is made as retail makes it - this entity's WORLD row, and a '<name>_Ballistic' sibling with
+           the BALLISTIC row on its own copy of the proxy - and every later change here keeps that sibling in step. */
+        private void MakePair(string label, bool materialChanged = false)
+        {
+            LevelContent content = Singleton.Editor?.CompositeBrowser?.Content;
+            if (content?.Level == null || HostComposite == null || HostEntity == null || !CollisionPairs.IsModelReference(HostEntity))
+                return;
+            if (HostComposite.GetEntityByID(HostEntity.shortGUID) != HostEntity)
+                return;
+            try
+            {
+                //Every entity sharing this row gets its own half; a physics material just set is carried by the proxies of both halves
+                string name = UndoLabels.Entity(HostComposite, HostEntity);
+                using (UndoStack.Current.BeginGroup(label + name))
+                    CollisionPairs.Normalise(content.Level, HostComposite, HostEntity, _currentCollisionMapping, CollisionPairs.Undoable(content.Level, label + name), materialChanged);
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show("The collision was set, but its ballistic half (what bullets, footstep sounds and zones use) could not be made: " + e.Message, "Collision pair", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
         private void btnSetMaterial_Click(object sender, EventArgs e)
@@ -109,6 +138,7 @@ namespace OpenCAGE.Popups.UserControls
             if (_currentCollisionMapping == null)
                 return;
             _currentCollisionMapping.Material = material;
+            MakePair("Set physics material of ", materialChanged: true);
             RefreshDisplay();
             NotifyModified();
             BringToFront();
@@ -137,6 +167,7 @@ namespace OpenCAGE.Popups.UserControls
             if (_currentCollisionMapping == null)
                 return;
             _currentCollisionMapping.MaterialMapping = mapping;
+            MakePair("Set collision material mapping of ");
             RefreshDisplay();
             NotifyModified();
             BringToFront();

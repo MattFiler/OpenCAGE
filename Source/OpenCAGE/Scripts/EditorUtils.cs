@@ -647,6 +647,20 @@ namespace OpenCAGE
         /* Utility: whether this install's game (AI.exe in Singleton.PathToAI) is running */
         public static bool ThisInstallsGameRunning() => GameProcesses(true).Count != 0;
 
+        /* Utility: this install's running AI.exe processes themselves, for a caller that watches them (it disposes them) */
+        public static List<Process> ThisInstallsGameProcesses()
+        {
+            List<Process> found = new List<Process>();
+            foreach (Process process in Process.GetProcessesByName("AI"))
+            {
+                if (IsThisInstall(ProcessImagePath(process)))
+                    found.Add(process);
+                else
+                    process.Dispose();
+            }
+            return found;
+        }
+
         private static bool IsThisInstall(string image)
         {
             if (string.IsNullOrEmpty(image)) return false;
