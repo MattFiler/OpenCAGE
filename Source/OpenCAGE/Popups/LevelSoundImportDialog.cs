@@ -654,6 +654,16 @@ namespace OpenCAGE
                 return;
 
             StopPlaying();
+
+            //One piece of audio several events play changes for all of them: ask before replacing it
+            if (replaceRadio.Checked && Selected() != null)
+            {
+                List<string> sharing = SoundNames.Playing(_library, Selected().SourceId).Select(o => o.Event).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                if (sharing.Count > 1 && MessageBox.Show(this, sharing.Count + " sound events play this same audio:\n\n" + string.Join("\n", sharing.Take(12)) + (sharing.Count > 12 ? "\n... and " + (sharing.Count - 12) + " more" : "")
+                    + "\n\nIt is one piece of audio, so on this level every one of them will play the new sound. Replace it anyway?", Text, MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                    return;
+            }
+
             LevelSoundOverride.Plan written;
             Cursor.Current = Cursors.WaitCursor;
             try

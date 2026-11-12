@@ -71,8 +71,12 @@ namespace OpenCAGE
             //--
 
             string previousName = _composite.name;
-            //Update composite name
-            _composite.name = path.Replace("/", "\\");
+            //Update composite name - as an edit, so a display model renamed to another "DisplayModel:" name also moves to the id the
+            //game finds that name by (Undo\CompositeRenameEdit, Characters\DisplayModelIdentity)
+            string newName = path.Replace("/", "\\");
+            OpenCAGE.Undo.UndoStack.Current.Apply(new OpenCAGE.Undo.CompositeRenameEdit(
+                new List<OpenCAGE.Undo.CompositeRenameEdit.Rename>() { new OpenCAGE.Undo.CompositeRenameEdit.Rename() { Composite = _composite.shortGUID, Before = previousName, After = newName } },
+                "Rename composite " + newName.Substring(newName.LastIndexOf('\\') + 1)));
 
             //Update cached ListViewItems that instance this composite
             Content.Level.Commands.Entries.ForEach(composite =>
@@ -86,9 +90,6 @@ namespace OpenCAGE
             //Fire off an event so any UI that references the name can update
             Singleton.OnCompositeRenamed?.Invoke(_composite, path);
             DirtyTracker.MarkLevelDataModified();
-            OpenCAGE.Undo.UndoStack.Current.Record(new OpenCAGE.Undo.CompositeRenameEdit(
-                new List<OpenCAGE.Undo.CompositeRenameEdit.Rename>() { new OpenCAGE.Undo.CompositeRenameEdit.Rename() { Composite = _composite.shortGUID, Before = previousName, After = _composite.name } },
-                "Rename composite " + EditorUtils.GetCompositeName(_composite)));
 
             this.Close();
         }

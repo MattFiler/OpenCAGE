@@ -447,11 +447,14 @@ namespace OpenCAGE.Undo
         }
 
         private readonly List<Rename> _renames;
+        //A display model is found by the hash of its name: renamed to another "DisplayModel:" name it moves to that id while the
+        //rename is applied, and back for its undo (Characters\DisplayModelIdentity). Rename index -> the id it moved to.
+        private readonly Dictionary<int, ShortGuid> _movedTo = new Dictionary<int, ShortGuid>();
 
         public string Label { get; }
         public ShortGuid CompositeId => ShortGuid.Invalid;
         public ShortGuid EntityId => ShortGuid.Invalid;
-        public IEnumerable<ShortGuid> ChangedComposites => _renames.Select(o => o.Composite);
+        public IEnumerable<ShortGuid> ChangedComposites => _renames.Select((o, i) => _movedTo.TryGetValue(i, out ShortGuid moved) ? moved : o.Composite);
 
         public CompositeRenameEdit(List<Rename> renames, string label)
         {
@@ -465,12 +468,32 @@ namespace OpenCAGE.Undo
         private void Set(UndoContext context, bool forward)
         {
             List<Composite> changed = new List<Composite>();
-            foreach (Rename rename in _renames)
+            for (int i = 0; i < _renames.Count; i++)
             {
-                Composite composite = context.Composite(rename.Composite);
+                Rename rename = _renames[i];
+                bool moved = _movedTo.TryGetValue(i, out ShortGuid movedTo);
+                Composite composite = context.Composite(moved ? movedTo : rename.Composite);
                 if (composite == null)
                     continue;
-                composite.name = forward ? rename.After : rename.Before;
+                if (forward)
+                {
+                    composite.name = rename.After;
+                    ShortGuid? id = moved ? null : OpenCAGE.Characters.DisplayModelIdentity.IdAfterRename(context.Commands, composite, rename.After);
+                    if (id != null)
+                    {
+                        OpenCAGE.Characters.DisplayModelIdentity.MoveId(context.Commands, composite, id.Value);
+                        _movedTo[i] = id.Value;
+                    }
+                }
+                else
+                {
+                    if (moved)
+                    {
+                        OpenCAGE.Characters.DisplayModelIdentity.MoveId(context.Commands, composite, rename.Composite);
+                        _movedTo.Remove(i);
+                    }
+                    composite.name = rename.Before;
+                }
                 changed.Add(composite);
             }
             context.Ui?.CompositesRenamed(changed);

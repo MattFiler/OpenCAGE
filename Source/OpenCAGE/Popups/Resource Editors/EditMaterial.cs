@@ -984,56 +984,92 @@ namespace OpenCAGE
         }
 
         /// <summary>
-        /// Render priority, which had no control at all before. It decides which pass a material draws
-        /// in, separately from any feature: measured over six pristine levels, first-person materials
-        /// sit at 31 (2,020 of 2,680, none above 52) and world geometry at 70 (15,003). A first-person
-        /// model left at a world priority draws behind the player's hands, and nothing in the feature
-        /// list explains why - so it belongs on screen next to them.
+        /// The draw pass row (the material's render priority): picked by name (MaterialConsistency.DrawPasses), the raw number
+        /// beside it for any other priority, with a warning when the pass is wrong for the material's features - a see-through
+        /// material in the lit opaque pass draws nothing, and a first-person one there draws behind the arms.
         /// </summary>
         private WpfStackPanel BuildPriorityRow(Materials.Material material)
         {
-            var row = new WpfStackPanel { Orientation = WpfOrientation.Horizontal, Margin = new System.Windows.Thickness(0, 4, 0, 0) };
+            var panel = new WpfStackPanel { Margin = new System.Windows.Thickness(0, 4, 0, 0) };
+            var row = new WpfStackPanel { Orientation = WpfOrientation.Horizontal };
+            panel.Children.Add(row);
             row.Children.Add(new WpfTextBlock
             {
-                Text = "Render priority:",
+                Text = "Draw pass:",
                 VerticalAlignment = System.Windows.VerticalAlignment.Center,
                 Margin = new System.Windows.Thickness(0, 0, 6, 0)
             });
 
+            void SetPriority(int value)
+            {
+                if (value == material.Priority) return;
+                material.Priority = value;
+                EditHistory.AssetChanged(Content?.Level, AssetKind.MATERIAL, material.Name);
+                Singleton.OnResourceModified?.Invoke();
+                materialList_SelectedIndexChanged(null, EventArgs.Empty);
+            }
+
+            string passHelp = string.Join("\n", MaterialConsistency.DrawPasses.Select(o => o + ": " + o.Description));
+            var picker = new System.Windows.Controls.ComboBox
+            {
+                Width = 170,
+                ToolTip = "Which pass this material draws in (its render priority).\n\n" + passHelp
+            };
+            foreach (MaterialConsistency.DrawPass pass in MaterialConsistency.DrawPasses)
+                picker.Items.Add(new System.Windows.Controls.ComboBoxItem { Content = pass.ToString(), Tag = pass, ToolTip = pass.Description });
+            MaterialConsistency.DrawPass current = MaterialConsistency.FindDrawPass(material.Priority);
+            if (current == null)
+                picker.Items.Add(new System.Windows.Controls.ComboBoxItem { Content = material.Priority + " - other", Tag = null, ToolTip = "No named pass: retail uses " + material.Priority + " rarely, if at all. Type a number in the box beside it to change it." });
+            picker.SelectedIndex = current == null ? picker.Items.Count - 1 : Array.IndexOf(MaterialConsistency.DrawPasses, current);
+            picker.SelectionChanged += (s, e) =>
+            {
+                if ((picker.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Tag is MaterialConsistency.DrawPass pass)
+                    SetPriority(pass.Priority);
+            };
+            row.Children.Add(picker);
+
             var box = new WpfTextBox
             {
                 Text = material.Priority.ToString(CultureInfo.InvariantCulture),
-                Width = 50,
-                ToolTip = "Which pass this material draws in. " + MaterialConsistency.WorldPriority
-                        + " is the world pass, and the one that draws a model lit, opaque and textured - "
-                        + "retail's hand-held weapons use it too. Lower priorities are special passes: "
-                        + "52 draws translucent, 39 draws unlit, 31 draws untextured over everything."
+                Width = 40,
+                Margin = new System.Windows.Thickness(6, 0, 0, 0),
+                VerticalContentAlignment = System.Windows.VerticalAlignment.Center,
+                ToolTip = "The render priority as a number (0-255), for a pass the list doesn't name."
             };
             box.LostKeyboardFocus += (s, e) =>
             {
                 int value;
                 if (int.TryParse(box.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out value) && value >= 0 && value <= 255)
-                {
-                    if (value == material.Priority) return;
-                    material.Priority = value;
-                    EditHistory.AssetChanged(Content?.Level, AssetKind.MATERIAL, material.Name);
-                    Singleton.OnResourceModified?.Invoke();
-                    materialList_SelectedIndexChanged(null, EventArgs.Empty);
-                }
+                    SetPriority(value);
                 else
-                {
                     box.Text = material.Priority.ToString(CultureInfo.InvariantCulture);
-                }
             };
             row.Children.Add(box);
 
-            row.Children.Add(new WpfTextBlock
+            /* A see-through material in the lit opaque pass, or a first-person one behind the arms: retail ships neither, and in
+             * game the first is invisible. Says so, with the pass retail uses one click away. */
+            string problem = MaterialConsistency.DrawPassProblem(material);
+            if (problem != null)
             {
-                Text = "   (world " + MaterialConsistency.WorldPriority + ")",
-                VerticalAlignment = System.Windows.VerticalAlignment.Center,
-                Foreground = System.Windows.Media.Brushes.Gray
-            });
-            return row;
+                var warning = new WpfStackPanel { Orientation = WpfOrientation.Horizontal, Margin = new System.Windows.Thickness(0, 4, 0, 0) };
+                warning.Children.Add(new WpfTextBlock
+                {
+                    Text = problem,
+                    TextWrapping = TextWrapping.Wrap,
+                    MaxWidth = 520,
+                    Foreground = System.Windows.Media.Brushes.Firebrick,
+                    VerticalAlignment = System.Windows.VerticalAlignment.Center
+                });
+                int? suggested = MaterialConsistency.DrawPassForFeatures(material.Shader.Ubershader, material.Shader.UbershaderFeatureFlags);
+                if (suggested != null)
+                {
+                    var use = new WpfButton { Content = "Use " + suggested.Value, Margin = new System.Windows.Thickness(6, 0, 0, 0), Padding = new System.Windows.Thickness(6, 0, 6, 0), VerticalAlignment = System.Windows.VerticalAlignment.Center };
+                    use.Click += (s, e) => SetPriority(suggested.Value);
+                    warning.Children.Add(use);
+                }
+                panel.Children.Add(warning);
+            }
+            return panel;
         }
 
         /// <summary>

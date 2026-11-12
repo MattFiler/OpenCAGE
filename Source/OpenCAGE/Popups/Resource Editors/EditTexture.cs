@@ -38,6 +38,7 @@ namespace OpenCAGE
             OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/texture-editor/");
             PopulateTextureFlagCheckboxes();
             BuildMipBars();
+            BuildStreamingControls();
 
             _environmentMapsOnly = environmentMapsOnly;
             _cubemapViewer = new GUI_CubemapViewer();
@@ -135,6 +136,7 @@ namespace OpenCAGE
             _selectedTexture = null;
             ResetFlagCheckboxes();
             UpdateMipBars(null);
+            UpdateStreamingControls(null);
             UpdateCubemapPreviewModeUi(false);
         }
 
@@ -223,6 +225,7 @@ namespace OpenCAGE
                     selectTextureBtn.Enabled = true;
                     _selectedTexture = texture;
                     ApplyFlagsUiFromTexture(texture);
+                    UpdateStreamingControls(texture);
                     RefreshTexturePreviewsForSelected();
                     break;
             }
@@ -579,7 +582,8 @@ namespace OpenCAGE
                     chosen = options.Format;
                     mipLevels = options.MipLevels;
                     persistentDrop = options.PersistentDrop;
-                    persistentOnly = options.PersistentOnly || !HasContent(texture.TextureStreamed);
+                    //The dialog's Keep loaded box starts ticked for a slot with no streamed part, so unticking it streams the new image
+                    persistentOnly = options.PersistentOnly;
                 }
 
                 Cursor = Cursors.WaitCursor;

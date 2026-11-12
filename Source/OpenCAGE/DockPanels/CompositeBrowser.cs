@@ -1664,6 +1664,9 @@ namespace OpenCAGE.DockPanels
                 findReferencesToolStripMenuItem.Enabled = comp != null;
                 duplicateToolStripMenuItem.Enabled = comp != null;
                 ApplyFindReferencesIcon(findReferencesToolStripMenuItem);
+                //"Replace Weapon Model..." on a weapon's composite (Popups\ReplaceWeaponModel.cs)
+                OpenCAGE.Popups.ReplaceWeaponModel.PrepareMenu(FileBrowserContextMenu, comp);
+                OpenCAGE.Popups.Characters.DisplayModelMenu.PrepareMenu(FileBrowserContextMenu, comp);
 
                 if (item != null)
                     lv.FocusedItem = item;
@@ -1701,6 +1704,8 @@ namespace OpenCAGE.DockPanels
                 findReferencesViaTreeView.Enabled = comp != null;
                 duplicateViaTreeView.Enabled = comp != null;
                 ApplyFindReferencesIcon(findReferencesViaTreeView);
+                OpenCAGE.Popups.ReplaceWeaponModel.PrepareMenu(FileTreeContextMenuNew, comp);
+                OpenCAGE.Popups.Characters.DisplayModelMenu.PrepareMenu(FileTreeContextMenuNew, comp);
 
                 if (_rightClickedNode == null)
                 {

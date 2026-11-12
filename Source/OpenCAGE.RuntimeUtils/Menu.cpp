@@ -18,6 +18,7 @@
 // Engine-specific code classes.
 
 #include <detours.h>
+#include <imgui_internal.h>
 #include <algorithm>
 #include <map>
 #include <mutex>
@@ -68,6 +69,74 @@ namespace
         }
         for (const ImGuiMessage& queued : messages)
             ImGui_ImplWin32_WndProcHandler(queued.window, queued.message, queued.wParam, queued.lParam);
+    }
+
+    // The overlay is laid out in the pixels of the picture it is drawn into (the swap chain's back buffers), not the window's.
+    // They differ in borderless: the window covers the monitor, while the picture is the game's chosen resolution, stretched.
+    ImVec2 g_picture(0.0f, 0.0f);       // this frame's picture size (0 x 0: the swap chain couldn't say)
+    ImVec2 g_lastPicture(0.0f, 0.0f);   // last frame's, to see it change
+    ImVec2 g_window(0.0f, 0.0f);        // the window's inside (its client area) this frame
+    ImVec2 g_windowToPicture(1.0f, 1.0f); // a window pixel in picture pixels, across and down
+    ImU32 g_mousePositionsFitted = 0;   // ImGui's input events before this one are in picture pixels already
+
+    // The sizes, at the start of each frame (render thread): the picture from the swap chain, the window from Windows
+    void MeasurePicture()
+    {
+        DXGI_SWAP_CHAIN_DESC desc;
+        g_picture = g_swapChain && SUCCEEDED(g_swapChain->GetDesc(&desc)) && desc.BufferDesc.Width > 0 && desc.BufferDesc.Height > 0
+            ? ImVec2(static_cast<float>(desc.BufferDesc.Width), static_cast<float>(desc.BufferDesc.Height)) : ImVec2(0.0f, 0.0f);
+        RECT client = {};
+        g_window = g_hWindow && GetClientRect(g_hWindow, &client) ? ImVec2(static_cast<float>(client.right - client.left), static_cast<float>(client.bottom - client.top)) : ImVec2(0.0f, 0.0f);
+        // Minimised (an empty window) or no picture: positions are left as they are
+        g_windowToPicture = g_picture.x > 0.0f && g_window.x > 0.0f && g_window.y > 0.0f
+            ? ImVec2(g_picture.x / g_window.x, g_picture.y / g_window.y) : ImVec2(1.0f, 1.0f);
+    }
+
+    // The mouse positions queued for ImGui this frame are in window pixels: scale each into picture pixels. A position ImGui
+    // carries to its next frame (a press and its release are a frame apart) is scaled only once.
+    void FitMousePositionsToPicture()
+    {
+        ImGuiContext& context = *ImGui::GetCurrentContext();
+        for (ImGuiInputEvent& event : context.InputEventsQueue)
+        {
+            if (event.Type != ImGuiInputEventType_MousePos || event.EventId < g_mousePositionsFitted)
+                continue;
+            // -FLT_MAX is "the mouse has left the window"
+            if (event.MousePos.PosX > -FLT_MAX && event.MousePos.PosY > -FLT_MAX)
+            {
+                event.MousePos.PosX *= g_windowToPicture.x;
+                event.MousePos.PosY *= g_windowToPicture.y;
+            }
+        }
+        g_mousePositionsFitted = context.InputEventsNextEventId;
+    }
+
+    // When the picture changes size (resolution or window mode), the overlay's windows keep their place and size as a share
+    // of the screen
+    void FitWindowsToPicture()
+    {
+        // Logged at start, and whenever the picture or the window changes size
+        static ImVec2 loggedWindow(0.0f, 0.0f);
+        if (g_picture.x > 0.0f && (g_picture.x != g_lastPicture.x || g_picture.y != g_lastPicture.y || g_window.x != loggedWindow.x || g_window.y != loggedWindow.y))
+        {
+            DevTools::Log("Overlay: the game's picture is %.0f x %.0f, in a window %.0f x %.0f inside", g_picture.x, g_picture.y, g_window.x, g_window.y);
+            loggedWindow = g_window;
+        }
+        if (g_lastPicture.x > 0.0f && g_lastPicture.y > 0.0f && g_picture.x > 0.0f && (g_picture.x != g_lastPicture.x || g_picture.y != g_lastPicture.y))
+        {
+            const ImVec2 scale(g_picture.x / g_lastPicture.x, g_picture.y / g_lastPicture.y);
+            for (ImGuiWindow* window : ImGui::GetCurrentContext()->Windows)
+            {
+                // Only the windows themselves: what is inside one, its tooltips and its pop-ups follow it
+                if (window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup))
+                    continue;
+                ImGui::SetWindowPos(window, ImVec2(window->Pos.x * scale.x, window->Pos.y * scale.y), ImGuiCond_Always);
+                if (!(window->Flags & ImGuiWindowFlags_AlwaysAutoResize))
+                    ImGui::SetWindowSize(window, ImVec2(window->SizeFull.x * scale.x, window->SizeFull.y * scale.y), ImGuiCond_Always);
+            }
+        }
+        if (g_picture.x > 0.0f)
+            g_lastPicture = g_picture;
     }
 }
 
@@ -170,6 +239,12 @@ IDXGISwapChain* Menu::GetSwapChain()
     return g_swapChain;
 }
 
+void Menu::PictureAndWindowSize(ImVec2& picture, ImVec2& window)
+{
+    picture = g_picture;
+    window = g_window;
+}
+
 bool Menu::IsInitialised()
 {
     return g_swapChain != nullptr;
@@ -264,19 +339,26 @@ void Menu::DrawMenu() {
     }
 
     ImGui_ImplDX11_NewFrame();
+    MeasurePicture();
     // ImGui's input, given to it here on the thread that presents: the window messages queued since the last frame, and
-    // where the cursor is now (needed with no window of ours open too, when no mouse move is sent to it)
+    // where the cursor is now (needed with no window of ours open too, when no mouse move is sent to it), in the picture's
+    // pixels
     FeedQueuedImGuiInput();
     {
         ImGuiIO& io = ImGui::GetIO();
         POINT cursorPos;
         if (GetCursorPos(&cursorPos) && ScreenToClient(g_hWindow, &cursorPos))
         {
-            io.MousePos.x = static_cast<float>(cursorPos.x);
-            io.MousePos.y = static_cast<float>(cursorPos.y);
+            io.MousePos.x = static_cast<float>(cursorPos.x) * g_windowToPicture.x;
+            io.MousePos.y = static_cast<float>(cursorPos.y) * g_windowToPicture.y;
         }
     }
     ImGui_ImplWin32_NewFrame();
+    // The overlay's screen is the picture (ImGui's window size is kept only when the swap chain can't say)
+    if (g_picture.x > 0.0f)
+        ImGui::GetIO().DisplaySize = g_picture;
+    FitMousePositionsToPicture();
+    FitWindowsToPicture();
     ImGui::NewFrame();
 
     // On-screen text from DebugText script entities.

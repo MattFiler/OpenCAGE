@@ -52,6 +52,8 @@ namespace OpenCAGE.ConfigEditors
 
             this.FormClosing += AmmoEditor_FormClosing;
             CloseOnConfigReset();
+            //Global: says so, and shows who uses each ammo type and which are spare
+            ConfigRecordsBanner.Attach(this, ConfigRecords.Kind.Ammo, () => classSelection.Text);
         }
 
         private void AmmoEditor_Load(object sender, EventArgs e)

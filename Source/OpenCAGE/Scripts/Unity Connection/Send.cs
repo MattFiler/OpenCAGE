@@ -57,6 +57,7 @@ namespace OpenCAGE.UnityConnection
             ViewerResourceSync.Initialise();
             ViewerZoneSync.Initialise();
             ViewerScriptResync.Initialise();
+            Brushwork.BrushHandleSync.Initialise();
         }
 
         public static bool Start()
@@ -198,6 +199,26 @@ namespace OpenCAGE.UnityConnection
                         rotation = new float[] { point.rotation.X, point.rotation.Y, point.rotation.Z },
                     });
                 }
+            }
+            SendData(packet);
+        }
+
+        /* The selected brush's face handles (BRUSH_EDIT): its bounds in its own space and its kind, or off */
+        internal static void SendBrushEdit(bool active, ShortGuid entity, System.Numerics.Vector3 min, System.Numerics.Vector3 max, int kind, float[] vertices = null, int[] edges = null)
+        {
+            if (!Connected)
+                return;
+
+            Packet packet = GeneratePacket(PacketEvent.BRUSH_EDIT);
+            packet.brush_edit_active = active;
+            packet.brush_edit_entity = active ? entity.AsUInt32 : 0;
+            packet.brush_edit_kind = kind;
+            if (active)
+            {
+                packet.brush_edit_min = new float[] { min.X, min.Y, min.Z };
+                packet.brush_edit_max = new float[] { max.X, max.Y, max.Z };
+                packet.brush_edit_vertices = vertices;
+                packet.brush_edit_edges = edges;
             }
             SendData(packet);
         }

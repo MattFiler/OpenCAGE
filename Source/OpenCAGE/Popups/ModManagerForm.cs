@@ -17,7 +17,7 @@ namespace OpenCAGE.Popups
      * game files and the ticked mods, in list order: mods changing the same file are combined, and where two
      * change the very same thing the one lower in the list wins. So turning a mod off, reordering, and removing
      * one are all the same safe operation, and turning everything off gives back the original game. */
-    public class ModManagerForm : Form
+    public partial class ModManagerForm : Form
     {
         private Panel _header;
         private Label _headline;
@@ -182,6 +182,8 @@ namespace OpenCAGE.Popups
             _applyButton = MakeButton(right, "Apply", (s, e) => ApplyChanges());
             _applyButton.Font = new Font(Font, FontStyle.Bold);
             _applyButton.MinimumSize = new Size(110, 30);
+            //Launch Mod, beside Apply (ModManagerForm.LaunchMod.cs)
+            AddLaunchButton(right);
             _repairButton = MakeButton(right, "Repair", (s, e) => Repair());
             _createButton = MakeButton(right, "Create a Mod...", (s, e) => OpenExporter());
             Panel buttons = new Panel() { Dock = DockStyle.Bottom, Height = 46 };
@@ -553,6 +555,7 @@ namespace OpenCAGE.Popups
             _statusLabel.Text = reorderOnly ? "Your mods' new order isn't applied yet - click Apply to use it."
                 : _pending ? "You have changes that aren't applied yet - click Apply."
                 : (_stale.Count != 0 ? "Some mod files need repairing - click Repair." : "");
+            UpdateLaunchButton();
         }
 
         /* A tick or a selection: shown once the list's events for it are through (posted, so a run of them is shown once) */

@@ -269,6 +269,10 @@ namespace OpenCAGE.MCP
                     };
                 },
             };
+
+            //The Level Check: check_level, fix_level_check, set_texture_heap (McpLevelCheckTools.cs)
+            foreach (McpTool tool in McpLevelCheckTools.Tools())
+                yield return tool;
         }
 
         #region Composites

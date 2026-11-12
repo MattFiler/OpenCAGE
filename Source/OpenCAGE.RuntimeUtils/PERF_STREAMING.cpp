@@ -50,6 +50,13 @@ namespace
 	constexpr uint32_t kHeapName = 0x1D;
 	constexpr uint32_t kHeapAllocated = 0x74;
 	constexpr uint32_t kHeapHighest = 0x78;
+	// The streaming heaps track their blocks in a fixed number of block handles (1024 for textures, 4096 for models): each block
+	// streamed in holds one, and so does each free gap. With none left nothing more streams in, however much of the heap is free
+	// (about 1,020 textures). Allocation and free counts (their difference: blocks in use), handles made, free gaps
+	constexpr uint32_t kHeapAllocs = 0x0C;
+	constexpr uint32_t kHeapFrees = 0x10;
+	constexpr uint32_t kHeapBlockHandles = 0xB8;
+	constexpr uint32_t kHeapFreeGaps = 0xBC;
 
 	// The level's textures (in the engine's material database): an array of them and how many
 	constexpr uint32_t kEngineTextures = 0x1804 + 0x08;
@@ -86,6 +93,7 @@ namespace
 		bool haveHeap = false;
 		char heapName[65] = {};
 		uint32_t heapSize = 0, heapUsed = 0, heapHighest = 0;
+		uint32_t handles = 0, blocksUsed = 0, freeGaps = 0;
 		uint64_t timeUs = 0;
 		uint32_t budget = 0;
 	};
@@ -142,6 +150,11 @@ namespace
 				out.heapSize = *reinterpret_cast<const uint32_t*>(heap + kHeapSize);
 				out.heapUsed = *reinterpret_cast<const uint32_t*>(heap + kHeapAllocated);
 				out.heapHighest = *reinterpret_cast<const uint32_t*>(heap + kHeapHighest);
+				out.handles = *reinterpret_cast<const uint32_t*>(heap + kHeapBlockHandles);
+				out.freeGaps = *reinterpret_cast<const uint32_t*>(heap + kHeapFreeGaps);
+				out.blocksUsed = *reinterpret_cast<const uint32_t*>(heap + kHeapAllocs) - *reinterpret_cast<const uint32_t*>(heap + kHeapFrees);
+				if (out.handles > 65536 || out.freeGaps > out.handles || out.blocksUsed > out.handles)
+					out.handles = out.freeGaps = out.blocksUsed = 0;
 				out.haveHeap = true;
 			}
 			out.have = true;
@@ -354,6 +367,9 @@ namespace
 			prefix, provider.busy ? 1 : 0, prefix, provider.requests, prefix, provider.releases, prefix, provider.timeUs / 1000);
 		if (provider.haveHeap)
 			text += Format("%s.heap=%s\n%s.heap_used=%u\n%s.heap_size=%u\n%s.heap_peak=%u\n", prefix, provider.heapName, prefix, provider.heapUsed, prefix, provider.heapSize, prefix, provider.heapHighest);
+		if (provider.handles)
+			text += Format("%s.block_handles=%u\n%s.blocks_in=%u\n%s.free_gaps=%u\n%s.handles_left=%u\n", prefix, provider.handles, prefix, provider.blocksUsed, prefix, provider.freeGaps, prefix,
+				provider.handles - (std::min)(provider.handles, provider.blocksUsed + provider.freeGaps));
 		if (provider.budget)
 			text += Format("%s.budget=%u\n", prefix, provider.budget);
 		return text;
@@ -418,6 +434,14 @@ namespace
 				PERF_STATS::Bytes(provider.heapHighest).c_str());
 			Tooltip("The fixed budget streamed data goes into. When it is full, more can't stream in until something is let go.");
 			Bar(Percent(provider.heapUsed, provider.heapSize));
+		}
+		if (provider.handles)
+		{
+			const uint32_t taken = (std::min)(provider.handles, provider.blocksUsed + provider.freeGaps);
+			ImGui::TextWrapped("Block handles: %u in, %u free gaps, of %u", provider.blocksUsed, provider.freeGaps, provider.handles);
+			Tooltip("The heap has a fixed number of block handles: each item streamed in takes one, and so does each free gap between them. "
+				"When none are left nothing more streams in, however much of the heap is free (textures: about 1,020 at once).");
+			Bar(Percent(taken, provider.handles));
 		}
 		if (provider.budget)
 			ImGui::TextWrapped("Budget set in place of the heap's size: %s", PERF_STATS::Bytes(provider.budget).c_str());
@@ -496,7 +520,7 @@ namespace
 
 	bool Register()
 	{
-		DEBUG_MENU::AddCommand("perf.streaming", "texture and model streaming (heap used/size/peak, waiting requests and releases, busy, time), the level's textures in at full resolution, and the main view's, key=value",
+		DEBUG_MENU::AddCommand("perf.streaming", "texture and model streaming (heap used/size/peak, block handles in use / free gaps / left - textures stop streaming in when none are left, waiting requests and releases, busy, time), the level's textures in at full resolution, and the main view's, key=value",
 			[](const std::string&) { return OnRender([]() { return StreamingText(); }); });
 		DEBUG_MENU::AddCommand("perf.list_textures_waiting", "the textures the main view draws that are not in at full resolution yet, largest first: NAME full=WxH now=WxH bytes=",
 			[](const std::string&) { return OnRender([]() { return WaitingText(); }); });

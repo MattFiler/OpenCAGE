@@ -35,6 +35,11 @@ public:
 	static void ReleaseRenderTarget(IDXGISwapChain* pSwapChain);
 
 	static IDXGISwapChain* GetSwapChain();
+
+	// This frame's sizes (render thread): the back buffers the overlay is laid out in (0 x 0 when the swap chain can't say)
+	// and the window's client area. They differ in borderless, where the picture is stretched to the monitor.
+	static void PictureAndWindowSize(ImVec2& picture, ImVec2& window);
+
 	static void DrawMenu();
 	static void ShutdownMenu();
 	static bool CreateRenderTarget();

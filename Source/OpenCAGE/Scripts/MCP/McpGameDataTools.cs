@@ -182,6 +182,10 @@ namespace OpenCAGE.MCP
                 Idempotent = true,
                 Run = call => McpEditor.UI(() => ResetConfigsTool(call)),
             };
+
+            //Texture streaming by count (their own toolset, 'assets')
+            foreach (McpTool tool in McpTextureStreamingTools.Tools())
+                yield return tool;
         }
 
         #region Shared

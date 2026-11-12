@@ -37,6 +37,12 @@ namespace AlienPAK
             Icon = SharedFormIcon.Icon;
 
             _treeHelper = new TreeUtility(FileTree, TreeType.MODELS);
+            //Right-click > Fracture into Debris... (the model cut into spawnable physics pieces)
+            OpenCAGE.Breakables.FractureWindow.AttachToModelEditor(FileTree, () => _model);
+            //Right-click > Find Z-Fighting... (this model's meshes lying over each other; the fix moves vertices)
+            OpenCAGE.Popups.ZFightWindow.AttachToModelEditor(FileTree, () => _model, () => { if (IsDisposed) return; RefreshTree(); RefreshSelectedModelPreview(false); });
+            //Right-click > Make First-Person Body... (a copy of this body cut for the player's view)
+            OpenCAGE.Popups.Characters.FirstPersonBodyDialog.AttachToModelEditor(FileTree, () => _model);
             if (_model == null) return;
             this.Text = _model.Name;
 

@@ -37,6 +37,13 @@ namespace OpenCAGE.Undo
             public int Index;
             public CAGEAnimation.Connection Connection;
         }
+        /// <summary>Float tracks of a CAGEAnimation that only the bindings going with the entity played.</summary>
+        private sealed class TrackRecord
+        {
+            public ShortGuid Composite;
+            public ShortGuid Owner;
+            public List<CageAnimationTrackCascade.Removed> Tracks;
+        }
         /// <summary>An alias elsewhere whose path passed through the entity: it goes with it, with the links into it in its composite.</summary>
         private sealed class AliasRecord
         {
@@ -51,6 +58,7 @@ namespace OpenCAGE.Undo
         private List<LinkRecord> _incomingLinks;
         private List<TriggerRecord> _triggerEntries;
         private List<AnimationRecord> _animationConnections;
+        private List<TrackRecord> _animationTracks;
         private List<AliasRecord> _aliases;
         private FlowgraphLayoutManager.LayoutTrim _layoutTrim;
         private List<NodeSnapshot> _nodes;
@@ -163,6 +171,7 @@ namespace OpenCAGE.Undo
             _incomingLinks = new List<LinkRecord>();
             _triggerEntries = new List<TriggerRecord>();
             _animationConnections = new List<AnimationRecord>();
+            _animationTracks = null;
             foreach (Entity other in composite.GetEntities())
             {
                 List<EntityConnector> keptLinks = new List<EntityConnector>(other.childLinks.Count);
@@ -266,7 +275,14 @@ namespace OpenCAGE.Undo
                         kept.Add(animation.connections[i]);
                 }
                 if (kept.Count != animation.connections.Count)
+                {
                     animation.connections = kept;
+                    //The float tracks only those bindings played go too: left, they are keys nothing plays
+                    List<CAGEAnimation.Connection> gone = _animationConnections.Where(o => o.Owner == owner.shortGUID && o.Composite == holder.shortGUID).Select(o => o.Connection).ToList();
+                    List<CageAnimationTrackCascade.Removed> tracks = CageAnimationTrackCascade.RemoveUnplayed(animation, gone);
+                    if (tracks.Count != 0)
+                        (_animationTracks ?? (_animationTracks = new List<TrackRecord>())).Add(new TrackRecord() { Composite = holder.shortGUID, Owner = owner.shortGUID, Tracks = tracks });
+                }
             }
         }
 
@@ -391,6 +407,11 @@ namespace OpenCAGE.Undo
                     owner.connections = connections;
                 }
             }
+            //The tracks those bindings played, the last animation's first
+            if (_animationTracks != null)
+                for (int t = _animationTracks.Count - 1; t >= 0; t--)
+                    if (context.Entity(_animationTracks[t].Composite, _animationTracks[t].Owner) is CAGEAnimation owner)
+                        CageAnimationTrackCascade.Restore(owner, _animationTracks[t].Tracks);
 
             /* Deleted while its composite was off screen there were no live nodes to take, and its
                pages may have been saved again since (the composite opened and left, the level saved),

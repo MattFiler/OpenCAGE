@@ -23,6 +23,9 @@ namespace OpenCAGE
             if (entity == null || commands?.Utils == null)
                 return 0;
 
+            //Parameters OpenCAGE's build honours that the type doesn't declare (SimpleWater's disable_size_culling): shown as rows of their own
+            BuildParameters.Ensure(entity);
+
             FunctionEntity instance = entity as FunctionEntity;
             if (instance == null && entity.variant == EntityVariant.PROXY)
                 instance = commands.Utils.GetResolvedTarget(commands.Utils.ResolveProxy((ProxyEntity)entity)).Item2 as FunctionEntity;

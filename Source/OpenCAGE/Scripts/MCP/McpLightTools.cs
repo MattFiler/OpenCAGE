@@ -108,6 +108,10 @@ namespace OpenCAGE.MCP
                     McpSchema.String("name", "The new entity's name.")),
                 Run = AddLight,
             };
+
+            //Utilities (add_rotation, key_physics_bodies, find_spare_config_records): each names its own toolset
+            foreach (McpTool tool in McpUtilityTools.Tools())
+                yield return tool;
         }
 
         #region Finding lights

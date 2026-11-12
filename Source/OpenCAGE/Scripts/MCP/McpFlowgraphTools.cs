@@ -47,6 +47,10 @@ namespace OpenCAGE.MCP
                 Idempotent = true,
                 Run = call => McpEditor.UI(() => Layout(call)),
             };
+
+            //The order a pin holds its links in (McpLinkOrderTools.cs)
+            foreach (McpTool tool in McpLinkOrderTools.Tools())
+                yield return tool;
         }
 
         /// <summary>

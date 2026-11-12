@@ -70,6 +70,9 @@ namespace OpenCAGE.Modding
         // those exact hashes. Serialized by name so the JSON does not depend on the enum's order.
         [JsonProperty("hashSet")] [JsonConverter(typeof(StringEnumConverter))] public PatchManager.Platform HashSet = PatchManager.Platform.STEAM;
         [JsonProperty("entries")] public List<ModPackageEntry> Entries = new List<ModPackageEntry>();
+        /* How Launch Mod starts the game for it (ModLaunch.cs): the level it starts in, and launch options for that launch. Null
+           (packages from before it, or the author left it): its only level, or the player picks */
+        [JsonProperty("launch", NullValueHandling = NullValueHandling.Ignore)] public ModLaunchInfo Launch;
 
         [JsonIgnore]
         public List<string> Levels

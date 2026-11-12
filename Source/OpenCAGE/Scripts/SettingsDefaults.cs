@@ -63,6 +63,7 @@ namespace OpenCAGE
             EnsureBool(Settings.ResetRenderFilters, false);
             EnsureBool(Settings.AlwaysFullyRebuildRadiosity, false);
             EnsureBool(Settings.SkipRadiosityRebuild, false);
+            EnsureBool(Settings.CompactCollisionOnBuild, false);
             EnsureInteger(Settings.CubemapCaptureSize, 0); // the size of the cubemap each capture replaces
             EnsureBool(Settings.ShowZones, false);
             EnsureBool(Settings.TransformVertexSnap, false);

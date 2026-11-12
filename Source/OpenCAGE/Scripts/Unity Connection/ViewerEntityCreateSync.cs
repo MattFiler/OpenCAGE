@@ -66,6 +66,11 @@ namespace OpenCAGE.UnityConnection
                 return Create(display, () => display.CreateCompositeInstanceEntity(instanceComposite, null, position));
             }
 
+            //A brush asked for in the viewport (Create > Brush, or the right-click Create Brush): made where it landed
+            Brushwork.BrushKind? brush = Brushwork.BrushPlacement.Claim(packet);
+            if (brush.HasValue)
+                return Create(display, () => Brushwork.BrushPlacement.CreateAt(display, brush.Value, position));
+
             FunctionType functionType = (FunctionType)packet.entity_function;
             if (packet.drop_function_type != 0)
             {

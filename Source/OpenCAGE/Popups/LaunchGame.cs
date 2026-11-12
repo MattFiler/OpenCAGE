@@ -213,6 +213,12 @@ namespace OpenCAGE
             _applyingExternalSettings = false;
             levelList.Enabled = loadToLevel.Checked;
             EditorUtils.PopulateLevelDropdown(levelList);
+            //The launched level's own UI movies, under the UI tweaks (LaunchGame.LevelUi.cs)
+            AddLevelUiLine();
+            //Why the last launch crashed, and whether Windows writes crash dumps (LaunchGame.CrashTriage.cs)
+            AddCrashTriageBox();
+            //Record game audio, and the recordings (LaunchGame.GameAudio.cs)
+            AddGameAudioBox();
 
             SettingsManager.SettingsChanged += OnSettingsChanged;
             FormClosed += LaunchGame_FormClosed;
@@ -357,8 +363,11 @@ namespace OpenCAGE
                 MessageBox.Show("Failed to set level loading values in AI.exe!\nIs the game already open?", "Failed to patch binary.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
             PatchManager.UpdateLevelListInPackages(Singleton.Platform, Singleton.PathToAI);
-            //The UI options as their settings say: checking the game's files puts the binary and UI.PAK back as shipped
-            UiMovieOverrides.Sync(Singleton.PathToAI);
+            //The level's own UI movies in (an earlier launch's out), then the UI options as their settings say: checking the
+            //game's files puts the binary and UI.PAK back as shipped
+            string levelUiProblem = LevelUiOverrides.ApplyForLaunch(Singleton.PathToAI, MapName, out _);
+            if (levelUiProblem != null)
+                MessageBox.Show("The game's UI could not be set up as this level asks: " + levelUiProblem + ".", "Level UI", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
             //Start game process
             if (Singleton.Platform == PatchManager.Platform.STEAM)
@@ -372,6 +381,10 @@ namespace OpenCAGE
                 alienProcess.FileName = Singleton.PathToAI + "/AI.exe";
                 Process.Start(alienProcess);
             }
+            //The level's own UI movies come out again once this game has closed
+            LevelUiOverrides.PutBackWhenGameCloses(Singleton.PathToAI);
+            //Crash triage watches the game until it closes, and names the cause should it crash (Scripts\CrashTriage)
+            CrashTriage.CrashWatch.Launched(Singleton.PathToAI, MapName);
             Steam.UnlockAchievement(Steam.Achievements.LAUNCHED_GAME);
             return true;
         }

@@ -112,7 +112,7 @@ namespace OpenCAGE.MCP
         private static readonly HashSet<string> NotLevelChanges = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "undo", "redo", "undo_group", "open_composite", "select_entities", "set_viewport_view", "set_viewport_camera", "viewport_action",
-            "launch_game", "close_game", "launch_options", "editor_options", "game_directories", "release_level_cache", "retry_shader_harvest",
+            "launch_game", "launch_mod", "close_game", "launch_options", "editor_options", "game_directories", "release_level_cache", "retry_shader_harvest",
             "load_level", "save_level", "create_backup", "delete_backups", "delete_level", "export_model", "export_textures", "export_sound", "export_animations",
             "export_collision_mesh", "export_composite_package", "export_region_collision", "runtime_utils", "preview_cage_animation",
             "open_anim_tree",

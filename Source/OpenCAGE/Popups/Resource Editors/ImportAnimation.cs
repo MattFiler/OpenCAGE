@@ -73,6 +73,9 @@ namespace OpenCAGE
             rootBox.Items.Add("Automatic - carry the character only if the file moves the root");
             rootBox.Items.Add("Leave the root to the game, whatever the file does");
             rootBox.Items.Add("Keep as authored, root motion and all");
+            //The travel put where the game wants it, so the capsule rides along under the body (AnimationImport.RootHandling.AtMarker)
+            rootBox.Items.Add("Travels at a marker (cinematic) - the capsule follows the body, starting on the marker");
+            rootBox.Items.Add("Travels at a marker - the file's own origin is the marker (clips made together in one scene)");
             rootBox.SelectedIndex = 0;
             for (int i = 0; i < Rates.Length; i++)
                 rateBox.Items.Add(Rates[i] > 0 ? Rates[i] + " fps" : "As the file says");
@@ -177,7 +180,10 @@ namespace OpenCAGE
             if (_filling) return;
 
             _options.Rig = rigBox.SelectedItem as string ?? "";
-            _options.Root = (AnimationImport.RootHandling)Math.Max(0, rootBox.SelectedIndex);
+            //the last two choices are the same handling, measured from the first frame or from the file's own origin
+            _options.Root = rootBox.SelectedIndex >= (int)AnimationImport.RootHandling.AtMarker
+                ? AnimationImport.RootHandling.AtMarker : (AnimationImport.RootHandling)Math.Max(0, rootBox.SelectedIndex);
+            _options.MarkerFromFirstFrame = rootBox.SelectedIndex <= (int)AnimationImport.RootHandling.AtMarker;
             _options.FrameRate = rateBox.SelectedIndex >= 0 && rateBox.SelectedIndex < Rates.Length ? Rates[rateBox.SelectedIndex] : 0;
             _options.Retarget = false;
 
@@ -239,9 +245,15 @@ namespace OpenCAGE
                 text.AppendLine("The file says it runs at " + _reading.FileFrameRate.ToString("0.##")
                     + " fps" + (_options.FrameRate > 0 ? ", which is being overridden." : "."));
 
-            text.AppendLine(_reading.RootAnimated
-                ? "The root bone moves over the clip, so this animation carries the character with it."
-                : "The root bone holds still, so where the character stands is left to the game.");
+            if (_reading.Travel != null)
+                text.AppendLine("Travels at a marker: the root is left to the game and REFERENCE_ROOT carries the travel, as the game's own travelling "
+                    + "clips do, so the character's capsule rides along under the body. Play it with CMD_PlayAnimation at a marker (play_character_animation 'at'); "
+                    + "to keep it in step with a cutscene, link its ExternalTime to the CAGEAnimation (right-click it in the flowgraph: Sync to a CAGEAnimation). "
+                    + "In the preview, tick root motion to see it travel as in game: the ring is the capsule.");
+            else
+                text.AppendLine(_reading.RootAnimated
+                    ? "The root bone moves over the clip, so this animation carries the character with it."
+                    : "The root bone holds still, so where the character stands is left to the game.");
 
             if (_replacing != null)
             {

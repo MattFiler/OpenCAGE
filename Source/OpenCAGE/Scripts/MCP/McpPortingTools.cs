@@ -133,6 +133,10 @@ namespace OpenCAGE.MCP
                     return new JObject() { ["released"] = released };
                 },
             };
+
+            //Compare Levels and Record / Replay Edits (McpLevelDiffTools.cs: compare_levels, record_edits, replay_recipe)
+            foreach (McpTool tool in McpLevelDiffTools.Tools())
+                yield return tool;
         }
 
         #region Search

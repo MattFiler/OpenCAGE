@@ -62,7 +62,7 @@ namespace OpenCAGE.MCP
                 Name = "list_animations",
                 Title = "List animations",
                 Description = "Animation clips in ANIMATION.PAK: the name an ANIMATION parameter takes, its set and context, stored path, authoring rig, frames, length (s), additive and event count. " +
-                    "CMD_PlayAnimation plays a clip by its set and name; a clip in a named context plays only while the character is in that state. Give set for one set's clips (context narrows it), " +
+                    "CMD_PlayAnimation plays a clip by its set and name; a command reaches only a set's own lines; a named context's lines are animation-tree slots overriding those while the character holds that context's weapon or item. Give set for one set's clips (context narrows it), " +
                     "or filter to search every set; plays_on keeps only clips that play on a rig. describe_animation shows one clip, preview_animation draws it.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("set", "An animation set's name (list_animation_sets)."),
@@ -146,12 +146,12 @@ namespace OpenCAGE.MCP
                     McpSchema.String("name", "The name the set plays it by, which ANIMATION parameters take (default: the file name; for several clips each clip's own name). With replace, the clip to rebuild."),
                     McpSchema.String("stored_path", "Where it is stored (default ANIMATION\\OPENCAGE\\<SET>\\<FILE>, plus _<CLIP> for several clips). Must be unused."),
                     McpSchema.String("rig", "The rig to build it against (default: the rig most of the set's clips use; list_skeletons)."),
-                    McpSchema.String("root", "auto (default): keep root motion only if the file moves the root; engine: leave the root to the game; authored: keep it.", options: new[] { "auto", "engine", "authored" }),
+                    McpSchema.String("root", "auto (default): keep root motion only if the file moves the root; engine: leave the root to the game; authored: keep it; marker: the clip TRAVELS, played at a marker (a cinematic) - its travel (on the root or in the pose) goes where the game wants it: the root left to the engine, a capsule following the body carried inverted on REFERENCE_ROOT and the body relative to it, as the game's travelling gameplay clips are built, so the character's capsule (animation LOD, culling, the AI) rides along under the body and it starts on the marker facing along it; marker_origin: the same, keeping the file's own origin as the marker (clips made together in one scene).", options: new[] { "auto", "engine", "authored", "marker", "marker_origin" }),
                     McpSchema.Number("frame_rate", "Frames per second (default: worked out from the file)."),
                     McpSchema.Boolean("additive", "Layer it over whatever else is playing instead of replacing it."),
                     McpSchema.Any("clip_index", "Which animation in the file, from 0 (default 0); a list of indexes, or 'all', imports several in one write."),
                     McpSchema.String("retarget", "auto (default): convert when the file is on another skeleton (its bone names don't prove it is this rig); always; never (match by name only).", options: new[] { "auto", "always", "never" }),
-                    McpSchema.String("context", "File it in this context of the set (e.g. WEAPON_HANDGUN): it then plays only in that state. Default: the set's own unnamed context."),
+                    McpSchema.String("context", "File it as a line of this context of the set (e.g. WEAPON_HANDGUN) instead of the set's own lines. A context's lines are animation-tree slots: each overrides the set's own line of the same name while the character holds the weapon or item whose character_animation_context names that context, so name it after the slot it replaces. A script command (CMD_PlayAnimation, play_character_animation) reaches only the set's own lines - the game rejects a context-only clip ('Attempt to load bad animation data') - so a clip a command plays needs an own line too: import it again without context. Default: the set's own lines."),
                     McpSchema.Integer("start_frame", "Keep frames from this one (from 0; default 0)."),
                     McpSchema.Integer("end_frame", "Keep frames up to this one, inclusive (default: the last)."),
                     McpSchema.Boolean("replace", "Rebuild the existing clip 'name' in place: its name, path and every script or tree naming it stay; its events and settings are kept, including the movement measurements and blend anchors locomotion is chosen on (linear_speed, translation, yTotalRotation...: the result's kept_settings), which still describe the old animation. Only a clip with a section (and one metadata instance block) to itself."),
@@ -669,6 +669,10 @@ namespace OpenCAGE.MCP
                 Run = ReplaceSound,
             };
             #endregion
+
+            //The rig tools (rebind onto a game rig, display rigs, prop animations, contexts): each names its own toolset
+            foreach (McpTool tool in McpRigTools.Tools())
+                yield return tool;
         }
 
         #region Shared helpers
@@ -747,7 +751,7 @@ namespace OpenCAGE.MCP
         /// Write ANIMATION.PAK as the animation browser does, capturing the mod baseline first. UI thread.
         /// It serialises everything parsed - every tree set too, so an Animation Tree Editor window's unsaved edits go out with it.
         /// </summary>
-        private static void WriteAnimationPak(McpCall call, Anim animations, string inMemory)
+        internal static void WriteAnimationPak(McpCall call, Anim animations, string inMemory)
         {
             if (Application.OpenForms.OfType<AnimTreeEditor>().Any())
                 call.Note("The Animation Tree Editor is open: this write also saved any tree edits it held unsaved (ANIMATION.PAK is written whole).");
@@ -782,7 +786,7 @@ namespace OpenCAGE.MCP
         }
 
         /// <summary>Refuse before anything changes in memory when ANIMATION.PAK has changed on disk since it was loaded: it couldn't be written back.</summary>
-        private static void RefuseIfAnimationPakChanged()
+        internal static void RefuseIfAnimationPakChanged()
         {
             //Not a step on the UI thread of its own: only the file on disk is looked at
             string changed = AnimationPakWrite.Stale(Singleton.Animations);
@@ -1594,12 +1598,16 @@ namespace OpenCAGE.MCP
             if (!File.Exists(file))
                 throw new McpError("There is no file at " + file + ".");
             AnimationImport.RootHandling root;
+            bool markerOrigin = false;
             switch ((call.Str("root") ?? "auto").Trim().ToLowerInvariant())
             {
                 case "auto": root = AnimationImport.RootHandling.Auto; break;
                 case "engine": root = AnimationImport.RootHandling.LeaveToEngine; break;
                 case "authored": root = AnimationImport.RootHandling.KeepAsAuthored; break;
-                default: throw new McpError("'root' is auto, engine or authored.");
+                //travels at a marker (AnimationImport.ApplyTravel, ClipTools\TravelAtMarker)
+                case "marker": root = AnimationImport.RootHandling.AtMarker; break;
+                case "marker_origin": root = AnimationImport.RootHandling.AtMarker; markerOrigin = true; break;
+                default: throw new McpError("'root' is auto, engine, authored, marker or marker_origin.");
             }
             string retarget = (call.Str("retarget") ?? "auto").Trim().ToLowerInvariant();
             if (retarget != "auto" && retarget != "always" && retarget != "never")
@@ -1709,6 +1717,7 @@ namespace OpenCAGE.MCP
                             StartFrame = startFrame,
                             EndFrame = endFrame,
                             Context = contextName,
+                            MarkerFromFirstFrame = !markerOrigin,
                         };
                         plans.Add(plan);
                     }
@@ -1779,8 +1788,10 @@ namespace OpenCAGE.MCP
                         if (!done) { failed.Add("'" + plan.Name + "': " + problem); plan.Problems.Add(problem); continue; }
                         //the Linux and Mac builds' own pre-converted copy of the clip, which the rebuild can't reach
                         if (note != null) call.Note("'" + plan.Name + "': " + note);
-                        //The pick lists are built once at startup, so they are told about the new clip
-                        Singleton.RegisterAnimation(set.Name, plan.Name);
+                        //The pick lists are built once at startup, so they are told about the new clip - an own line only: a command can't
+                        //play a context-only clip (the game rejects it), so the ANIMATION picker never offers one
+                        if (contextName == null)
+                            Singleton.RegisterAnimation(set.Name, plan.Name);
                     }
                     if (failed.Count == ready.Count)
                         throw new McpError((failed.Count == 1 ? "" : "None of the clips went in: ") + string.Join(" ", failed) + " Nothing was written.");
@@ -5497,6 +5508,7 @@ namespace OpenCAGE.MCP
                 if (!written.Ok) throw new McpError("The sound was not replaced: " + written.Problem);
                 result["replaced"] = readings.Count;
                 result["level_package_bytes"] = written.SizeAfter;
+                if (written.Notes.Count != 0) result["notes"] = new JArray(written.Notes);
                 return result;
             }
 
@@ -5775,7 +5787,7 @@ namespace OpenCAGE.MCP
                             : DidYouMean(found.Contexts.SelectMany(o => o.Clips).Select(o => o.Name), clipName, " (list_animations set " + found.Name + " lists its clips).")));
                 }
                 else if ((clip.Context?.Name ?? "").Trim().Length != 0)
-                    problems.Add("'" + clip.Name + "' is only in " + found.Name + "'s " + clip.Context.Name + " context, so it plays only while the character is in that state.");
+                    problems.Add("'" + clip.Name + "' is only in " + found.Name + "'s " + clip.Context.Name + " context, not in the set's own lines, and a command reaches only those: the game rejects it at script start ('Attempt to load bad animation data'). Import it into " + found.Name + "'s own lines too, or play it through the context (its weapon or item's character_animation_context).");
                 else if (!clip.Playable)
                     problems.Add("'" + clip.Name + "' is listed in " + found.Name + " but its animation data is missing from ANIMATION.PAK.");
             }

@@ -132,6 +132,20 @@ namespace OpenCAGE.DockPanels
             _createModeButton.DropDownItems.Add(_createModeNoneItem);
             _createModeButton.DropDownItems.Add(new ToolStripSeparator());
 
+            //Brushes: each click makes a box or plane (a ModelReference drawing a model made from it) standing where it lands
+            foreach (Brushwork.BrushKind kind in new[] { Brushwork.BrushKind.Box, Brushwork.BrushKind.Plane })
+            {
+                ToolStripMenuItem item = new ToolStripMenuItem("Brush: " + kind)
+                {
+                    CheckOnClick = false,
+                    Tag = kind,
+                    ToolTipText = "Click in the viewport to make a " + kind.ToString().ToLowerInvariant() + " brush there: grey grid texture, solid collision, editable afterwards (Edit Brush)",
+                };
+                item.Click += OnCreateBrushMenuItemClick;
+                _createModeButton.DropDownItems.Add(item);
+            }
+            _createModeButton.DropDownItems.Add(new ToolStripSeparator());
+
             foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All
                 .OrderBy(definition => definition.FunctionType.ToString(), StringComparer.OrdinalIgnoreCase))
             {
@@ -333,14 +347,26 @@ namespace OpenCAGE.DockPanels
             if (_createModeButton == null)
                 return;
 
+            //Creation mode making brushes is a ModelReference mode: anything else is not making brushes
+            bool brushMode = functionType == (uint)FunctionType.ModelReference && Brushwork.BrushPlacement.CreateModeKind.HasValue;
+            if (functionType != (uint)FunctionType.ModelReference)
+                Brushwork.BrushPlacement.CreateModeKind = null;
+
             string label = null;
             foreach (ToolStripItem toolStripItem in _createModeButton.DropDownItems)
             {
                 ToolStripMenuItem item = toolStripItem as ToolStripMenuItem;
+                if (item != null && item.Tag is Brushwork.BrushKind kind)
+                {
+                    item.Checked = brushMode && Brushwork.BrushPlacement.CreateModeKind == kind;
+                    if (item.Checked)
+                        label = item.Text;
+                    continue;
+                }
                 if (item == null || !(item.Tag is uint))
                     continue;
 
-                bool isActive = (uint)item.Tag == functionType;
+                bool isActive = (uint)item.Tag == functionType && !(brushMode && functionType != 0);
                 item.Checked = isActive;
                 if (isActive && functionType != 0)
                     label = item.Text;
@@ -629,6 +655,22 @@ namespace OpenCAGE.DockPanels
             if (item.Checked)
                 functionType = 0;
 
+            //An ordinary type, not a brush
+            Brushwork.BrushPlacement.CreateModeKind = null;
+            ApplyCreateMode(functionType);
+            CreateModeChanged?.Invoke(this, functionType);
+        }
+
+        private void OnCreateBrushMenuItemClick(object sender, EventArgs e)
+        {
+            ToolStripMenuItem item = sender as ToolStripMenuItem;
+            if (item == null || !(item.Tag is Brushwork.BrushKind kind))
+                return;
+
+            //Clicking the active brush again exits creation mode
+            bool leaving = item.Checked;
+            Brushwork.BrushPlacement.CreateModeKind = leaving ? (Brushwork.BrushKind?)null : kind;
+            uint functionType = leaving ? 0u : (uint)FunctionType.ModelReference;
             ApplyCreateMode(functionType);
             CreateModeChanged?.Invoke(this, functionType);
         }

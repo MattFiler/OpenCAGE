@@ -24,7 +24,7 @@ namespace OpenCAGE
     {
         private readonly string _package;
 
-        private readonly Label summary = new Label { Dock = DockStyle.Top, Height = 54, Padding = new Padding(6, 6, 6, 0) };
+        private readonly Label summary = new Label { Dock = DockStyle.Top, Height = 72, Padding = new Padding(6, 6, 6, 0) };
         private readonly TextBox search = new TextBox { Dock = DockStyle.Fill };
         private readonly ListView list = new ListView { Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true, HideSelection = false, MultiSelect = true, ShowItemToolTips = true };
         private readonly FlowLayoutPanel buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 38, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(4) };
@@ -34,9 +34,10 @@ namespace OpenCAGE
         private readonly Button addBtn = new Button { Text = "Add Files...", Width = 100, Height = 26 };
         private readonly Button importBtn = new Button { Text = "Import WAV...", Width = 110, Height = 26 };
         private readonly Button bankBtn = new Button { Text = "New Soundbank...", Width = 120, Height = 26 };
+        private readonly Button tuneBtn = new Button { Text = "Tune Event...", Width = 105, Height = 26 };
         private readonly ToolTip tips = new ToolTip();
 
-        private enum RowKind { Bank, BankSound, Stream }
+        private enum RowKind { Bank, BankSound, Stream, TunedEvent }
 
         private sealed class Row
         {
@@ -60,6 +61,9 @@ namespace OpenCAGE
             public string Name, File, KindText, Language, OnThisLevel;
             public int Length;
             public string Search;
+
+            /// <summary>For an event this level tunes (Tune Event): its name, as the level's sound data spells it.</summary>
+            public string EventName;
         }
 
         private List<Row> _rows = new List<Row>();
@@ -72,7 +76,7 @@ namespace OpenCAGE
             Text = "Level Sound Override";
             Icon = SharedFormIcon.Icon;
             ClientSize = new Size(1000, 460);
-            MinimumSize = new Size(620, 300);
+            MinimumSize = new Size(780, 300);
             StartPosition = FormStartPosition.CenterParent;
             ShowInTaskbar = false;
             MinimizeBox = false;
@@ -89,6 +93,8 @@ namespace OpenCAGE
             tips.SetToolTip(exportBtn, "Save the selected soundbank or stream - or a sound from inside a soundbank - out of the package, as Wwise audio (.wem) or as a .wav.");
             tips.SetToolTip(removeBtn, "Take the selected files out of the package (on this level the game reads the base game's instead, or nothing for a file only this level has), and put the base game's audio back in place of the selected sounds in soundbanks.");
             importBtn.Click += (s, e) => ImportWav();
+            tuneBtn.Click += (s, e) => TuneEvent();
+            tips.SetToolTip(tuneBtn, "Change how a sound event plays on this level alone: volume, pitch, start delay, fades, what its stop reaches, looping and how far away it can be heard - in this package's copies of its soundbanks.");
             bankBtn.Click += (s, e) => EditBank();
             tips.SetToolTip(bankBtn, "Make a soundbank of the level's own: new sound events, each playing a .wav and sounding like a sound of the game's you pick. With a soundbank of the level's own selected, add events to it or take them out.");
             addBtn.Click += (s, e) => AddFiles();
@@ -102,6 +108,8 @@ namespace OpenCAGE
                 List<Row> rows = Selected();
                 if (rows.Count == 1 && rows[0].Kind == RowKind.Bank && rows[0].Own)
                     EditBank();
+                else if (rows.Count == 1 && rows[0].Kind == RowKind.TunedEvent)
+                    TuneEvent();
                 else
                     ImportWav();
             };
@@ -113,7 +121,7 @@ namespace OpenCAGE
             };
 
             //Right to left: Close at the far right, then what acts on the selection, then what adds
-            buttons.Controls.AddRange(new Control[] { closeBtn, removeBtn, exportBtn, addBtn, bankBtn, importBtn });
+            buttons.Controls.AddRange(new Control[] { closeBtn, removeBtn, exportBtn, addBtn, bankBtn, tuneBtn, importBtn });
 
             TableLayoutPanel searchRow = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, RowCount = 1, Height = 28, Padding = new Padding(3, 0, 3, 2) };
             searchRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
@@ -163,7 +171,7 @@ namespace OpenCAGE
             if (!File.Exists(_package))
             {
                 _rows = new List<Row>();
-                summary.Text = "This level has no sound package yet (" + relative + ").\nImport a .wav, add a soundbank or stream here, or replace a sound with Replace > For This Level Only in the Sound Editor to start one.";
+                summary.Text = "This level has no sound package yet (" + relative + ").\nImport a .wav, add a soundbank or stream here, tune an event (Tune Event...), or replace a sound with Replace > For This Level Only in the Sound Editor to start one.";
                 Fill();
                 return;
             }
@@ -178,6 +186,7 @@ namespace OpenCAGE
                 {
                     package = WwiseFilePackageBuilder.Load(_package);
                     rows = Read(package);
+                    AddTunedEvents(rows);
                 }
                 catch (Exception e)
                 {
@@ -203,13 +212,17 @@ namespace OpenCAGE
                         //Sounds changed in copies of the game's soundbanks, and those in soundbanks only this level has (made here, say)
                         int sounds = rows.Count(o => o.Kind == RowKind.BankSound && !rows.Any(b => b.Kind == RowKind.Bank && b.Own && b.Item == o.Item));
                         int own = rows.Count(o => o.Kind == RowKind.Bank && o.Own);
+                        int tuned = rows.Count(o => o.Kind == RowKind.TunedEvent);
                         List<string> about = new List<string>();
                         if (sounds != 0) about.Add(sounds + " sound" + (sounds == 1 ? "" : "s") + " changed in them");
+                        if (tuned != 0) about.Add(tuned + " event" + (tuned == 1 ? "" : "s") + " tuned");
                         if (own != 0) about.Add(own + " of the level's own");
+                        string pool = SoundBankPool();
                         summary.Text = relative + "  -  " + LevelSoundOverride.Describe(new FileInfo(_package).Length) + "\n"
                             + package.Banks.Count + " soundbank" + (package.Banks.Count == 1 ? "" : "s") + (about.Count != 0 ? " (" + string.Join(", ", about) + ")" : "")
                             + " and " + package.Streams.Count + " stream" + (package.Streams.Count == 1 ? "" : "s")
-                            + ". The game reads these instead of the base game's files of the same id, on this level only.";
+                            + ". The game reads these instead of the base game's files of the same id, on this level only."
+                            + (pool != null ? "\n" + pool : "");
                         Fill();
                     });
                 }
@@ -353,14 +366,14 @@ namespace OpenCAGE
                 if (wanted.Length != 0 && row.Search.IndexOf(wanted, StringComparison.Ordinal) < 0)
                 {
                     //A sound in a soundbank stays with its bank when the bank matched by name
-                    Row bank = row.Kind == RowKind.BankSound ? _rows.FirstOrDefault(o => o.Kind == RowKind.Bank && o.Item == row.Item) : null;
+                    Row bank = row.Kind == RowKind.BankSound || row.Kind == RowKind.TunedEvent ? _rows.FirstOrDefault(o => o.Kind == RowKind.Bank && o.Item == row.Item) : null;
                     if (bank == null || (bank.Name + " " + bank.File).ToUpperInvariant().IndexOf(wanted, StringComparison.Ordinal) < 0)
                         continue;
                 }
 
-                ListViewItem item = new ListViewItem(new[] { row.Name, row.File, row.KindText, LevelSoundOverride.Describe(row.Length), row.OnThisLevel });
+                ListViewItem item = new ListViewItem(new[] { row.Name, row.File, row.KindText, row.Kind == RowKind.TunedEvent ? "" : LevelSoundOverride.Describe(row.Length), row.OnThisLevel });
                 item.Tag = row;
-                item.ToolTipText = row.Kind == RowKind.Bank ? row.Name : row.Name.Trim() + " (" + row.SourceId + ")";
+                item.ToolTipText = row.Kind == RowKind.Bank ? row.Name : row.Kind == RowKind.TunedEvent ? row.Name.Trim() + ": " + row.OnThisLevel : row.Name.Trim() + " (" + row.SourceId + ")";
                 if (selected.Contains(Key(row)))
                     item.Selected = true;
                 list.Items.Add(item);
@@ -384,7 +397,7 @@ namespace OpenCAGE
         {
             int selected = list.SelectedItems.Count;
             removeBtn.Enabled = selected != 0;
-            exportBtn.Enabled = selected == 1;
+            exportBtn.Enabled = selected == 1 && Selected()[0].Kind != RowKind.TunedEvent;
             bankBtn.Text = OwnBankSelected() != null ? "Edit Soundbank..." : "New Soundbank...";
         }
 
@@ -408,6 +421,92 @@ namespace OpenCAGE
                 dialog.ShowDialog(this);
         }
 
+        /// <summary>Tune a sound event for this level (volume, delay, fades, stops, loop, reach): the selected tuned event, else one to name.</summary>
+        private void TuneEvent()
+        {
+            List<Row> selected = Selected();
+            string start = selected.Count == 1 && selected[0].Kind == RowKind.TunedEvent ? selected[0].EventName : null;
+            using (LevelSoundTuneDialog dialog = new LevelSoundTuneDialog(_package, start))
+                dialog.ShowDialog(this);
+        }
+
+        /// <summary>
+        /// A row for each event the package's copies of the game's soundbanks play differently (Tune Event), after its soundbank's row
+        /// and the sounds changed in it - found by comparing each copy with DATA/SOUND's.
+        /// </summary>
+        private void AddTunedEvents(List<Row> rows)
+        {
+            List<LevelSoundOverride.TunedEvent> tuned;
+            try
+            {
+                tuned = LevelSoundOverride.TunedEvents(_package);
+            }
+            catch (Exception e)
+            {
+                Debug.Log("Sound", "Couldn't compare the level's soundbanks with the base game's: " + e.Message);
+                return;
+            }
+            foreach (IGrouping<uint, LevelSoundOverride.TunedEvent> bank in tuned.GroupBy(o => o.BankId))
+            {
+                int at = rows.FindIndex(o => o.Kind == RowKind.Bank && o.Item.Id == bank.Key);
+                if (at < 0)
+                    continue;
+                Row bankRow = rows[at];
+                int insert = at + 1;
+                while (insert < rows.Count && rows[insert].Kind == RowKind.BankSound && rows[insert].Item == bankRow.Item)
+                    insert++;
+                foreach (LevelSoundOverride.TunedEvent ev in bank.OrderBy(o => o.Name, StringComparer.OrdinalIgnoreCase))
+                {
+                    rows.Insert(insert++, new Row
+                    {
+                        Kind = RowKind.TunedEvent,
+                        Item = bankRow.Item,
+                        SourceId = ev.EventId,
+                        EventName = ev.Event,
+                        Name = "    " + ev.Name,
+                        File = bankRow.File,
+                        KindText = "Tuned event",
+                        Language = bankRow.Language,
+                        OnThisLevel = string.Join("; ", ev.Changes),
+                        Search = (ev.Name + " " + bankRow.File + " " + string.Join(" ", ev.Changes)).ToUpperInvariant(),
+                    });
+                }
+                bankRow.OnThisLevel += " - " + bank.Count() + " event" + (bank.Count() == 1 ? "" : "s") + " tuned";
+                bankRow.Search += " " + string.Join(" ", bank.Select(o => o.Name)).ToUpperInvariant();
+            }
+        }
+
+        /// <summary>
+        /// The sound bank memory line: what the level's SoundLoadBanks load against the game's ~20.5 MB level bank pool, worked out
+        /// as the Level Check's sound_bank_pool rule does. Null when no level is open.
+        /// </summary>
+        private static string SoundBankPool()
+        {
+            try
+            {
+                LevelContent content = Singleton.Editor == null || Singleton.Editor.CompositeBrowser == null ? null : Singleton.Editor.CompositeBrowser.Content;
+                if (content == null || content.Level == null || content.Level.Commands == null)
+                    return null;
+                LevelCheckReport report = new LevelCheckReport() { Level = content.Level.Name };
+                LevelCheckContext context = new LevelCheckContext(content.Level, report);
+                SoundBankPoolRule rule = new SoundBankPoolRule();
+                context.Walk(rule.Walks, rule.WalksInstancesOf);
+                List<LevelCheckFinding> found = new List<LevelCheckFinding>();
+                rule.Run(context, found);
+                Newtonsoft.Json.Linq.JObject figures = report.Figures["sound_banks"] as Newtonsoft.Json.Linq.JObject;
+                if (figures == null)
+                    return null;
+                double start = (double)figures["loaded_at_start_mb"], all = (double)figures["all_loaders_mb"], pool = (double)figures["pool_mb"];
+                return "Sound bank memory: the level's SoundLoadBanks load " + start.ToString("0.0") + " MB as it starts" + (all > start ? " (" + all.ToString("0.0") + " MB with every loader)" : "")
+                    + " of the game's ~" + pool.ToString("0.0") + " MB pool" + (found.Count != 0 ? " - OVER: the next bank silently won't load (Level Check)." : ".");
+            }
+            catch (Exception e)
+            {
+                Debug.Log("Sound", "Couldn't work out the level's sound bank memory: " + e.Message);
+                return null;
+            }
+        }
+
         /// <summary>
         /// Make game audio from a .wav. Starts on the selected stream or sound; with a soundbank selected, on that soundbank's
         /// sounds.
@@ -417,7 +516,7 @@ namespace OpenCAGE
             List<Row> selected = Selected();
             Row row = selected.Count == 1 ? selected[0] : null;
 
-            uint? sourceId = row != null && row.Kind != RowKind.Bank ? row.SourceId : (uint?)null;
+            uint? sourceId = row != null && row.Kind != RowKind.Bank && row.Kind != RowKind.TunedEvent ? row.SourceId : (uint?)null;
             List<uint> bankSounds = row != null && row.Kind == RowKind.Bank && row.Sounds.Count != 0 ? row.Sounds : null;
             using (LevelSoundImportDialog dialog = new LevelSoundImportDialog(_package, sourceId, bankSounds, row != null ? row.Name : null))
                 dialog.ShowDialog(this);
@@ -492,11 +591,15 @@ namespace OpenCAGE
             if (selected.Count == 0)
                 return;
 
-            //A sound in a soundbank that is itself being taken out goes with it
-            List<Row> files = selected.Where(o => o.Kind != RowKind.BankSound).ToList();
+            //A sound in a soundbank (or a tuned event) that is itself being taken out goes with it
+            List<Row> files = selected.Where(o => o.Kind != RowKind.BankSound && o.Kind != RowKind.TunedEvent).ToList();
             List<Row> sounds = selected.Where(o => o.Kind == RowKind.BankSound && !files.Any(f => f.Kind == RowKind.Bank && f.Item == o.Item)).ToList();
+            List<Row> tunedEvents = selected.Where(o => o.Kind == RowKind.TunedEvent && o.EventName != null && !files.Any(f => f.Kind == RowKind.Bank && f.Item == o.Item)).ToList();
 
             List<string> what = new List<string>();
+            if (tunedEvents.Count != 0)
+                what.Add("Give " + (tunedEvents.Count == 1 ? tunedEvents[0].EventName : tunedEvents.Count + " events") + " the base game's settings again on this level (and "
+                    + (tunedEvents.Count == 1 ? "its" : "their") + " Stop_ event's, if tuned)?");
             if (files.Count != 0)
                 what.Add("Take " + (files.Count == 1 ? files[0].Name.Trim() : files.Count + " files") + " out of the level's sound package? On this level the game will read the base game's "
                     + (files.Count == 1 ? "file" : "files") + " of the same id instead - or nothing, for a file only this level has."
@@ -525,6 +628,12 @@ namespace OpenCAGE
                         problems.Add(plan.Problem);
                     else
                         notes.AddRange(plan.Notes.Where(o => o.StartsWith("Kept", StringComparison.Ordinal)));
+                }
+                foreach (string name in tunedEvents.Select(o => o.EventName).Distinct(StringComparer.OrdinalIgnoreCase))
+                {
+                    LevelSoundOverride.Tuning untuned = LevelSoundOverride.Untune(_package, name, true);
+                    if (!untuned.Plan.Ok)
+                        problems.Add(name + ": " + untuned.Plan.Problem);
                 }
             }
             finally { Cursor.Current = Cursors.Default; }

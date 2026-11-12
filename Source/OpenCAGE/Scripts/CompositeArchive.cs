@@ -91,7 +91,10 @@ namespace OpenCAGE
                     {
                         foreach (Parameter parameter in entity.parameters)
                         {
-                            if (parameter?.content is cString text && !string.IsNullOrEmpty(text.value) && displayModels.TryGetValue(text.value, out ShortGuid displayModel))
+                            //Not the entity's own name, as CompositePorter.PortCharacters: a LogicDelay called 'Wait' is no character
+                            if (parameter == null || parameter.name == ShortGuids.name)
+                                continue;
+                            if (parameter.content is cString text && !string.IsNullOrEmpty(text.value) && displayModels.TryGetValue(text.value, out ShortGuid displayModel))
                                 brought.Add(displayModel);
                         }
                     }
@@ -160,6 +163,14 @@ namespace OpenCAGE
         {
             public bool OverwriteComposites = false;
             public bool OverwriteAssets = false;
+            /// <summary>
+            /// With <see cref="OverwriteComposites"/>: keep the destination's own copy of every composite its edit history
+            /// says the user changed there (<see cref="EditedCompositesItWouldReplace(Manifest, Commands)"/>) instead of
+            /// replacing it with the package's - all but those in <see cref="ReplaceEdited"/>. Judged per destination level.
+            /// </summary>
+            public bool KeepEdited = false;
+            /// <summary>Edited composites (by ID) to replace all the same: the import window's ticked rows.</summary>
+            public HashSet<uint> ReplaceEdited = new HashSet<uint>();
         }
 
         public class Result
@@ -170,7 +181,86 @@ namespace OpenCAGE
             public int Renderables, CollisionMappings, PhysicsSystems, AnimatedModels, EnvironmentMaps;
             /// <summary>The proxies among the ported composites that resolve to nothing in the destination.</summary>
             public DeadProxyReport DeadProxies = new DeadProxyReport();
+            /// <summary>The composites the package also holds that kept the destination's edited copy (<see cref="ImportOptions.KeepEdited"/>), by name.</summary>
+            public List<string> KeptEdited = new List<string>();
         }
+
+        #region EDITED COMPOSITES
+        /// <summary>A composite the destination already has, edited there by the user, that an import with overwrite would replace.</summary>
+        public class EditedComposite
+        {
+            public uint Guid;
+            public string Name;
+            /// <summary>When the user last changed it (local time), from the level's edit history.</summary>
+            public DateTime Edited;
+        }
+
+        /// <summary>
+        /// The package's composites that the loaded level already has and that its edit history (COMPOSITE_MODIFICATION_INFO,
+        /// written by <see cref="EditHistory"/>) says the user changed there - made, edited, or brought in - newest first.
+        /// An import with overwrite on would replace each with the package's copy, and the user's changes to it would be gone.
+        /// </summary>
+        public static List<EditedComposite> EditedCompositesItWouldReplace(Manifest manifest, Commands commands)
+        {
+            if (manifest == null || commands?.Utils == null)
+                return new List<EditedComposite>();
+            HashSet<ShortGuid> here = new HashSet<ShortGuid>(commands.Entries.Where(o => o != null).Select(o => o.shortGUID));
+            return EditedOf(manifest, here, id => commands.Utils.GetModificationInfo(id));
+        }
+
+        /// <summary>
+        /// As <see cref="EditedCompositesItWouldReplace(Manifest, Commands)"/> for a level on disk, by name (as the level lists
+        /// give it): from its script's edit history table and composite index, without loading it.
+        /// </summary>
+        public static List<EditedComposite> EditedCompositesItWouldReplace(Manifest manifest, string levelName)
+        {
+            if (manifest == null || string.IsNullOrEmpty(levelName))
+                return new List<EditedComposite>();
+            string commandsPath = new Level(Singleton.PathToAI + "/DATA/ENV/" + levelName, Singleton.Global, false).CommandsFilepath;
+            if (!File.Exists(commandsPath))
+                return new List<EditedComposite>();
+            CompositeModificationInfoTable table = CustomTable.ReadTable(commandsPath, CustomTableType.COMPOSITE_MODIFICATION_INFO) as CompositeModificationInfoTable;
+            if (table?.modification_info == null || table.modification_info.Count == 0)
+                return new List<EditedComposite>();
+            Dictionary<ShortGuid, CompositeModificationInfoTable.ModificationInfo> history = table.modification_info.Where(o => o != null)
+                .GroupBy(o => o.composite_id).ToDictionary(o => o.Key, o => o.OrderByDescending(x => x.modification_date).First());
+            HashSet<ShortGuid> here = new HashSet<ShortGuid>(CompositeIndexCache.Get(levelName).Select(o => o.ID));
+            return EditedOf(manifest, here, id => history.TryGetValue(id, out CompositeModificationInfoTable.ModificationInfo info) ? info : null);
+        }
+
+        private static List<EditedComposite> EditedOf(Manifest manifest, HashSet<ShortGuid> here, Func<ShortGuid, CompositeModificationInfoTable.ModificationInfo> history)
+        {
+            //GLOBAL and PAUSEMENU are never walked into, so never replaced - unless the author ticked one (or the package
+            //predates roots, when every composite in it is imported directly)
+            bool hasRoots = manifest.Composites.Any(o => o != null && o.IsRoot);
+            List<EditedComposite> edited = new List<EditedComposite>();
+            HashSet<uint> seen = new HashSet<uint>();
+            foreach (CompositeEntry entry in manifest.Composites)
+            {
+                if (entry == null || !seen.Add(entry.Guid)) continue;
+                ShortGuid id = new ShortGuid(entry.Guid);
+                if (hasRoots && !entry.IsRoot && LevelEntryPoints.Contains(id)) continue;
+                if (!here.Contains(id)) continue;
+                CompositeModificationInfoTable.ModificationInfo info = history(id);
+                if (info == null) continue;
+                edited.Add(new EditedComposite() { Guid = entry.Guid, Name = entry.Name, Edited = EditHistory.ToLocal(info.modification_date) });
+            }
+            return edited.OrderByDescending(o => o.Edited).ThenBy(o => o.Name, StringComparer.OrdinalIgnoreCase).ToList();
+        }
+
+        /* The composites of the destination to keep for ImportOptions.KeepEdited: every one its edit history has a row for,
+           but the ones the user said to replace anyway */
+        private static HashSet<ShortGuid> EditedToKeep(ImportOptions options, Level destination)
+        {
+            HashSet<ShortGuid> keep = new HashSet<ShortGuid>();
+            if (!options.OverwriteComposites || !options.KeepEdited || destination?.Commands?.Utils == null)
+                return keep;
+            foreach (CompositeModificationInfoTable.ModificationInfo info in destination.Commands.Utils.AllModificationInfo)
+                if (info != null && !(options.ReplaceEdited?.Contains(info.composite_id.AsUInt32) ?? false))
+                    keep.Add(info.composite_id);
+            return keep;
+        }
+        #endregion
 
         /// <summary>One destination of an import into levels on disk.</summary>
         public class LevelResult
@@ -656,6 +746,8 @@ namespace OpenCAGE
                     OverwriteAssets = options.OverwriteAssets,
                     Recurse = true,
                     DoNotDescendInto = new HashSet<ShortGuid>(LevelEntryPoints),
+                    //The user's own edits to composites the package also holds stay, unless they said otherwise
+                    KeepExisting = EditedToKeep(options, destination),
                 };
                 porter.OnProgress = RefreshAction(progress);
                 porter.OnCompositePorted = (original, copy) =>
@@ -681,6 +773,7 @@ namespace OpenCAGE
                 result.PhysicsSystems = porter.PhysicsSystemsPorted;
                 result.AnimatedModels = porter.AnimatedModelsPorted;
                 result.EnvironmentMaps = porter.EnvironmentMapsPorted;
+                result.KeptEdited = porter.KeptExisting.Select(o => destination.Commands.GetComposite(o)?.name ?? o.ToString()).ToList();
                 //Judged here, against the destination, while the ported objects are still to hand
                 result.DeadProxies = DeadProxyReport.Of(destination.Commands, result.Ported);
             }

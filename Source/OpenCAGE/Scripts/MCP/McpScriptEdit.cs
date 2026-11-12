@@ -93,6 +93,8 @@ namespace OpenCAGE.MCP
             public bool DryRun;
             /// <summary>Other composites the change goes into: their first-open purge is run beforehand, as the focus composite's is.</summary>
             public IEnumerable<Composite> AlsoTouches;
+            /// <summary>What the undo history calls the step, before its label: a tool's change is "AI: ", one the user asked for elsewhere (a Level Check fix) says so.</summary>
+            public string LabelPrefix = "AI: ";
         }
 
         /// <summary>
@@ -139,7 +141,7 @@ namespace OpenCAGE.MCP
                 bool select = navigate || !options.Show;
 
                 McpScriptEdit edit = null;
-                RefactorEdit step = new RefactorEdit("AI: " + label, focus, pageSource =>
+                RefactorEdit step = new RefactorEdit((options.LabelPrefix ?? "") + label, focus, pageSource =>
                 {
                     edit = new McpScriptEdit(commands, pageSource) { DryRun = options.DryRun };
                     RefactorResult result;
@@ -194,7 +196,7 @@ namespace OpenCAGE.MCP
                     //The change went in and then bringing the editor up to date failed: keep it on the history, so it can be undone
                     UndoStack.Current.Record(step);
                     Debug.Log("MCP", "An edit was made but updating the editor failed: " + e);
-                    throw new McpError("The change was made, but OpenCAGE failed while updating its views (" + e.GetType().Name + ": " + e.Message + "). It is on the undo history as 'AI: " + label + "' - undo it if anything looks wrong.");
+                    throw new McpError("The change was made, but OpenCAGE failed while updating its views (" + e.GetType().Name + ": " + e.Message + "). It is on the undo history as '" + (options.LabelPrefix ?? "") + label + "' - undo it if anything looks wrong.");
                 }
 
                 Outcome outcome = new Outcome() { Edit = edit, Changed = true, Label = label };
@@ -520,10 +522,16 @@ namespace OpenCAGE.MCP
                 throw new McpError(composite.name + " already has a " + type + ", and a composite can only have one.");
             //Without a name, numbered as the editor numbers one (TriggerSimple_1, then _2) - worked out before it's added, so it doesn't count itself
             string entityName = string.IsNullOrWhiteSpace(name) ? CompositeDisplay.NewFunctionName(Commands, composite, type) : name.Trim();
+            //A SimpleWater with no renderable crashes the game as the level loads: given one below, or refused when the level has none to give
+            Level waterLevel = type == FunctionType.SimpleWater ? McpEditor.RequireLevel().Level : null;
+            if (waterLevel != null && SimpleWaterModel.WhyCannot(waterLevel, Singleton.PathToAI) is string noWater)
+                throw new McpError(McpErrorCodes.Refused, noWater);
             FunctionEntity entity = composite.AddFunction(type);
             //What the Add Function dialog does: every parameter at its default, less the delete flag
             Commands.Utils.AddAllDefaultParameters(entity, composite);
             entity.RemoveParameter(ShortGuids.delete_me);
+            if (waterLevel != null)
+                SimpleWaterModel.Ensure(waterLevel, entity, Singleton.PathToAI);
             //A box-shaped function's default size is zero: an empty volume, drawn as a speck. It starts at the size it is drawn
             //at instead, as one made in the editor does
             CompositeDisplay.GiveNewBoxItsShownSize(null, entity, type);
@@ -1034,7 +1042,9 @@ namespace OpenCAGE.MCP
                             Touch(reach.Composite, reach.Owner);
                             CAGEAnimation animation = (CAGEAnimation)reach.Owner;
                             animation.connections = animation.connections.Where(o => !reach.Connections.Contains(o)).ToList();
-                            alsoRemoved.Add(reach.Connections.Count + " binding" + (reach.Connections.Count == 1 ? "" : "s") + " of CAGEAnimation " + ownerName + where);
+                            //...and the float tracks only those bindings played: left, they are keys nothing plays
+                            int tracks = CageAnimationTrackCascade.RemoveUnplayed(this, animation, reach.Connections);
+                            alsoRemoved.Add(reach.Connections.Count + " binding" + (reach.Connections.Count == 1 ? "" : "s") + (tracks == 0 ? "" : " and the " + CageAnimationTrackCascade.Describe(tracks) + " they played") + " of CAGEAnimation " + ownerName + where);
                             break;
                         }
                     case ReachKind.PinUse:
@@ -1188,6 +1198,9 @@ namespace OpenCAGE.MCP
                     //A method's relay (LogicCounter's on_Up) is not in the schema, but holds a delay as the flowgraph gives it one
                     if (NodeUtils.GetMethodRelays(entity, composite, Commands).ContainsKey(id))
                         variant = ParameterVariant.TARGET_PIN;
+                    //One OpenCAGE's build honours that the type doesn't declare (SimpleWater's disable_size_culling)
+                    else if (BuildParameters.Find(entity, id) != null)
+                        template = new cBool(BuildParameters.Find(entity, id).Default);
                     else if (!allowCustom)
                         throw new McpError(McpScript.TypeName(Commands, composite, entity) + " has no parameter '" + name + "'." + Suggest(composite, entity, name) + " (To add a parameter it does not normally have, pass allow_custom: true.)");
                 }

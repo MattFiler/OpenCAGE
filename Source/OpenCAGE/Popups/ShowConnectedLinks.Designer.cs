@@ -31,11 +31,14 @@
             this.goToButton = new System.Windows.Forms.Button();
             this.linkList = new System.Windows.Forms.ListView();
             this.pinColumn = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.orderColumn = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.nodeColumn = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.linkedPinColumn = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.findLabel = new System.Windows.Forms.Label();
             this.findBox = new System.Windows.Forms.TextBox();
             this.countLabel = new System.Windows.Forms.Label();
+            this.moveUpButton = new System.Windows.Forms.Button();
+            this.moveDownButton = new System.Windows.Forms.Button();
             this.SuspendLayout();
             //
             // goToButton
@@ -56,6 +59,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.linkList.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
             this.pinColumn,
+            this.orderColumn,
             this.nodeColumn,
             this.linkedPinColumn});
             this.linkList.FullRowSelect = true;
@@ -64,27 +68,33 @@
             this.linkList.MultiSelect = false;
             this.linkList.Name = "linkList";
             this.linkList.ShowItemToolTips = true;
-            this.linkList.Size = new System.Drawing.Size(365, 500);
+            this.linkList.Size = new System.Drawing.Size(365, 467);
             this.linkList.TabIndex = 2;
             this.linkList.UseCompatibleStateImageBehavior = false;
             this.linkList.View = System.Windows.Forms.View.Details;
             this.linkList.KeyDown += new System.Windows.Forms.KeyEventHandler(this.linkList_KeyDown);
+            this.linkList.SelectedIndexChanged += new System.EventHandler(this.linkList_SelectedIndexChanged);
             this.linkList.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.linkList_MouseDoubleClick);
             //
             // pinColumn
             //
             this.pinColumn.Text = "Pin";
-            this.pinColumn.Width = 95;
+            this.pinColumn.Width = 90;
+            //
+            // orderColumn
+            //
+            this.orderColumn.Text = "Order";
+            this.orderColumn.Width = 40;
             //
             // nodeColumn
             //
             this.nodeColumn.Text = "Linked Node";
-            this.nodeColumn.Width = 150;
+            this.nodeColumn.Width = 135;
             //
             // linkedPinColumn
             //
             this.linkedPinColumn.Text = "Linked Pin";
-            this.linkedPinColumn.Width = 95;
+            this.linkedPinColumn.Width = 80;
             //
             // findLabel
             //
@@ -118,11 +128,37 @@
             this.countLabel.Text = "0 links.";
             this.countLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             //
+            // moveUpButton
+            //
+            this.moveUpButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.moveUpButton.Enabled = false;
+            this.moveUpButton.Location = new System.Drawing.Point(12, 511);
+            this.moveUpButton.Name = "moveUpButton";
+            this.moveUpButton.Size = new System.Drawing.Size(90, 27);
+            this.moveUpButton.TabIndex = 5;
+            this.moveUpButton.Text = "Move Up";
+            this.moveUpButton.UseVisualStyleBackColor = true;
+            this.moveUpButton.Click += new System.EventHandler(this.moveUpButton_Click);
+            //
+            // moveDownButton
+            //
+            this.moveDownButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.moveDownButton.Enabled = false;
+            this.moveDownButton.Location = new System.Drawing.Point(108, 511);
+            this.moveDownButton.Name = "moveDownButton";
+            this.moveDownButton.Size = new System.Drawing.Size(90, 27);
+            this.moveDownButton.TabIndex = 6;
+            this.moveDownButton.Text = "Move Down";
+            this.moveDownButton.UseVisualStyleBackColor = true;
+            this.moveDownButton.Click += new System.EventHandler(this.moveDownButton_Click);
+            //
             // ShowConnectedLinks
             //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(389, 587);
+            this.Controls.Add(this.moveDownButton);
+            this.Controls.Add(this.moveUpButton);
             this.Controls.Add(this.countLabel);
             this.Controls.Add(this.findBox);
             this.Controls.Add(this.findLabel);
@@ -143,10 +179,13 @@
         private System.Windows.Forms.Button goToButton;
         private System.Windows.Forms.ListView linkList;
         private System.Windows.Forms.ColumnHeader pinColumn;
+        private System.Windows.Forms.ColumnHeader orderColumn;
         private System.Windows.Forms.ColumnHeader nodeColumn;
         private System.Windows.Forms.ColumnHeader linkedPinColumn;
         private System.Windows.Forms.Label findLabel;
         private System.Windows.Forms.TextBox findBox;
         private System.Windows.Forms.Label countLabel;
+        private System.Windows.Forms.Button moveUpButton;
+        private System.Windows.Forms.Button moveDownButton;
     }
 }

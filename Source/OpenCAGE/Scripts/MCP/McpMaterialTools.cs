@@ -32,7 +32,7 @@ namespace OpenCAGE.MCP
                     McpSchema.String("family", "Only this shader family, e.g. CA_ENVIRONMENT."),
                     McpSchema.Strings("require_features", "Only materials with all of these features on, e.g. ['EMISSIVE']."),
                     McpSchema.String("texture", "Only materials sampling this texture (level or GLOBAL)."),
-                    McpSchema.Integer("priority", "Only this render priority (70 world, 52 translucent, 39 unlit, 31 overlay)."),
+                    McpSchema.Integer("priority", "Only this draw pass (render priority): 70 lit opaque, 52 mesh decal, 42 see-through (late), 39 see-through (glass, particles), 31 first person (NO_CLIP held items)."),
                     McpSchema.Limit(200, "materials"),
                     McpSchema.Offset("materials")),
                 ReadOnly = true,
@@ -75,7 +75,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "edit_material",
                 Title = "Edit material",
-                Description = "Change a material as the Material Editor does: bind or clear sampler textures (keeping the sampler's feature in step; GLOBAL textures can be bound too), turn features on/off or pick a whole permutation mask (rebinding the shader, compiling one if needed), set parameters, set render priority. Everything is checked before anything changes. An open Material Editor is closed first (it would write its old values back). " +
+                Description = "Change a material as the Material Editor does: bind or clear sampler textures (keeping the sampler's feature in step; GLOBAL textures can be bound too), turn features on/off or pick a whole permutation mask (rebinding the shader, compiling one if needed), set parameters, set the draw pass (render priority; a see-through or first-person material in the wrong pass is reported, with the pass retail uses). Everything is checked before anything changes. An open Material Editor is closed first (it would write its old values back). " +
                     "One undo step (undo puts the material back exactly; the previous values are returned too). Every model drawing the material changes; written by save_level (no build needed).",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("material", "The material's name, or name#index.", required: true),
@@ -85,7 +85,7 @@ namespace OpenCAGE.MCP
                     McpSchema.String("mask", "A whole permutation mask instead (e.g. '0x1A0', from list_material_permutations); enable/disable apply on top."),
                     McpSchema.Boolean("sync_features", "Turn a sampler's gating feature on/off with its texture (default true), as every shipped material has it."),
                     McpSchema.Map("parameters", "Parameter name to a number or [x, y, z(, w)]: {\"DIFFUSE_TINT\": [1, 0.5, 0.5, 1], \"SPECULAR_POWER\": 0.8}."),
-                    McpSchema.Integer("priority", "Render priority 0-255: 70 world (lit, opaque), 52 translucent, 39 unlit, 31 untextured overlay."),
+                    McpSchema.Integer("priority", "Draw pass (render priority) 0-255: 70 lit opaque (world, props, characters); 52 mesh decal (blended onto the surface behind and lit as it - glass here draws flat pale white); 42 see-through, late (retail's *_PREPASS window glass, fog planes, water); 39 see-through (retail's glass and particles: a FORCE_TO_ALPHA material at 70 draws nothing at all, so glass goes here; an opaque material here draws unlit, near-black); 31 first person (retail's held items, with NO_CLIP; above 52 a NO_CLIP item draws behind the arms)."),
                     McpSchema.Any("physical_material", PhysicalMaterialText)),
                 Run = EditMaterialTool,
             };
@@ -245,6 +245,9 @@ namespace OpenCAGE.MCP
             result["shader"] = family.ToString();
             result["mask"] = Hex(mask);
             result["priority"] = material.Priority;
+            result["draw_pass"] = MaterialConsistency.DescribeDrawPass(material.Priority);
+            string passProblem = MaterialConsistency.DrawPassProblem(material);
+            if (passProblem != null) result["draw_pass_problem"] = passProblem;
             if (material.EnvironmentMapIndex != 255) result["environment_map_index"] = material.EnvironmentMapIndex;
 
             //Features: on or off, and what toggling one would need (as the editor's checkboxes offer them)
@@ -594,7 +597,7 @@ namespace OpenCAGE.MCP
                 throw new McpError("Give textures, enable/disable, mask, parameters, priority and/or physical_material (describe_material shows what the material has).");
             int? priority = call.Has("priority") ? call.Int("priority") : (int?)null;
             if (priority != null && (priority < 0 || priority > 255))
-                throw new McpError("'priority' is 0-255 (70 is the world pass).");
+                throw new McpError("'priority' is 0-255 (70 lit opaque, 52 mesh decal, 39 see-through, 31 first person).");
             int? physical = ReadPhysicalMaterial(call);
 
             using (McpEditorTools.Heartbeat(call, "Editing material"))
@@ -798,6 +801,14 @@ namespace OpenCAGE.MCP
                     {
                         result["problems"] = new JArray(problems.Select(o => o.Text));
                         call.Note("The features and textures disagree, which no shipped material does and the engine will not draw correctly: set the missing textures, or change the features.");
+                    }
+                    //A see-through material left in the lit opaque pass draws nothing; a first-person one there draws behind the arms
+                    string passProblem = MaterialConsistency.DrawPassProblem(material);
+                    if (passProblem != null)
+                    {
+                        result["draw_pass_problem"] = passProblem;
+                        int? suggested = MaterialConsistency.DrawPassForFeatures(family, material.Shader.UbershaderFeatureFlags);
+                        call.Note(passProblem + (suggested != null ? " Give priority " + suggested.Value + " to fix it." : ""));
                     }
                     result["previous"] = previous;
                     result["undo"] = "One undo step: 'AI: Edit material " + level.Materials.GetMaterialName(material) + "'.";

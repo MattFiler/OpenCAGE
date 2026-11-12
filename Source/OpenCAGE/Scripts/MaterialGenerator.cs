@@ -241,7 +241,19 @@ namespace OpenCAGE
             }
 
             if (!plan.Textures.Any(o => o.Usable && o.Role.Sampler == "DIFFUSE_MAP"))
-                plan.Notes.Add("No base colour texture was found on this model material. Every shipped material of this kind has one, so the result will render untextured until you set one.");
+            {
+                /* A plain-colour material (a glTF baseColorFactor, an OBJ Kd with no map_Kd) still needs a base colour texture: every
+                 * shipped material binds one, and with none the game draws the surface black. A small white one is bound and the
+                 * model's colour carried by DIFFUSE_TINT - one texture shared by every such material. */
+                PlannedTexture white = PlainWhiteTexture(family, level);
+                if (white != null)
+                {
+                    plan.Textures.Add(white);
+                    plan.Notes.Add("This model material has a colour but no base colour texture, so a small white texture is bound and the colour is carried by the material's tint.");
+                }
+                else
+                    plan.Notes.Add("No base colour texture was found on this model material. Every shipped material of this kind has one, so the result will render untextured until you set one.");
+            }
 
             plan.CutOut = PlanCutOut(source, plan);
 
@@ -249,6 +261,8 @@ namespace OpenCAGE
             plan.NeedsBothSides = FacesPointBothWays(scene, source, mesh, out flippedEdges, out sharedEdges);
             if (plan.NeedsBothSides)
                 plan.Notes.Add("Some of this mesh's faces point the opposite way to the faces beside them (" + flippedEdges.ToString("N0") + " of its " + sharedEdges.ToString("N0") + " shared edges), which only looks right drawn from both sides, so the material is made double-sided.");
+            //glTF doubleSided, read from the file itself (AssimpNet always reads it as false)
+            GltfMaterialFlags.ApplyDoubleSided(plan, scene, source, mesh, modelPath);
 
             //Everything a model can't tell us comes from the level's own most typical material of this family
             long baseMask;
@@ -349,7 +363,7 @@ namespace OpenCAGE
                 if (opacity < 0.99f)
                 {
                     plan.Opacity = Math.Max(0.0f, opacity);
-                    plan.Notes.Add("This model material is see-through (" + (plan.Opacity * 100).ToString("0") + "% opaque), so it is drawn in the game's transparent pass, as its glass is.");
+                    plan.Notes.Add("This model material is see-through (" + (plan.Opacity * 100).ToString("0") + "% opaque), so it is drawn in the game's see-through pass (draw pass " + MaterialConsistency.SeeThroughPriority + "), as its glass is.");
                     return CutOutSource.None;
                 }
                 plan.Notes.Add("This model material is alpha blended through its texture's alpha, so it has been set up to cut out wherever that is less than half opaque.");
@@ -669,6 +683,36 @@ namespace OpenCAGE
                 return string.IsNullOrEmpty(decoded) ? filePath : decoded;
             }
             catch { return filePath; }
+        }
+
+        /// <summary>The level texture a plain-colour material's base colour sampler gets: 4 x 4 white, reused once the level has it.</summary>
+        public const string PlainWhiteName = "OPENCAGE_PLAIN_WHITE";
+
+        private static PlannedTexture PlainWhiteTexture(SHADER_LIST family, Level level)
+        {
+            Role role = Roles.FirstOrDefault(o => o.Sampler == "DIFFUSE_MAP" && o.SourceIndex == 0);
+            int sampler = SamplerIndex(family, "DIFFUSE_MAP");
+            if (role == null || sampler < 0 || level?.Textures == null) return null;
+            byte[] png;
+            using (System.Drawing.Bitmap white = new System.Drawing.Bitmap(4, 4))
+            using (MemoryStream stream = new MemoryStream())
+            {
+                using (System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(white)) g.Clear(System.Drawing.Color.White);
+                white.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
+                png = stream.ToArray();
+            }
+            PlannedTexture planned = new PlannedTexture
+            {
+                Role = role,
+                SamplerIndex = sampler,
+                Embedded = new EmbeddedTexture("png", png, PlainWhiteName + ".png"),
+                SourceLabel = "(plain white, made by OpenCAGE: the model's colour is the tint)",
+                TextureName = PlainWhiteName,
+            };
+            Textures.TEX4 existing = level.Textures.Entries.FirstOrDefault(o => string.Equals(o.Name, PlainWhiteName, StringComparison.OrdinalIgnoreCase));
+            //the name is OpenCAGE's own and always this image, so it is reused by name (a size read of a 4 x 4 can disagree and import a copy)
+            if (existing != null) planned.Existing = existing;
+            return planned;
         }
 
         private static string TextureNameFor(string filePath, Role role, string materialName)
@@ -1146,7 +1190,7 @@ namespace OpenCAGE
             //Sensible values first, so parameters the donor doesn't carry - and a level with no
             //materials at all to donate from - still come out with something workable
             ApplyFallbackDefaults(material, family);
-            material.Priority = DefaultPriority(family);
+            material.Priority = DefaultPriority(family, material.Shader?.UbershaderFeatureFlags ?? 0);
 
             Materials.Material donor = FindDonor(materials, material, family);
             if (donor?.Shader == null) return;
@@ -1168,7 +1212,16 @@ namespace OpenCAGE
          * The pass a material belongs in is a property of its shader family, so that is what this
          * table is: the modal priority of each family over ~48,000 materials in six pristine levels.
          * CA_ENVIRONMENT 14,028 of 17,493 at 70, CA_SKIN 1,622 of 1,694 at 59, CA_PARTICLE 17,786 of
-         * 20,330 at 39, and so on down. Anything not listed falls back to the world pass. */
+         * 20,330 at 39, and so on down. Anything not listed falls back to the world pass.
+         *
+         * Within a family two features move the pass, as in retail without exception: a see-through
+         * (FORCE_TO_ALPHA) material is drawn at 39 (at 70 it draws nothing in game) and a first-person
+         * (NO_CLIP) one at 31 (MaterialConsistency.DrawPassForFeatures). */
+        internal static int DefaultPriority(SHADER_LIST family, long mask)
+        {
+            return MaterialConsistency.DrawPassForFeatures(family, mask) ?? DefaultPriority(family);
+        }
+
         private static int DefaultPriority(SHADER_LIST family)
         {
             switch (family)

@@ -15,7 +15,7 @@ namespace OpenCAGE.Popups
      *
      * Files whose pristine bytes are held in the baseline store ship as small patches; the rest
      * ship whole. Config files ship as just the values that changed. */
-    public class ModExporterForm : Form
+    public partial class ModExporterForm : Form
     {
         private class ConfigChange
         {
@@ -222,6 +222,8 @@ namespace OpenCAGE.Popups
             meta.Controls.Add(_installs);
             meta.Controls.Add(_installsInfo);
             DescribeInstalls();
+            //How Launch Mod starts the game for it (ModExporterForm.Launch.cs)
+            AddLaunchChoice(meta, tips);
             meta.Controls.Add(new Label() { Text = "Mod name", AutoSize = true, Margin = new Padding(0, 8, 0, 0) });
             _name = new TextBox() { Dock = DockStyle.Top };
             meta.Controls.Add(_name);
@@ -313,6 +315,8 @@ namespace OpenCAGE.Popups
             _version.Text = NextVersion(_updating.Version);
             //A new version installs as the old one did, unless the author says otherwise
             _installs.SelectedIndex = _updating.Replaces ? 1 : 0;
+            //...and launches as it did
+            ChooseLaunchOf(_updating);
             byte[] png = null;
             try { png = ModServices.Installer.OpenPackage(_updating).ReadPreview(); }
             catch { }
@@ -1377,6 +1381,7 @@ namespace OpenCAGE.Popups
             Dictionary<string, List<PakPart>> archiveParts = SelectedArchiveParts();
             List<string> levelText = SelectedLevelText();
             bool replaces = Replaces;
+            ModLaunchInfo launch = LaunchChoice();
             if (files.Count == 0 && configs.Count == 0 && parts.Count == 0 && archiveParts.Count == 0 && levelText.Count == 0)
             {
                 MessageBox.Show("Tick the changes to include first.", "Nothing selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -1439,6 +1444,7 @@ namespace OpenCAGE.Popups
                         builder.Info.Summary = _changesEdited ? _changes.Text.Trim() : "";
                         builder.Info.OpenCageVersion = Singleton.Version;
                         builder.Info.Installs = replaces ? ModPackageInfo.InstallsReplace : ModPackageInfo.InstallsCombine;
+                        builder.Info.Launch = launch;
                         builder.Preview = _preview;
                         builder.AddFiles(files);
                         foreach (KeyValuePair<string, List<PakPart>> archive in archiveParts)

@@ -12,7 +12,7 @@ using System.Numerics;
 namespace OpenCAGE.MCP
 {
     /// <summary>Scripted cameras: camera rigs and camera tracks for CAGEAnimations.</summary>
-    internal static class McpCameraTools
+    internal static partial class McpCameraTools
     {
         private const string Conventions = "Positions [x, y, z] metres, Y up; rotations [pitch, yaw, roll] degrees (a camera looks along its +Z; positive pitch looks down).";
 
@@ -55,6 +55,7 @@ namespace OpenCAGE.MCP
                 McpSchema.Number("look_height", "region: height above the floor of the centre looked at (m, default: height)."),
                 McpSchema.Number("clearance", "Keep the path at least this far off the collision (m, default 0.3): points where the curve passes closer are pushed away from the surface (the result lists them). 0 keeps the points exactly."),
                 McpSchema.String("collision", "The collision the path keeps clear of and is checked against (default camera). " + McpCollision.FilterHelp, options: McpCollision.Filters),
+                FlyProp(),
             };
         }
 
@@ -101,11 +102,15 @@ namespace OpenCAGE.MCP
                 Destructive = true,
                 Run = AnimateCameraPath,
             };
+
+            //Key simplifying, ride-along, cinematic shots and pose baking (McpCinematicTools.cs)
+            foreach (McpTool tool in McpCinematicTools.Tools())
+                yield return tool;
         }
 
         #region Reading the path
         /// <summary>A camera path as asked for: control points and look targets in world space, and the timing.</summary>
-        private sealed class PathSpec
+        private sealed partial class PathSpec
         {
             public List<Vector3> Points = new List<Vector3>();
             public List<Vector3?> LookAts = new List<Vector3?>();
@@ -257,6 +262,7 @@ namespace OpenCAGE.MCP
             spec.Ease = ease;
             if (call.Has("duration") && call.Has("speed")) throw new McpError("Give 'duration' or 'speed', not both.");
             if (call.Has("duration")) spec.Duration = Finite(call, "duration", 0, 0.05, 1e5, "seconds, more than 0");
+            ReadFly(call, spec);
             return spec;
         }
         #endregion
@@ -404,6 +410,7 @@ namespace OpenCAGE.MCP
         /// </summary>
         private static BuiltTrack Build(PathSpec spec, cTransform frame)
         {
+            if (spec.Fly != null) return BuildFly(spec, frame);
             Spline spline = new Spline(spec.Points, spec.Closed);
             if (spline.Length < 0.05f) throw new McpError("The path is only " + Math.Round(spline.Length, 3) + " m long: give points further apart.");
             double duration = spec.Duration > 0 ? spec.Duration : spline.Length / 1.0;

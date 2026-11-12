@@ -99,6 +99,10 @@ namespace OpenCAGE.MCP
                 Destructive = true,
                 Run = LevelSoundPackage,
             };
+
+            //Per-level tuning of events (volume, delay, fades, stops, loop, reach) in the same package
+            foreach (McpTool tool in McpSoundTuneTools.Tools())
+                yield return tool;
         }
 
         #region Helpers
@@ -617,6 +621,10 @@ namespace OpenCAGE.MCP
                 ["bytes"] = o.Length,
                 ["on_this_level"] = LevelSoundOverride.IsPermanent(o.Id, soundDirectory) ? "never read: a permanent soundbank" : LevelSoundOverride.BaseBankFile(o.Id, null) != null ? "read instead of the base game's" : "only this level has it",
             }));
+            //Events its copies of the game's soundbanks play differently (tune_sound_event)
+            List<LevelSoundOverride.TunedEvent> tuned = LevelSoundOverride.TunedEvents(package);
+            if (tuned.Count != 0)
+                result["tuned_events"] = new JArray(tuned.Take(50).Select(o => new JObject() { ["event"] = o.Name, ["bank"] = o.Bank, ["changes"] = new JArray(o.Changes) }));
             result["stream_count"] = read.Streams.Count;
             //Each stream by the sound event that plays it too, as the Level Sound Override window lists them
             WwiseSoundLibrary named = null;

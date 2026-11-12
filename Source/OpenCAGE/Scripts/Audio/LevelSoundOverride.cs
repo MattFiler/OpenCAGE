@@ -21,7 +21,7 @@ namespace OpenCAGE.Audio
     /// audio is left out: the game looks it up under the voice language, and a package carrying any has to list it
     /// for every language.
     /// </summary>
-    internal static class LevelSoundOverride
+    internal static partial class LevelSoundOverride
     {
         public const string FileName = "LEVEL_SOUND_OVERRIDE.PCK";
 
@@ -279,6 +279,9 @@ namespace OpenCAGE.Audio
                 }
             }
 
+            //One piece of audio played by several events changes for all of them: noted for each
+            foreach (string shared in SharedAudioNotes(library, replacements.Keys))
+                plan.Notes.Add(shared);
             if (voiced.Count != 0)
                 plan.Notes.Add("Left as it is, because it's voiced audio the game looks up by voice language: " + string.Join(", ", voiced.Distinct()) + ".");
             if (otherLevels.Count != 0)

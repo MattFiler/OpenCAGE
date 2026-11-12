@@ -378,6 +378,10 @@
     <Compile Include="Popups\Resource Editors\AnimationPreview.Designer.cs">
       <DependentUpon>AnimationPreview.cs</DependentUpon>
     </Compile>
+    <Compile Include="Popups\Resource Editors\AnimationPreview.BakePose.cs">
+      <DependentUpon>AnimationPreview.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Popups\Resource Editors\AnimationSkeletonPicker.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -783,11 +787,18 @@
     <Compile Include="Popups\LevelSoundBankDialog.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\LevelSoundTuneDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Popups\LaunchGame.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Popups\LaunchGame.Designer.cs">
       <DependentUpon>LaunchGame.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\LaunchGame.AnimHeap.cs">
+      <DependentUpon>LaunchGame.cs</DependentUpon>
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="Popups\LevelBackupManager.cs">
       <SubType>Form</SubType>
@@ -998,6 +1009,44 @@
     <Compile Include="Scripts\AssetName.cs" />
     <Compile Include="Scripts\AssetUsage.cs" />
     <Compile Include="Scripts\UiMovieOverrides.cs" />
+    <Compile Include="Scripts\LevelUiOverrides.cs" />
+    <Compile Include="Scripts\MCP\McpUiOverrideTools.cs" />
+    <Compile Include="Popups\LevelUiOverridesEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\LaunchGame.LevelUi.cs">
+      <DependentUpon>LaunchGame.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="CommandsEditor.LevelUi.cs">
+      <DependentUpon>CommandsEditor.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Scripts\Modding\ModLaunch.cs" />
+    <Compile Include="Popups\ModManagerForm.LaunchMod.cs">
+      <DependentUpon>ModManagerForm.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\ModExporterForm.Launch.cs">
+      <DependentUpon>ModExporterForm.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Scripts\Hud\HudSwf.cs" />
+    <Compile Include="Scripts\Hud\HudAbc.cs" />
+    <Compile Include="Scripts\Hud\HudMovieCheck.cs" />
+    <Compile Include="Scripts\Hud\HudDesign.cs" />
+    <Compile Include="Scripts\Hud\HudMovieBuilder.cs" />
+    <Compile Include="Scripts\Hud\HudPng.cs" />
+    <Compile Include="Scripts\Hud\HudOverlays.cs" />
+    <Compile Include="Scripts\Hud\HudScript.cs" />
+    <Compile Include="Scripts\MCP\McpHudTools.cs" />
+    <Compile Include="Popups\HudOverlayBuilder.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="CommandsEditor.Hud.cs">
+      <DependentUpon>CommandsEditor.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Popups\UserControls\AssetNameBox.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -1007,6 +1056,17 @@
     <Compile Include="Scripts\Textures\DdsFile.cs" />
     <Compile Include="Scripts\Textures\EnvironmentMapCapture.cs" />
     <Compile Include="Scripts\Textures\TextureConverter.cs" />
+    <Compile Include="Scripts\Textures\TextureStreaming.cs" />
+    <Compile Include="Scripts\Textures\TextureStreaming.Editing.cs" />
+    <Compile Include="Scripts\Textures\TextureSlotsRule.cs" />
+    <Compile Include="Scripts\MCP\McpTextureStreamingTools.cs" />
+    <Compile Include="Popups\TextureStreamingWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditTexture.Streaming.cs">
+      <DependentUpon>EditTexture.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Scripts\Audio\VorbisReader.cs" />
     <Compile Include="Scripts\Audio\VorbisBitStream.cs" />
     <Compile Include="Scripts\Audio\WavePlayer.cs" />
@@ -1015,6 +1075,12 @@
     <Compile Include="Scripts\Audio\WwiseFilePackage.cs" />
     <Compile Include="Scripts\Audio\WwiseFilePackageBuilder.cs" />
     <Compile Include="Scripts\Audio\LevelSoundOverride.cs" />
+    <Compile Include="Scripts\Audio\LevelSoundOverride.Tuning.cs" />
+    <Compile Include="Scripts\Audio\SoundEventTuning.cs" />
+    <Compile Include="Scripts\Audio\SoundBankIndex.cs" />
+    <Compile Include="Scripts\Audio\GameAudioCapture.cs" />
+    <Compile Include="Scripts\Audio\GameAudioRecorder.cs" />
+    <Compile Include="Scripts\Audio\AudioAnalysis.cs" />
     <Compile Include="Scripts\Audio\WwiseObjects.cs" />
     <Compile Include="Scripts\Audio\WwiseSoundBank.cs" />
     <Compile Include="Scripts\Audio\WwiseSoundLibrary.cs" />
@@ -1044,6 +1110,7 @@
     <Compile Include="Scripts\Theming\ThemePainters.cs" />
     <Compile Include="Scripts\Theming\WpfTheme.cs" />
     <Compile Include="Scripts\MaterialApplier.cs" />
+    <Compile Include="Scripts\AnimationHeapBudget.cs" />
     <Compile Include="Scripts\MaterialConsistency.cs" />
     <Compile Include="Scripts\MaterialGenerator.cs" />
     <Compile Include="Scripts\Modding\ModToolkit.cs" />
@@ -1081,12 +1148,68 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Scripts\AlienBackstageCheck.cs" />
+    <Compile Include="Scripts\Weapons\WeaponGeometry.cs" />
+    <Compile Include="Scripts\Weapons\WeaponModelReplace.cs" />
+    <Compile Include="Scripts\MCP\McpWeaponTools.cs" />
+    <Compile Include="Popups\ReplaceWeaponModel.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Scripts\CrashTriage\CrashAnalysis.cs" />
+    <Compile Include="Scripts\CrashTriage\CrashTable.cs" />
+    <Compile Include="Scripts\CrashTriage\CrashWatch.cs" />
+    <Compile Include="Scripts\CrashTriage\LocalDumps.cs" />
+    <Compile Include="Scripts\CrashTriage\MiniDump.cs" />
+    <Compile Include="Scripts\MCP\McpCrashTools.cs" />
+    <Compile Include="Popups\LaunchGame.GameAudio.cs">
+      <DependentUpon>LaunchGame.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\GameAudioWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\LaunchGame.CrashTriage.cs">
+      <DependentUpon>LaunchGame.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Scripts\LevelCheck\LevelCheck.cs" />
+    <Compile Include="Scripts\LevelCheck\LevelCheckContext.cs" />
+    <Compile Include="Scripts\LevelCheck\CharacterRules.cs" />
+    <Compile Include="Scripts\LevelCheck\ScriptRules.cs" />
+    <Compile Include="Scripts\LevelCheck\WorldRules.cs" />
+    <Compile Include="Scripts\LevelCheck\TextureBudget.cs" />
+    <Compile Include="Scripts\LevelCheck\TextureBudgetImportRow.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Scripts\MCP\McpLevelCheckTools.cs" />
+    <Compile Include="Popups\LevelCheckWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Scripts\CompositePath.cs" />
     <Compile Include="Scripts\CloseReasons.cs" />
     <Compile Include="Scripts\DirectXTexUtility.cs" />
     <Compile Include="Scripts\BuildFingerprint.cs" />
     <Compile Include="Scripts\DirtyTracker.cs" />
     <Compile Include="Scripts\EditHistory.cs" />
+    <Compile Include="Scripts\LevelDiff\CathodeJson.cs" />
+    <Compile Include="Scripts\LevelDiff\Fields.cs" />
+    <Compile Include="Scripts\LevelDiff\LevelComparer.cs" />
+    <Compile Include="Scripts\LevelDiff\LevelDiffReport.cs" />
+    <Compile Include="Scripts\LevelDiff\ScriptDelta.cs" />
+    <Compile Include="Scripts\LevelDiff\ScriptReport.cs" />
+    <Compile Include="Scripts\LevelDiff\ScriptSnapshot.cs" />
+    <Compile Include="Scripts\LevelDiff\ResourceNames.cs" />
+    <Compile Include="Scripts\Recipes\Recipe.cs" />
+    <Compile Include="Scripts\Recipes\RecipeBuilder.cs" />
+    <Compile Include="Scripts\Recipes\RecipePlayer.cs" />
+    <Compile Include="Scripts\LevelDiff\LevelSides.cs" />
+    <Compile Include="Scripts\Recipes\RecipeEditor.cs" />
+    <Compile Include="Scripts\MCP\McpLevelDiffTools.cs" />
+    <Compile Include="Popups\CompareLevelsWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\RecordEditsWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Scripts\EnumStringListViewItems.cs" />
     <Compile Include="Scripts\FlowgraphLayoutManager.cs" />
     <Compile Include="Scripts\CompositePreviewManager.cs" />
@@ -1094,6 +1217,17 @@
     <Compile Include="Scripts\AnimTreeLayoutManager.cs" />
     <Compile Include="Scripts\LoadedGameFiles.cs" />
     <Compile Include="Scripts\AnimTreeLayouts.cs" />
+    <Compile Include="Scripts\Brushes\BrushCollision.cs" />
+    <Compile Include="Scripts\Brushes\BrushDefinition.cs" />
+    <Compile Include="Scripts\Brushes\BrushEditing.cs" />
+    <Compile Include="Scripts\Brushes\BrushGeometry.cs" />
+    <Compile Include="Scripts\Brushes\BrushHandleSync.cs" />
+    <Compile Include="Scripts\Brushes\BrushMaterials.cs" />
+    <Compile Include="Scripts\Brushes\BrushModelBuilder.cs" />
+    <Compile Include="Scripts\Brushes\BrushPlacement.cs" />
+    <Compile Include="Scripts\Brushes\Brushes.cs" />
+    <Compile Include="Scripts\Brushes\CollisionMatch.cs" />
+    <Compile Include="Scripts\Brushes\TestRoom.cs" />
     <Compile Include="Scripts\CollisionPairs.cs" />
     <Compile Include="Scripts\CollisionProxyImporter.cs" />
     <Compile Include="Scripts\PhysicsSystemImporter.cs" />
@@ -1122,6 +1256,18 @@
     </Compile>
     <Compile Include="Popups\SelectComposite.Designer.cs">
       <DependentUpon>SelectComposite.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\BrushEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\CinematicShotBuilder.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\ClipSyncMenu.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\ClipSplicerWindow.cs">
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="Popups\EditSpline.cs">
       <SubType>Form</SubType>
@@ -1160,6 +1306,10 @@
       <DependentUpon>CAGEAnimationEditor.cs</DependentUpon>
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\Function Editors\CAGEAnimationEditor.PathTools.cs">
+      <DependentUpon>CAGEAnimationEditor.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Popups\SelectLevel.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -1191,13 +1341,109 @@
     <Compile Include="Scripts\ModelIO.cs" />
     <Compile Include="Scripts\AnimationExport.cs" />
     <Compile Include="Scripts\AnimationImport.cs" />
+    <Compile Include="Scripts\ClipTools\ClipFrames.cs" />
+    <Compile Include="Scripts\ClipTools\TravelAtMarker.cs" />
+    <Compile Include="Scripts\ClipTools\ClipSplice.cs" />
+    <Compile Include="Scripts\ClipTools\ClipSync.cs" />
+    <Compile Include="Scripts\ClipTools\ClipTravelRule.cs" />
+    <Compile Include="Scripts\MCP\McpClipTools.cs" />
     <Compile Include="Scripts\AnimationRetarget.cs" />
     <Compile Include="Scripts\ModelImportRig.cs" />
+    <Compile Include="Scripts\Rigging\Core\AnimationContexts.cs" />
+    <Compile Include="Scripts\Rigging\Core\DisplayRigBuilder.cs" />
+    <Compile Include="Scripts\Rigging\Core\PropRig.cs" />
+    <Compile Include="Scripts\Rigging\Core\PropRigBuilder.cs" />
+    <Compile Include="Scripts\Rigging\Core\RigMath.cs" />
+    <Compile Include="Scripts\Rigging\Core\RigRoles.cs" />
+    <Compile Include="Scripts\Rigging\Core\SkinRebind.cs" />
+    <Compile Include="Scripts\Rigging\Core\SourceRig.cs" />
+    <Compile Include="Scripts\Rigging\DisplayRigFit.cs" />
+    <Compile Include="Scripts\Rigging\PropImport.cs" />
+    <Compile Include="Scripts\Rigging\RebindImport.cs" />
+    <Compile Include="Scripts\Rigging\RigPicture.cs" />
+    <Compile Include="Scripts\MCP\McpRigTools.cs" />
+    <Compile Include="Scripts\Characters\Core\FirstPersonCut.cs" />
+    <Compile Include="Scripts\Characters\Core\BodyPicture.cs" />
+    <Compile Include="Scripts\Characters\Core\DisplayModelShape.cs" />
+    <Compile Include="Scripts\Characters\DisplayModelIdentity.cs" />
+    <Compile Include="Scripts\Characters\DisplayModelFixEdit.cs" />
+    <Compile Include="Scripts\Characters\HeldPart.cs" />
+    <Compile Include="Scripts\MCP\McpDisplayModelTools.cs" />
+    <Compile Include="Popups\Characters\CharacterLookDialogs.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Rigging\RebindDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Rigging\DisplayRigDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Rigging\PropImportDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Rigging\RigToolMenus.cs" />
     <Compile Include="Scripts\CompositeInstanceParameters.cs" />
+    <Compile Include="Scripts\Utilities\BuildParameters.cs" />
+    <Compile Include="Scripts\Utilities\CageAnimationTrackCascade.cs" />
+    <Compile Include="Scripts\Utilities\PhysicsBodyKeys.cs" />
+    <Compile Include="Scripts\Utilities\PhysicsPropSpawner.cs" />
+    <Compile Include="Scripts\Utilities\SimpleWaterModel.cs" />
+    <Compile Include="Scripts\Utilities\Spinners.cs" />
+    <Compile Include="Scripts\Utilities\ConfigRecords.cs" />
+    <Compile Include="Scripts\Utilities\GltfMaterialFlags.cs" />
+    <Compile Include="Scripts\Utilities\UtilityRules.cs" />
+    <Compile Include="Scripts\MCP\McpUtilityTools.cs" />
+    <Compile Include="Popups\ConfigRecordsWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\SpinDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Scripts\Building\Panorama.cs" />
+    <Compile Include="Scripts\Building\OutdoorPlanner.cs" />
+    <Compile Include="Scripts\MCP\McpBuildingTools.cs" />
+    <Compile Include="Scripts\Breakables\FractureGeometry.cs" />
+    <Compile Include="Scripts\Breakables\FractureModels.cs" />
+    <Compile Include="Scripts\Breakables\FracturePreview.cs" />
+    <Compile Include="Scripts\Breakables\BreakableBuilder.cs" />
+    <Compile Include="Scripts\MCP\McpFractureTools.cs" />
+    <Compile Include="Popups\FractureWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\SkyAndSunWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Scripts\SceneImport\ScenePlan.cs" />
+    <Compile Include="Scripts\SceneImport\SceneImporter.cs" />
+    <Compile Include="Scripts\MCP\McpSceneImportTools.cs" />
+    <Compile Include="Scripts\Surfaces\ZFightFinder.cs" />
+    <Compile Include="Scripts\Surfaces\ZFightScene.cs" />
+    <Compile Include="Scripts\Surfaces\ZFightRepair.cs" />
+    <Compile Include="Scripts\Surfaces\ZFightPreview.cs" />
+    <Compile Include="Scripts\MCP\McpSurfaceTools.cs" />
+    <Compile Include="Popups\ZFightWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\SceneImportWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Scripts\ColourParameters.cs" />
     <Compile Include="Scripts\ComboBoxExtensions.cs" />
     <Compile Include="Scripts\ListViewColumnSorter.cs" />
     <Compile Include="Scripts\ListViewGroupNavigation.cs" />
+    <Compile Include="Scripts\LinkOrder.cs" />
+    <Compile Include="Scripts\Prefabs\PrefabLibrary.cs" />
+    <Compile Include="Scripts\Prefabs\PrefabPlacer.cs" />
+    <Compile Include="Scripts\MCP\McpPrefabTools.cs" />
+    <Compile Include="Popups\InsertPrefabWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Scripts\AlienVents\AlienVents.cs" />
+    <Compile Include="Scripts\AlienVents\AlienVentsCheck.cs" />
+    <Compile Include="Scripts\MCP\McpAlienVentTools.cs" />
+    <Compile Include="Popups\AlienVentsWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Scripts\ModelCompositeBuilder.cs" />
     <Compile Include="Scripts\Undo\CompositeEdits.cs" />
     <Compile Include="Scripts\Undo\RefactorEdit.cs" />
@@ -1398,6 +1644,11 @@
     <Compile Include="Scripts\CAGE Animation\AnimationModeSession.cs" />
     <Compile Include="Scripts\CAGE Animation\CageAnimationCurves.cs" />
     <Compile Include="Scripts\CAGE Animation\CageAnimationDrivers.cs" />
+    <Compile Include="Scripts\CAGE Animation\CageAnimationSpace.cs" />
+    <Compile Include="Scripts\Cinematics\FlightPath.cs" />
+    <Compile Include="Scripts\Cinematics\KeyFit.cs" />
+    <Compile Include="Scripts\Cinematics\PoseBake.cs" />
+    <Compile Include="Scripts\Cinematics\ShotPlan.cs" />
     <Compile Include="Scripts\ParameterGrid\EntityParameterProxy.cs" />
     <Compile Include="Scripts\ParameterGrid\ParameterGridDescriptors.cs" />
     <Compile Include="Scripts\ParameterGrid\ParameterGridPanel.cs">
@@ -1471,6 +1722,7 @@
     <Compile Include="Scripts\InstanceTransform.cs" />
     <Compile Include="Scripts\CompositeRefactoring.cs" />
     <Compile Include="Scripts\MCP\McpAssetTools.cs" />
+    <Compile Include="Scripts\MCP\McpBrushTools.cs" />
     <Compile Include="Scripts\MCP\McpAnimationAssetTools.cs" />
     <Compile Include="Scripts\MCP\McpCageAnimationTools.cs" />
     <Compile Include="Scripts\MCP\McpEditingTools.cs" />
@@ -1478,12 +1730,14 @@
     <Compile Include="Scripts\MCP\McpLevelTools.cs" />
     <Compile Include="Scripts\MCP\McpDebugger.cs" />
     <Compile Include="Scripts\MCP\McpMaterialTools.cs" />
+    <Compile Include="Scripts\MCP\McpPackageEdits.cs" />
     <Compile Include="Scripts\MCP\McpPageTools.cs" />
     <Compile Include="Scripts\MCP\McpResourceTools.cs" />
     <Compile Include="Scripts\MCP\McpBrowseTools.cs" />
     <Compile Include="Scripts\MCP\McpEditor.cs" />
     <Compile Include="Scripts\MCP\McpEditorTools.cs" />
     <Compile Include="Scripts\MCP\McpFlowgraphTools.cs" />
+    <Compile Include="Scripts\MCP\McpLinkOrderTools.cs" />
     <Compile Include="Scripts\MCP\McpImportTools.cs" />
     <Compile Include="Scripts\MCP\McpPortingTools.cs" />
     <Compile Include="Scripts\MCP\McpScript.cs" />
@@ -1500,7 +1754,13 @@
     <Compile Include="Scripts\MCP\McpNavTools.cs" />
     <Compile Include="Scripts\MCP\McpPlatformTools.cs" />
     <Compile Include="Scripts\MCP\McpSoundTools.cs" />
+    <Compile Include="Scripts\MCP\McpSoundTuneTools.cs" />
+    <Compile Include="Scripts\MCP\McpGameAudioTools.cs" />
     <Compile Include="Scripts\MCP\McpCameraTools.cs" />
+    <Compile Include="Scripts\MCP\McpCameraTools.Fly.cs" />
+    <Compile Include="Scripts\MCP\McpCinematicTools.cs" />
+    <Compile Include="Scripts\MCP\McpCinematicTools.Pose.cs" />
+    <Compile Include="Scripts\MCP\McpCinematicTools.Shots.cs" />
     <Compile Include="Scripts\MCP\McpCharacterTools.cs" />
     <Compile Include="Scripts\MCP\McpLightTools.cs" />
     <Compile Include="Scripts\MCP\McpUsageTools.cs" />
@@ -1985,6 +2245,34 @@
     </Content>
     <Content Include="Resources\Native\win-x86\vorbisfile.dll">
       <TargetPath>Native\win-x86\vorbisfile.dll</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\Prefabs\EnemySpawner.ocp">
+      <TargetPath>Prefabs\EnemySpawner.ocp</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\Prefabs\Ally.ocp">
+      <TargetPath>Prefabs\Ally.ocp</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\Prefabs\Hunter.ocp">
+      <TargetPath>Prefabs\Hunter.ocp</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\Prefabs\SafeDespawn.ocp">
+      <TargetPath>Prefabs\SafeDespawn.ocp</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\Prefabs\SpawnPoint.ocp">
+      <TargetPath>Prefabs\SpawnPoint.ocp</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\Prefabs\KillCounter.ocp">
+      <TargetPath>Prefabs\KillCounter.ocp</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\Prefabs\KillVolume.ocp">
+      <TargetPath>Prefabs\KillVolume.ocp</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <EmbeddedResource Include="Resources\packed_codebooks_aoTuV_603.bin" />

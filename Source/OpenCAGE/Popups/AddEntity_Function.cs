@@ -102,6 +102,13 @@ namespace OpenCAGE
                 return;
             }
 
+            //A SimpleWater with no renderable crashes the game as the level loads: it is given one below, or refused here when the level has none to give
+            if (function == FunctionType.SimpleWater && SimpleWaterModel.WhyCannot(Content.Level, Singleton.PathToAI) is string noWater)
+            {
+                MessageBox.Show(noWater, "SimpleWater", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             //One undo step for the entity and the node a flowgraph may add for it on OnEntityAdded
             using (OpenCAGE.Undo.UndoStack.Current.BeginGroup("Add " + entityName.Text))
             {
@@ -115,6 +122,8 @@ namespace OpenCAGE
                 }
                 //As one made from the palette starts: the definitions' zero is an empty volume, drawn a speck
                 DockPanels.CompositeDisplay.GiveNewBoxItsShownSize(_composite, newEntity, function);
+                if (function == FunctionType.SimpleWater)
+                    SimpleWaterModel.Ensure(Content.Level, (FunctionEntity)newEntity, Singleton.PathToAI);
 
                 Content.Level.Commands.Utils.SetEntityName(_composite, newEntity, entityName.Text);
                 SettingsManager.SetString(Settings.PreviouslySelectedFunctionType, function.ToString());

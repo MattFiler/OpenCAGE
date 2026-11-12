@@ -55,10 +55,147 @@ namespace OpenCAGE
 
             ShowHeader();
             PrepareDestination();
+            PrepareEditedList();
             openAfterImport.Checked = SettingsManager.GetBool(Settings.CompositeImportOpenAfter, false);
             Reflow();
             PopulateComposites();
         }
+
+        #region YOUR EDITS
+        /* The composites the user has changed in the destination (its edit history says so) that overwriting would replace
+           with the package's copies: listed under the overwrite box, unticked - kept - unless the user ticks one, or "Replace
+           them anyway". */
+        private Label _editedLabel;
+        private CheckedListBox _editedList;
+        private CheckBox _replaceAnyway;
+        private bool _showEdited;
+        private bool _settingEditedTicks;
+        private bool _laidOut;
+        //Each level on disk's edited composites, by its script's write time (ticking levels re-reads only what changed)
+        private readonly Dictionary<string, KeyValuePair<DateTime, List<CompositeArchive.EditedComposite>>> _editedOnDisk = new Dictionary<string, KeyValuePair<DateTime, List<CompositeArchive.EditedComposite>>>(StringComparer.OrdinalIgnoreCase);
+
+        private class EditedRow
+        {
+            public uint Guid;
+            public string Name;
+            public DateTime Edited;
+            public List<string> Levels = new List<string>();
+            public override string ToString() => Name + "   (you changed it " + Edited.ToString("g") + (Levels.Count == 0 ? "" : " in " + string.Join(", ", Levels)) + ")";
+        }
+
+        private void PrepareEditedList()
+        {
+            _editedLabel = new Label() { AutoSize = false, ForeColor = Color.DarkOrange };
+            _editedLabel.HandleCreated += (s, e) => _editedLabel.ForeColor = Color.DarkOrange;
+            _editedList = new CheckedListBox() { CheckOnClick = true, IntegralHeight = false, HorizontalScrollbar = true };
+            _replaceAnyway = new CheckBox() { AutoSize = true, Text = "Replace them anyway" };
+            toolTip1.SetToolTip(_editedList, "Composites you have changed here that the package also holds. Unticked: your version stays (the import still brings in what it adds around it). Ticked: the package's copy replaces yours.");
+            toolTip1.SetToolTip(_replaceAnyway, "Tick to let the package replace every composite listed, losing your changes to them.");
+            toolTip1.SetToolTip(overwriteComposites, "If checked: a composite the level already holds under the same ID is replaced by the imported copy - except ones you have changed here, which are listed below it to choose from. If unchecked, every existing one is kept.");
+            Controls.AddRange(new Control[] { _editedLabel, _editedList, _replaceAnyway });
+            _editedList.ItemCheck += (s, e) =>
+            {
+                if (_settingEditedTicks) return;
+                //ItemCheck comes before the tick changes
+                BeginInvoke(new Action(SyncReplaceAnyway));
+            };
+            _replaceAnyway.CheckedChanged += (s, e) =>
+            {
+                if (_settingEditedTicks) return;
+                _settingEditedTicks = true;
+                for (int i = 0; i < _editedList.Items.Count; i++)
+                    _editedList.SetItemChecked(i, _replaceAnyway.Checked);
+                _settingEditedTicks = false;
+            };
+            overwriteComposites.CheckedChanged += (s, e) => RefreshEdited();
+            _levels.SelectionChanged += RefreshEdited;
+            RefreshEdited();
+        }
+
+        private void SyncReplaceAnyway()
+        {
+            if (IsDisposed) return;
+            _settingEditedTicks = true;
+            _replaceAnyway.Checked = _editedList.Items.Count != 0 && _editedList.CheckedItems.Count == _editedList.Items.Count;
+            _settingEditedTicks = false;
+        }
+
+        /* Who has what: the open level's history, or each ticked level on disk's */
+        private void RefreshEdited()
+        {
+            List<EditedRow> rows = new List<EditedRow>();
+            if (overwriteComposites.Checked)
+            {
+                try
+                {
+                    if (_levelOpen)
+                    {
+                        if (Content?.Level?.Commands != null)
+                            rows.AddRange(CompositeArchive.EditedCompositesItWouldReplace(_manifest, Content.Level.Commands).Select(o => new EditedRow() { Guid = o.Guid, Name = o.Name, Edited = o.Edited }));
+                    }
+                    else
+                    {
+                        Dictionary<uint, EditedRow> byId = new Dictionary<uint, EditedRow>();
+                        foreach (string level in _levels.Selected)
+                            foreach (CompositeArchive.EditedComposite edited in EditedOnDisk(level))
+                            {
+                                if (!byId.TryGetValue(edited.Guid, out EditedRow row))
+                                    byId[edited.Guid] = row = new EditedRow() { Guid = edited.Guid, Name = edited.Name, Edited = edited.Edited };
+                                row.Levels.Add(level);
+                                if (edited.Edited > row.Edited) row.Edited = edited.Edited;
+                            }
+                        rows.AddRange(byId.Values.OrderByDescending(o => o.Edited));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log("Import", "Could not read the destination's edit history: " + ex.Message);
+                }
+            }
+
+            //A row still listed keeps the tick it had
+            HashSet<uint> ticked = new HashSet<uint>(_editedList.CheckedItems.OfType<EditedRow>().Select(o => o.Guid));
+            _settingEditedTicks = true;
+            _editedList.BeginUpdate();
+            _editedList.Items.Clear();
+            foreach (EditedRow row in rows)
+                _editedList.Items.Add(row, ticked.Contains(row.Guid));
+            _editedList.EndUpdate();
+            _settingEditedTicks = false;
+            SyncReplaceAnyway();
+
+            _editedLabel.Text = "You have changed " + (rows.Count == 1 ? "1 composite" : rows.Count + " composites") + (_levelOpen ? " in this level" : "")
+                + " that this package would replace. Unticked ones keep your version; tick one to take the package's copy instead:";
+            _showEdited = rows.Count != 0;
+            _editedLabel.Visible = _editedList.Visible = _replaceAnyway.Visible = _showEdited;
+            if (_laidOut)
+                Reflow();
+        }
+
+        private List<CompositeArchive.EditedComposite> EditedOnDisk(string level)
+        {
+            string commands = new Level(Singleton.PathToAI + "/DATA/ENV/" + level, Singleton.Global, false).CommandsFilepath;
+            DateTime written = File.Exists(commands) ? File.GetLastWriteTimeUtc(commands) : DateTime.MinValue;
+            if (_editedOnDisk.TryGetValue(level, out var cached) && cached.Key == written)
+                return cached.Value;
+            List<CompositeArchive.EditedComposite> edited = CompositeArchive.EditedCompositesItWouldReplace(_manifest, level);
+            _editedOnDisk[level] = new KeyValuePair<DateTime, List<CompositeArchive.EditedComposite>>(written, edited);
+            return edited;
+        }
+
+        /* The ticked rows: replaced all the same */
+        private HashSet<uint> EditedToReplace()
+        {
+            return new HashSet<uint>(_editedList.CheckedItems.OfType<EditedRow>().Select(o => o.Guid));
+        }
+
+        private static string KeptText(CompositeArchive.Result result)
+        {
+            if (result?.KeptEdited == null || result.KeptEdited.Count == 0) return "";
+            return "\n\nKept your version of " + (result.KeptEdited.Count == 1 ? "1 composite" : result.KeptEdited.Count + " composites") + " you had changed: "
+                + string.Join(", ", result.KeptEdited.Take(8)) + (result.KeptEdited.Count > 8 ? ", ..." : "") + ".";
+        }
+        #endregion
 
         #region HEADER
         /* The package's name and description, when its author gave it either, and any reason to doubt the import */
@@ -212,13 +349,29 @@ namespace OpenCAGE
             }
 
             overwriteComposites.Location = new Point(left, y);
-            overwriteAssets.Location = new Point(left, y + overwriteComposites.Height + gap);
+            int boxesTop = y;
+            y += overwriteComposites.Height + gap;
+            //The user's edited composites overwriting would replace, under the box they belong to, clear of the Import button
+            if (_showEdited)
+            {
+                int indent = left + Scale(16);
+                int width = right - importButton.Width - gap - indent;
+                FitText(_editedLabel, indent, y, width, 3);
+                y += _editedLabel.Height + inset;
+                _editedList.Location = new Point(indent, y);
+                _editedList.Size = new Size(width, _editedList.ItemHeight * Math.Max(2, Math.Min(6, _editedList.Items.Count)) + Scale(4));
+                y += _editedList.Height + inset;
+                _replaceAnyway.Location = new Point(indent, y);
+                y += _replaceAnyway.Height + gap;
+            }
+            overwriteAssets.Location = new Point(left, y);
             //Beside the second, in a column clear of both
             openAfterImport.Location = new Point(left + Math.Max(overwriteComposites.Width, overwriteAssets.Width) + block * 2, overwriteAssets.Top);
-            importButton.Location = new Point(right - importButton.Width, y);
+            importButton.Location = new Point(right - importButton.Width, _showEdited ? overwriteAssets.Bottom - importButton.Height : boxesTop);
             y = Math.Max(importButton.Bottom, overwriteAssets.Bottom) + margin;
 
             ClientSize = new Size(ClientSize.Width, y);
+            _laidOut = true;
         }
 
         private void LayoutDestination(int margin, int inset, int gap)
@@ -308,6 +461,9 @@ namespace OpenCAGE
             {
                 OverwriteComposites = overwriteComposites.Checked,
                 OverwriteAssets = overwriteAssets.Checked,
+                //Composites the user changed in the destination stay as they are, but the ones ticked to replace anyway
+                KeepEdited = true,
+                ReplaceEdited = EditedToReplace(),
             };
 
             if (_levelOpen)
@@ -368,6 +524,7 @@ namespace OpenCAGE
 
             string deadProxies = result.DeadProxies.Describe("this level");
             MessageBox.Show("Imported " + Summarise(result) + ".\n\nSave the level to keep them."
+                + KeptText(result)
                 + (opening == null ? "" : "\n\nThe composite could not be opened in the editor afterwards: " + opening)
                 + (deadProxies == "" ? "" : "\n\n" + deadProxies),
                 "Complete", MessageBoxButtons.OK, deadProxies == "" ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
@@ -494,6 +651,7 @@ namespace OpenCAGE
                 string level = done[0].Level;
                 string deadProxies = done[0].Result.DeadProxies.Describe(level);
                 if (MessageBox.Show("Imported " + Summarise(done[0].Result) + " into " + level + "."
+                    + KeptText(done[0].Result)
                     + (deadProxies == "" ? "" : "\n\n" + deadProxies)
                     + "\n\nOpen " + level + " now?", "Complete", MessageBoxButtons.YesNo, deadProxies == "" ? MessageBoxIcon.Information : MessageBoxIcon.Warning) == DialogResult.Yes)
                 {
@@ -506,7 +664,9 @@ namespace OpenCAGE
             {
                 int composites = done.Sum(o => o.Result.PortedCount);
                 string deadProxies = DeadProxyReport.Describe(done.Select(o => new KeyValuePair<string, DeadProxyReport>(o.Level, o.Result.DeadProxies)));
+                int kept = done.Sum(o => o.Result.KeptEdited.Count);
                 MessageBox.Show("Imported into " + done.Count + " levels (" + composites + " composites in all, including the ones they instance)."
+                    + (kept == 0 ? "" : "\n\nKept your version of " + kept + " composite" + (kept == 1 ? "" : "s") + " you had changed (" + string.Join("; ", done.Where(o => o.Result.KeptEdited.Count != 0).Select(o => o.Level + ": " + string.Join(", ", o.Result.KeptEdited.Take(4)) + (o.Result.KeptEdited.Count > 4 ? ", ..." : ""))) + ").")
                     + (deadProxies == "" ? "" : "\n\n" + deadProxies),
                     "Complete", MessageBoxButtons.OK, deadProxies == "" ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
             }

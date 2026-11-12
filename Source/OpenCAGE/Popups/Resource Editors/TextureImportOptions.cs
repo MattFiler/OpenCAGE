@@ -30,8 +30,8 @@ namespace OpenCAGE
         /// <summary>How many levels down the persistent copy sits, or 0 for no persistent copy.</summary>
         public int PersistentDrop { get { return _persistent.Checked ? _drop.Value : 0; } }
 
-        /// <summary>Whether the streamed slot should be left empty, the way volume textures are stored.</summary>
-        public bool PersistentOnly { get; private set; }
+        /// <summary>Whether the streamed slot should be left empty, the way volume textures are stored - or kept loaded (never streamed), ticked.</summary>
+        public bool PersistentOnly => _volume || (_keepLoaded.Enabled && _keepLoaded.Checked);
 
         /// <summary>The name to store it under, folders and all. Empty when replacing.</summary>
         public string AssetName { get { return _name == null ? "" : _name.Value; } }
@@ -42,6 +42,8 @@ namespace OpenCAGE
         private readonly CheckBox _persistent = new CheckBox();
         private readonly TrackBar _drop = new TrackBar();
         private readonly Label _dropLabel = new Label();
+        private readonly CheckBox _keepLoaded = new CheckBox();
+        private bool _volume;
         private AssetNameBox _name;
 
         private readonly int _width, _height, _sourceMips;
@@ -50,6 +52,7 @@ namespace OpenCAGE
                                     Func<IEnumerable<string>> takenNames = null)
         {
             Text = replacing == null ? "Import texture" : "Replace texture";
+            Icon = SharedFormIcon.Icon;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
@@ -58,13 +61,13 @@ namespace OpenCAGE
             Font = SystemFonts.MessageBoxFont;
 
             Shape(file, slot, out _width, out _height, out _sourceMips, out bool cube, out bool volume);
-            PersistentOnly = volume;
+            _volume = volume;
 
             /* Only an import gets a name - a replace is aimed at a slot that already has one, and
              * renaming it is a different job from putting a new image in it. */
             bool naming = replacing == null && takenNames != null;
             int shift = naming ? 62 : 0;
-            ClientSize = new Size(540, 266 + shift);
+            ClientSize = new Size(540, 290 + shift);
 
             Label source = new Label { AutoEllipsis = true, Location = new Point(12, 12), Size = new Size(516, 20) };
             source.Text = Path.GetFileName(file) + (_width > 0 ? "   —   " + _width + " x " + _height : "");
@@ -78,10 +81,11 @@ namespace OpenCAGE
             BuildFormatPicker(replacing, shift);
             BuildMipSlider(shift);
             BuildPersistentSlider(replacing, slot, cube, volume, shift);
+            BuildKeepLoaded(replacing, slot, cube, volume, shift);
 
-            //just below the persistent slider, which ends at 219
-            Button ok = new Button { Text = replacing == null ? "Import" : "Replace", DialogResult = DialogResult.OK, Location = new Point(372, 231 + shift), Size = new Size(75, 23) };
-            Button cancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, Location = new Point(453, 231 + shift), Size = new Size(75, 23) };
+            //just below the keep loaded box, which sits under the persistent slider (it ends at 219)
+            Button ok = new Button { Text = replacing == null ? "Import" : "Replace", DialogResult = DialogResult.OK, Location = new Point(372, 255 + shift), Size = new Size(75, 23) };
+            Button cancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, Location = new Point(453, 255 + shift), Size = new Size(75, 23) };
 
             Controls.Add(ok);
             Controls.Add(cancel);
@@ -215,6 +219,28 @@ namespace OpenCAGE
             UpdateDropLabel();
         }
 
+        /* Kept loaded (TextureStreaming): the whole chain in the persistent slot and nothing streamed, as the game stores its effect
+         * textures - it never streams, so it is never drawn blurry and takes none of the game's ~1,020 streaming slots, but its memory
+         * stays taken. Replacing a texture that is kept loaded keeps it so; a cubemap can't be (the game streams every one). */
+        private void BuildKeepLoaded(TextureFormat? replacing, TEX4 slot, bool cube, bool volume, int shift)
+        {
+            _keepLoaded.AutoSize = true;
+            _keepLoaded.Location = new Point(14, 226 + shift);
+            _keepLoaded.Text = volume ? "Kept loaded (never streamed), as the game keeps every volume texture"
+                             : cube ? "Keep loaded (never streamed) — not for a cubemap: the game streams every one"
+                             : "Keep loaded at full size (never streamed: always sharp, memory kept for the level)";
+            _keepLoaded.Checked = volume || (!cube && replacing != null && slot != null && TextureStreaming.IsKeptLoaded(slot));
+            _keepLoaded.Enabled = !volume && !cube;
+            _keepLoaded.CheckedChanged += (s, e) =>
+            {
+                _persistent.Enabled = !_keepLoaded.Checked && !(cube || volume);
+                _drop.Enabled = _persistent.Checked && _persistent.Enabled;
+                UpdateDropLabel();
+            };
+            if (_keepLoaded.Checked && _keepLoaded.Enabled) { _persistent.Enabled = false; _drop.Enabled = false; UpdateDropLabel(); }
+            Controls.Add(_keepLoaded);
+        }
+
         #endregion
 
         #region LABELS
@@ -240,6 +266,7 @@ namespace OpenCAGE
 
         private void UpdateDropLabel()
         {
+            if (_keepLoaded.Checked && !_volume) { _dropLabel.Text = "Kept loaded:\r\nthe full chain, persistent"; return; }
             if (!_drop.Enabled) { _dropLabel.Text = _persistent.Checked ? "Full size" : "Streamed copy only"; return; }
 
             int drop = _drop.Value;

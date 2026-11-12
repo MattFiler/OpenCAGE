@@ -318,6 +318,10 @@ namespace OpenCAGE.MCP
                 Run = FindAssetUsers,
             };
             #endregion
+
+            //Replace weapon model: describe_weapon, export_weapon_reference, replace_weapon_model (McpWeaponTools.cs)
+            foreach (McpTool tool in McpWeaponTools.Tools())
+                yield return tool;
         }
 
         #region Models

@@ -120,6 +120,7 @@ namespace OpenCAGE
             this.FormClosing += CAGEAnimationEditor_FormClosing;
             AnimationModeSession.AnimationReplaced += OnAnimationReplaced;
             LayoutEditorControls();
+            SetupPathTools();
 
             //Everything from here is a user edit, and every user edit is written back as it is made
             _liveCommits = true;
@@ -1806,6 +1807,8 @@ namespace OpenCAGE
                     AddNewConnectionSet(connection.Copy(), ((cFloat)param.content).value, param.name);
                     break;
                 case DataType.TRANSFORM:
+                    //A target inside instances is keyed in this animation's composite's space (CageAnimationSpace): its tracks rest there
+                    cTransform seed = CageAnimationSpace.RestingKey(Content.Level.Commands, _animComposite, activePath, param.name, (cTransform)param.content);
                     string[] transformSubProperties = new string[6] { "x", "y", "z", "Yaw", "Pitch", "Roll" };
                     foreach (string subProp in transformSubProperties)
                     {
@@ -1813,22 +1816,22 @@ namespace OpenCAGE
                         switch (subProp)
                         {
                             case "x":
-                                val = ((cTransform)param.content).position.X;
+                                val = seed.position.X;
                                 break;
                             case "y":
-                                val = ((cTransform)param.content).position.Y;
+                                val = seed.position.Y;
                                 break;
                             case "z":
-                                val = ((cTransform)param.content).position.Z;
+                                val = seed.position.Z;
                                 break;
                             case "Yaw":
-                                val = ((cTransform)param.content).rotation.Y;
+                                val = seed.rotation.Y;
                                 break;
                             case "Pitch":
-                                val = ((cTransform)param.content).rotation.X;
+                                val = seed.rotation.X;
                                 break;
                             case "Roll":
-                                val = ((cTransform)param.content).rotation.Z;
+                                val = seed.rotation.Z;
                                 break;
                         }
                         AddNewConnectionSet(connection.Copy(), val, param.name, subProp);

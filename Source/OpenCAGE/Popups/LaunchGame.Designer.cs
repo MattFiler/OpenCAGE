@@ -45,6 +45,7 @@ namespace OpenCAGE
             this.renderConstantAmbient = new System.Windows.Forms.CheckBox();
             this.disableUI = new System.Windows.Forms.CheckBox();
             this.patchCurrentGen = new System.Windows.Forms.CheckBox();
+            this.allowLargerAnimMemory = new System.Windows.Forms.CheckBox();
             this.enableCapFps = new System.Windows.Forms.CheckBox();
             this.capFpsRate = new System.Windows.Forms.ComboBox();
             this.enableUnlockMouse = new System.Windows.Forms.CheckBox();
@@ -66,7 +67,7 @@ namespace OpenCAGE
             // OpenGame
             //
             this.OpenGame.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.OpenGame.Location = new System.Drawing.Point(12, 314);
+            this.OpenGame.Location = new System.Drawing.Point(12, 337);
             this.OpenGame.Name = "OpenGame";
             this.OpenGame.Size = new System.Drawing.Size(436, 40);
             this.OpenGame.TabIndex = 5;
@@ -256,6 +257,18 @@ namespace OpenCAGE
             this.patchCurrentGen.UseVisualStyleBackColor = true;
             this.patchCurrentGen.CheckedChanged += new System.EventHandler(this.patchCurrentGen_CheckedChanged);
             //
+            // allowLargerAnimMemory
+            //
+            this.allowLargerAnimMemory.AutoSize = true;
+            this.allowLargerAnimMemory.Location = new System.Drawing.Point(236, 88);
+            this.allowLargerAnimMemory.Name = "allowLargerAnimMemory";
+            this.allowLargerAnimMemory.Size = new System.Drawing.Size(174, 17);
+            this.allowLargerAnimMemory.TabIndex = 9;
+            this.allowLargerAnimMemory.Text = "Allow larger animation memory";
+            this.toolTip1.SetToolTip(this.allowLargerAnimMemory, "Doubles the game's animation memory (its 21.5 MB resident animation heap and the others beside it). A character whose animation set does not fit never spawns, so custom animation sets and new animation contexts need this. An AI.exe patch: every level, from the next start.");
+            this.allowLargerAnimMemory.UseVisualStyleBackColor = true;
+            this.allowLargerAnimMemory.CheckedChanged += new System.EventHandler(this.allowLargerAnimMemory_CheckedChanged);
+            //
             // enableCapFps
             //
             this.enableCapFps.AutoSize = true;
@@ -407,6 +420,7 @@ namespace OpenCAGE
             this.gameOptionsGroup.Controls.Add(this.renderConstantAmbient);
             this.gameOptionsGroup.Controls.Add(this.disableUI);
             this.gameOptionsGroup.Controls.Add(this.patchCurrentGen);
+            this.gameOptionsGroup.Controls.Add(this.allowLargerAnimMemory);
             this.gameOptionsGroup.Controls.Add(this.enableCapFps);
             this.gameOptionsGroup.Controls.Add(this.capFpsRate);
             this.gameOptionsGroup.Controls.Add(this.enableUnlockMouse);
@@ -415,7 +429,7 @@ namespace OpenCAGE
             this.gameOptionsGroup.Controls.Add(this.possessKey);
             this.gameOptionsGroup.Location = new System.Drawing.Point(12, 139);
             this.gameOptionsGroup.Name = "gameOptionsGroup";
-            this.gameOptionsGroup.Size = new System.Drawing.Size(436, 92);
+            this.gameOptionsGroup.Size = new System.Drawing.Size(436, 115);
             this.gameOptionsGroup.TabIndex = 3;
             this.gameOptionsGroup.TabStop = false;
             this.gameOptionsGroup.Text = "Game options";
@@ -426,7 +440,7 @@ namespace OpenCAGE
             this.uiTweaksGroup.Controls.Add(this.levelSelect);
             this.uiTweaksGroup.Controls.Add(this.debugLoadingScreen);
             this.uiTweaksGroup.Controls.Add(this.quitToMenuOnDeath);
-            this.uiTweaksGroup.Location = new System.Drawing.Point(12, 237);
+            this.uiTweaksGroup.Location = new System.Drawing.Point(12, 260);
             this.uiTweaksGroup.Name = "uiTweaksGroup";
             this.uiTweaksGroup.Size = new System.Drawing.Size(436, 69);
             this.uiTweaksGroup.TabIndex = 4;
@@ -437,7 +451,7 @@ namespace OpenCAGE
             //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(460, 366);
+            this.ClientSize = new System.Drawing.Size(460, 389);
             this.Controls.Add(this.loadToLevel);
             this.Controls.Add(this.levelList);
             this.Controls.Add(this.debugToolsGroup);
@@ -452,6 +466,7 @@ namespace OpenCAGE
             this.Name = "LaunchGame";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Launch Game";
+            this.Load += new System.EventHandler(this.LaunchGame_LoadAnimHeap);
             this.debugToolsGroup.ResumeLayout(false);
             this.debugToolsGroup.PerformLayout();
             this.gameOptionsGroup.ResumeLayout(false);
@@ -481,6 +496,7 @@ namespace OpenCAGE
         private System.Windows.Forms.CheckBox renderConstantAmbient;
         private System.Windows.Forms.CheckBox disableUI;
         private System.Windows.Forms.CheckBox patchCurrentGen;
+        private System.Windows.Forms.CheckBox allowLargerAnimMemory;
         private System.Windows.Forms.CheckBox enableCapFps;
         private System.Windows.Forms.ComboBox capFpsRate;
         private System.Windows.Forms.CheckBox enableUnlockMouse;

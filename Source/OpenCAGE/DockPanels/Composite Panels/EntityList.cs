@@ -39,11 +39,17 @@ namespace OpenCAGE.DockPanels
             EditorIcons.Bind(createInstanceOfCompositeToolStripMenuItem, EditorIcon.CompositeInstance);
             EditorIcons.Bind(createProxyToolStripMenuItem, EditorIcon.Proxy);
             EditorIcons.Bind(createAliasToolStripMenuItem1, EditorIcon.Alias);
+            //Create Entity > Insert Prefab...: the prefab library (Prefabs\InsertPrefabWindow)
+            createToolStripMenuItem.DropDownItems.Add(Prefabs.InsertPrefabWindow.MenuItem(() => List.Composite));
             EditorIcons.Bind(deinstanceToolStripMenuItem, EditorIcon.DeinstanceComposite);
             EditorIcons.Bind(createVariantToolStripMenuItem, EditorIcon.CompositeVariant);
             EditorIcons.Bind(createCompositeToolStripMenuItem, EditorIcon.CreateCompositeFromSelected);
 
             compositeEntityList1.ContextMenuStrip = EntityListContextMenu;
+            SpinDialog.AttachMenu(EntityListContextMenu, () => List.Composite, () => List.SelectedEntities);
+            OpenCAGE.Popups.ClipSyncMenu.Attach(EntityListContextMenu, () => List.Composite, () => List.SelectedEntities.Count == 1 ? List.SelectedEntities[0] : null);
+            //Make Breakable... (fracture into debris) on one ModelReference
+            Breakables.FractureWindow.AttachMenu(EntityListContextMenu, () => List.Composite, () => List.SelectedEntities);
 
             compositeEntityList1.SelectedEntityChanged += OnEntitySelected;
             compositeEntityList1.StepIntoCompositeInstance = entity => Singleton.Editor?.CompositeDisplay?.StepIntoCompositeInstance(entity);

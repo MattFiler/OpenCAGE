@@ -333,6 +333,17 @@ namespace OpenCAGE.MCP
             return found;
         }
 
+        /// <summary>
+        /// One setting (anim_set, say) of the NPC a placement belongs to, resolved as describe_npc does (instance pins, composite
+        /// pins, aliases) along a chain from <paramref name="start"/> to the NPC's archetype instance or inside it. Null when the
+        /// chain is not an NPC's, or nothing sets it. UI thread.
+        /// </summary>
+        internal static JToken ResolvedSetting(Commands commands, Composite start, List<Entity> chain, McpPlacements.Placement placement, string setting)
+        {
+            Npc npc = NpcOf(commands, start, chain, placement);
+            return npc == null ? null : SettingOf(commands, npc, SettingName(setting))?.Value;
+        }
+
         /// <summary>The path of an NPC as results give it (from the root when placed).</summary>
         private static JObject PathOf(Commands commands, Npc npc)
         {
@@ -1835,8 +1846,15 @@ namespace OpenCAGE.MCP
                     throw McpError.NotFound("clip in " + set.Name, clipName, set.Contexts.SelectMany(o => o.Clips).Select(o => o.Name),
                         (elsewhere.Count != 0 ? "These sets have it: " + string.Join(", ", elsewhere) + " (pass animation_set). " : "") + "list_animations set=" + set.Name + " lists its clips.");
                 }
-                if (!string.IsNullOrWhiteSpace(clip.Context?.Name))
-                    warnings.Add("'" + clip.Name + "' is in " + set.Name + "'s " + clip.Context.Name + " context: it plays only while the character is in that state.");
+                /* A command reaches only the set's own (unnamed) lines: retail never points CMD_PlayAnimation / CHR_PlaySecondaryAnimation
+                 * at a context-only one, and the game rejects one that does at script start ("Attempt to load bad animation data") and then
+                 * crashes. A context's lines override the set's line of the same name while the character holds that context's weapon or item. */
+                if (!set.Contexts.Where(o => string.IsNullOrWhiteSpace(o.Name)).SelectMany(o => o.Clips).Any(o => string.Equals(o.Name, clip.Name, StringComparison.OrdinalIgnoreCase)))
+                {
+                    List<string> inContexts = set.Contexts.Where(o => !string.IsNullOrWhiteSpace(o.Name) && o.Clips.Any(c => string.Equals(c.Name, clip.Name, StringComparison.OrdinalIgnoreCase))).Select(o => o.Name).ToList();
+                    throw McpError.Invalid("'" + clip.Name + "' is only in " + set.Name + "'s " + string.Join(", ", inContexts) + " context" + (inContexts.Count == 1 ? "" : "s") + ", not in the set's own lines, and a command reaches only those: the game rejects it (\"Attempt to load bad animation data\"). " +
+                        "Import the clip into " + set.Name + "'s own lines too (import_animation without context) and play that, or play it through the context: point one of the context's lines at it (create_animation_context with existing and lines) and give the character the weapon or item whose character_animation_context names that context.");
+                }
                 //Whether the set plays on this character's rig: its own set's rig, or one the game retargets onto it
                 if (npc != null)
                 {

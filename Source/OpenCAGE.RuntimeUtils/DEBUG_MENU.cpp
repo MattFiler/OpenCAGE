@@ -393,7 +393,7 @@ namespace
 			result.message = std::string("entity=") + ping(DEBUG_MENU::AnswerOnEntityThread) + "\nai=" + ping(DEBUG_MENU::AnswerOnAiThread) + "\nrender=" + ping(DEBUG_MENU::AnswerOnRenderThread);
 			return result;
 		});
-		DEBUG_MENU::AddCommand("menu.characters", "this frame's characters: id, name, class, position, player/dead", [](const std::string&)
+		DEBUG_MENU::AddCommand("menu.characters", "this frame's characters: id, name, class, position, player/dead; then the character slots in use of the game's 18", [](const std::string&)
 		{
 			return DEBUG_MENU::AnswerOnRenderThread([]()
 			{
@@ -405,6 +405,10 @@ namespace
 						character.position[0], character.position[1], character.position[2], character.player ? " player" : "", character.dead ? " dead" : "");
 					result.message += line;
 				}
+				// Character slots in use of the game's 18 (see kCharacterSlots). Last, so parsers of the lines above are unaffected
+				char slots[128];
+				snprintf(slots, sizeof(slots), "slots %u / %d\n", static_cast<unsigned>(DEBUG_MENU::Characters().size()), DEBUG_MENU::kCharacterSlots);
+				result.message += slots;
 				return result;
 			});
 		});

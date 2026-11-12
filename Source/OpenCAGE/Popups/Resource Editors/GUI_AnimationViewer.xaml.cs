@@ -346,6 +346,7 @@ namespace OpenCAGE.Popups.UserControls
                 ? CathodeLib.Animation.SampleRigPose(_clip, _skeleton, _frame, _rootMotion, retarget)
                 : CathodeLib.Animation.SampleModelPose(_clip, _skeleton, _frame, _rootMotion, retarget);
             if (animated == null) return;
+            Matrix4x4? capsule = EnvironmentRig ? (Matrix4x4?)null : PlaceAsInGame(animated);
 
             List<Matrix4x4> bind = EnvironmentRig ? _skeleton.GetModelSpacePose() : _skeleton.GetBindPose();
             Matrix4x4[] skinning = new Matrix4x4[animated.Count];
@@ -355,6 +356,66 @@ namespace OpenCAGE.Popups.UserControls
             for (int i = 0; i < _submeshes.Count; i++)
                 if (_submeshes[i].Visible) _submeshes[i].Pose(skinning);
             PoseBones(animated);
+            if (capsule.HasValue) DrawCapsule(capsule.Value);
+        }
+
+        /* Where the game puts a character playing this clip: the capsule at marker x inverse(REFERENCE_ROOT), frame by frame (shipped
+         * travelling clips carry it along under the body). With root motion followed the pose is placed that way too. Returns the
+         * capsule's frame to draw; null on a rig without a reference bone. */
+        private Matrix4x4? PlaceAsInGame(List<Matrix4x4> animated)
+        {
+            int reference = CathodeLib.Animation.ReferenceBone(_skeleton);
+            if (reference < 0 || reference >= animated.Count) return null;
+            if (!Matrix4x4.Invert(animated[reference], out Matrix4x4 capsule)) return null;
+            if (_rootMotion == CathodeLib.Animation.RootMotion.Follow)
+                for (int i = 0; i < animated.Count; i++) animated[i] = animated[i] * capsule;
+            return capsule;
+        }
+
+        /* The capsule: a ring on its floor with an arrow the way it faces, and a cross where the marker is (where the reference bone stood at
+         * the first frame) when the character is carried away from it. Drawn with the rig, and whenever root motion is followed. */
+        private void DrawCapsule(Matrix4x4 capsule)
+        {
+            if (!_showBones && _rootMotion != CathodeLib.Animation.RootMotion.Follow) return;
+            Point3DCollection points = new Point3DCollection();
+            Int32Collection indices = new Int32Collection();
+            Vector3 at = capsule.Translation;
+            Vector3 forward = Vector3.TransformNormal(Vector3.UnitZ, capsule);
+            forward.Y = 0;
+            forward = forward.LengthSquared() > 1e-6f ? Vector3.Normalize(forward) : Vector3.UnitZ;
+            Vector3 side = new Vector3(forward.Z, 0, -forward.X);
+            const int Steps = 24;
+            const float Radius = 0.3f, Width = 0.025f;
+            for (int i = 0; i < Steps; i++)
+            {
+                double a = i * 2 * Math.PI / Steps, b = (i + 1) * 2 * Math.PI / Steps;
+                Vector3 da = new Vector3((float)Math.Cos(a), 0, (float)Math.Sin(a)), db = new Vector3((float)Math.Cos(b), 0, (float)Math.Sin(b));
+                Quad(points, indices, at + da * (Radius - Width), at + da * (Radius + Width), at + db * (Radius + Width), at + db * (Radius - Width));
+            }
+            //the arrow: a shaft and a head, flat on the floor
+            Vector3 tip = at + forward * (Radius + 0.25f);
+            Quad(points, indices, at - side * Width, at + side * Width, tip - forward * 0.08f + side * Width, tip - forward * 0.08f - side * Width);
+            Quad(points, indices, tip, tip - forward * 0.1f + side * 0.07f, tip - forward * 0.08f, tip - forward * 0.1f - side * 0.07f);
+            if (_rootMotion == CathodeLib.Animation.RootMotion.Follow && at.LengthSquared() > 0.0025f)
+            {
+                Quad(points, indices, new Vector3(-0.12f, 0, -Width), new Vector3(0.12f, 0, -Width), new Vector3(0.12f, 0, Width), new Vector3(-0.12f, 0, Width));
+                Quad(points, indices, new Vector3(-Width, 0, -0.12f), new Vector3(Width, 0, -0.12f), new Vector3(Width, 0, 0.12f), new Vector3(-Width, 0, 0.12f));
+            }
+            SolidColorBrush brush = new SolidColorBrush(Color.FromRgb(90, 200, 230));
+            _bones.Children.Add(new GeometryModel3D
+            {
+                Geometry = new MeshGeometry3D { Positions = points, TriangleIndices = indices },
+                Material = new DiffuseMaterial(brush),
+                BackMaterial = new DiffuseMaterial(brush),
+            });
+        }
+
+        private static void Quad(Point3DCollection points, Int32Collection indices, Vector3 a, Vector3 b, Vector3 c, Vector3 d)
+        {
+            int at = points.Count;
+            Add(points, a); Add(points, b); Add(points, c); Add(points, d);
+            indices.Add(at); indices.Add(at + 1); indices.Add(at + 2);
+            indices.Add(at); indices.Add(at + 2); indices.Add(at + 3);
         }
 
         /// <summary>Show or hide one part of the model without rebuilding the rest.</summary>

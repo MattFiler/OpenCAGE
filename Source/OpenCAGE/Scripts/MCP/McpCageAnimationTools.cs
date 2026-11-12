@@ -109,7 +109,7 @@ namespace OpenCAGE.MCP
                     "pivot:[x,y,z] with a rotation (no position) turns it about that point, e.g. a hinge, from where it rests - the position is worked out, and swings of more than 15 degrees get keys along the arc; " +
                     "or from:'viewport_camera' (where the viewport camera is now). A key at an existing time updates it. Times in seconds.",
             },
-            ["space"] = Prop("string", "What the keys are in: 'composite' (default: the space of the composite holding the target - find_entities within=<that composite> reports positions in it), 'world' (converted for you; see 'placement') or 'relative' (offsets added to the target's resting value)."),
+            ["space"] = Prop("string", "What the keys are in: 'composite' (default: the space of the composite holding the target - find_entities within=<that composite> reports positions in it; for a target inside instances it is the animation's own composite, where the game applies such keys), 'world' (converted for you; see 'placement') or 'relative' (offsets added to the target's resting value)."),
             ["placement"] = Prop("integer", "space 'world' (and keys from the viewport camera): which placement of the animation's composite the keys are for (0-based, get_placements order); needed when it is placed more than once."),
             ["unwrap"] = Prop("boolean", "Rotation keys (Yaw, Pitch, Roll) written here move by whole turns to within 180 degrees of the key before them, so nothing spins the long way round (default true)."),
             ["replace"] = Prop("boolean", "The keys replace every key the track has."),
@@ -152,7 +152,7 @@ namespace OpenCAGE.MCP
             ["from_root"] = Prop("boolean", "These paths start in the level's root composite."),
         };
 
-        private const string PoseHelp = "Sample the composed pose of animated transforms: {step?: s (default 0.5), target?: path (default every animated transform, at most 10), from_root?, space?: 'composite' (default: the space of the composite holding the target) or 'world', placement?: n (world: which placement of the animation's composite), check_collision?: true (world: say where the path passes through or close to collision, as the level stands in the editor)}.";
+        private const string PoseHelp = "Sample the composed pose of animated transforms: {step?: s (default 0.5), target?: path (default every animated transform, at most 10), from_root?, space?: 'composite' (default: the space of the composite holding the target; the animation's own composite for a target inside instances) or 'world', placement?: n (world: which placement of the animation's composite), check_collision?: true (world: say where the path passes through or close to collision, as the level stands in the editor)}.";
 
         private static readonly JObject PoseSpec = new JObject()
         {
@@ -215,7 +215,7 @@ namespace OpenCAGE.MCP
                 Name = "animate_parameters",
                 Title = "Animate parameters",
                 Description = "Edit a CAGEAnimation's float tracks as its editor does: drive an entity's FLOAT or TRANSFORM parameter (a transform gets all six component tracks; a new track starts from the resting value at 0 unless 'replace'), add, update, replace, move or delete keys and tangents, remove tracks or targets, retime the whole animation (shift, scale, reverse, ping-pong), set length and interpolation. " +
-                    "Keys are in the space of the composite holding the target unless 'space' is 'world' or 'relative'; rotations are [pitch, yaw, roll] degrees (Pitch = rotation x, Yaw = y, Roll = z; an entity faces +Z, positive pitch looks down) and rotation keys are unwrapped; look_at/forward keys build the rotation for you. " +
+                    "Keys are in the space of the composite holding the target (for a target inside instances: the animation's own composite's space, which is where the game applies them) unless 'space' is 'world' or 'relative'; rotations are [pitch, yaw, roll] degrees (Pitch = rotation x, Yaw = y, Roll = z; an entity faces +Z, positive pitch looks down) and rotation keys are unwrapped; look_at/forward keys build the rotation for you. " +
                     "To fly a camera, key a CameraResource's position and link something to its activate_camera (create_camera_animation builds the whole rig, animate_camera_path a smooth path); the 'camera' binding of set_animation_events is for CameraPlayAnimation clips. " +
                     "A new CAGEAnimation (create_entities {function: 'CAGEAnimation'}) has anim_length 10 until its first keys set it; playspeed (set_parameters) scales playback; there is no loop parameter (link animation_finished -> start). " +
                     "Retail animates positions (models, composite instances, lights, cameras) and VariableFloat initial_value: other parameters may not change in game, and each touched track says whether retail drives it. One undo step; saved with save_level. Returns the touched tracks' keys.",
@@ -534,6 +534,9 @@ namespace OpenCAGE.MCP
                 {
                     try { content = commands.Utils.CreateDefaultParameterData(e, c, connection.target_param); } catch { }
                 }
+                //A target inside instances is keyed in the animation's composite's space (CageAnimationSpace): its rest there
+                if (content is cTransform transform)
+                    content = CageAnimationSpace.RestingKey(commands, composite, connection.connectedEntity, connection.target_param, transform);
                 return ComponentValue(content, ComponentName(connection.target_sub_param));
             }
             catch
@@ -575,7 +578,7 @@ namespace OpenCAGE.MCP
             return label + ": " + precedent + ". Retail animates positions (ModelReference, composite instances, LightReference, CameraResource) and a VariableFloat's initial_value linked on to the parameter; check it in game (preview_cage_animation in_game).";
         }
 
-        private static float? ComponentValue(ParameterData content, string component)
+        internal static float? ComponentValue(ParameterData content, string component)
         {
             switch (content)
             {
@@ -1107,7 +1110,9 @@ namespace OpenCAGE.MCP
                     result.Add(entry);
                     continue;
                 }
-                cTransform rest = InstanceTransform.TransformOf(entity) ?? new cTransform(Vector3.Zero, Vector3.Zero);
+                //A target inside instances is keyed (and rests) in the animation's composite's space (CageAnimationSpace)
+                bool nested = CageAnimationSpace.IsNested(commands, composite, group.Key);
+                cTransform rest = CageAnimationSpace.RestingKey(commands, composite, group.Key, PositionParam, InstanceTransform.TransformOf(entity) ?? new cTransform(Vector3.Zero, Vector3.Zero));
                 cTransform frame = null;
                 if (world)
                 {
@@ -1116,7 +1121,7 @@ namespace OpenCAGE.MCP
                     entry["frame"] = described;
                 }
                 else
-                    entry["space"] = "composite " + holder.name;
+                    entry["space"] = "composite " + (nested ? composite.name + " (the animation's: keys on a target inside instances apply in its space)" : holder.name);
                 List<Vector3> positions = new List<Vector3>();
                 List<Vector3> rotations = new List<Vector3>();
                 List<float> times = new List<float>();
@@ -1168,6 +1173,9 @@ namespace OpenCAGE.MCP
             ParameterData resting = RestingContent(w.Commands, target.Composite, target.Entity, PositionParam);
             if (!(resting is cTransform) && resting != null)
                 throw new McpError(target.Name + "'s position is not a transform, so it cannot be keyed as one.");
+            //A target inside instances is keyed in the animation's composite's space (CageAnimationSpace): new tracks rest there
+            if (resting is cTransform restingTransform)
+                resting = CageAnimationSpace.RestingKey(w.Commands, w.Composite, target.Path, PositionParam, restingTransform);
             List<string> made = new List<string>();
             int written = 0;
             foreach (string c in Components)
@@ -1956,7 +1964,7 @@ namespace OpenCAGE.MCP
             }
         }
 
-        private static ParameterData RestingContent(Commands commands, Composite composite, Entity entity, ShortGuid parameter)
+        internal static ParameterData RestingContent(Commands commands, Composite composite, Entity entity, ShortGuid parameter)
         {
             ParameterData content = entity.GetParameter(parameter)?.content;
             if (content != null) return content;
@@ -1978,7 +1986,7 @@ namespace OpenCAGE.MCP
             return names.Count == 0 ? " It has no FLOAT or TRANSFORM parameters to animate." : " Parameters it has that can be animated: " + string.Join(", ", names.Take(40)) + (names.Count > 40 ? ", ..." : "") + ".";
         }
 
-        private static CAGEAnimation.FloatTrack FindTrack(Working w, Target target, ShortGuid parameter, string component)
+        internal static CAGEAnimation.FloatTrack FindTrack(Working w, Target target, ShortGuid parameter, string component)
         {
             foreach (CAGEAnimation.Connection connection in w.Connections)
             {
@@ -1991,7 +1999,7 @@ namespace OpenCAGE.MCP
         }
 
         /// <summary>A new connection and float track, as the editor's AddNewConnectionSet makes them (the keys come later).</summary>
-        private static CAGEAnimation.FloatTrack AddTrack(Working w, Target target, ShortGuid parameter, DataType type, string component, float rest)
+        internal static CAGEAnimation.FloatTrack AddTrack(Working w, Target target, ShortGuid parameter, DataType type, string component, float rest)
         {
             CAGEAnimation.FloatTrack track = new CAGEAnimation.FloatTrack() { shortGUID = ShortGuidUtils.GenerateRandom() };
             w.FloatTracks.Add(track);
@@ -2071,6 +2079,13 @@ namespace OpenCAGE.MCP
             Dictionary<string, CAGEAnimation.FloatTrack> existing = Components.ToDictionary(o => o, o => FindTrack(w, target, parameter, o));
             foreach (string c in Components)
                 channel.Rest[c] = ComponentValue(resting, c) ?? 0f;
+            //A target inside instances is keyed in the animation's composite's space (CageAnimationSpace), so its resting value is taken there too
+            if (resting is cTransform restingTransform && CageAnimationSpace.IsNested(w.Commands, w.Composite, target.Path))
+            {
+                cTransform restKey = CageAnimationSpace.RestingKey(w.Commands, w.Composite, target.Path, parameter, restingTransform);
+                foreach (string c in Components)
+                    channel.Rest[c] = CageAnimationSpace.Component(restKey, c);
+            }
             bool none = existing.Values.All(o => o == null);
             if (none)
             {
@@ -2232,7 +2247,7 @@ namespace OpenCAGE.MCP
             throw new McpError("'" + where + "' takes three numbers [x, y, z], or {x?, y?, z?} to key only some of them.");
         }
 
-        /// <summary>What the target holds at a time: its tracks where it has them, its resting value elsewhere (the target's composite space).</summary>
+        /// <summary>What the target holds at a time: its tracks where it has them, its resting value elsewhere (in the key's space).</summary>
         private static cTransform PoseAt(Working w, Channel channel, float time)
         {
             float[] values = new float[6];
@@ -2247,8 +2262,9 @@ namespace OpenCAGE.MCP
         }
 
         /// <summary>
-        /// The world transform of the space a stored path's target writes its position in: the animation's composite at one of
-        /// its placements (or the root, for a path from the root), and the instances the path steps through. UI thread.
+        /// The world transform of the space a stored path's target is keyed in: the animation's composite at one of its placements
+        /// (however deep inside instances the target is - CageAnimationSpace), or for a path from the root, the instances it steps
+        /// through. UI thread.
         /// </summary>
         internal static cTransform TargetFrame(Commands commands, Composite composite, EntityPath stored, int? placement, string argument, out JObject described)
         {
@@ -2260,15 +2276,12 @@ namespace OpenCAGE.MCP
             List<Entity> prefix = new List<Entity>();
             if (chain[0].Item1 == composite)
             {
+                //Keys on a target inside instances apply in the animation's OWN composite space - the instances in between do not move
+                //them (CageAnimationSpace) - so the frame is the animation's composite's, however deep the target is
                 cTransform placed = McpSpatialTools.FrameOf(commands, composite, placement, argument, out described);
-                if (through.Count == 0)
-                    return placed;
-                if (described["placement_path"] is JArray ids)
-                {
-                    prefix = McpRegion.ChainFromIds(commands, root, ids.Select(o => (McpScript.ParseId((string)o) ?? ShortGuid.Invalid).AsUInt32));
-                    if (prefix == null)
-                        throw new McpError("The placement of " + composite.name + " could not be walked from the root.");
-                }
+                if (through.Count != 0)
+                    described["key_space"] = "the animation's composite " + composite.name + " (the target is inside " + string.Join(" / ", through.Select(o => McpScript.EntityName(commands, chain.First(c => c.Item2 == o).Item1, o))) + ", but keys on a target inside instances apply in the animation's own composite's space, as the game applies them)";
+                return placed;
             }
             else
             {
@@ -2301,9 +2314,8 @@ namespace OpenCAGE.MCP
                 List<Tuple<Composite, Entity>> chain = channel.Target.Chain;
                 if (chain == null || chain.Count == 0 || chain[0].Item1 != w.Composite)
                     throw new McpError(where + ": the target's path starts in the level's root, but the viewport shows " + w.Composite.name + ". Open the level's root composite in the editor so the viewport camera is in world space.");
-                List<Entity> through = chain.Take(chain.Count - 1).Select(o => o.Item2).ToList();
-                cTransform inner = through.Count == 0 ? null : McpRegion.Walker(w.Commands).Evaluate(w.Composite, through).World;
-                return InstanceTransform.ToLocal(inner, pose);
+                //The viewport shows the animation's composite, which is the space every key of its targets applies in (CageAnimationSpace)
+                return pose;
             }
             throw new McpError(where + ": the viewport shows " + (camera.Scene?.name ?? "another composite") + ", which is neither the level's root nor " + w.Composite.name + ", so its camera pose cannot be placed in the animation's space. Open the level's root (or " + w.Composite.name + ") in the editor, then try again.");
         }

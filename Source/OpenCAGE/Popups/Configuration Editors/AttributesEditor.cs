@@ -88,6 +88,8 @@ namespace OpenCAGE.ConfigEditors
             this.FormClosing += AttributesEditor_FormClosing;
             this.Activated += AttributesEditor_Activated;
             CloseOnConfigReset();
+            //Global: says so, and shows who uses each set and which are spare
+            ConfigRecordsBanner.Attach(this, ConfigRecords.Kind.Attributes, () => characters.Text);
         }
 
         private static string BehaviourTreesPath => Singleton.PathToAI + "\\DATA\\BINARY_BEHAVIOR\\_DIRECTORY_CONTENTS.BML";

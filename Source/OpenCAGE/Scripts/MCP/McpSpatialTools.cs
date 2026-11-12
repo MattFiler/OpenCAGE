@@ -199,6 +199,10 @@ namespace OpenCAGE.MCP
                 Idempotent = true,
                 Run = ExportRegionCollision,
             };
+
+            //Sky dome from a panorama, outdoor sun and sky lighting (McpBuildingTools.cs): each names its own toolset
+            foreach (McpTool tool in McpBuildingTools.Tools())
+                yield return tool;
         }
 
         #region Shared reading

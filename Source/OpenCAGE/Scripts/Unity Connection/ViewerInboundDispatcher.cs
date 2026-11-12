@@ -223,6 +223,14 @@ namespace OpenCAGE.UnityConnection
                     ViewerPopulateSync.NotifyFinished(packet);
                     //A viewer that has just (re)built its scene - or restarted - is shown the spline being edited again
                     EditSpline.ResendToViewer();
+                    //...and the selected brush's handles
+                    Brushwork.BrushHandleSync.Resend();
+                    break;
+                case PacketEvent.BRUSH_EDIT_RESIZED:
+                    Brushwork.BrushHandleSync.ApplyResize(packet);
+                    break;
+                case PacketEvent.BRUSH_EDIT_VERTICES:
+                    Brushwork.BrushHandleSync.ApplyVertices(packet);
                     break;
                 case PacketEvent.SPLINE_EDIT_POINT_PICKED:
                 case PacketEvent.SPLINE_EDIT_POINT_MOVED:

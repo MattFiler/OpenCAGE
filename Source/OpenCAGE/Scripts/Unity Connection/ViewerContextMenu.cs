@@ -4,6 +4,7 @@ using OpenCAGE.DockPanels;
 using OpenCAGE.Theming;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -37,6 +38,12 @@ namespace OpenCAGE.UnityConnection
         private static ToolStripMenuItem _deinstance;
         private static ToolStripMenuItem _createVariant;
         private static ToolStripMenuItem _createComposite;
+        private static ToolStripMenuItem _createBrush;
+        private static ToolStripMenuItem _editBrush;
+        private static ToolStripMenuItem _matchCollision;
+
+        //Where the right click was, as fractions of the viewport: a brush made from the menu goes where it lands
+        private static float _clickX, _clickY;
 
         //The viewer has been told the menu is up, and not yet that it has gone
         private static bool _open;
@@ -133,6 +140,13 @@ namespace OpenCAGE.UnityConnection
             _createComposite.Enabled = CompositeRefactoring.CanCreateComposite(selected);
             //From what was decided: an item's Visible reads false while its menu is not on screen, which it isn't yet
             _refactorSeparator.Visible = deinstance || variant || create;
+
+            //Brushes: made where the right click landed; a lone selected brush can be edited
+            _clickX = packet.context_menu_viewport_x;
+            _clickY = packet.context_menu_viewport_y;
+            _createBrush.Enabled = Send.Connected;
+            _editBrush.Visible = selected.Count == 1 && Brushwork.BrushService.IsBrush(commands.Content.Level, display.Composite, selected[0]);
+            _matchCollision.Visible = selected.Count != 0 && !_editBrush.Visible && selected.All(o => Brushwork.CollisionMatch.CanMatch(commands.Content.Level, display.Composite, o));
 
             /* Where the click landed, through the panel the viewer is embedded in - the viewer reports it as
                a fraction of its window, and that panel's client area IS that window. The cursor otherwise,
@@ -241,6 +255,17 @@ namespace OpenCAGE.UnityConnection
                     CompositeRefactoring.CreateVariant(instance);
             });
             _createComposite = Item("Create Composite From Selected...", null, (sender, e) => CompositeRefactoring.CreateComposite(SelectedInList()));
+            _createBrush = new ToolStripMenuItem("Create Brush");
+            _createBrush.DropDownItems.Add(Item("Box", null, (sender, e) => Brushwork.BrushPlacement.RequestAt(Brushwork.BrushKind.Box, _clickX, _clickY)));
+            _createBrush.DropDownItems.Add(Item("Plane", null, (sender, e) => Brushwork.BrushPlacement.RequestAt(Brushwork.BrushKind.Plane, _clickX, _clickY)));
+            _editBrush = Item("Edit Brush...", null, (sender, e) =>
+            {
+                List<Entity> selected = SelectedInList();
+                CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
+                if (selected.Count == 1 && display?.Composite != null)
+                    new BrushEditor(display.Composite, selected[0]).Show();
+            });
+            _matchCollision = Item("Create Collision to Match", null, (sender, e) => MatchCollision(SelectedInList()));
             EditorIcons.Bind(_deinstance, EditorIcon.DeinstanceComposite);
             EditorIcons.Bind(_createVariant, EditorIcon.CompositeVariant);
             EditorIcons.Bind(_createComposite, EditorIcon.CreateCompositeFromSelected);
@@ -261,11 +286,36 @@ namespace OpenCAGE.UnityConnection
                 _openComposite,
                 _selectParent,
                 _deselectAll,
+                new ToolStripSeparator(),
+                _createBrush,
+                _editBrush,
+                _matchCollision,
                 _refactorSeparator,
                 _deinstance,
                 _createVariant,
                 _createComposite,
             });
+        }
+
+        /* Collision made from what each selected ModelReference draws (solid: walked on, shot at), replacing what it had - one undo
+           step each, as the tools make it (Brushwork.CollisionMatch) */
+        private static void MatchCollision(List<Entity> selected)
+        {
+            CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
+            CathodeLib.Level level = display?.Content?.Level;
+            if (level == null || display.Composite == null)
+                return;
+            List<string> failed = new List<string>();
+            foreach (Entity entity in selected)
+            {
+                if (!(entity is FunctionEntity function) || !Brushwork.CollisionMatch.CanMatch(level, display.Composite, function))
+                    continue;
+                string name = level.Commands.Utils.GetEntityName(display.Composite, entity);
+                try { Brushwork.CollisionMatch.Apply(level, display.Composite, function, new Brushwork.CollisionMatch.Options(), "Create collision to match " + name); }
+                catch (Brushwork.BrushException e) { failed.Add(name + ": " + e.Message); }
+            }
+            if (failed.Count != 0)
+                MessageBox.Show(string.Join("\n", failed.Take(10)), "Create Collision to Match", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
 
         private static List<Entity> SelectedInList()

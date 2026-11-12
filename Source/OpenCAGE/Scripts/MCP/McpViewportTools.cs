@@ -206,6 +206,10 @@ namespace OpenCAGE.MCP
                 ReadOnly = true,
                 Run = Preview,
             };
+
+            //Z-fighting: find_z_fighting, fix_z_fighting - each names its own toolset ('world')
+            foreach (McpTool tool in McpSurfaceTools.Tools())
+                yield return tool;
         }
 
         #region Viewer readiness

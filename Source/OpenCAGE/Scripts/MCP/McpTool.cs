@@ -1204,6 +1204,7 @@ namespace OpenCAGE.MCP
                         _tools.AddRange(McpToolsets.Tag("assets", McpResourceTools.Tools()));
                         _tools.AddRange(McpToolsets.Tag("assets", McpMaterialTools.Tools()));
                         _tools.AddRange(McpToolsets.Tag("animation", McpAnimationAssetTools.Tools()));
+                        _tools.AddRange(McpToolsets.Tag("animation", McpClipTools.Tools()));
                         _tools.AddRange(McpToolsets.Tag("gamedata", McpGameDataTools.Tools()));
                         _tools.AddRange(McpToolsets.Tag("game", McpLevelTools.Tools()));
                         _tools.AddRange(McpToolsets.Tag("world", McpSpatialTools.Tools()));
@@ -1214,6 +1215,8 @@ namespace OpenCAGE.MCP
                         _tools.AddRange(McpToolsets.Tag("characters", McpCharacterTools.Tools()));
                         _tools.AddRange(McpToolsets.Tag("lights", McpLightTools.Tools()));
                         _tools.AddRange(McpToolsets.Tag("script", McpUsageTools.Tools()));
+                        _tools.AddRange(McpToolsets.Tag("assets", McpBrushTools.Tools()));
+                        _tools.AddRange(McpToolsets.Tag("game", McpGameAudioTools.Tools()));
                         //A name given twice would make the whole list fail: the first one stays, and the clash is logged
                         _byName = new Dictionary<string, McpTool>(StringComparer.OrdinalIgnoreCase);
                         foreach (McpTool tool in _tools.ToList())
@@ -1403,7 +1406,10 @@ namespace OpenCAGE.MCP
             "places a model with the collision its submeshes name; find_asset_users follows a texture, material or model to its users. An edit inside a " +
             "composite changes every placement (placements_affected); for one " +
             "placement, set a material mapping on the instance placing the models. Texture, material, mapping and model material edits are undo steps; geometry " +
-            "changes and Havok imports are not.\n";
+            "changes and Havok imports are not. Greyboxing: create_brush makes a box or plane (grey grid texture, solid collision) that edit_brush resizes and " +
+            "retextures later (list_brushes) and edit_brush_mesh reshapes (vertices, clip, extrude); each is one undo step. Weapons: describe_weapon " +
+            "shows a weapon's parts and the bones / clips moving them; replace_weapon_model puts a model authored in weapon space (export_weapon_reference) " +
+            "on first person, third person and pickups at once, keeping its animation (dry_run lists the plan; no path = show / hide parts only).\n";
 
         //Other levels, whole levels and backups
         private const string InstructionsLevels =

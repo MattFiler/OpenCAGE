@@ -94,10 +94,11 @@ namespace OpenCAGE.MCP
             {
                 Name = "import_composite_package",
                 Title = "Import composite package",
-                Description = "Import an OpenCAGE .ocp package's composites (and everything they use) into the open level: not undoable, written by save_level. Or, with 'levels', into those levels on disk: each is backed up first (backup_first), then loaded, imported into and saved (built too with build=true), written straight away; this closes this install's game. Place imported composites with create_entities. dry_run lists the composites and which the level already has (inspect_composite_package reads a package without a level). (.ocp is composites to bring into a level; a mod for the mod manager is an .omp - mods export.)",
+                Description = "Import an OpenCAGE .ocp package's composites (and everything they use) into the open level: not undoable, written by save_level. Or, with 'levels', into those levels on disk: each is backed up first (backup_first), then loaded, imported into and saved (built too with build=true), written straight away; this closes this install's game. Place imported composites with create_entities. With overwrite_composites, composites you have changed in the level (its edit history) keep your version unless keep_edited is false; the result lists them (kept_edited). dry_run lists the composites and which the level already has, and which of them you have edited (inspect_composite_package reads a package without a level). (.ocp is composites to bring into a level; a mod for the mod manager is an .omp - mods export.)",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("path", "The .ocp file's full path.", required: true),
-                    McpSchema.Boolean("overwrite_composites", "Replace composites the level already has with the same id."),
+                    McpSchema.Boolean("overwrite_composites", "Replace composites the level already has with the same id - except ones you have changed there, unless keep_edited is false."),
+                    McpPackageEdits.KeepEditedSchema(),
                     McpSchema.Boolean("overwrite_assets", "Replace models/textures/materials the level already has with the same name."),
                     McpSchema.Strings("levels", "Import into these levels on disk instead of the open one (list_levels names them). Not the level that is open."),
                     McpSchema.Boolean("build", "With 'levels': Save & Build each one after importing (much slower). Default false."),
@@ -270,7 +271,15 @@ namespace OpenCAGE.MCP
         }
 
         #region Models
-        private static object ImportModel(McpCall call)
+        private static object ImportModel(McpCall call) => ImportModel(call, null);
+
+        /// <summary>
+        /// import_model, with a step between reading the file and planning the import: import_skinned_onto_rig rebinds the
+        /// scene onto a game rig there (McpRigTools), so everything after - materials, the DisplayModel, the notes - is the
+        /// ordinary import of a mesh on that rig. <paramref name="prepare"/> gets the scene and the plan (whose unit is settled)
+        /// and may throw an McpError to stop.
+        /// </summary>
+        internal static object ImportModel(McpCall call, Action<Scene, ModelIO.ImportPlan> prepare)
         {
             string path = McpAssets.AbsolutePath(call.Str("path", required: true), "path");
             if (!File.Exists(path))
@@ -300,6 +309,7 @@ namespace OpenCAGE.MCP
             //A file with no sidecar carries its own unit: glTF is in metres, FBX usually centimetres
             if (!plan.HasMetadata)
                 plan.UnitScale = ModelIO.FormatUnitScale(path);
+            prepare?.Invoke(scene, plan);
             List<ModelIO.PlannedSubmesh> planned = plan.AllSubmeshes().ToList();
 
             //Meshes left out, as unticking them in the import preview does
@@ -530,6 +540,9 @@ namespace OpenCAGE.MCP
                         notes.Add("No DisplayModel composite was made (create_composite is false), so nothing binds the mesh to " + skeleton.Name + ".");
 
                     AddAnimationHint(result, rig, skeleton, path, notes);
+                    //The level's streamed textures against the game's texture heap after what this import added (Scripts\LevelCheck\TextureBudget.cs)
+                    if (generated.Values.Any(o => o != null))
+                        TextureBudget.NoteAfterImport(level, result, notes);
                     Singleton.OnResourceModified?.Invoke();
                     foreach (string note in notes) call.Note(note);
                     return result;
@@ -950,7 +963,7 @@ namespace OpenCAGE.MCP
             if (ids.Count == 0)
                 throw new McpError("The package holds no composites.");
             bool overwrite = call.Bool("overwrite_composites");
-            CompositeArchive.ImportOptions options = new CompositeArchive.ImportOptions() { OverwriteComposites = overwrite, OverwriteAssets = call.Bool("overwrite_assets") };
+            CompositeArchive.ImportOptions options = new CompositeArchive.ImportOptions() { OverwriteComposites = overwrite, OverwriteAssets = call.Bool("overwrite_assets"), KeepEdited = McpPackageEdits.KeepEdited(call) };
 
             if (call.Bool("dry_run"))
                 return ImportPlan(call, path, manifest, overwrite);
@@ -1023,6 +1036,7 @@ namespace OpenCAGE.MCP
                         ["collision"] = result.CollisionMappings,
                     };
                     if (result.DeadProxies.Any) summary["dead_proxies"] = result.DeadProxies.Describe("this level");
+                    McpPackageEdits.Report(call, summary, result);
                     return summary;
                 });
             }
@@ -1103,6 +1117,7 @@ namespace OpenCAGE.MCP
                         ["physics_systems"] = o.Result.PhysicsSystems,
                     };
                     if (o.Result.DeadProxies.Any) item["dead_proxies"] = o.Result.DeadProxies.Describe(o.Level);
+                    McpPackageEdits.Report(null, item, o.Result);
                     return item;
                 })),
                 ["roots"] = new JArray(manifest.Composites.Where(o => o != null && o.IsRoot).Select(o => o.Name)),
@@ -1152,7 +1167,8 @@ namespace OpenCAGE.MCP
                 {
                     HashSet<ShortGuid> there = new HashSet<ShortGuid>(CompositeIndexCache.Get(level).Select(o => o.ID));
                     List<string> clash = all.Where(o => there.Contains(new ShortGuid(o.Guid))).Select(o => o.Name).ToList();
-                    targets.Add(new JObject() { ["level"] = level, ["new"] = all.Count - clash.Count, [overwrite ? "would_replace" : "already_there_kept"] = new JArray(clash.Take(100)) });
+                    targets.Add(McpPackageEdits.Plan(new JObject() { ["level"] = level, ["new"] = all.Count - clash.Count, [overwrite ? "would_replace" : "already_there_kept"] = new JArray(clash.Take(100)) },
+                        overwrite ? CompositeArchive.EditedCompositesItWouldReplace(manifest, level) : null, overwrite, McpPackageEdits.KeepEdited(call)));
                 }
                 if (EditorUtils.ThisInstallsGameRunning())
                     call.Note("Alien: Isolation is running: the real call closes it.");
@@ -1161,7 +1177,9 @@ namespace OpenCAGE.MCP
             {
                 HashSet<ShortGuid> here = McpEditor.UI(() => new HashSet<ShortGuid>(McpEditor.RequireCommands(forEditing: false).Entries.Where(o => o != null).Select(o => o.shortGUID)));
                 List<string> clash = all.Where(o => here.Contains(new ShortGuid(o.Guid))).Select(o => o.Name).ToList();
-                targets.Add(new JObject() { ["level"] = "the open level", ["new"] = all.Count - clash.Count, [overwrite ? "would_replace" : "already_here_kept"] = new JArray(clash.Take(100)) });
+                List<CompositeArchive.EditedComposite> edited = overwrite ? McpEditor.UI(() => CompositeArchive.EditedCompositesItWouldReplace(manifest, McpEditor.RequireCommands(forEditing: false))) : null;
+                targets.Add(McpPackageEdits.Plan(new JObject() { ["level"] = "the open level", ["new"] = all.Count - clash.Count, [overwrite ? "would_replace" : "already_here_kept"] = new JArray(clash.Take(100)) },
+                    edited, overwrite, McpPackageEdits.KeepEdited(call)));
             }
             plan["into"] = targets;
             return plan;

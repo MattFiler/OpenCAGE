@@ -565,7 +565,7 @@ namespace OpenCAGE
             if (parameterGroups != null && parameterGroups.TryGetValue(parameter.name, out string declaredBy))
                 group = declaredBy;
 
-            string description = parameter.content.dataType.ToString() + " (" + parameter.variant.ToString() + ")";
+            string description = BuildParameters.Describe(Entity, parameter.name) ?? (parameter.content.dataType.ToString() + " (" + parameter.variant.ToString() + ")");
             return new Attribute[]
             {
                 new CategoryAttribute(group),

@@ -36,6 +36,99 @@ namespace OpenCAGE
             Level = new Level(Singleton.PathToAI + "/DATA/ENV/" + levelName + "/", Singleton.Global, false);
         }
 
+        #region Collision compaction
+        static LevelContent()
+        {
+            //A collision compaction (Save/Build option, MCP compact_collision) keeps every proxy the undo history can bring back
+            CathodeLib.Havok.CollisionCompactor.HeldElsewhere = ProxiesHeldByUndo;
+        }
+
+        /// <summary>Options > Save/Build > Compact Collision On Build, for the instanced save about to run.</summary>
+        private static void ApplyCollisionCompaction(Level level)
+        {
+            if (level != null)
+                level.CompactCollisionOnSave = SettingsManager.GetBool(Settings.CompactCollisionOnBuild);
+        }
+
+        /// <summary>
+        /// The collision proxies the undo and redo history still holds - the COLLISION_MAPPING rows and compounds reachable from any edit's
+        /// fields: an entity or composite a delete keeps, a row a resource edit or a brush edit can put back, a proxy a pair edit made. An
+        /// undo past a compaction then still finds its proxy. Null (nothing is pruned) when the walk cannot finish.
+        /// </summary>
+        internal static ICollection<HavokPackfile.StaticCompoundShape> ProxiesHeldByUndo(Level level)
+        {
+            List<Undo.IEdit> edits;
+            try { edits = Undo.UndoStack.Current.HeldEdits(); }
+            catch { return null; }
+
+            HashSet<HavokPackfile.StaticCompoundShape> found = new HashSet<HavokPackfile.StaticCompoundShape>(new ByReference<HavokPackfile.StaticCompoundShape>());
+            HashSet<object> seen = new HashSet<object>(new ByReference<object>());
+            Queue<object> queue = new Queue<object>(edits.Cast<object>());
+            Dictionary<Type, System.Reflection.FieldInfo[]> fieldsOf = new Dictionary<Type, System.Reflection.FieldInfo[]>();
+            int budget = 2000000;
+            while (queue.Count != 0)
+            {
+                if (--budget < 0)
+                    return null;
+                object o = queue.Dequeue();
+                if (o == null || !seen.Add(o))
+                    continue;
+                if (o is HavokPackfile.StaticCompoundShape compound) { found.Add(compound); continue; }
+                if (o is CollisionMaps.COLLISION_MAPPING row) { if (row.CollisionProxy != null) found.Add(row.CollisionProxy); continue; }
+
+                //The level and the editor around it: what the live level holds is counted from the level itself
+                if (o is string || o is Delegate || o is Type || o is System.Reflection.MemberInfo || o is Level || o is CathodeFile || o is HavokPackfile
+                    || o is LevelContent || o is CommandsUtils || o is System.ComponentModel.Component || o is System.Windows.Forms.Control)
+                    continue;
+                Type type = o.GetType();
+                if (type.IsPrimitive || type.IsEnum || type.IsPointer)
+                    continue;
+                if (o is System.Collections.IDictionary map)
+                {
+                    foreach (System.Collections.DictionaryEntry entry in map) { queue.Enqueue(entry.Key); queue.Enqueue(entry.Value); }
+                    continue;
+                }
+                string ns = type.Namespace ?? "";
+                bool ours = ns.StartsWith("CATHODE") || ns.StartsWith("CathodeLib") || ns.StartsWith("OpenCAGE");
+                if (!ours && o is System.Collections.IEnumerable items)
+                {
+                    if (!(o is Array array) || !array.GetType().GetElementType().IsPrimitive)
+                        foreach (object item in items) queue.Enqueue(item);
+                    continue;
+                }
+                //CATHODE and OpenCAGE types, and the tuples and pairs edits keep them in
+                if (!ours && !(type.IsGenericType && (ns == "System" || ns == "System.Collections.Generic")))
+                    continue;
+                if (!fieldsOf.TryGetValue(type, out System.Reflection.FieldInfo[] fields))
+                {
+                    List<System.Reflection.FieldInfo> list = new List<System.Reflection.FieldInfo>();
+                    for (Type t = type; t != null && t != typeof(object); t = t.BaseType)
+                        foreach (System.Reflection.FieldInfo field in t.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly))
+                        {
+                            Type f = field.FieldType;
+                            if (f.IsPrimitive || f.IsEnum || f == typeof(string) || f.IsPointer || (f.IsValueType && !f.IsGenericType))
+                                continue;
+                            list.Add(field);
+                        }
+                    fieldsOf[type] = fields = list.ToArray();
+                }
+                foreach (System.Reflection.FieldInfo field in fields)
+                {
+                    object value;
+                    try { value = field.GetValue(o); } catch { continue; }
+                    if (value != null) queue.Enqueue(value);
+                }
+            }
+            return found;
+        }
+
+        private sealed class ByReference<T> : IEqualityComparer<T> where T : class
+        {
+            public bool Equals(T x, T y) => ReferenceEquals(x, y);
+            public int GetHashCode(T obj) => RuntimeHelpers.GetHashCode(obj);
+        }
+        #endregion
+
         public void Load()
         {
             Level.Load();
@@ -174,6 +267,7 @@ namespace OpenCAGE
         /// </summary>
         public static Instancing SaveInstancedWithOptions(Level level, bool allowSkippingTheBake = true)
         {
+            ApplyCollisionCompaction(level);
             return level.SaveInstanced(new CathodeLib.NavMesh.NavMeshBakeSettings(), new CathodeLib.NavMesh.CoverBakeSettings(), RadiositySettingsFromOptions(allowSkippingTheBake),
                 new CathodeLib.NavMesh.JobPositionBakeSettings(), new CathodeLib.Alphalight.AlphalightBakeSettings(), new CathodeLib.Sound.SoundNetworkBakeSettings());
         }
@@ -223,6 +317,7 @@ namespace OpenCAGE
                             //A baker is skipped by passing null for its settings - alphalight bakes regardless, so it has its own switch
                             bool skippedAlphalight = Instancing.SkipAlphalightBake;
                             Instancing.SkipAlphalightBake = skippedAlphalight || !bakers.Alphalight;
+                            ApplyCollisionCompaction(Level);
                             try
                             {
                                 pass = Level.SaveInstanced(
@@ -286,21 +381,12 @@ namespace OpenCAGE
             IsVanilla = false;
         }
 
-        /* The checks a build runs of the level's script for what will crash the game: their warnings, or null for none. A
-           check that throws only loses its own warning (logged), never the save. */
+        /* The Level Check a build runs (Scripts\LevelCheck: the alien's vents, the character cap, texture memory and the rest) on the
+           level as built: what it finds that the user hasn't dismissed for this level, crashes first, or null for none. A check that
+           throws only loses its own findings (logged), never the save; the report is kept for the Level Check window. */
         private List<string> CheckLevel()
         {
-            List<string> found = new List<string>();
-            try
-            {
-                string alien = AlienBackstageCheck.Warning(Level.Commands);
-                if (alien != null)
-                    found.Add(alien);
-            }
-            catch (Exception e)
-            {
-                Debug.Log("LevelContent", "Checking " + Level.Name + " for an alien without backstage nodes failed: " + e);
-            }
+            List<string> found = LevelCheck.BuildWarnings(Level);
             return found.Count == 0 ? null : found;
         }
 

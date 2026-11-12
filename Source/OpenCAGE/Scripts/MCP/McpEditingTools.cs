@@ -201,6 +201,10 @@ namespace OpenCAGE.MCP
                 Destructive = true,
                 Run = RemoveReferences,
             };
+
+            //The prefab library: list_prefabs, place_prefab (McpPrefabTools)
+            foreach (McpTool tool in McpPrefabTools.Tools())
+                yield return tool;
         }
 
         #region Copying

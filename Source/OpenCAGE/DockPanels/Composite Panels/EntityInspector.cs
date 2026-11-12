@@ -684,7 +684,8 @@ namespace OpenCAGE.DockPanels
                         FunctionType function = ((FunctionEntity)_entity).function.AsFunctionType;
                         description = function.ToString();
                         editFunction.Enabled = function == FunctionType.CAGEAnimation || function == FunctionType.TriggerSequence || function == FunctionType.Character
-                            || (function == FunctionType.EnvironmentMap && CanCaptureCubemap);
+                            || (function == FunctionType.EnvironmentMap && CanCaptureCubemap)
+                            || (function == FunctionType.ModelReference && Brushwork.BrushService.IsBrush(Content.Level, Composite, _entity));
 
                         bool supportsResources = EntitySupportsResources((FunctionEntity)_entity, function);
                         editEntityResources.Enabled = supportsResources && Content.Level.Models != null;
@@ -1416,6 +1417,10 @@ namespace OpenCAGE.DockPanels
                         if (half != null)
                             CollisionPairs.RemoveHalf(composite, half, CollisionPairs.Undoable(content.Level, label));
                     }
+
+                    //A ModelReference given another model, and no collision: offer the collision that model already has, or to make some
+                    if (changed && live && function == FunctionType.ModelReference && DrawnModelOf(opened) != DrawnModelOf(closed) && DrawnModelOf(closed) != null)
+                        BeginInvoke(new Action(() => Brushwork.CollisionMatch.OfferAfterModelChange(this, content.Level, composite, functionEntity)));
                 };
             }
             else
@@ -1432,6 +1437,12 @@ namespace OpenCAGE.DockPanels
                 };
             }
             _resourceDialog.Show();
+        }
+
+        /* The first submesh a resource's renderable draws: which model it shows, for telling a model change from another edit */
+        private static object DrawnModelOf(cResource resource)
+        {
+            return resource?.value?.FirstOrDefault(o => o != null && o.resource_type == ResourceType.RENDERABLE_INSTANCE)?.RenderableInstance?.FirstOrDefault(o => o?.Model != null)?.Model;
         }
 
         /// <summary>
@@ -1693,6 +1704,10 @@ namespace OpenCAGE.DockPanels
                             text = "Capture";
                         tip = "Capture this environment map's cubemap in the running game, from where it is, and use it (Live Link)";
                         break;
+                    case FunctionType.ModelReference:
+                        text = "Edit Brush";
+                        tip = "Resize this brush and change how its faces are textured, or its collision";
+                        break;
                 }
             }
             if (!editFunction.Enabled && text != "Capturing...")
@@ -1757,9 +1772,16 @@ namespace OpenCAGE.DockPanels
                     case FunctionType.EnvironmentMap:
                         CaptureCubemapInGame();
                         break;
+                    case FunctionType.ModelReference:
+                        if (_brushDialog != null && !_brushDialog.IsDisposed)
+                            _brushDialog.Close();
+                        _brushDialog = new BrushEditor(Composite, Entity);
+                        _brushDialog.Show();
+                        break;
                 }
             }
         }
+        BrushEditor _brushDialog = null;
         private void CAGEAnimationEditor_Closed(object sender, FormClosedEventArgs e)
         {
             if (IsDisposed || !Populated)

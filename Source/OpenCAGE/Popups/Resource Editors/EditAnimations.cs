@@ -127,6 +127,12 @@ namespace OpenCAGE
             _tips.SetToolTip(metadataBtn, "See and edit the selected animation's metadata: its settings, and the tracks of moments it fires them at (footsteps, sounds, flags).");
             _tips.SetToolTip(deleteBtn, "Take the selected animation out of this set and ANIMATION.PAK. Only animations imported with OpenCAGE, and only once nothing here plays them.");
             BuildClipMenu();
+            //Right-click on the sets: the rig tools (display rigs, new contexts) - Popups\Rigging\RigToolMenus
+            if (_picking == PickMode.None)
+                OpenCAGE.Popups.Rigging.RigToolMenus.AttachSetMenu(this, setList, () => _set, () => { FillContexts(); });
+            //Right-click on the clips: Add to the Clip Splicer / Clip Splicer... (ClipSplicerWindow)
+            if (_picking == PickMode.None)
+                OpenCAGE.ClipSplicerWindow.Attach(this, clipList, () => _animations, () => _set, () => Selected(), () => { FillContexts(); });
             clipList.KeyDown += (s, e) =>
             {
                 if (e.KeyCode != Keys.Delete || !deleteBtn.Visible || !deleteBtn.Enabled) return;

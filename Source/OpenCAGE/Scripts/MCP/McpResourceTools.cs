@@ -150,6 +150,21 @@ namespace OpenCAGE.MCP
 
             yield return new McpTool()
             {
+                Name = "compact_collision",
+                Title = "Compact collision",
+                Description = "Drop the collision proxies nothing uses any more and reclaim the dead space edits leave in COLLISION.HKX / HKX64 (every new proxy used to leave a copy of the whole proxy list behind: tens of MB on a big custom level), renumbering every reference - COLLISION.MAP rows, the world hosts' placements, model submeshes, the edit history - in both files at once. " +
+                    "A proxy stays while a row, a script collision resource, a placement, a model submesh or the undo history names it; only ones an editor added after the level's world hosts are pruned unless include_shipped. The result is written and read back and every remaining proxy checked before it is kept, else nothing changes. " +
+                    "dry_run (the default) reports what would go and the sizes before and after. In memory: save_level writes it. Collision of entities deleted since the last build is still placed on the world hosts until save_level build=true rebuilds them (Options compact_collision_on_build compacts on every build). Not undoable; a later undo that brings back an entity whose proxy went gives it no collision (the build warns).",
+                InputSchema = McpSchema.Object(
+                    McpSchema.Boolean("dry_run", "Only report (default true): pass false to compact."),
+                    McpSchema.Boolean("include_shipped", "Also prune unused proxies the level shipped with (before its world hosts): renumbers the hosts and everything after them."),
+                    McpSchema.Boolean("reclaim_only", "Prune nothing: only reclaim dead space (old copies of moved arrays, unreferenced meshes and boxes).")),
+                Destructive = true,
+                Run = CompactCollision,
+            };
+
+            yield return new McpTool()
+            {
                 Name = "list_physics_systems",
                 Title = "List physics systems",
                 Description = "The open level's physics systems (PHYSICS.HKX) by index and name; bodies:true adds each rigid body's shape, motion type, mass, friction, restitution, damping, gravity and filter. Give 'system' for one, with its preview triangle count and the PhysicsSystem entities bound to it.",
@@ -183,6 +198,7 @@ namespace OpenCAGE.MCP
                     McpSchema.Number("restitution", "Bounciness, 0 to 1 (default 0.4)."),
                     McpSchema.Boolean("place_at_model", "Put the body where the composite's ModelReference sits (default true when there is one)."),
                     McpSchema.Boolean("bind", "Bind the composite's PhysicsSystem entity to the new system (default true when it has one)."),
+                    McpSchema.Boolean("key_by_name", "With bind: key the composite's ModelReferences by their bodies' names, as retail's are, so the prop also works when an AssetSpawner spawns it (default true; key_physics_bodies does it for existing props)."),
                     McpSchema.Boolean("dry_run", "Build the hull and report it, without writing anything.")),
                 Run = ImportPhysicsSystem,
             };
@@ -1823,6 +1839,95 @@ namespace OpenCAGE.MCP
             });
         }
 
+        private static object CompactCollision(McpCall call)
+        {
+            bool dryRun = call.Bool("dry_run", true);
+            bool includeShipped = call.Bool("include_shipped");
+            bool reclaimOnly = call.Bool("reclaim_only");
+            return McpEditor.UI(() =>
+            {
+                Level level = McpEditor.RequireLevel().Level;
+                RequireCollision(level);
+                if (!dryRun && UndoStack.Current.Blocked) throw McpError.Busy("OpenCAGE is saving a level. Try again when it has finished.");
+                CollisionCompactor.LevelCompaction report;
+                try
+                {
+                    using (McpEditorTools.Heartbeat(call, dryRun ? "Measuring the collision files" : "Compacting the collision files"))
+                        report = level.CompactCollision(new CollisionCompactor.CompactionOptions() { DryRun = dryRun, IncludeShippedProxies = includeShipped, ReclaimOnly = reclaimOnly });
+                }
+                catch (Exception e) when (!(e is McpError)) { throw new McpError(McpErrorCodes.Failed, "The collision files could not be compacted, and are as they were: " + e.Message); }
+                if (report.Refused != null)
+                    throw new McpError(McpErrorCodes.Refused, "Collision compaction refused: " + report.Refused + ".");
+
+                CollisionCompactor.ProxyReferences refs = report.References;
+                int Count(CollisionCompactor.ProxyReferences.Holder holder) => refs.Holders.Count(o => (o & holder) != 0);
+                JObject result = new JObject()
+                {
+                    ["dry_run"] = dryRun,
+                    ["changed"] = report.Changed,
+                    ["proxies"] = refs.Count,
+                    ["world_hosts"] = new JArray(refs.HostOrdinals),
+                    ["appended_from"] = refs.FirstAppended,
+                    ["used_by"] = new JObject()
+                    {
+                        ["rows"] = Count(CollisionCompactor.ProxyReferences.Holder.Row),
+                        ["script_resources"] = Count(CollisionCompactor.ProxyReferences.Holder.Resource),
+                        ["placements"] = Count(CollisionCompactor.ProxyReferences.Holder.Placed),
+                        ["model_submeshes"] = Count(CollisionCompactor.ProxyReferences.Holder.Submesh),
+                        ["undo_history"] = Count(CollisionCompactor.ProxyReferences.Holder.Keep),
+                        ["other_pointers"] = Count(CollisionCompactor.ProxyReferences.Holder.OtherPointer),
+                    },
+                    ["pruned"] = report.Pruned.Count,
+                    ["pruned_proxies"] = new JArray(report.Pruned.Take(200)),
+                    ["files"] = new JArray(report.Files.Select(o => new JObject()
+                    {
+                        ["file"] = o.File,
+                        ["bytes_before"] = o.FileBefore,
+                        ["bytes_after"] = o.FileAfter,
+                        ["compounds_before"] = o.CompoundsBefore,
+                        ["compounds_after"] = o.CompoundsAfter,
+                        ["dead_bytes"] = o.DeadTailBytes + o.UnreachableBytes,
+                        ["dropped_meshes"] = o.DroppedMeshes,
+                        ["dropped_boxes"] = o.DroppedBoxes,
+                        ["proxy_list_slots"] = o.ListSlotsBefore + " -> " + o.ListSlotsAfter,
+                    })),
+                };
+                if (!dryRun)
+                {
+                    result["submeshes_renumbered"] = report.SubmeshesRenumbered;
+                    result["history_entries_renumbered"] = report.HistoryEntriesRenumbered;
+                }
+                foreach (string note in report.Notes.Distinct().Take(10))
+                    call.Note(note);
+                if (!dryRun && report.Changed)
+                {
+                    //The proxies' ordinals moved: everything that shows or caches them is refreshed (rows keep their proxy objects)
+                    Singleton.OnResourceModified?.Invoke();
+                    call.Note("Compacted in memory: save_level writes it." + (report.Pruned.Count != 0 ? " Proxies after a pruned one have new numbers; list_collision_proxies shows them." : ""));
+                }
+                else if (dryRun && report.Changed)
+                    call.Note("dry_run: nothing changed. dry_run false compacts.");
+                return result;
+            });
+        }
+
+        static McpResourceTools()
+        {
+            //Imported proxies are remembered by ordinal: a compaction renumbers them (or drops them)
+            CollisionCompactor.Compacted += (level, report) =>
+            {
+                lock (_importedProxies)
+                    foreach (string key in _importedProxies.Keys.ToList())
+                    {
+                        (WeakReference held, int proxy) = _importedProxies[key];
+                        if (!ReferenceEquals(held.Target, level)) continue;
+                        int to = proxy >= 0 && proxy < report.Remap.Length ? report.Remap[proxy] : -1;
+                        if (to < 0) _importedProxies.Remove(key);
+                        else _importedProxies[key] = (held, to);
+                    }
+            };
+        }
+
         private static float ReadScale(McpCall call)
         {
             double scale = call.Num("scale", 1.0);
@@ -2171,6 +2276,12 @@ namespace OpenCAGE.MCP
                     Commit(bindTarget, "AI: Set physics system of " + bindTarget.Label, list => BindPhysics(list, created));
                     result["bound"] = EntityBrief(bindTarget);
                     call.Note("Binding " + bindTarget.Name + " to it is one undo step.");
+                    //Its ModelReference keyed by the body's name, as retail's are, so the prop also works spawned
+                    if (call.Bool("key_by_name", true))
+                    {
+                        List<PhysicsBodyKeys.Body> keyed = PhysicsBodyKeys.KeyComposite(level, host, "Key physics bodies of " + host.name + " by name", "AI: ", created);
+                        result["bodies"] = new JArray(keyed.Select(o => PhysicsBodyKeys.Describe(o)));
+                    }
                 }
                 return result;
             });

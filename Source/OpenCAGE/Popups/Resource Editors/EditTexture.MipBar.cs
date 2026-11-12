@@ -39,7 +39,8 @@ namespace OpenCAGE
         {
             if (persistentOnly)
             {
-                texture.TextureStreamed = new Textures.TEX4.Texture();
+                //No streamed bytes, its header sizes those of the persistent part: as every persistent-only texture the game ships is stored
+                texture.TextureStreamed = TextureStreaming.HeaderOnly(part);
                 texture.TexturePersistent = part.Copy();
                 return;
             }

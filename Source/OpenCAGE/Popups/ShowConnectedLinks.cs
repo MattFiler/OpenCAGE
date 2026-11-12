@@ -1,4 +1,6 @@
+using CATHODE.Scripting;
 using CATHODE.Scripting.Internal;
+using OpenCAGE.DockPanels;
 using OpenCAGE.Popups.Base;
 using ST.Library.UI.NodeEditor;
 using System;
@@ -11,7 +13,10 @@ namespace OpenCAGE.Popups
     /* Every link in and out of one node on a flowgraph page, grouped by the kind of pin on the node it's on. It stays up to
        date while it's open, however the links change (drawn, deleted, undone). Go To brings the page forward with the node
        at the other end of the chosen link selected, and closes the window. It goes with the page it was opened from, and
-       closes if the node leaves it. */
+       closes if the node leaves it.
+       Order is a link's place among the links of the pin it leaves from (on whichever node that is), across every page:
+       the order a relay fires them in, and for links setting a value, the last one wins. Move Up / Move Down (Alt+Up /
+       Alt+Down) change it; see LinkOrder. A link drawn since the composite was last compiled shows "new" (it goes last). */
     public partial class ShowConnectedLinks : BaseWindow
     {
         private readonly Flowgraph _flowgraph;
@@ -31,6 +36,13 @@ namespace OpenCAGE.Popups
             public string NodeName;
             public string NodeType;
             public string OtherPinName;
+
+            //The link as the composite stores it: from the pin on the node that owns it (a right or top pin) to the other end
+            public Entity Owner;
+            public EntityConnector Connector;
+            public int Occurrence; //the k-th listed copy of the same link
+            public int Place;      //0-based among its pin's stored links; -1 when not stored yet
+            public int PinCount;   //how many links its pin has stored
         }
 
         /* The groups, in this order: the kind of pin is the side of the node the flowgraph draws it on (as the pin pickers
@@ -63,7 +75,13 @@ namespace OpenCAGE.Popups
             _editor.OptionDisconnected += OnLinkChanged;
             _editor.NodeRemoved += OnNodeRemoved;
             Singleton.OnEntityRenamed += OnEntityRenamed;
+            LinkOrder.OrderChanged += OnOrderChanged;
             _hooked = true;
+
+            _tips = new ToolTip();
+            _tips.SetToolTip(moveUpButton, "Fire the selected link earlier among the links of the pin it leaves from (Alt+Up)");
+            _tips.SetToolTip(moveDownButton, "Fire the selected link later among the links of the pin it leaves from (Alt+Down)");
+            Disposed += (o, e) => _tips.Dispose();
             FormClosed += (o, e) => Unhook();
             Disposed += (o, e) => Unhook();
 
@@ -85,6 +103,15 @@ namespace OpenCAGE.Popups
             _editor.OptionDisconnected -= OnLinkChanged;
             _editor.NodeRemoved -= OnNodeRemoved;
             Singleton.OnEntityRenamed -= OnEntityRenamed;
+            LinkOrder.OrderChanged -= OnOrderChanged;
+        }
+
+        private ToolTip _tips;
+
+        /* A pin's order changed (here, an undo, MCP): any of the node's links may show another place */
+        private void OnOrderChanged(Composite composite, Entity owner)
+        {
+            QueueRefresh();
         }
 
         /* A link to or from the node was made or broken. The page raises these for every link on it - hundreds at once when
@@ -158,7 +185,7 @@ namespace OpenCAGE.Popups
                     if (otherNode == null || otherNode.Owner != _editor)
                         continue; //on a node that's no longer on the page
 
-                    _links.Add(new Link()
+                    Link link = new Link()
                     {
                         Pin = pin,
                         Other = other,
@@ -168,25 +195,55 @@ namespace OpenCAGE.Popups
                         NodeName = otherNode.Title ?? "",
                         NodeType = otherNode.SubTitle ?? "",
                         OtherPinName = other.Text,
-                    });
+                    };
+                    SetStoredPlace(link);
+                    _links.Add(link);
                 }
             }
 
             /* Alphabetical within each group by the node's pin, then the node and pin at the other end, ignoring case - the
-               comparison the pin pickers sort with */
+               comparison the pin pickers sort with. Links leaving the same pin of this node are listed in their order. */
             _links.Sort((a, b) =>
             {
                 if (a.Group != b.Group)
                     return a.Group.CompareTo(b.Group);
                 int order = CompareNames(a.PinName, b.PinName);
+                if (order == 0 && a.Owner == _node.Entity && b.Owner == _node.Entity)
+                    order = PlaceKey(a).CompareTo(PlaceKey(b));
                 if (order == 0)
                     order = CompareNames(a.NodeName, b.NodeName);
                 if (order == 0)
                     order = CompareNames(a.OtherPinName, b.OtherPinName);
+                if (order == 0)
+                    order = PlaceKey(a).CompareTo(PlaceKey(b));
                 return order;
             });
 
             ShowLinks();
+        }
+
+        private static int PlaceKey(Link link) => link.Place < 0 ? int.MaxValue : link.Place;
+
+        /* Which end owns the link (the compile stores it on the node whose right or top pin it leaves from), and its place
+           among that pin's stored links */
+        private void SetStoredPlace(Link link)
+        {
+            STNode node = link.Pin.Owner;
+            bool ownedHere = node.GetOutputOptions().Contains(link.Pin) || node.GetTopOptions().Contains(link.Pin);
+            STNodeOption from = ownedHere ? link.Pin : link.Other;
+            STNodeOption to = ownedHere ? link.Other : link.Pin;
+            link.Owner = from.Owner?.Entity;
+            link.Connector = new EntityConnector() { thisParamID = from.ShortGUID, linkedEntityID = to.Owner.ShortGUID, linkedParamID = to.ShortGUID };
+            link.Occurrence = _links.Count(o => o.Owner == link.Owner && o.Connector.Equals(link.Connector));
+            link.Place = link.Owner == null ? -1 : LinkOrder.PlaceOf(link.Owner, link.Connector, link.Occurrence);
+            link.PinCount = link.Owner == null ? 0 : LinkOrder.PinLinks(link.Owner, from.ShortGUID).Count;
+        }
+
+        private static string OrderText(Link link)
+        {
+            if (link.Place < 0)
+                return "new";
+            return (link.Place + 1) + "/" + link.PinCount;
         }
 
         private static int CompareNames(string a, string b)
@@ -229,11 +286,12 @@ namespace OpenCAGE.Popups
                 if (search.Length != 0 && !Matches(link, search))
                     continue;
 
-                ListViewItem item = new ListViewItem(new string[] { link.PinName, link.NodeName, link.OtherPinName });
+                ListViewItem item = new ListViewItem(new string[] { link.PinName, OrderText(link), link.NodeName, link.OtherPinName });
                 item.ImageIndex = link.Image;
                 item.Group = linkList.Groups[link.Group];
                 item.Tag = link;
-                item.ToolTipText = link.PinName + " - " + link.NodeName + (link.NodeType != "" ? " (" + link.NodeType + ")" : "") + ": " + link.OtherPinName;
+                item.ToolTipText = link.PinName + " - " + link.NodeName + (link.NodeType != "" ? " (" + link.NodeType + ")" : "") + ": " + link.OtherPinName +
+                    (link.Place < 0 ? "\nNew: goes after its pin's other links when the composite is saved" : "\nLink " + (link.Place + 1) + " of " + link.PinCount + " on the pin it leaves from (all pages)");
                 linkList.Items.Add(item);
 
                 if (selected != null && link.Pin == selected.Pin && link.Other == selected.Other)
@@ -255,6 +313,66 @@ namespace OpenCAGE.Popups
             else
                 countLabel.Text = _links.Count == 1 ? "1 link." : _links.Count + " links.";
             goToButton.Enabled = linkList.Items.Count != 0;
+            UpdateMoveButtons();
+        }
+
+        private Link SelectedLink => linkList.SelectedItems.Count == 0 ? null : linkList.SelectedItems[0].Tag as Link;
+
+        /* A link can move while its pin has another link to swap with (a new one is stored first, so it counts) */
+        private void UpdateMoveButtons()
+        {
+            Link link = SelectedLink;
+            bool movable = link?.Owner != null && (link.Place < 0 ? link.PinCount >= 1 : link.PinCount >= 2);
+            moveUpButton.Enabled = movable && link.Place != 0;
+            moveDownButton.Enabled = movable && link.Place >= 0 && link.Place < link.PinCount - 1;
+        }
+
+        private void linkList_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            UpdateMoveButtons();
+        }
+
+        private void moveUpButton_Click(object sender, EventArgs e)
+        {
+            MoveSelected(-1);
+        }
+
+        private void moveDownButton_Click(object sender, EventArgs e)
+        {
+            MoveSelected(1);
+        }
+
+        /* Move the selected link among its pin's links. One drawn since the last compile is stored first: the composite's pages
+           are compiled (which keeps every stored link's order and puts it last) */
+        private void MoveSelected(int delta)
+        {
+            Link link = SelectedLink;
+            if (link?.Owner == null)
+                return;
+
+            CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
+            if (display == null || display.IsDisposed || display.Composite == null || !display.Flowgraphs.Contains(_flowgraph))
+                return;
+
+            if (link.Place < 0)
+            {
+                display.SaveAllFlowgraphs();
+                link.Place = LinkOrder.PlaceOf(link.Owner, link.Connector, link.Occurrence);
+                if (link.Place < 0)
+                    return;
+            }
+
+            if (LinkOrder.Move(display.Composite, link.Owner, link.Connector, delta, link.Occurrence))
+            {
+                Populate(); //now, not queued: the same link stays selected for the next press
+                ListViewItem again = linkList.Items.Cast<ListViewItem>().FirstOrDefault(o => o.Tag is Link l && l.Pin == link.Pin && l.Other == link.Other);
+                if (again != null)
+                {
+                    again.Selected = true;
+                    again.Focused = true;
+                    again.EnsureVisible();
+                }
+            }
         }
 
         private static bool Matches(Link link, string search)
@@ -296,6 +414,13 @@ namespace OpenCAGE.Popups
 
         private void linkList_KeyDown(object sender, KeyEventArgs e)
         {
+            if (e.Alt && (e.KeyCode == Keys.Up || e.KeyCode == Keys.Down))
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                MoveSelected(e.KeyCode == Keys.Up ? -1 : 1);
+                return;
+            }
             if (e.KeyCode != Keys.Enter)
                 return;
             e.Handled = true;

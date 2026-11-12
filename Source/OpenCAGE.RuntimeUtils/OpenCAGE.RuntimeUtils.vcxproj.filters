@@ -216,6 +216,9 @@
     <ClCompile Include="GAME_TIME_STEP.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GAME_DISPLAY.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="GAME_SNAPSHOTS.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

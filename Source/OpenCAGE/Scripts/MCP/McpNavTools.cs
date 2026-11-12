@@ -50,6 +50,10 @@ namespace OpenCAGE.MCP
                 Idempotent = true,
                 Run = QueryNavmesh,
             };
+
+            //The alien vents helper (Scripts\AlienVents): add_alien_vents, check_alien_vents
+            foreach (McpTool tool in McpAlienVentTools.Tools())
+                yield return tool;
         }
 
         #region Cache

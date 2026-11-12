@@ -50,6 +50,10 @@ namespace OpenCAGE.MCP
 
         public static IEnumerable<McpTool> Tools()
         {
+            //Character looks: display model variants, held parts, first-person bodies, the player's model (McpDisplayModelTools, toolset 'characters')
+            foreach (McpTool tool in McpDisplayModelTools.Tools())
+                yield return tool;
+
             yield return new McpTool()
             {
                 Name = "edit_flowgraph_pages",

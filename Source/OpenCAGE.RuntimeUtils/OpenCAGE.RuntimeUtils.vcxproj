@@ -109,6 +109,7 @@
     <ClCompile Include="GAME_ACHIEVEMENTS.cpp" />
     <ClCompile Include="GAME_TIME_STEP.cpp" />
     <ClCompile Include="GAME_SNAPSHOTS.cpp" />
+    <ClCompile Include="GAME_DISPLAY.cpp" />
     <ClCompile Include="ANIM_NAMES.cpp" />
     <ClCompile Include="ANIM_DEBUG.cpp" />
     <ClCompile Include="ANIM_DEBUG_VIEWS.cpp" />

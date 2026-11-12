@@ -95,6 +95,7 @@ namespace OpenCAGE
             hideAllPartsBtn.Click += (s, e) => SetAllParts(false);
 
             _playback.Tick += Playback_Tick;
+            SetupBakePose();
             Load += (s, e) => SizeTimeline();
             FormClosed += AnimationPreview_FormClosed;
         }

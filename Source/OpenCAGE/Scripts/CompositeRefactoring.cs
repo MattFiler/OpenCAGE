@@ -259,7 +259,9 @@ namespace OpenCAGE
                     if (!string.IsNullOrEmpty(page))
                         FlowgraphLayoutManager.SetSelectedPage(result.CreatedComposite, page);
                     CompositePreviewManager.MarkEdited(result.CreatedComposite);
-                });
+                },
+                //A copied display model gets an animated-model entry of its own, as every shipped one has (Characters\DisplayModelIdentity)
+                OpenCAGE.Characters.DisplayModelIdentity.AfterDuplicate());
         }
 
         private static bool TryGetDisplay(out CompositeDisplay display, out Commands commands)

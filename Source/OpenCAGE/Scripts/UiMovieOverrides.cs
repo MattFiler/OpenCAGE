@@ -66,7 +66,8 @@ namespace OpenCAGE
         public static bool IsOwnedEntry(string entryName)
         {
             string name = (entryName ?? "").Replace('\\', '/').TrimStart('/');
-            return All.Any(o => string.Equals(name, o.Entry, StringComparison.OrdinalIgnoreCase));
+            //A level's own movies, put in by a launch into it, are OpenCAGE's too (LevelUiOverrides)
+            return All.Any(o => string.Equals(name, o.Entry, StringComparison.OrdinalIgnoreCase)) || LevelUiOverrides.IsOwnedEntry(name);
         }
 
         /// <summary>UI.PAK, as a path relative to the game folder the way the Mod Manager names files.</summary>
@@ -114,6 +115,9 @@ namespace OpenCAGE
             PAK2.File own = EntryOf(pak, movie.Entry);
             if (own != null && !Same(own.Content, Embedded(movie, true)))
                 return "edited";
+            //The game pointed at a launched level's own version of the movie: that is used over the option, whose movie is in or not
+            if (LevelUiOverrides.PointedAtFor(pathToAI, movie.GamePath) != null)
+                return own != null ? "on" : "off";
             bool redirected = PatchManager.HasFilePath(pathToAI, movie.OwnPath);
             if (own != null && redirected) return "on";
             if (own == null && !redirected && !OverwrittenByOldVersion(pak, movie)) return "off";
@@ -184,6 +188,9 @@ namespace OpenCAGE
                 pakChanged = true;
             }
 
+            //A launched level's own version of the movie is used over the option's: the game stays pointed at it
+            if (LevelUiOverrides.PointedAtFor(pathToAI, movie.GamePath) != null)
+                return null;
             if (!PatchManager.PatchFilePath(pathToAI, movie.GamePath, movie.OwnPath, on))
                 return "AI.exe could not be " + (on ? "pointed at" : "pointed back from") + " OpenCAGE's " + movie.Resource + " movie (is the game open?)";
             return null;
@@ -334,6 +341,8 @@ namespace OpenCAGE
                         continue;
                     changed = true;
                 }
+                //And the movies of a launched level the game is pointed at (LevelUiOverrides)
+                changed |= LevelUiOverrides.AddInUse(pak, Singleton.PathToAI);
                 return changed ? BytesOf(pak) : null;
             }
             catch

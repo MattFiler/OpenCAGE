@@ -30,6 +30,13 @@ namespace OpenCAGE
 
             /// <summary>Write out whatever the file holds, root motion and all.</summary>
             KeepAsAuthored,
+
+            /// <summary>
+            /// The clip travels, played at a marker (a cinematic): built as the game's travelling clips are - root left to the engine, the
+            /// capsule carried (inverted) on REFERENCE_ROOT, the body relative to it - so the capsule follows the body and LOD/culling
+            /// measure from it. See <see cref="OpenCAGE.ClipTools.TravelAtMarker"/>.
+            /// </summary>
+            AtMarker,
         }
 
         public class Options
@@ -72,6 +79,12 @@ namespace OpenCAGE
 
             /// <summary>The set's context to file the clip in (WEAPON_HANDGUN, CROUCHED...), or null for its own unnamed one.</summary>
             public string Context = null;
+
+            /// <summary>
+            /// With <see cref="RootHandling.AtMarker"/>: measure the travel from the first frame, so the clip starts on the marker facing along
+            /// it (true, the default), or keep the file's own origin as the marker (false: clips authored together in one scene).
+            /// </summary>
+            public bool MarkerFromFirstFrame = true;
         }
 
         /// <summary>What came out of a file, and everything worth telling the user before they commit.</summary>
@@ -121,6 +134,9 @@ namespace OpenCAGE
 
             public string Problem;
             public List<string> Warnings = new List<string>();
+
+            /// <summary>With <see cref="RootHandling.AtMarker"/>: where the capsule goes and how close the body stays to it.</summary>
+            public OpenCAGE.ClipTools.TravelAtMarker.Result Travel;
 
             public bool Ok { get { return Poses != null && Problem == null; } }
             public float Duration { get { return Frames > 1 ? (Frames - 1) * FrameDuration : FrameDuration; } }
@@ -283,6 +299,7 @@ namespace OpenCAGE
                 reading.Warnings.AddRange(across.Notes);
                 reading.RootAnimated = RootMoves(reading.Poses);
                 ApplyRoot(reading, options.Root);
+                if (options.Root == RootHandling.AtMarker) ApplyTravel(reading, rig, options);
                 return reading;
             }
 
@@ -352,7 +369,30 @@ namespace OpenCAGE
             reading.RootAnimated = RootMoves(poses);
             reading.Poses = poses;
             ApplyRoot(reading, options.Root);
+            if (options.Root == RootHandling.AtMarker) ApplyTravel(reading, rig, options);
             return reading;
+        }
+
+        /// <summary>
+        /// <see cref="RootHandling.AtMarker"/>: rebuild the frames in the travelling shape (<see cref="OpenCAGE.ClipTools.TravelAtMarker"/>),
+        /// the file's root motion counted as the body's travel. An additive clip holds no pose to travel with and is refused.
+        /// </summary>
+        public static void ApplyTravel(Reading reading, Skeleton rig, Options options)
+        {
+            if (reading?.Poses == null || reading.Problem != null) return;
+            if (options.Additive)
+            {
+                reading.Problem = "An additive clip only lays changes over whatever the character is doing, so it has no travel of its own to play at a marker. "
+                    + "Import it without 'travels at a marker' (additive clips play on CHR_PlaySecondaryAnimation, not CMD_PlayAnimation).";
+                return;
+            }
+            OpenCAGE.ClipTools.TravelAtMarker.Result travel = OpenCAGE.ClipTools.TravelAtMarker.Convert(reading.Poses, rig, reading.FrameDuration,
+                new OpenCAGE.ClipTools.TravelAtMarker.Options { FromFirstFrame = options.MarkerFromFirstFrame, RootIsTravel = true });
+            if (!travel.Ok) { reading.Problem = travel.Problem; return; }
+            reading.Poses = travel.Poses;
+            reading.Travel = travel;
+            reading.Warnings.Add(travel.Describe());
+            reading.Warnings.AddRange(travel.Notes);
         }
 
         /* Keep only the frames asked for, and say so */
@@ -427,7 +467,8 @@ namespace OpenCAGE
         public static void ApplyRoot(Reading reading, RootHandling handling)
         {
             if (reading?.Poses == null || reading.Poses.Count == 0) return;
-            if (handling == RootHandling.KeepAsAuthored) return;
+            //AtMarker takes the root's motion as the body's travel and then leaves the root itself to the engine (ApplyTravel)
+            if (handling == RootHandling.KeepAsAuthored || handling == RootHandling.AtMarker) return;
 
             bool all = handling == RootHandling.LeaveToEngine;
             HavokPackfile.SampledTransform first = reading.Poses[0][0];

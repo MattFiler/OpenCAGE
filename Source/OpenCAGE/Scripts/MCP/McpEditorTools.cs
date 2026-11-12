@@ -103,6 +103,9 @@ namespace OpenCAGE.MCP
                     McpSchema.Boolean("overwrite_assets", "With imports: let imported models/textures/materials replace same-named ones (default false)."),
                     McpSchema.Boolean("discard_unsaved", "Open it even though the level open now has unsaved changes, losing them."),
                     McpSchema.Boolean("close_game", "If Alien: Isolation is running, close it first, as File > Create Level does (progress in it is lost). Without this the call is refused while it runs."),
+                    McpSchema.Boolean("test_room", "Make it a playable test room (Create Level's 'Make playable test room'): DisplayModel:RIPLEY_FP from PRODUCTION/FRONTEND and Archetypes\\Script\\Mission\\SpawnPositionSelect from PRODUCTION/SCI_HUB join the imports, then once it is open a room of brushes is built in the root (floor, ceiling and four walls facing in, grid material, solid collision - the ceiling ballistic only, so its top is not walkable and the navmesh and player start stay on the floor; list_brushes / edit_brush edit them), ceiling lights, a player start in the middle facing the +Z wall and a NavMeshReachabilitySeedPoint on the floor - one undo step - and it is saved with build=true, so launch_game can start it straight away."),
+                    McpSchema.Vector("room_size", "With test_room: [width (X), length (Z), height] inside the walls, metres (default [16, 16, 5]; sides 2-128, height 2.5-32)."),
+                    McpSchema.Boolean("room_lights", "With test_room: light it with a grid of ceiling lights about 8 m apart (default true)."),
                     McpSchema.Boolean("dry_run", "Check the name and imports and report what would be ported, writing nothing.")),
                 Destructive = true,
                 Run = CreateLevel,
@@ -142,7 +145,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "diff_level",
                 Title = "What changed in a level",
-                Description = "Compare the open level's script (with its unsaved edits) against: 'saved' (default, what is on disk now - 'what have I changed since the last save'), 'backup' (a backup's script, backup_id from list_backups), or 'level' (another level's script on disk, e.g. the level a copy came from). Lists composites added, removed and renamed, and per composite the entities added, removed and renamed, parameters changed (old -> new), and links added and removed. Script only: models, materials and textures are not compared. Read-only.",
+                Description = "Compare the open level's script (with its unsaved edits) against: 'saved' (default, what is on disk now - 'what have I changed since the last save'), 'backup' (a backup's script, backup_id from list_backups), or 'level' (another level's script on disk, e.g. the level a copy came from). Lists composites added, removed and renamed, and per composite the entities added, removed and renamed, parameters changed (old -> new), and links added and removed. Script only: compare_levels compares the rest (models, materials, textures, placements, lights, collision, physics, zones, navigation, sound, files) of two saved copies. Read-only.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("against", "saved (default), backup, or level.", options: new[] { "saved", "backup", "level" }),
                     McpSchema.Integer("backup_id", "against backup: the backup's id (list_backups)."),
@@ -172,7 +175,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "launch_game",
                 Title = "Launch the game",
-                Description = "Start Alien: Isolation straight into a level (Steam, Epic or GOG). Closes this install's game first if running, and writes the launch_options AI.exe patches and UI mods as set (and puts those of options Launch Game no longer has back off). The game loads what is on disk: save (or save_level first) - a level needing a Save & Build is refused unless allow_stale_build (get_editor_state level.build says why). A level starts playing straight away: the title screen is skipped, as Launch Game's Load straight into does. wait_for 'level' or 'playing' waits until the game reports it through Live Link (launch_options live_link on), 'process' until AI.exe runs. Installs or removes the runtime utils ASI (the Debug tools - debug_menu and its dont_write_saves, debug_entities, hot_reload, live_link - and cap_fps, unlock_mouse, possess_characters) as launch_options say. Without a level it starts at the main menu.",
+                Description = "Start Alien: Isolation straight into a level (Steam, Epic or GOG). Closes this install's game first if running, and writes the launch_options AI.exe patches and UI mods as set (and puts those of options Launch Game no longer has back off). The level's own UI movies (list_ui_overrides) go in for this launch (level_ui lists them; one the level brings is used over the matching UI mod) and come out again once the game closes or anything else is launched. The game loads what is on disk: save (or save_level first) - a level needing a Save & Build is refused unless allow_stale_build (get_editor_state level.build says why). A level starts playing straight away: the title screen is skipped, as Launch Game's Load straight into does. wait_for 'level' or 'playing' waits until the game reports it through Live Link (launch_options live_link on), 'process' until AI.exe runs. Installs or removes the runtime utils ASI (the Debug tools - debug_menu and its dont_write_saves, debug_entities, hot_reload, live_link - and cap_fps, unlock_mouse, possess_characters) as launch_options say. Without a level it starts at the main menu. If the game crashes, crash triage names the cause and the fix from its crash dump: in the error when a wait_for ends in a crash, else as previous_crash in the next launch's result (crash_triage reads it any time).",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("level", "The level to start in, as list_levels names it. Defaults to the open level; 'menu' for the main menu."),
                     McpSchema.String("save", "Save the open level first when it is the one launched: none (default), save, build (Save & Build), or auto (build if it needs one, else save if it has unsaved changes).", options: new[] { "none", "save", "build", "auto" }),
@@ -476,6 +479,18 @@ namespace OpenCAGE.MCP
                 Destructive = true,
                 Run = DeleteBackups,
             };
+
+            //A level's own UI movies and launching a mod (McpUiOverrideTools.cs: the 'game' toolset)
+            foreach (McpTool tool in McpUiOverrideTools.Tools())
+                yield return tool;
+
+            //Why the game crashed (McpCrashTools.cs: crash_triage, the 'game' toolset)
+            foreach (McpTool tool in McpCrashTools.Tools())
+                yield return tool;
+
+            //A level's own HUD overlays and checking any UI movie (McpHudTools.cs: hud_overlay, check_ui_movie)
+            foreach (McpTool tool in McpHudTools.Tools())
+                yield return tool;
         }
 
         /// <summary>The 'path' argument open_composite and select_entities share.</summary>
@@ -713,6 +728,25 @@ namespace OpenCAGE.MCP
                 throw new McpError("New levels are made from PRODUCTION/FRONTEND, which is missing from this install. Verify the game files.");
             //What to port in, checked against each source level's composite index before anything is written
             CompositeSelection imports = ReadImports(call);
+            //A playable test room: the player and the spawn logic join the imports (as the dialog lists them), the room is built once it is open
+            Brushwork.TestRoom.Options room = null;
+            if (call.Bool("test_room"))
+            {
+                room = new Brushwork.TestRoom.Options() { Lights = call.Bool("room_lights", true) };
+                if (call.Has("room_size"))
+                {
+                    System.Numerics.Vector3 size = McpValues.ReadVector(call.Token("room_size"), "room_size", null);
+                    room.Width = size.X;
+                    room.Length = size.Y;
+                    room.Height = size.Z;
+                }
+                string problem = room.Problem();
+                if (problem != null) throw McpError.Invalid(problem);
+                try { Brushwork.TestRoom.AddImports(imports); }
+                catch (Brushwork.BrushException e) { throw new McpError(McpErrorCodes.NotFound, e.Message); }
+            }
+            else if (call.Has("room_size") || call.Has("room_lights"))
+                throw McpError.Invalid("room_size and room_lights only apply with test_room: true.");
             bool displayModels = call.Bool("include_display_models", true);
             if (call.Has("include_display_models") && imports.IsEmpty)
                 throw McpError.Invalid("include_display_models only applies with 'imports'.");
@@ -721,6 +755,8 @@ namespace OpenCAGE.MCP
             if (call.Bool("dry_run"))
             {
                 JObject plan = new JObject() { ["dry_run"] = true, ["level"] = levelId, ["folder"] = Path.GetFullPath(path) };
+                if (room != null)
+                    plan["test_room"] = new JObject() { ["size"] = new JArray(room.Width, room.Length, room.Height), ["brushes"] = 6, ["lights"] = room.Lights ? Brushwork.TestRoom.LightPlan(room).Count : 0, ["then"] = "save_level with build=true" };
                 if (!imports.IsEmpty)
                 {
                     JArray from = new JArray();
@@ -888,6 +924,24 @@ namespace OpenCAGE.MCP
             }
             //A level made from scratch has never been built: the game cannot run it until it is
             McpEditor.UI(() => BuildTracker.MarkUnbuilt("a new level: it has not been through a Save & Build yet"));
+            //The test room in it, then the Save & Build that makes it playable
+            JObject roomMade = null;
+            if (room != null)
+            {
+                call.Progress("Building the test room");
+                try
+                {
+                    Brushwork.TestRoom.Report report = McpEditor.UI(() => Brushwork.TestRoom.Build(Singleton.Editor.CompositeBrowser.Content, room));
+                    foreach (string note in report.Notes.Distinct()) call.Note(note);
+                    roomMade = report.ToJson();
+                    roomMade["size"] = new JArray(room.Width, room.Length, room.Height);
+                }
+                catch (Brushwork.BrushException e)
+                {
+                    throw new McpError(levelId + " was created and opened, but its test room could not be built: " + e.Message);
+                }
+                roomMade["save_level"] = Nested(call, "save_level", new JObject() { ["build"] = true });
+            }
             JObject state = McpEditor.UI(() => State());
             JObject created = new JObject() { ["level"] = levelId, ["folder"] = Path.GetFullPath(path), ["composites"] = ported };
             if (textDatabases != null)
@@ -907,10 +961,16 @@ namespace OpenCAGE.MCP
                 if (imported.Extra.Count != 0) importedSummary["display_models_added"] = new JArray(imported.Extra);
                 if (imported.DeadProxies.Any) importedSummary["dead_proxies"] = imported.DeadProxies.Describe(levelId);
                 created["imported"] = importedSummary;
-                call.Note("Imported composites are not placed anywhere yet: add instances in 'root' with create_entities, then save_level with build=true.");
+                if (roomMade == null)
+                    call.Note("Imported composites are not placed anywhere yet: add instances in 'root' with create_entities, then save_level with build=true.");
             }
             else
                 call.Note("The level has no geometry or player yet. Typical next steps: port_composites from a campaign level (e.g. the player spawn 'Archetypes\\Script\\Mission\\SpawnPositionSelect' with 'DisplayModel:RIPLEY_FP', and some geometry), create_entities in 'root' to place them, then save_level with build=true.");
+            if (roomMade != null)
+            {
+                created["test_room"] = roomMade;
+                call.Note("The test room is built and saved with a build: launch_game {level: '" + levelId + "'} starts in it. Its brushes are edited with edit_brush (list_brushes lists them).");
+            }
             state["created"] = created;
             return state;
         }
@@ -1233,7 +1293,7 @@ namespace OpenCAGE.MCP
             JObject result = McpEditor.UI(() => CompareScripts(call, mine, theirs, only, details));
             result["level"] = levelName;
             result["against"] = label;
-            result["note"] = "'before' is " + label + "; 'now' is the open level, unsaved edits included. Script only: models, materials and textures are not compared.";
+            result["note"] = "'before' is " + label + "; 'now' is the open level, unsaved edits included. Script only: compare_levels compares models, materials, textures and the rest of two saved copies.";
             return result;
         }
 
@@ -1639,6 +1699,10 @@ namespace OpenCAGE.MCP
                 result["skip_frontend"] = skipFrontend;
                 result["game_running"] = EditorUtils.ThisInstallsGameRunning();
                 result["patches"] = McpLevelTools.PatchSettings(skipFrontend);
+                //The level's own UI movies the launch would put in (list_ui_overrides)
+                List<LevelUiOverrides.Movie> wouldUse = LevelUiOverrides.Of(Singleton.PathToAI, level).Keys.ToList();
+                if (wouldUse.Count != 0)
+                    result["level_ui"] = new JArray(wouldUse.Select(o => o.Name));
                 result["wait_for"] = waitFor;
                 if (save != "none") result["would_save"] = launchesOpen ? save : "nothing (the launched level is not open)";
                 return result;
@@ -1661,10 +1725,13 @@ namespace OpenCAGE.MCP
             //Another mod's d3d11.dll was just moved aside for the loader: that mod won't run in this game, so the user should hear it
             else if (keptAside != null)
                 call.Note(keptAside.Replace("\n\n", " "));
-            //The UI mods as launch_options say, as the Launch Game window does: also takes out the movies of the ones it no longer has
-            string uiModProblem = UiMovieOverrides.Sync(Singleton.PathToAI);
+            //The level's own UI movies (an earlier launch's out), then the UI mods as launch_options say, as the Launch Game window
+            //does: also takes out the movies of the ones it no longer has
+            string uiModProblem = LevelUiOverrides.ApplyForLaunch(Singleton.PathToAI, level, out List<LevelUiOverrides.Movie> levelUi);
             if (uiModProblem != null)
-                call.Note("The UI mods could not all be set as launch_options say (" + uiModProblem + "): the game runs with UI.PAK as it is.");
+                call.Note("The level's UI and the UI mods could not all be set (" + uiModProblem + "): the game runs with UI.PAK as it is.");
+            if (levelUi.Count != 0)
+                result["level_ui"] = new JArray(levelUi.Select(o => o.Name));
             //The level to start in, the integrity check and the popup are what a launch needs; the rest are options
             bool launchPatched = PatchManager.PatchLaunchMode(platform, Singleton.PathToAI, level) && !patchFailures.Contains("file integrity check") && !patchFailures.Contains("popup message");
             if (!launchPatched)
@@ -1692,6 +1759,12 @@ namespace OpenCAGE.MCP
                 Process.Start("steam://rungameid/214490");
             else
                 started = Process.Start(new ProcessStartInfo() { FileName = Singleton.PathToAI + "/AI.exe", WorkingDirectory = Singleton.PathToAI });
+            //The level's own UI movies come out again once this game has closed
+            LevelUiOverrides.PutBackWhenGameCloses(Singleton.PathToAI);
+            //Crash triage: the last launch's crash if no result has said so yet, and a watch on this one (Scripts\CrashTriage)
+            CrashTriage.CrashReport previousCrash = CrashTriage.CrashWatch.TakeUnreported();
+            CrashTriage.CrashWatch.Launched(Singleton.PathToAI, menu ? "menu" : level, started);
+            if (previousCrash != null) result["previous_crash"] = previousCrash.ToJson();
 
             result["launched"] = true;
             result["level"] = menu ? "menu" : level;
@@ -1960,7 +2033,8 @@ namespace OpenCAGE.MCP
                     dump = CrashDump(out folders);
                 }
                 text += dump != null ? " Windows wrote a crash dump: " + dump + "." : " Windows wrote no crash dump of it since the launch (looked in " + string.Join(", ", folders) + ").";
-                return text + " The Windows Application log (Application Error, event 1000) names the module it crashed in.";
+                //Crash triage names the crash from its dump: the known crash, its cause and fix (Scripts\CrashTriage\CrashWatch.cs)
+                return text + " " + CrashTriage.CrashWatch.DescribeForMcp(dump);
             }
 
             /// <summary>

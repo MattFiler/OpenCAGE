@@ -116,6 +116,22 @@ namespace OpenCAGE
 
             InitializeComponent();
             Theming.ThemeManager.ApplyToForm(this);
+            //File > Level Check..., under Save and Build Level
+            OpenCAGE.Popups.LevelCheckWindow.AttachMenu(saveAndBuildLevelToolStripMenuItem);
+            //View > Replace Weapon Model..., under Model Editor
+            OpenCAGE.Popups.ReplaceWeaponModel.AttachMenu(modelsToolStripMenuItem);
+            //View > Sky and Outdoor Lighting, under Galaxy Editor
+            OpenCAGE.Popups.SkyAndSunWindow.AttachMenu(galaxyToolStripMenuItem);
+            //File > Compare Levels... and Record Edits..., after the Level Check
+            OpenCAGE.Popups.CompareLevelsWindow.AttachMenu(saveAndBuildLevelToolStripMenuItem);
+            //File > Alien Vents..., after the Level Check
+            OpenCAGE.Popups.AlienVentsWindow.AttachMenu(saveAndBuildLevelToolStripMenuItem);
+            //File > Import Scene..., after Import Composites
+            OpenCAGE.Popups.SceneImportWindow.AttachMenu(importCompositesMenu);
+            //View > Find Z-Fighting..., under Model Editor
+            OpenCAGE.Popups.ZFightWindow.AttachMenu(modelsToolStripMenuItem);
+            //View > Cinematic Shot Builder, under Animations
+            OpenCAGE.Popups.CinematicShotBuilder.AttachMenu(animationsToolStripMenuItem);
 
             Singleton.Editor = this;
             Singleton.LoadGlobals();
@@ -283,6 +299,11 @@ namespace OpenCAGE
             //beside the game's menus - straight away, as they'd be in place whether the game is launched from OpenCAGE or not
             if (Singleton.IsPrimaryInstance && UiMovieOverrides.PutBackOldMenus(Singleton.PathToAI) && UiMovieOverrides.All.Any(UiMovieOverrides.IsOn))
                 UiMovieOverrides.Sync(Singleton.PathToAI);
+            //Level UI movies an earlier launch left in come out (the game closed after OpenCAGE did), and the Level UI Overrides menu
+            //item is added (CommandsEditor.LevelUi.cs)
+            SetUpLevelUi();
+            //HUD Overlay Builder in the menu, after Level UI Overrides (CommandsEditor.Hud.cs)
+            SetUpHudBuilder();
             Modding.ModServices.CaptureSmallFilesInBackground();
 
             versionToolStripMenuItem.Text = "Version " + ProductVersion;
@@ -2048,11 +2069,10 @@ namespace OpenCAGE
                 MessageBox.Show(text, "Some data was not regenerated", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
 
-            //What the level itself will crash the game on (an alien with no backstage vent to break out to): the save went
-            //ahead, but this has to be seen before the level is played - before the game is launched below, too
-            IReadOnlyList<string> levelWarnings = _compositeBrowser.Content.LastLevelWarnings;
-            if (levelWarnings != null && levelWarnings.Count != 0)
-                MessageBox.Show("The level saved, but the game will crash in it:\n\n" + string.Join("\n\n", levelWarnings), "The game will crash in this level", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            //What the Level Check found in the built level (crashes, things that silently won't work), less what was dismissed:
+            //shown before the game is launched below. The editor's Save & Build opens the Level Check window on it (a crash also gets
+            //a message box); a save with no messages (MCP's) gets the box alone
+            OpenCAGE.Popups.LevelCheckWindow.AfterBuild(this, _compositeBrowser.Content, successMsg);
 
 #if !DEBUG
             PatchManager.PatchFileIntegrityCheck(Singleton.Platform, Singleton.PathToAI);
@@ -2083,8 +2103,8 @@ namespace OpenCAGE
                 //...and a Cinematic Tools injector an older OpenCAGE left waiting (its game never came up) would put them in this
                 //game: closed before the game starts (the save closed the game itself)
                 LaunchGame.CloseGameAndOldInjector();
-                //The UI options as their settings say, as a launch from the Launch Game window does
-                UiMovieOverrides.Sync(Singleton.PathToAI);
+                //The level's own UI movies, then the UI options as their settings say, as a launch from the Launch Game window does
+                LevelUiOverrides.ApplyForLaunch(Singleton.PathToAI, _compositeBrowser.Content.Level.Name, out _);
 
                 if (Singleton.Platform == PatchManager.Platform.STEAM)
                 {
@@ -2097,6 +2117,10 @@ namespace OpenCAGE
                     alienProcess.FileName = Singleton.PathToAI + "/AI.exe";
                     Process.Start(alienProcess);
                 }
+                //...which come out again once this game has closed
+                LevelUiOverrides.PutBackWhenGameCloses(Singleton.PathToAI);
+                //Crash triage watches the game until it closes, and names the cause should it crash (Scripts\CrashTriage)
+                CrashTriage.CrashWatch.Launched(Singleton.PathToAI, _compositeBrowser.Content.Level.Name);
                 Steam.UnlockAchievement(Steam.Achievements.LAUNCHED_GAME);
                 RefreshLiveLinkMenu();
             }
@@ -2614,6 +2638,11 @@ namespace OpenCAGE
             ToggleBoolSetting(Settings.SkipRadiosityRebuild);
         }
 
+        private void compactCollisionOnBuildToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.CompactCollisionOnBuild);
+        }
+
         /* Options > Save/Build's radiosity pair. Don't Rebuild Radiosity skips the bake that Always Fully Rebuild Radiosity
            changes, so while it is on the other is greyed out and shown unticked, keeping its own setting for when the bake
            comes back (LevelContent.RadiositySettingsFromOptions lets the skip win the same way). */
@@ -3082,6 +3111,8 @@ namespace OpenCAGE
                 resetRenderFiltersOnLoadToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.ResetRenderFilters);
             if (ShouldApplySetting(Settings.AlwaysFullyRebuildRadiosity, changedKeys) || ShouldApplySetting(Settings.SkipRadiosityRebuild, changedKeys))
                 ApplyRadiosityOptionGates();
+            if (ShouldApplySetting(Settings.CompactCollisionOnBuild, changedKeys))
+                compactCollisionOnBuildToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.CompactCollisionOnBuild);
             if (ShouldApplySetting(Settings.CubemapCaptureSize, changedKeys))
                 ApplyCubemapCaptureSizeSelectionFromSettings();
             if (ShouldApplySetting(Settings.HideLiveLinkLabel, changedKeys))

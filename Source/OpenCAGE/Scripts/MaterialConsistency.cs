@@ -1,6 +1,7 @@
 using CATHODE;
 using CATHODE.ShaderTypes;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace OpenCAGE
 {
@@ -33,14 +34,92 @@ namespace OpenCAGE
         }
 
         /// <summary>
-        /// What retail sets a hand-held weapon's materials to. The pistol, boltgun and welding torch
-        /// in BSP_TORRENS are all 70, and so is every other world material; the motion tracker is the
-        /// one weapon that draws in the first-person overlay pass at 31, and its materials carry a far
-        /// richer feature mask than a generated one has. Measured in game, a plain diffuse-plus-normal
-        /// material renders untextured at 31, unlit at 39 and translucent at 52, so 70 is also the
-        /// only pass that draws an imported model the way its preview looks.
+        /// The lit opaque pass: world geometry, props and characters (most retail CA_ENVIRONMENT materials). In game a plain
+        /// diffuse-plus-normal material renders untextured at 31, unlit at 39 and translucent at 52, so 70 is the pass that draws
+        /// an opaque imported model the way its preview looks.
         /// </summary>
         public const int WorldPriority = 70;
+
+        /// <summary>
+        /// The see-through pass. Retail's glass (GLASS_Clean, GLASS_Dirty, KEY_CARD_GLASS, VISOR_GLASSCA, BROKEN_GLASS_SHARD) is
+        /// CA_ENVIRONMENT FORCE_TO_ALPHA at 39 (the rest at 42 and 52, none at 70), as are particles. A FORCE_TO_ALPHA pane at
+        /// 70 does not draw at all in game, and at 52 it draws flat pale white.
+        /// </summary>
+        public const int SeeThroughPriority = 39;
+
+        /// <summary>
+        /// The first-person pass. Retail's held items are NO_CLIP at 31: its NO_CLIP CA_ENVIRONMENT materials are at 31, or 52
+        /// for throwables' and the tracker's decals, none above; CA_CHARACTER's (the first-person arms) are at 31 and 47, CA_SKIN's
+        /// at 32. A NO_CLIP material above ~52 draws behind the arms.
+        /// </summary>
+        public const int FirstPersonPriority = 31;
+
+        /// <summary>A draw pass a material can be put in by its priority, with an honest name for the editor's picker.</summary>
+        public class DrawPass
+        {
+            public int Priority;
+            public string Name;
+            public string Description;
+            public override string ToString() => Priority + " - " + Name;
+        }
+
+        /// <summary>
+        /// The passes the Material Editor and MCP name, most used first. What each does is measured in game, except 42, which is
+        /// named for what retail puts there.
+        /// </summary>
+        public static readonly DrawPass[] DrawPasses = new DrawPass[]
+        {
+            new DrawPass { Priority = WorldPriority, Name = "lit opaque", Description = "World geometry, props and characters: lit, opaque and textured. Most materials draw here." },
+            new DrawPass { Priority = 52, Name = "mesh decal", Description = "Blended onto the surface behind it and lit as that surface (decals, terrain strips). Glass here draws flat pale white." },
+            new DrawPass { Priority = 42, Name = "see-through (late)", Description = "Where retail puts its *_PREPASS window glass, fog planes and water. Not measured in game: prefer 39 for glass." },
+            new DrawPass { Priority = SeeThroughPriority, Name = "see-through", Description = "Glass, visors and particles, blended over what is behind them: retail's glass is FORCE_TO_ALPHA here. An opaque material here draws unlit, near-black." },
+            new DrawPass { Priority = FirstPersonPriority, Name = "first person", Description = "Held items drawn over the world and in front of the arms: retail's first-person weapons, with NO_CLIP. Without NO_CLIP a plain material here draws untextured over everything." },
+        };
+
+        /// <summary>The named pass at this priority, or null.</summary>
+        public static DrawPass FindDrawPass(int priority) => DrawPasses.FirstOrDefault(o => o.Priority == priority);
+
+        /// <summary>"39 - see-through", or "57 (no named pass)".</summary>
+        public static string DescribeDrawPass(int priority) => FindDrawPass(priority)?.ToString() ?? priority + " (no named pass)";
+
+        /// <summary>
+        /// The pass retail puts a material of this family and permutation in, when its features decide it: first person for
+        /// NO_CLIP (31; CA_SKIN 32), see-through for FORCE_TO_ALPHA (39), in families whose usual pass is the lit opaque one.
+        /// Null when the features don't decide it (the family's usual pass applies).
+        /// </summary>
+        public static int? DrawPassForFeatures(SHADER_LIST family, long mask)
+        {
+            if (family == SHADER_LIST.CA_SKIN)
+                return HasFeature(family, mask, "NO_CLIP") ? 32 : (int?)null;
+            if (family != SHADER_LIST.CA_ENVIRONMENT && family != SHADER_LIST.CA_CHARACTER)
+                return null;
+            if (HasFeature(family, mask, "NO_CLIP")) return FirstPersonPriority;
+            if (HasFeature(family, mask, "FORCE_TO_ALPHA")) return SeeThroughPriority;
+            return null;
+        }
+
+        /// <summary>
+        /// Why this material's priority will draw it wrongly, or null: a see-through (FORCE_TO_ALPHA) material in the lit opaque
+        /// pass draws nothing, and a first-person (NO_CLIP) one above 52 draws behind the arms. Retail ships neither.
+        /// </summary>
+        public static string DrawPassProblem(Materials.Material material)
+        {
+            if (material?.Shader == null) return null;
+            SHADER_LIST family = material.Shader.Ubershader;
+            long mask = material.Shader.UbershaderFeatureFlags;
+            if (family != SHADER_LIST.CA_ENVIRONMENT && family != SHADER_LIST.CA_CHARACTER) return null;
+            if (HasFeature(family, mask, "NO_CLIP") && material.Priority > 52)
+                return "NO_CLIP (first person) is on but the draw pass is " + material.Priority + ": above 52 a held item draws behind the arms. Retail's are at " + FirstPersonPriority + ".";
+            if (HasFeature(family, mask, "FORCE_TO_ALPHA") && material.Priority >= 60)
+                return "FORCE_TO_ALPHA (see-through) is on but the draw pass is " + material.Priority + ": a see-through material there does not draw at all in game. Retail's glass is at " + SeeThroughPriority + ".";
+            return null;
+        }
+
+        private static bool HasFeature(SHADER_LIST family, long mask, string feature)
+        {
+            int? bit = ShaderUtility.GetShaderFunctionalityIndex(family, ShaderIndexType.FEATURES, feature);
+            return bit != null && (mask & (1L << bit.Value)) != 0;
+        }
 
         public class Problem
         {
@@ -126,11 +205,9 @@ namespace OpenCAGE
                     problems.Add(new Problem { Type = Kind.EnvironmentMap, Text = "This material has an environment map but ENVIRONMENT_MAPPING is off." });
             }
 
-            /* There was a rule here saying a NO_CLIP material above priority 52 would draw behind the
-             * player's hands, and it was wrong in both directions: re-measured with the family's own
-             * feature ordering, the NO_CLIP materials retail ships sit at 39 (300), 70 (41), 10, 52,
-             * 59 and 56 - not one of them at 31. Following it is what put an imported model in the
-             * overlay pass, where it renders untextured. NO_CLIP and priority are independent. */
+            /* The draw pass is not a feature/texture disagreement, so it is not one of these problems: DrawPassProblem says when
+             * a material's priority is wrong for its NO_CLIP / FORCE_TO_ALPHA features (the Material Editor's Draw pass row and
+             * edit_material show it). */
 
             return problems;
         }

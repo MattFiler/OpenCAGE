@@ -25,6 +25,9 @@ namespace OpenCAGE
         private static readonly int MaxNameLength = Math.Min(32, PatchManager.MaxLaunchMapNameLength);
 
         private CompositeSelection _imports = new CompositeSelection();
+        //The imports "Make playable test room" put in the list that were not there already: unticking it takes these out again
+        private List<Brushwork.TestRoom.Entry> _testRoomAdded = new List<Brushwork.TestRoom.Entry>();
+        private bool _settingTestRoom = false;
 
         public CreateLevel() : base()
         {
@@ -46,12 +49,54 @@ namespace OpenCAGE
                 if (picker.ShowDialog(this) == DialogResult.OK)
                     _imports = picker.Selection;
             }
+            //A test room import unticked in the picker: the room can't be made without it, so the option goes off with it
+            if (testRoom.Checked && Brushwork.TestRoom.Imports.Any(o => !_imports.Levels.Any(pick => string.Equals(pick.Level, o.Level, StringComparison.OrdinalIgnoreCase) &&
+                pick.Composites.Values.Any(name => string.Equals(MCP.McpScript.NormalisePath(name), o.Composite, StringComparison.OrdinalIgnoreCase)))))
+                testRoom.Checked = false;
             ShowImportSummary();
         }
 
         private void clearImports_Click(object sender, EventArgs e)
         {
             _imports = new CompositeSelection();
+            _testRoomAdded.Clear();
+            testRoom.Checked = false;
+            ShowImportSummary();
+        }
+
+        private void testRoom_CheckedChanged(object sender, EventArgs e)
+        {
+            foreach (Control control in new Control[] { roomLights, roomSizeLabel, roomWidth, roomTimes1, roomLength, roomTimes2, roomHeight })
+                control.Enabled = testRoom.Checked;
+            if (_settingTestRoom)
+                return;
+
+            if (testRoom.Checked)
+            {
+                //The player and the spawn logic, listed with the other imports so it's plain they are coming in
+                Cursor.Current = Cursors.WaitCursor;
+                try
+                {
+                    _testRoomAdded = Brushwork.TestRoom.AddImports(_imports);
+                }
+                catch (Exception ex)
+                {
+                    Cursor.Current = Cursors.Default;
+                    MessageBox.Show("A test room can't be made in this install:\n\n" + ex.Message, "Test room", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    _settingTestRoom = true;
+                    testRoom.Checked = false;
+                    _settingTestRoom = false;
+                    foreach (Control control in new Control[] { roomLights, roomSizeLabel, roomWidth, roomTimes1, roomLength, roomTimes2, roomHeight })
+                        control.Enabled = false;
+                }
+                Cursor.Current = Cursors.Default;
+            }
+            else
+            {
+                //...and out again, unless they were in the list before the option put them there
+                Brushwork.TestRoom.RemoveImports(_imports, _testRoomAdded);
+                _testRoomAdded.Clear();
+            }
             ShowImportSummary();
         }
 
@@ -66,8 +111,13 @@ namespace OpenCAGE
             }
             else
             {
+                //Each level, then the composites ticked in it (what they place comes too, counted in the level's line)
                 foreach (CompositeSelection.LevelPick pick in _imports.Levels)
+                {
                     importSummary.Items.Add(pick.Level + ":  " + pick.Summary());
+                    foreach (string name in pick.Composites.Values.OrderBy(o => o, StringComparer.OrdinalIgnoreCase))
+                        importSummary.Items.Add("      " + name + (testRoom.Checked && Brushwork.TestRoom.IsImport(pick.Level, name) ? "   (for the test room)" : ""));
+                }
             }
             importSummary.EndUpdate();
         }
@@ -99,6 +149,17 @@ namespace OpenCAGE
             {
                 MessageBox.Show(clash, "Level exists", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
+            }
+
+            Brushwork.TestRoom.Options room = RoomOptions();
+            if (room != null)
+            {
+                string problem = room.Problem();
+                if (problem != null)
+                {
+                    MessageBox.Show(problem, "Test room", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
             }
 
             //Close alien down if it's open, it conflicts with our write locks! (this install's: another install's game holds none of these files)
@@ -143,10 +204,27 @@ namespace OpenCAGE
             if (imported.Ported.Count > 0)
                 summary += " with " + imported.Ported.Count + " imported composite" + (imported.Ported.Count == 1 ? "" : "s");
             string warnings = string.Join("\n\n", new[] { imported.DeadProxies.Describe(levelId), textWarning }.Where(o => !string.IsNullOrEmpty(o)));
+            if (room != null)
+                summary += "!\n\nIts test room (" + room.Describe() + ") is built once it opens, then the level is saved and built, ready to play";
             MessageBox.Show(summary + "!" + (warnings == "" ? "" : "\n\n" + warnings), "Complete", MessageBoxButtons.OK, warnings == "" ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
 
             this.Close();
-            Singleton.Editor.LoadLevelAskingToSave(levelId);
+            if (Singleton.Editor.LoadLevelAskingToSave(levelId) && room != null)
+                Brushwork.TestRoom.BuildWhenOpen(levelId, room);
+        }
+
+        /* The test room the options ask for, or null when "Make playable test room" is off */
+        private Brushwork.TestRoom.Options RoomOptions()
+        {
+            if (!testRoom.Checked)
+                return null;
+            return new Brushwork.TestRoom.Options()
+            {
+                Width = (float)roomWidth.Value,
+                Length = (float)roomLength.Value,
+                Height = (float)roomHeight.Value,
+                Lights = roomLights.Checked,
+            };
         }
 
         private CompositeImporter.Result Create(string levelId, string path)

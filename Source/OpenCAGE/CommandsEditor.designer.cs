@@ -166,6 +166,8 @@ namespace OpenCAGE
             this.saveBuildToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveBuildToolStripSeparatorRadiosity = new System.Windows.Forms.ToolStripSeparator();
             this.skipRadiosityRebuildToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.saveBuildToolStripSeparatorCollision = new System.Windows.Forms.ToolStripSeparator();
+            this.compactCollisionOnBuildToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.cubemapCaptureSizeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.hideLiveLinkLabelToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.dontShowLevelSelectOnStartupToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -1247,7 +1249,9 @@ namespace OpenCAGE
             this.writeCompressedToolStripMenuItem,
             this.saveBuildToolStripSeparatorRadiosity,
             this.alwaysFullyRebuildRadiosityToolStripMenuItem,
-            this.skipRadiosityRebuildToolStripMenuItem});
+            this.skipRadiosityRebuildToolStripMenuItem,
+            this.saveBuildToolStripSeparatorCollision,
+            this.compactCollisionOnBuildToolStripMenuItem});
             this.saveBuildToolStripMenuItem.Name = "saveBuildToolStripMenuItem";
             this.saveBuildToolStripMenuItem.Size = new System.Drawing.Size(210, 22);
             this.saveBuildToolStripMenuItem.Text = "Save/Build";
@@ -1266,6 +1270,22 @@ namespace OpenCAGE
     "e is long, as on custom levels. Models you add have no baked lighting and models you move keep the lighting of wh" +
     "ere they were, until you build with this off. Always Fully Rebuild Radiosity has no effect while this is on.";
             this.skipRadiosityRebuildToolStripMenuItem.Click += new System.EventHandler(this.skipRadiosityRebuildToolStripMenuItem_Click);
+            //
+            // saveBuildToolStripSeparatorCollision
+            //
+            this.saveBuildToolStripSeparatorCollision.Name = "saveBuildToolStripSeparatorCollision";
+            this.saveBuildToolStripSeparatorCollision.Size = new System.Drawing.Size(251, 6);
+            //
+            // compactCollisionOnBuildToolStripMenuItem
+            //
+            this.compactCollisionOnBuildToolStripMenuItem.Name = "compactCollisionOnBuildToolStripMenuItem";
+            this.compactCollisionOnBuildToolStripMenuItem.Size = new System.Drawing.Size(254, 22);
+            this.compactCollisionOnBuildToolStripMenuItem.Text = "Compact Collision On Build";
+            this.compactCollisionOnBuildToolStripMenuItem.ToolTipText = "If enabled, Save and Build drops the collision proxies nothing uses any more (ones added in the editor and repla" +
+    "ced since, or left by deleted entities - never one the undo history can bring back) and the dead space edits " +
+    "leave in the collision files, renumbering everything that refers to them. A custom level's collision files can s" +
+    "hrink from tens of MB to a few.";
+            this.compactCollisionOnBuildToolStripMenuItem.Click += new System.EventHandler(this.compactCollisionOnBuildToolStripMenuItem_Click);
             //
             // miscToolStripMenuItem
             //
@@ -1804,6 +1824,8 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem saveBuildToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator saveBuildToolStripSeparatorRadiosity;
         private System.Windows.Forms.ToolStripMenuItem skipRadiosityRebuildToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator saveBuildToolStripSeparatorCollision;
+        private System.Windows.Forms.ToolStripMenuItem compactCollisionOnBuildToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem cubemapCaptureSizeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem hideLiveLinkLabelToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem dontShowLevelSelectOnStartupToolStripMenuItem;

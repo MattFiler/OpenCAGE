@@ -50,6 +50,8 @@ namespace AlienPAK
         private ModelImportRig.Situation _rig;
 
         private CheckBox _compositeCheck;
+        //Compact Textures and the import's texture memory (Scripts\LevelCheck\TextureBudgetImportRow.cs)
+        private OpenCAGE.TextureBudgetImportRow _textureRow;
         private TextBox _compositeNameBox;
         private Label _compositeStatus;
         private bool _compositeValid;
@@ -75,8 +77,21 @@ namespace AlienPAK
         /// <summary>The game skeleton the mesh is skinned to, when it is on one; null otherwise.</summary>
         public Skeleton CompositeSkeleton
         {
-            get { return _rig != null && _rig.FitsAGameRig ? _rig.BestFit?.Skeleton : null; }
+            get
+            {
+                //a mesh rebound here is on the rig it was rebound onto, whatever other rig shares its bone layout
+                if (_reboundRig != null) return _reboundRig;
+                return _rig != null && _rig.FitsAGameRig ? _rig.BestFit?.Skeleton : null;
+            }
         }
+
+        /* Rebind onto a game skeleton (Popups\Rigging\RebindDialog): the rig the scene was rewritten onto, and what the
+         * name row needs to be built again once it has been - the rig panel and the composite row both follow the rig */
+        private Skeleton _reboundRig;
+        private float _reboundFit;
+        private Func<IEnumerable<string>> _takenNames;
+        private Panel _topRow;
+        private System.Drawing.Size _sizeBeforeRows, _minimumBeforeRows;
 
 
 
@@ -130,7 +145,10 @@ namespace AlienPAK
         /// </summary>
         private void BuildNameRow(Func<IEnumerable<string>> takenNames)
         {
+            if (_topRow == null) { _sizeBeforeRows = Size; _minimumBeforeRows = MinimumSize; }
+            _takenNames = takenNames;
             Panel row = new Panel { Dock = DockStyle.Top, Height = 96, Padding = new Padding(8, 0, 8, 8) };
+            _topRow = row;
 
             _nameBox = new AssetNameBox { Dock = DockStyle.Top, Height = 44 };
             _nameBox.Bind(_plan.Name, takenNames);
@@ -157,6 +175,17 @@ namespace AlienPAK
                 row.Controls.Add(compositeRow);
                 Height += compositeRow.Height;
                 MinimumSize = new System.Drawing.Size(MinimumSize.Width, MinimumSize.Height + compositeRow.Height);
+            }
+
+            /* Compact Textures, and what the import adds to the level's streamed textures against the game's texture heap: under the
+             * scale row, only when materials are generated */
+            _textureRow = OpenCAGE.TextureBudgetImportRow.For(_level, () => _generatedPlans.Values);
+            if (_textureRow != null)
+            {
+                row.Height += _textureRow.Height;
+                row.Controls.Add(_textureRow);
+                Height += _textureRow.Height;
+                MinimumSize = new System.Drawing.Size(MinimumSize.Width, MinimumSize.Height + _textureRow.Height);
             }
 
             row.Controls.Add(BuildScaleRow());
@@ -294,6 +323,12 @@ namespace AlienPAK
         private Panel BuildRigRow()
         {
             _rig = ModelImportRig.Examine(_scene, _plan, Singleton.Animations);
+            if (_reboundRig != null)
+            {
+                //rebound here: it is on that rig, not whichever rig sharing its bone layout happened to score best
+                CathodeLib.Animation.SkeletonAsset asset = Singleton.Animations?.Skeletons.FirstOrDefault(o => o.Skeleton == _reboundRig || o.Skeleton64 == _reboundRig);
+                if (asset != null) { _rig.BestFit = asset; _rig.BestFitScore = Math.Min(Math.Max(0, _reboundFit), ModelImportRig.FitThreshold); }
+            }
             if (!_rig.Skinned && !_rig.HasAnimations) return null;
 
             Panel panel = new Panel { Dock = DockStyle.Top, Height = 26, Padding = new Padding(0, 6, 0, 0) };
@@ -358,12 +393,28 @@ namespace AlienPAK
                     ForeColor = System.Drawing.Color.Firebrick,
                     Text = "This is skinned to a skeleton the game doesn't have, so it will be imported"
                          + " unskinned - the mesh comes in, the bone weights don't. To bring a character in"
-                         + " with its skinning intact, bind it to one of the game's skeletons before"
-                         + " importing it.",
+                         + " with its skinning intact, rebind it onto one of the game's skeletons: it then"
+                         + " plays that rig's animations.",
                 };
                 warning.Height = WrappedHeight(warning);
                 panel.Controls.Add(warning);
                 y += warning.Height + 4;
+
+                Button rebind = new Button { Text = "Rebind onto a game skeleton...", AutoSize = true, Location = new System.Drawing.Point(0, y) };
+                rebind.Click += (s, e) => OpenRebind();
+                panel.Controls.Add(rebind);
+                y += 30;
+            }
+            else if (_reboundRig != null)
+            {
+                panel.Controls.Add(new Label
+                {
+                    AutoSize = true,
+                    Location = new System.Drawing.Point(0, y),
+                    ForeColor = System.Drawing.Color.SeaGreen,
+                    Text = "Rebound onto " + _reboundRig.Name + ": it imports skinned to it and plays its animations.",
+                });
+                y += 22;
             }
 
             if (_rig.HasAnimations)
@@ -390,6 +441,33 @@ namespace AlienPAK
 
             panel.Height = y + 4;
             return panel;
+        }
+
+        /* Rebind onto a game skeleton: the dialog rewrites the scene as a mesh on that rig, so the rig panel, the composite row
+         * (which then offers the DisplayModel) and the preview are rebuilt from it. The scale goes back to 1: a skinned mesh
+         * resized here would pull away from the rig it was just fitted to. */
+        private void OpenRebind()
+        {
+            using (OpenCAGE.Popups.Rigging.RebindDialog dialog = new OpenCAGE.Popups.Rigging.RebindDialog(_scene, _plan.UnitScale, Path.GetFileName(_sourceFilePath ?? _sourceFileName)))
+            {
+                if (dialog.ShowDialog(this) != DialogResult.OK || dialog.Rig == null) return;
+                _reboundRig = dialog.Rig;
+                _reboundFit = dialog.Result?.Fit ?? 0;
+            }
+            _plan.Scale = 1.0f;
+            if (_topRow != null && _takenNames != null)
+            {
+                if (_nameBox != null && _nameBox.IsValid) _plan.Name = _nameBox.Value;
+                SuspendLayout();
+                Controls.Remove(_topRow);
+                _topRow.Dispose();
+                _topRow = null;
+                MinimumSize = _minimumBeforeRows;
+                Size = _sizeBeforeRows;
+                BuildNameRow(_takenNames);
+                ResumeLayout();
+            }
+            UpdatePreviewFromSelection();
         }
 
         /* The height a fixed-width label needs to show all of its text, wrapped */
@@ -730,6 +808,9 @@ namespace AlienPAK
                 for (int i = texturesBefore; i < (_level.Textures?.Entries.Count ?? 0); i++)
                     EditHistory.AssetChanged(_level, AssetModificationInfoTable.AssetKind.TEXTURE, _level.Textures.Entries[i].Name);
             }
+
+            //Compact Textures, as the texture row says: DXT1 instead of BC7 for the colour maps
+            _textureRow?.ApplyTo(_generatedPlans.Values);
 
             Cursor = Cursors.WaitCursor;
             try

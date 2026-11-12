@@ -91,6 +91,18 @@ namespace OpenCAGE.DockPanels
             EditorIcons.Bind(createProxyEntityToolStripMenuItem, EditorIcon.Proxy);
             EditorIcons.Bind(createAliasToolStripMenuItem, EditorIcon.Alias);
 
+            //Brushes: a box or plane made here and drawn by a ModelReference, editable afterwards (Brushwork.BrushService)
+            ToolStripMenuItem createBrush = new ToolStripMenuItem("Create Brush") { ToolTipText = "Make a box or plane brush - level geometry with the grey grid texture and solid collision, resized and retextured later with Edit Brush - where the Viewport is looking (at the composite's origin without it)." };
+            foreach (Brushwork.BrushKind kind in new[] { Brushwork.BrushKind.Box, Brushwork.BrushKind.Plane })
+            {
+                ToolStripMenuItem item = new ToolStripMenuItem(kind.ToString());
+                item.Click += (s, e) => CreateBrush(kind);
+                createBrush.DropDownItems.Add(item);
+            }
+            createEntity.DropDownItems.Add(createBrush);
+            //Create Entity > Insert Prefab...: ready-made gameplay script from the Prefabs folder (Prefabs\InsertPrefabWindow)
+            createEntity.DropDownItems.Add(Prefabs.InsertPrefabWindow.MenuItem(() => Composite));
+
             /* Made outside the designer's container, so nothing disposed it: a ToolTip hooks the top-level form and holds
                every control it has a tip for, so each closed display (and its inspector and level content) lived as long as
                the editor, through the back button's Click handler. */
@@ -861,6 +873,7 @@ namespace OpenCAGE.DockPanels
                 int ogCount = Content.Level.Commands.Utils.CountLinks(_composite);
 #endif
                 int newCount = 0;
+                LinkOrder.Snapshot linkOrder = LinkOrder.Capture(_composite); //each pin keeps its links' stored order, whatever pages draw them (LinkOrder.cs)
                 Content.Level.Commands.Utils.ClearAllLinks(_composite);
                 for (int i = 0; i < _flowgraphs.Count; i++)
                 {
@@ -869,6 +882,7 @@ namespace OpenCAGE.DockPanels
                         newCount += _flowgraphs[i].SaveAndCompile();
                     }
                 }
+                LinkOrder.Restore(_composite, linkOrder);
                 Debug.Log("Composite Display", EditorUtils.GetCompositeName(Composite) + " -> Created " + newCount + " links from flowgraph pages!");
 #if DEBUG
                 if (ogCount != newCount)
@@ -2869,6 +2883,19 @@ namespace OpenCAGE.DockPanels
             CreateEntity(EntityVariant.ALIAS);
         }
 
+        /* A brush from the Create Entity menu: where the middle of the Viewport lands when there is one (it asks, and the brush is
+           made when it answers), else at the composite's origin, and selected */
+        private void CreateBrush(Brushwork.BrushKind kind)
+        {
+            if (!Populated || Composite == null)
+                return;
+            if (Brushwork.BrushPlacement.RequestAt(kind, 0.5f, 0.5f))
+                return;
+            Entity made = Brushwork.BrushPlacement.CreateAt(this, kind, new cTransform());
+            if (made != null)
+                LoadEntity(made, true);
+        }
+
         AddEntity_Variable dialog_var = null;
         AddEntity_Function dialog_func = null;
         AddEntity_CompositeInstance dialog_compinst = null;
@@ -3205,6 +3232,13 @@ namespace OpenCAGE.DockPanels
                 return null;
             }
 
+            //A SimpleWater with no renderable crashes the game as the level loads: it is given one below, or refused here when the level has none to give
+            if (function == FunctionType.SimpleWater && SimpleWaterModel.WhyCannot(Content.Level, Singleton.PathToAI) is string noWater)
+            {
+                MessageBox.Show(noWater, "SimpleWater", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return null;
+            }
+
             string entityName = NewFunctionName(Content.Level.Commands, Composite, function);
 
             Singleton.OnEntityAddPending?.Invoke();
@@ -3213,6 +3247,8 @@ namespace OpenCAGE.DockPanels
             if (position != null)
                 AddPlacedPosition(newEntity, position);
             GiveBoxItsShownSize(newEntity, function);
+            if (function == FunctionType.SimpleWater)
+                SimpleWaterModel.Ensure(Content.Level, (FunctionEntity)newEntity, Singleton.PathToAI);
             SettingsManager.SetString(Settings.PreviouslySelectedFunctionType, function.ToString());
             EntityPaletteRecent.RecordFunction(function);
 

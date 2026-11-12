@@ -373,6 +373,9 @@ namespace OpenCAGE.MCP
 
             foreach (McpTool tool in PlanTools())
                 yield return tool;
+            //Scene import: import_scene (Scripts\MCP\McpSceneImportTools.cs; toolset "assets")
+            foreach (McpTool tool in McpSceneImportTools.Tools())
+                yield return tool;
         }
 
         #region Reading zones and links

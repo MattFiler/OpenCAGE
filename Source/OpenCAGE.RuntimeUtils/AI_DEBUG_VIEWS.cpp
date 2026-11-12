@@ -853,6 +853,13 @@ namespace
 		ImGui::TextDisabled("Otherwise for the selected character only.");
 
 		ImGui::SeparatorText("Characters (click to select)");
+		// How full the game's pool of characters is: a corpse keeps its slot until it is despawned, and the 19th spawn crashes the game
+		const int slots = static_cast<int>(snapshot.characters.size());
+		if (slots >= DEBUG_MENU::kCharacterSlots - 1)
+			ImGui::TextColored(ImVec4(1.0f, 0.45f, 0.35f, 1.0f), "%d / %d character slots in use: %s", slots, DEBUG_MENU::kCharacterSlots,
+				slots >= DEBUG_MENU::kCharacterSlots ? "the next spawn crashes the game" : "one more fills the pool (two spawns racing for it crash the game)");
+		else
+			ImGui::TextDisabled("%d / %d character slots in use (corpses keep theirs until despawned; the 19th crashes the game)", slots, DEBUG_MENU::kCharacterSlots);
 		DrawTable(snapshot);
 
 		const AI_DEBUG::Character* selected = nullptr;

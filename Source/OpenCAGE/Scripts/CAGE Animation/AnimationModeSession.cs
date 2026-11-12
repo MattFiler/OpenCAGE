@@ -226,6 +226,17 @@ namespace OpenCAGE
         /// </summary>
         private List<SyncedAnimationTarget> BuildPreviewTargets()
         {
+            List<SyncedAnimationTarget> targets = BuildKeyTargets(out List<EntityPath> stored);
+            ToViewerSpace(targets, stored);
+            return targets;
+        }
+
+        /* The transform each driven instance holds at the playhead, as its keys give it: in its own composite's space, except
+           for a target inside instances, whose keys are in the animation's composite's space (CageAnimationSpace).
+           stored: the path the animation stores for each, in the same order. */
+        private List<SyncedAnimationTarget> BuildKeyTargets(out List<EntityPath> stored)
+        {
+            stored = new List<EntityPath>();
             List<SyncedAnimationTarget> targets = new List<SyncedAnimationTarget>();
             CAGEAnimation animation = _host?.Animation;
             Commands commands = Commands;
@@ -266,6 +277,7 @@ namespace OpenCAGE
                     };
                     byPath.Add(key, target);
                     targets.Add(target);
+                    stored.Add(connection.connectedEntity);
                 }
 
                 float value = CageAnimationCurves.ValueAt(track, Time, bezier);
@@ -273,6 +285,79 @@ namespace OpenCAGE
             }
 
             return targets;
+        }
+
+        /* The game draws a target inside instances at its key in the animation's composite's space, whatever the instances
+           between are, but the viewer composes the instances above it: so such a target is sent as its key taken into the
+           frame the viewer composes for its holder. Targets directly in the animation's composite, and paths from the level's
+           root, are left as they are. */
+        private void ToViewerSpace(List<SyncedAnimationTarget> targets, List<EntityPath> stored)
+        {
+            Commands commands = Commands;
+            Composite composite = _host?.AnimationComposite;
+            if (commands == null || composite == null)
+                return;
+            Func<ShortGuid[], cTransform> animated = KeyedFrames(targets, stored);
+            List<KeyValuePair<SyncedAnimationTarget, cTransform>> moved = new List<KeyValuePair<SyncedAnimationTarget, cTransform>>();
+            for (int i = 0; i < targets.Count; i++)
+            {
+                cTransform holder = CageAnimationSpace.HolderFrame(commands, composite, stored[i], animated);
+                if (holder == null)
+                    continue;
+                moved.Add(new KeyValuePair<SyncedAnimationTarget, cTransform>(targets[i], CageAnimationSpace.FromKey(holder, KeyOf(targets[i]))));
+            }
+            //Written only once every holder is worked out, from the keys
+            foreach (KeyValuePair<SyncedAnimationTarget, cTransform> entry in moved)
+            {
+                entry.Key.vector3_a = new float[] { entry.Value.position.X, entry.Value.position.Y, entry.Value.position.Z };
+                entry.Key.vector3_b = new float[] { entry.Value.rotation.X, entry.Value.rotation.Y, entry.Value.rotation.Z };
+            }
+        }
+
+        /* An instance on a target's path, by the stored ids that reach it: its key at the playhead when this animation moves it */
+        private static Func<ShortGuid[], cTransform> KeyedFrames(List<SyncedAnimationTarget> targets, List<EntityPath> stored)
+        {
+            Dictionary<string, cTransform> keyed = new Dictionary<string, cTransform>();
+            for (int i = 0; i < targets.Count; i++)
+            {
+                string key = StoredKey(stored[i]?.path);
+                if (key != null && !keyed.ContainsKey(key))
+                    keyed.Add(key, KeyOf(targets[i]));
+            }
+            return ids => keyed.TryGetValue(StoredKey(ids) ?? "", out cTransform found) ? found : null;
+        }
+
+        private static string StoredKey(ShortGuid[] ids)
+        {
+            if (ids == null)
+                return null;
+            System.Text.StringBuilder builder = new System.Text.StringBuilder();
+            foreach (ShortGuid id in ids)
+            {
+                if (id.IsInvalid)
+                    continue;
+                if (builder.Length != 0) builder.Append('/');
+                builder.Append(id.AsUInt32);
+            }
+            return builder.ToString();
+        }
+
+        private static cTransform KeyOf(SyncedAnimationTarget target)
+        {
+            return new cTransform(
+                new Vector3(target.vector3_a[0], target.vector3_a[1], target.vector3_a[2]),
+                new Vector3(target.vector3_b[0], target.vector3_b[1], target.vector3_b[2]));
+        }
+
+        /* The frame a target's own-composite transform is taken into the key's space through, at the playhead (null: the same) */
+        private cTransform HolderFrameNow(EntityPath stored)
+        {
+            Commands commands = Commands;
+            Composite composite = _host?.AnimationComposite;
+            if (commands == null || composite == null || !CageAnimationSpace.IsNested(commands, composite, stored))
+                return null;
+            List<SyncedAnimationTarget> targets = BuildKeyTargets(out List<EntityPath> keyedPaths);
+            return CageAnimationSpace.HolderFrame(commands, composite, stored, KeyedFrames(targets, keyedPaths));
         }
 
         private static void WriteTransformComponent(SyncedAnimationTarget target, ShortGuid subProperty, float value)
@@ -311,6 +396,11 @@ namespace OpenCAGE
                 return false;
             if (!TryStoredPathFor(instancePath, out EntityPath stored))
                 return false;
+
+            //The move is in the entity's own composite's space; a target inside instances is keyed in the animation's (CageAnimationSpace)
+            cTransform holder = HolderFrameNow(stored);
+            if (holder != null)
+                transform = CageAnimationSpace.ToKey(holder, transform);
 
             //Cathode eulers: Y is yaw, X is pitch, Z is roll - the order the sub-properties are in
             float[] values = new float[]
@@ -530,9 +620,12 @@ namespace OpenCAGE
             position = Vector3.Zero;
             rotation = Vector3.Zero;
 
-            cTransform transform = ResolveParameter(stored, ShortGuidUtils.Generate("position"))?.content as cTransform;
+            ShortGuid positionParam = ShortGuidUtils.Generate("position");
+            cTransform transform = ResolveParameter(stored, positionParam)?.content as cTransform;
             if (transform == null)
                 return;
+            //Where it rests in its keys' space: the animation's composite's for a target inside instances (CageAnimationSpace)
+            transform = CageAnimationSpace.RestingKey(Commands, _host?.AnimationComposite, stored, positionParam, transform);
             position = transform.position;
             rotation = transform.rotation;
         }
@@ -549,7 +642,8 @@ namespace OpenCAGE
                     return ((cFloat)content).value;
                 case DataType.TRANSFORM:
                 {
-                    cTransform transform = (cTransform)content;
+                    //A new track rests in its keys' space: the animation's composite's for a target inside instances (CageAnimationSpace)
+                    cTransform transform = CageAnimationSpace.RestingKey(Commands, _host?.AnimationComposite, stored, parameter, (cTransform)content);
                     switch (subProperty)
                     {
                         case "x": return transform.position.X;

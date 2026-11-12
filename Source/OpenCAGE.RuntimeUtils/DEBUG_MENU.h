@@ -114,6 +114,9 @@ namespace DEBUG_MENU
 	};
 	const std::vector<Character>& Characters();
 	const char* ClassName(int characterClass);
+	// The game's pool of characters (ACTIVE_CHARACTERS::initialise, 0x12): the player, the alive and the dead until despawned all
+	// hold a slot, and the 19th spawn crashes the game (request_character writes through a null slot)
+	constexpr int kCharacterSlots = 18;
 
 	// The character chosen in the window (0: none), by unique id: the tabs show it in detail.
 	uint32_t SelectedId();

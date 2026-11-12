@@ -49,6 +49,16 @@ namespace OpenCAGE.Undo
         public int UndoCount => _undo.Count;
         public int RedoCount => _redo.Count;
 
+        /// <summary>Every edit an undo or redo can still apply (copies of both lists): what a collision compaction must not prune from under.</summary>
+        internal List<IEdit> HeldEdits()
+        {
+            List<IEdit> held = new List<IEdit>(_undo.Count + _redo.Count + 1);
+            held.AddRange(_undo);
+            held.AddRange(_redo);
+            if (_group != null) held.Add(_group);
+            return held;
+        }
+
         /// <summary>
         /// Who is making the edits recorded now, when it is not the user at the keyboard (an AI assistant's tool, say).
         /// Each new step is stamped with it for <see cref="History"/>; null (or a null answer) is the user.

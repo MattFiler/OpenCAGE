@@ -62,6 +62,10 @@ namespace OpenCAGE
             EditorIcons.Bind(createInstanceOfCompositeToolStripMenuItem, EditorIcon.CompositeInstance);
             EditorIcons.Bind(createProxyToolStripMenuItem, EditorIcon.Proxy);
             EditorIcons.Bind(createAliasToolStripMenuItem1, EditorIcon.Alias);
+            //Create Entity > Insert Prefab...: the prefab library, its node where this menu was opened (Prefabs\InsertPrefabWindow)
+            createToolStripMenuItem.DropDownItems.Add(Prefabs.InsertPrefabWindow.MenuItem(() => _composite, () => (_flowgraphName, stNodeEditor1.MousePositionInCanvas)));
+            //Sync to a CAGEAnimation... on a CMD_PlayAnimation node: its ExternalTime linked to the CAGEAnimation (Popups\ClipSyncMenu)
+            OpenCAGE.Popups.ClipSyncMenu.Attach(nodeContextMenu, () => _composite, () => stNodeEditor1.GetHoveredNode()?.Entity);
             EditorIcons.Bind(showConnectedLinksToolStripMenuItem, EditorIcon.ConnectedLinks);
             EditorIcons.Bind(addReroutePointToolStripMenuItem, EditorIcon.AddReroutePoint);
             EditorIcons.Bind(removeReroutePointToolStripMenuItem, EditorIcon.RemoveReroutePoint);

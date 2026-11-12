@@ -117,14 +117,15 @@ namespace Packager
          * leaves in the build folder - debug symbols, the API documentation that comes with a NuGet
          * package, the settings file the app writes beside itself - is a developer's business and not a
          * user's. */
-        private static readonly string[] _shippedExtensions = new string[] { ".exe", ".dll", ".config", ".dat" };
+        private static readonly string[] _shippedExtensions = new string[] { ".exe", ".dll", ".config", ".dat", ".ocp" };
 
         /* Subfolders of the build output that are part of the program: the native binaries the app
          * ships beside itself, and the one MSBuild makes - runtimes\<rid>\native, where AssimpNet
          * looks for its native library. The list is opt-in so that a folder someone left behind while
          * working, a test harness or a scratch build, stays behind rather than being uploaded because
-         * it happened to contain a DLL. */
-        private static readonly string[] _shippedFolders = new string[] { "Native", "runtimes" };
+         * it happened to contain a DLL. Prefabs holds the prefab library Insert Prefab lists (.ocp
+         * composite packages). */
+        private static readonly string[] _shippedFolders = new string[] { "Native", "runtimes", "Prefabs" };
 
         /// <summary>
         /// Copy the built application into the root of the build, by rule rather than by name, so a

@@ -87,6 +87,10 @@ namespace OpenCAGE.MCP
                 Toolset = "core",
                 Run = FindLinks,
             };
+
+            //Fracture into debris: make_breakable, fracture_model, list_breakables - each names its own toolset
+            foreach (McpTool tool in McpFractureTools.Tools())
+                yield return tool;
         }
 
         #region Usage index

@@ -66,6 +66,10 @@ namespace OpenCAGE.Popups.UserControls
             _resourceRef.PhysicsSystem = system;
             _resourceRef.PhysicsSystemIndex = system?.SystemIndex ?? -1;
 
+            //Its bodies' ModelReferences keyed by the bodies' names, as retail's are: then the prop also works spawned by an AssetSpawner
+            if (system != null && HostComposite != null)
+                PhysicsBodyKeys.KeyForBinding(HostComposite, system);
+
             RefreshDisplay();
             Singleton.OnResourceModified?.Invoke();
             BringToFront();

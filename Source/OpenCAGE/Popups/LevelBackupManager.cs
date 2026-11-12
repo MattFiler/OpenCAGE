@@ -27,6 +27,18 @@ namespace OpenCAGE
         public LevelBackupManager()
         {
             InitializeComponent();
+            //Compare the selected backup with the level as saved now (File > Compare Levels)
+            Button compareBackup = new Button() { Text = "Compare With Level", Location = new System.Drawing.Point(384, 482), Size = new System.Drawing.Size(134, 23), Anchor = removeSelectedBackup.Anchor, UseVisualStyleBackColor = true };
+            compareBackup.Click += (s, e) =>
+            {
+                if (level == null || backupList.SelectedItems.Count != 1)
+                {
+                    MessageBox.Show("Please select one backup from the list to compare with the level.", "None or multiple selected!", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                CompareLevelsWindow.Open("backup:" + level.Backups[backupList.SelectedItems[0].Index].ID + "@" + level.Name, "level:" + level.Name, compare: true);
+            };
+            Controls.Add(compareBackup);
             OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/backup-manager/");
             Theming.ThemeManager.ApplyToForm(this);
 
