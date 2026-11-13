@@ -515,6 +515,10 @@
       <DependentUpon>Flowgraph.cs</DependentUpon>
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="DockPanels\Composite Panels\Flowgraph.Comments.cs">
+      <DependentUpon>Flowgraph.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="DockPanels\Composite Panels\Flowgraph.LiveLink.cs">
       <DependentUpon>Flowgraph.cs</DependentUpon>
       <SubType>Form</SubType>
@@ -1212,6 +1216,8 @@
     </Compile>
     <Compile Include="Scripts\EnumStringListViewItems.cs" />
     <Compile Include="Scripts\FlowgraphLayoutManager.cs" />
+    <Compile Include="Scripts\FlowgraphComments.cs" />
+    <Compile Include="Scripts\Undo\CommentEdits.cs" />
     <Compile Include="Scripts\CompositePreviewManager.cs" />
     <Compile Include="Scripts\AnimationPakWrite.cs" />
     <Compile Include="Scripts\AnimTreeLayoutManager.cs" />
@@ -1451,6 +1457,8 @@
     <Compile Include="Scripts\Undo\PageEdits.cs" />
     <Compile Include="Scripts\Undo\SessionEdits.cs" />
     <Compile Include="Scripts\Undo\FlowgraphEdits.cs" />
+    <Compile Include="Scripts\Flowgraph\WireTieEdit.cs" />
+    <Compile Include="Scripts\Flowgraph\WireTieLayouts.cs" />
     <Compile Include="Scripts\Undo\IEdit.cs" />
     <Compile Include="Scripts\Undo\ParameterEdits.cs" />
     <Compile Include="Scripts\Undo\UndoContext.cs" />
@@ -1467,6 +1475,10 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="DockPanels\Composite Panels\Flowgraph.Undo.cs">
+      <DependentUpon>Flowgraph.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DockPanels\Composite Panels\Flowgraph.WireTies.cs">
       <DependentUpon>Flowgraph.cs</DependentUpon>
       <SubType>Form</SubType>
     </Compile>
@@ -1633,6 +1645,7 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Scripts\SharedFormIcon.cs" />
+    <Compile Include="Scripts\NavMeshBakeOptions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -1732,6 +1745,8 @@
     <Compile Include="Scripts\MCP\McpMaterialTools.cs" />
     <Compile Include="Scripts\MCP\McpPackageEdits.cs" />
     <Compile Include="Scripts\MCP\McpPageTools.cs" />
+    <Compile Include="Scripts\MCP\McpCommentTools.cs" />
+    <Compile Include="Scripts\MCP\McpWireTieTools.cs" />
     <Compile Include="Scripts\MCP\McpResourceTools.cs" />
     <Compile Include="Scripts\MCP\McpBrowseTools.cs" />
     <Compile Include="Scripts\MCP\McpEditor.cs" />

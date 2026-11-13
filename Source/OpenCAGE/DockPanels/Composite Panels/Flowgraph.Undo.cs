@@ -306,7 +306,7 @@ namespace OpenCAGE
                     {
                         if (peer?.Owner == null)
                             continue;
-                        PointF[] route = stNodeEditor1.GetReroutePoints(option, peer);
+                        PointF[] route = stNodeEditor1.GetLineRoute(option, peer); //its wire ties too, so putting it back re-ties it
                         snapshot.Connections.Add(new ConnectionSnapshot()
                         {
                             Peer = new NodeRef(peer.Owner),

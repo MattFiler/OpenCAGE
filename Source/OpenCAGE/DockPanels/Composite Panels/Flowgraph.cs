@@ -112,7 +112,14 @@ namespace OpenCAGE
             EditorIcons.NodeIconsWhenZoomedOutChanged += OnNodeIconsWhenZoomedOutChanged;
             //A page disposed without closing must not be kept alive by the static event
             this.Disposed += (s, e) => EditorIcons.NodeIconsWhenZoomedOutChanged -= OnNodeIconsWhenZoomedOutChanged;
+
+            SetUpComments(); //Flowgraph.Comments.cs
+            SetUpWireTies();
         }
+
+        //Wire ties (Flowgraph.WireTies.cs, when it is there)
+        partial void SetUpWireTies();
+        partial void ApplyWireTies(FlowgraphMeta flowgraphMeta);
 
         private void OnNodeIconsWhenZoomedOutChanged()
         {
@@ -930,6 +937,8 @@ namespace OpenCAGE
                     }
                 }
             }
+            FlowgraphComments.Apply(stNodeEditor1, flowgraphMeta); //comment boxes behind the nodes
+            ApplyWireTies(flowgraphMeta);
 
             foreach (STNode node in stNodeEditor1.Nodes)
             {
@@ -976,6 +985,9 @@ namespace OpenCAGE
             {
                 //Live Link script debugger: F9 breakpoint, F8 continue, F10 step (Flowgraph.Debugger.cs)
                 if (TryHandleDebuggerKey(keyData))
+                    return true;
+                //Escape stops a comment box being placed; Delete takes the selected one (Flowgraph.Comments.cs)
+                if (TryHandleCommentKey(keyData))
                     return true;
 
                 Keys keyCode = keyData & Keys.KeyCode;

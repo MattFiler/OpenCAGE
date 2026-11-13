@@ -49,19 +49,42 @@ namespace OpenCAGE
             if (placing.Count < 2)
                 return 0;
 
+            //Comment boxes go with what they hold: each box's nodes are laid out together and the box fitted round them
+            List<STNodeComment> boxes = BoxesArrangedWith(placing);
+            Dictionary<STNode, int> boxOf = new Dictionary<STNode, int>();
+            List<PageArranger.Group> groups = new List<PageArranger.Group>();
+            if (boxes.Count != 0)
+            {
+                PageArranger.GroupsFromBoxes(placing.Select(o => o.Rectangle).ToList(), boxes.Select(o => o.Bounds).ToList(), out int[] nodeBox, out int[] boxParent);
+                for (int i = 0; i < placing.Count; i++)
+                    boxOf[placing[i]] = nodeBox[i];
+                for (int b = 0; b < boxes.Count; b++)
+                {
+                    bool empty = !nodeBox.Contains(b) && !boxParent.Contains(b);
+                    groups.Add(new PageArranger.Group() { Parent = boxParent[b], MinSize = empty ? boxes[b].Bounds.Size : CommentMinSize(boxes[b]) });
+                }
+            }
+
             Point origin = new Point(placing.Min(o => o.Left), placing.Min(o => o.Top));
+            if (boxes.Count != 0)
+                origin = new Point(Math.Min(origin.X, boxes.Min(o => o.Bounds.X)), Math.Min(origin.Y, boxes.Min(o => o.Bounds.Y)));
             Dictionary<STNode, Point> start = placing.ToDictionary(o => o, o => o.Location);
-            int added = 0;
+            int added = 0, boxesMoved = 0;
             List<NodeMoveEdit.Movement> moves = new List<NodeMoveEdit.Movement>();
             using (UndoStack.Current.BeginGroup(label))
             {
+                WireTiesBeforeArrange(placing);
                 ClearRoutesBetween(placing);
                 Point[] positions;
+                Rectangle[] boxBounds = null;
                 for (int round = 0; ; round++)
                 {
                     List<PageArranger.Connection> connections = Measure(placing, out List<(STNodeOption from, STNodeOption to)> pins);
                     List<PageArranger.Node> sized = placing.Select(o => new PageArranger.Node() { Size = new Size(o.Width, o.Height) }).ToList();
-                    positions = PageArranger.Arrange(sized, connections);
+                    if (boxes.Count == 0)
+                        positions = PageArranger.Arrange(sized, connections);
+                    else
+                        positions = PageArranger.ArrangeGrouped(sized, connections, placing.Select(o => boxOf[o]).ToList(), groups, out boxBounds, STNodeEditor.CommentTitleHeight, PageArranger.GroupPadding);
                     List<PageArranger.Split> splits = round < PageArranger.SplitRounds ? PageArranger.SplitsFor(sized, connections, positions) : new List<PageArranger.Split>();
                     if (splits.Count == 0)
                         break;
@@ -74,6 +97,8 @@ namespace OpenCAGE
                         if (copy == null)
                             continue;
                         start[copy] = copy.Location;
+                        if (boxes.Count != 0)
+                            boxOf[copy] = boxOf[placing[split.Partner]]; //beside the node it was split off for
                         placing.Add(copy);
                         added++;
                     }
@@ -90,15 +115,66 @@ namespace OpenCAGE
                 }
                 if (moves.Count != 0 && CanRecord)
                     UndoStack.Current.Record(new NodeMoveEdit(_composite, _flowgraphName, moves, label));
+
+                for (int b = 0; b < boxes.Count && boxBounds != null; b++)
+                {
+                    Rectangle to = new Rectangle(origin.X + boxBounds[b].X, origin.Y + boxBounds[b].Y, boxBounds[b].Width, boxBounds[b].Height);
+                    if (boxes[b].Bounds == to)
+                        continue;
+                    SetCommentBounds(boxes[b], to);
+                    boxesMoved++;
+                }
+                WireTiesAfterArrange(placing);
             }
             arranged = placing;
-            if (moves.Count == 0 && added == 0)
+            if (moves.Count == 0 && added == 0 && boxesMoved == 0)
                 return 0;
 
             stNodeEditor1.Invalidate();
             MarkFlowgraphEdit();
             RefreshNodeMarkers();
-            return moves.Count + added;
+            return moves.Count + added + boxesMoved;
+        }
+
+        //Wire ties (Flowgraph.WireTies.cs, when it is there): told before and after an arrange, inside its undo step
+        partial void WireTiesBeforeArrange(List<STNode> nodes);
+        partial void WireTiesAfterArrange(List<STNode> nodes);
+
+        /// <summary>
+        /// The comment boxes arranged with these nodes: every box when they are the whole page, else each box whose nodes are
+        /// all among them (at least one), with the boxes inside those. Others are left where they are.
+        /// </summary>
+        private List<STNodeComment> BoxesArrangedWith(List<STNode> nodes)
+        {
+            if (stNodeEditor1.Comments.Count == 0)
+                return new List<STNodeComment>();
+            HashSet<STNode> arranging = new HashSet<STNode>(nodes);
+            if (stNodeEditor1.Nodes.ToArray().All(arranging.Contains))
+                return stNodeEditor1.Comments.ToList();
+            HashSet<STNodeComment> chosen = new HashSet<STNodeComment>();
+            foreach (STNodeComment box in stNodeEditor1.Comments)
+            {
+                STNode[] inside = stNodeEditor1.GetNodesInComment(box);
+                if (inside.Length != 0 && inside.All(arranging.Contains))
+                {
+                    chosen.Add(box);
+                    foreach (STNodeComment inner in stNodeEditor1.GetCommentsInComment(box))
+                        chosen.Add(inner);
+                }
+            }
+            return stNodeEditor1.Comments.Where(chosen.Contains).ToList();
+        }
+
+        //The least a box holding nodes is fitted to: room for its title
+        private Size CommentMinSize(STNodeComment box)
+        {
+            int width = STNodeEditor.CommentMinWidth;
+            if (!string.IsNullOrEmpty(box.Title))
+            {
+                using (Font font = new Font(stNodeEditor1.Font.FontFamily, STNodeEditor.CommentTitleHeight * 0.52f, FontStyle.Bold, GraphicsUnit.Pixel))
+                    width = Math.Max(width, System.Windows.Forms.TextRenderer.MeasureText(box.Title, font).Width + STNodeEditor.CommentTitleHeight);
+            }
+            return new Size(width, STNodeEditor.CommentMinHeight);
         }
 
         /// <summary>

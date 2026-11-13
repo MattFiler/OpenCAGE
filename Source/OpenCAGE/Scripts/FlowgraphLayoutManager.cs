@@ -1112,6 +1112,8 @@ namespace OpenCAGE
                 flowgraphMeta.Nodes.Add(nodeMeta);
             }
 
+            FlowgraphComments.Save(editor, flowgraphMeta); //its comment boxes
+            WireTieLayouts.Save(editor, flowgraphMeta); //its wire ties
             return flowgraphMeta;
         }
 

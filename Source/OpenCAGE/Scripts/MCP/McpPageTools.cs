@@ -515,6 +515,11 @@ namespace OpenCAGE.MCP
                 into.Nodes.Add(copy);
                 moved++;
             }
+            //its comment boxes move down with its nodes
+            foreach (FlowgraphMeta.CommentMeta comment in from.Comments ?? new List<FlowgraphMeta.CommentMeta>())
+                into.Comments.Add(new FlowgraphMeta.CommentMeta() { Bounds = new Rectangle(comment.Bounds.X + dx, comment.Bounds.Y + dy, comment.Bounds.Width, comment.Bounds.Height), Title = comment.Title, Colour = comment.Colour });
+            //and its wire ties, on the links that moved
+            WireTieLayouts.CarryInto(from, into, ids, dx, dy);
             pages.Remove(from);
             if (!RefactorPages.PagesMatchLinks(session.Composite, pages))
                 throw new McpError("The pages of " + session.Composite.name + " would no longer draw exactly its links after the merge, so nothing was changed. layout_flowgraph (mode 'complete') brings them back in step.");
@@ -552,6 +557,7 @@ namespace OpenCAGE.MCP
                 Name = name,
                 CanvasPosition = page.CanvasPosition,
                 CanvasScale = page.CanvasScale <= 0 ? 1f : page.CanvasScale,
+                Comments = (page.Comments ?? new List<FlowgraphMeta.CommentMeta>()).Select(o => o.Clone()).ToList(),
             };
             for (int i = 0; i < drawn.Count; i++)
             {

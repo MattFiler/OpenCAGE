@@ -132,6 +132,8 @@ namespace OpenCAGE
             OpenCAGE.Popups.ZFightWindow.AttachMenu(modelsToolStripMenuItem);
             //View > Cinematic Shot Builder, under Animations
             OpenCAGE.Popups.CinematicShotBuilder.AttachMenu(animationsToolStripMenuItem);
+            //Options > Save/Build > Walk On Downward-Facing Floors, at the end
+            NavMeshBakeOptions.AttachMenu(saveBuildToolStripMenuItem);
 
             Singleton.Editor = this;
             Singleton.LoadGlobals();

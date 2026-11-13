@@ -268,7 +268,7 @@ namespace OpenCAGE
         public static Instancing SaveInstancedWithOptions(Level level, bool allowSkippingTheBake = true)
         {
             ApplyCollisionCompaction(level);
-            return level.SaveInstanced(new CathodeLib.NavMesh.NavMeshBakeSettings(), new CathodeLib.NavMesh.CoverBakeSettings(), RadiositySettingsFromOptions(allowSkippingTheBake),
+            return level.SaveInstanced(NavMeshBakeOptions.FromOptions(), new CathodeLib.NavMesh.CoverBakeSettings(), RadiositySettingsFromOptions(allowSkippingTheBake),
                 new CathodeLib.NavMesh.JobPositionBakeSettings(), new CathodeLib.Alphalight.AlphalightBakeSettings(), new CathodeLib.Sound.SoundNetworkBakeSettings());
         }
 
@@ -321,7 +321,7 @@ namespace OpenCAGE
                             try
                             {
                                 pass = Level.SaveInstanced(
-                                    bakers.NavMesh ? new CathodeLib.NavMesh.NavMeshBakeSettings() : null,
+                                    bakers.NavMesh ? NavMeshBakeOptions.FromOptions() : null,
                                     bakers.Cover ? new CathodeLib.NavMesh.CoverBakeSettings() : null,
                                     bakers.Radiosity ? RadiositySettingsFromOptions() : null,
                                     bakers.JobPositions ? new CathodeLib.NavMesh.JobPositionBakeSettings() : null,

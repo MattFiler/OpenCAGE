@@ -1200,6 +1200,8 @@ namespace OpenCAGE.MCP
                         _tools.AddRange(McpToolsets.Tag("script", McpEditingTools.Tools()));
                         _tools.AddRange(McpToolsets.Tag("zones", McpZoneTools.Tools()));
                         _tools.AddRange(McpToolsets.Tag("flowgraph", McpPageTools.Tools()));
+                        _tools.AddRange(McpToolsets.Tag("flowgraph", McpWireTieTools.Tools()));
+                        _tools.AddRange(McpToolsets.Tag("flowgraph", McpCommentTools.Tools()));
                         _tools.AddRange(McpToolsets.Tag("animation", McpCageAnimationTools.Tools()));
                         _tools.AddRange(McpToolsets.Tag("assets", McpResourceTools.Tools()));
                         _tools.AddRange(McpToolsets.Tag("assets", McpMaterialTools.Tools()));
