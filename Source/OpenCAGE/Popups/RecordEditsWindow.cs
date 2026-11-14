@@ -34,7 +34,7 @@ namespace OpenCAGE.Popups
             Icon = SharedFormIcon.Icon;
             Size = new Size(980, 700);
             MinimumSize = new Size(700, 480);
-            StartPosition = FormStartPosition.CenterParent;
+            StartPosition = FormStartPosition.CenterScreen;
             ShowInTaskbar = false;
             BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/record-edits/");
 

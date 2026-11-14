@@ -146,6 +146,8 @@ namespace OpenCAGE
         //The Error Log window's own options: start afresh at each launch (on by default), and list the errors under their entities
         public const string ErrorLogClearOnPlay = "ErrorLogClearOnPlay";
         public const string ErrorLogGroupByEntity = "ErrorLogGroupByEntity";
+        //The Game Crash Log opens when a game launched from OpenCAGE crashes (on by default)
+        public const string CrashLogOpenOnCrash = "CrashLogOpenOnCrash";
         //Possess Characters (Launch Game > Game options): its key opens an in-game menu to take a character and move it
         public const string PossessCharacters = "PossessCharacters";
         public const string PossessCharactersKey = "PossessCharactersKey";

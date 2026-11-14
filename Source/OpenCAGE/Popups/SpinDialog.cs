@@ -48,7 +48,7 @@ namespace OpenCAGE
             Text = "Rotate Continuously";
             Icon = SharedFormIcon.Icon;
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
-            StartPosition = FormStartPosition.CenterParent;
+            StartPosition = FormStartPosition.CenterScreen;
             AutoSize = true;
             AutoSizeMode = AutoSizeMode.GrowAndShrink;
             StayAboveEditor = true;

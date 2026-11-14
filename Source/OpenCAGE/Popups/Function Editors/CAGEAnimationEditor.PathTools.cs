@@ -407,7 +407,7 @@ namespace OpenCAGE
             {
                 Text = title;
                 Icon = SharedFormIcon.Icon;
-                StartPosition = FormStartPosition.CenterParent;
+                StartPosition = FormStartPosition.CenterScreen;
                 Size = new Size(560, 640);
                 MinimumSize = new Size(460, 420);
                 ShowInTaskbar = false;

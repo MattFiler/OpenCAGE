@@ -56,7 +56,7 @@ namespace OpenCAGE
             Icon = SharedFormIcon.Icon;
             ClientSize = new Size(860, 520);
             MinimumSize = new Size(560, 300);
-            StartPosition = FormStartPosition.CenterParent;
+            StartPosition = FormStartPosition.CenterScreen;
             ShowInTaskbar = false;
             MinimizeBox = false;
             BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/ui-editor/#level-ui-overrides");

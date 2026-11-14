@@ -62,7 +62,7 @@ namespace OpenCAGE
             Icon = SharedFormIcon.Icon;
             ClientSize = new Size(1320, 780);
             MinimumSize = new Size(980, 560);
-            StartPosition = FormStartPosition.CenterParent;
+            StartPosition = FormStartPosition.CenterScreen;
             ShowInTaskbar = false;
             MinimizeBox = false;
             KeyPreview = true;
@@ -473,7 +473,7 @@ namespace OpenCAGE
         }
         #endregion
 
-        /// <summary>The preview: the 1280x720 design space scaled into the panel, every slot drawn as it will look (near enough - the game's own fonts aren't installed), drag to move, the corner handle to resize.</summary>
+        /// <summary>The preview: the 1280x720 design space scaled into the panel, every slot drawn as it will look (text in the game's own fonts, read from its files by <see cref="HudFonts"/>), drag to move, the corner handle to resize.</summary>
         private sealed class PreviewPanel : Panel
         {
             public HudOverlayBuilder Builder;
@@ -577,12 +577,19 @@ namespace OpenCAGE
                     case HudSlotKind.Number:
                     case HudSlotKind.Timer:
                         {
-                            bool bold = slot.Font.EndsWith("Bold", StringComparison.Ordinal) || slot.Font == "$Isolation" || slot.Font == "$NostromoBoldCond";
-                            string family = slot.Font == "$NostromoBoldCond" || slot.Font == "$JectRexBold" ? "Bahnschrift SemiCondensed" : "Bahnschrift";
+                            string text = Sample(slot);
+                            HudFont gameFont = HudFonts.Get(Singleton.PathToAI, slot.Font);
+                            if (gameFont != null)
+                            {
+                                using (GraphicsPath path = HudFonts.Layout(gameFont, slot.Font, text, slot.Size, r, scale, slot.Align, out bool _))
+                                    HudFonts.DrawTextField(g, path, r, Col(slot.Colour, 1), slot.Shadow, scale, alpha);
+                                break;
+                            }
+                            //The game's fonts can't be read: a Windows face stands in
+                            HudFonts.StandIn(slot.Font, out string family, out bool bold);
                             using (Font font = new Font(family, Math.Max(1f, (float)slot.Size * scale * 0.75f), bold ? FontStyle.Bold : FontStyle.Regular, GraphicsUnit.Point))
                             using (StringFormat format = new StringFormat() { Alignment = slot.Align == "center" ? StringAlignment.Center : slot.Align == "right" ? StringAlignment.Far : StringAlignment.Near, LineAlignment = StringAlignment.Near, FormatFlags = StringFormatFlags.NoWrap })
                             {
-                                string text = Sample(slot);
                                 if (slot.Shadow)
                                     using (Brush shadow = new SolidBrush(Color.FromArgb((int)(alpha * 200), 0, 0, 0)))
                                         g.DrawString(text, font, shadow, new RectangleF(r.X + 1.5f, r.Y + 1.5f, r.Width, r.Height), format);

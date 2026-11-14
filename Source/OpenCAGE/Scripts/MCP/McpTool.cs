@@ -1218,7 +1218,6 @@ namespace OpenCAGE.MCP
                         _tools.AddRange(McpToolsets.Tag("lights", McpLightTools.Tools()));
                         _tools.AddRange(McpToolsets.Tag("script", McpUsageTools.Tools()));
                         _tools.AddRange(McpToolsets.Tag("assets", McpBrushTools.Tools()));
-                        _tools.AddRange(McpToolsets.Tag("game", McpGameAudioTools.Tools()));
                         //A name given twice would make the whole list fail: the first one stays, and the clash is logged
                         _byName = new Dictionary<string, McpTool>(StringComparer.OrdinalIgnoreCase);
                         foreach (McpTool tool in _tools.ToList())

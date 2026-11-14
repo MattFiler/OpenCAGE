@@ -30,8 +30,11 @@ namespace OpenCAGE
             public string FileName => GamePath.Substring(GamePath.LastIndexOf('/') + 1).ToUpperInvariant();
             /// <summary>The name the tools use for it: "RADIALMENU".</summary>
             public string Name => Path.GetFileNameWithoutExtension(FileName);
-            public string OriginalEntry => GamePath.ToUpperInvariant();
-            public string Entry => LevelPath.ToUpperInvariant();
+            public string OriginalEntry => PakName(GamePath);
+            public string Entry => PakName(LevelPath);
+
+            /* A path as UI.PAK names it: a movie the binary holds by its bare name (one the HUD loads itself) is in DATA/UI */
+            private static string PakName(string path) => (path.Contains("/") ? path : "DATA/UI/" + path).ToUpperInvariant();
 
             /// <summary>The Launch Game UI tweak that replaces this movie too, or null.</summary>
             public UiMovieOverrides.Movie Tweak => UiMovieOverrides.All.FirstOrDefault(o => string.Equals(o.GamePath, GamePath, StringComparison.OrdinalIgnoreCase));
@@ -49,13 +52,16 @@ namespace OpenCAGE
         }
 
         /// <summary>
-        /// Every movie the game opens by a path in its binary (the same 26 in the Steam, GOG and Epic builds, each once), in the
-        /// order a list shows them. Movies a movie loads itself (the hub's pages, the crafting components) are part of it.
+        /// Every movie the game opens by a path in its binary (the same 26 in the Steam, GOG and Epic builds, each once), plus the two
+        /// the HUD (AGGREGATE.GFX) loads by a bare name the binary holds, in the order a list shows them. Movies a movie loads itself
+        /// (the hub's pages, the crafting components) are part of it.
         /// </summary>
         public static readonly IReadOnlyList<Movie> All = new List<Movie>()
         {
             Make("DATA/UI/RADIALMENU.GFX", "Radial menu (hold Q: inventory, items)"),
             Make("DATA/UI/AGGREGATE.GFX", "HUD (prompts, pickups, health, messages)"),
+            Make("PICKUPOVERLAY.GFX", "HUD messages and prompts (objective updates, pickups, use prompts)"),
+            Make("POPUPOVERLAY.GFX", "HUD pop-up boxes"),
             Make("DATA/UI/WeaponStuff.gfx", "Weapon HUD (crosshair, ammo, reloading)"),
             Make("DATA/UI/MOTIONTRACKER.GFX", "Motion tracker screen"),
             Make("DATA/UI/HUB.GFX", "Hub (Tab: map, inventory, logs, missions)"),
@@ -242,10 +248,30 @@ namespace OpenCAGE
                     if (end < binary.Length && binary[end] == 0)
                         paths.Add(Encoding.ASCII.GetString(binary, i, end - i));
                 }
+                //The HUD's own movies, held by their bare names
+                foreach (Movie movie in All.Where(o => !o.GamePath.Contains("/")))
+                    foreach (string name in new[] { movie.GamePath, movie.LevelPath })
+                        if (HasWholeString(binary, Encoding.ASCII.GetBytes(name)))
+                            paths.Add(name);
                 _exeSeen = seen;
                 _exePaths = paths;
                 return paths;
             }
+        }
+
+        /* A zero-ended string with a zero before it, anywhere in the binary */
+        private static bool HasWholeString(byte[] binary, byte[] text)
+        {
+            for (int i = 1; i + text.Length < binary.Length; i++)
+            {
+                if (binary[i] != text[0] || binary[i - 1] != 0 || binary[i + text.Length] != 0)
+                    continue;
+                int j = 1;
+                while (j < text.Length && binary[i + j] == text[j]) j++;
+                if (j == text.Length)
+                    return true;
+            }
+            return false;
         }
 
         /// <summary>Whether the game is pointed at a level's version of this movie (the path in its binary is OpenCAGE's).</summary>

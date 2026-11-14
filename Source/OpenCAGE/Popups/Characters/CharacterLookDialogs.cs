@@ -125,7 +125,7 @@ namespace OpenCAGE.Popups.Characters
             _heldOnly = heldOnly;
             Text = heldOnly ? "Add a part skinned to " + source : "Make a variant of " + source;
             Icon = SharedFormIcon.Icon;
-            StartPosition = FormStartPosition.CenterParent;
+            StartPosition = FormStartPosition.CenterScreen;
             AutoSize = true;
             AutoSizeMode = AutoSizeMode.GrowAndShrink;
             CancelButton = _close;
@@ -252,7 +252,7 @@ namespace OpenCAGE.Popups.Characters
             _model = model;
             Text = "Make a first-person body from " + (displayModel ?? model);
             Icon = SharedFormIcon.Icon;
-            StartPosition = FormStartPosition.CenterParent;
+            StartPosition = FormStartPosition.CenterScreen;
             AutoSize = true;
             AutoSizeMode = AutoSizeMode.GrowAndShrink;
             CancelButton = _close;

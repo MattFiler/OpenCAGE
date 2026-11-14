@@ -33,7 +33,7 @@ namespace OpenCAGE.Popups
             Icon = SharedFormIcon.Icon;
             Size = new Size(1000, 640);
             MinimumSize = new Size(720, 420);
-            StartPosition = FormStartPosition.CenterParent;
+            StartPosition = FormStartPosition.CenterScreen;
             ShowInTaskbar = false;
             BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/level-check/");
 

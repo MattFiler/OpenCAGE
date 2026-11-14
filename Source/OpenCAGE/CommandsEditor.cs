@@ -188,6 +188,7 @@ namespace OpenCAGE
             Singleton.OnResourceModified += OnResourceModified;
             SetupUndo();
             SetupAiAssistantStatus();
+            CrashLog.WatchCrashes(this);
 
             // Options category menus: open on hover, and stay open when toggling checkable items
             compositeViewerToolStripMenuItem.MouseHover += (sender, e) => { ((ToolStripMenuItem)sender).PerformClick(); };

@@ -42,7 +42,7 @@ namespace OpenCAGE.Popups
             Icon = SharedFormIcon.Icon;
             Size = new Size(860, 640);
             MinimumSize = new Size(720, 520);
-            StartPosition = FormStartPosition.CenterParent;
+            StartPosition = FormStartPosition.CenterScreen;
             ShowInTaskbar = false;
             StayAboveEditor = true;
             BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/alien-vents/");

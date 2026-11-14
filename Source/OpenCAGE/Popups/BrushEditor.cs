@@ -51,7 +51,7 @@ namespace OpenCAGE
             Text = "Brush";
             Icon = SharedFormIcon.Icon;
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
-            StartPosition = FormStartPosition.CenterParent;
+            StartPosition = FormStartPosition.CenterScreen;
             AutoSize = true;
             AutoSizeMode = AutoSizeMode.GrowAndShrink;
             KeyPreview = true;

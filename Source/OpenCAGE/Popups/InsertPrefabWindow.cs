@@ -52,7 +52,7 @@ namespace OpenCAGE.Prefabs
             Icon = SharedFormIcon.Icon;
             Size = new Size(900, 560);
             MinimumSize = new Size(700, 440);
-            StartPosition = FormStartPosition.CenterParent;
+            StartPosition = FormStartPosition.CenterScreen;
             ShowInTaskbar = false;
             StayAboveEditor = true;
             BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/prefabs/");

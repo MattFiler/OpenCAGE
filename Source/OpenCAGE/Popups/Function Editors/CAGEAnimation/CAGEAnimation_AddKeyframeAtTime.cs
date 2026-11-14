@@ -18,7 +18,7 @@ namespace OpenCAGE
         {
             Text = "Add Keyframe";
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
-            StartPosition = FormStartPosition.CenterParent;
+            StartPosition = FormStartPosition.CenterScreen;
             ClientSize = new Size(320, 120);
             MinimizeBox = false;
             MaximizeBox = false;

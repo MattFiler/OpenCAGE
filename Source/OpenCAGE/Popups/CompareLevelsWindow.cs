@@ -47,7 +47,7 @@ namespace OpenCAGE.Popups
             Icon = SharedFormIcon.Icon;
             Size = new Size(1100, 720);
             MinimumSize = new Size(760, 480);
-            StartPosition = FormStartPosition.CenterParent;
+            StartPosition = FormStartPosition.CenterScreen;
             ShowInTaskbar = false;
             BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/compare-levels/");
 

@@ -47,6 +47,10 @@ namespace OpenCAGE.CrashTriage
         public List<string> Callers = new List<string>();
 
         //Filled by the watch on a launch (CrashWatch), not from the dump
+        /// <summary>The game folder it was launched from.</summary>
+        public string Install;
+        /// <summary>Read back from disk as its one-line summary (in <see cref="Problem"/>); its dump has not been read again.</summary>
+        public bool Summary;
         public string Level;
         public DateTime? LaunchedUtc;
         public DateTime? ExitedUtc;
@@ -79,7 +83,7 @@ namespace OpenCAGE.CrashTriage
             return text.ToString();
         }
 
-        /// <summary>The whole report, as the Launch Game window's Details show it.</summary>
+        /// <summary>The whole report, as the Game Crash Log shows it.</summary>
         public string Text()
         {
             StringBuilder text = new StringBuilder();

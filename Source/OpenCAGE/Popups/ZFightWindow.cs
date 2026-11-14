@@ -67,7 +67,7 @@ namespace OpenCAGE.Popups
             Text = model == null ? "Find Z-Fighting" : "Find Z-Fighting - " + System.IO.Path.GetFileName(model.Name);
             Icon = SharedFormIcon.Icon;
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
-            StartPosition = FormStartPosition.CenterParent;
+            StartPosition = FormStartPosition.CenterScreen;
             AutoSize = true;
             AutoSizeMode = AutoSizeMode.GrowAndShrink;
             StayAboveEditor = true;

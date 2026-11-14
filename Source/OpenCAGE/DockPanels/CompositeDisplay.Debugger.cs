@@ -86,8 +86,13 @@ namespace OpenCAGE.DockPanels
                 ToolTipText = "The level's script errors as the running game finds them: double-click one to go to its entity (Launch Game's Error log opens it as the game starts).",
             };
             _debuggerErrorLog.Click += (s, e) => ErrorLog.Open();
+            ToolStripMenuItem crashLog = new ToolStripMenuItem("Game Crash Log", ScriptErrorLog.SignImage(true, 16))
+            {
+                ToolTipText = "The crashes of games launched from OpenCAGE, and why each happened, if it is a crash OpenCAGE knows (opens by itself when one crashes).",
+            };
+            crashLog.Click += (s, e) => CrashLog.Open();
             _debuggerMenu.DropDownItems.AddRange(new ToolStripItem[] { _debuggerBreakpoints, _debuggerRemoveAll, new ToolStripSeparator(), _debuggerShowStates,
-                _debuggerSelectFromGame, _debuggerPause, new ToolStripSeparator(), _debuggerFollowHits, new ToolStripSeparator(), _debuggerErrorLog });
+                _debuggerSelectFromGame, _debuggerPause, new ToolStripSeparator(), _debuggerFollowHits, new ToolStripSeparator(), _debuggerErrorLog, crashLog });
             _debuggerMenu.DropDownOpening += (s, e) =>
             {
                 LiveLinkDebugger.PanelOpen = true;

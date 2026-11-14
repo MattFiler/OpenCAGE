@@ -215,10 +215,6 @@ namespace OpenCAGE
             EditorUtils.PopulateLevelDropdown(levelList);
             //The launched level's own UI movies, under the UI tweaks (LaunchGame.LevelUi.cs)
             AddLevelUiLine();
-            //Why the last launch crashed, and whether Windows writes crash dumps (LaunchGame.CrashTriage.cs)
-            AddCrashTriageBox();
-            //Record game audio, and the recordings (LaunchGame.GameAudio.cs)
-            AddGameAudioBox();
 
             SettingsManager.SettingsChanged += OnSettingsChanged;
             FormClosed += LaunchGame_FormClosed;

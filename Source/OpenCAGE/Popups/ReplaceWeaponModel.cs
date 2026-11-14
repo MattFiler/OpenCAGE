@@ -108,7 +108,7 @@ namespace OpenCAGE.Popups
             Icon = SharedFormIcon.Icon;
             Size = new Size(1280, 860);
             MinimumSize = new Size(900, 600);
-            StartPosition = FormStartPosition.CenterParent;
+            StartPosition = FormStartPosition.CenterScreen;
             KeyPreview = true;
             BuildLayout();
             _muzzle.Items.AddRange(new object[] { "auto", "keep" });

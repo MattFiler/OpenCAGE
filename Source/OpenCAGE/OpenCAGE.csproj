@@ -1036,6 +1036,7 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Scripts\Hud\HudSwf.cs" />
+    <Compile Include="Scripts\Hud\HudFonts.cs" />
     <Compile Include="Scripts\Hud\HudAbc.cs" />
     <Compile Include="Scripts\Hud\HudMovieCheck.cs" />
     <Compile Include="Scripts\Hud\HudDesign.cs" />
@@ -1082,9 +1083,6 @@
     <Compile Include="Scripts\Audio\LevelSoundOverride.Tuning.cs" />
     <Compile Include="Scripts\Audio\SoundEventTuning.cs" />
     <Compile Include="Scripts\Audio\SoundBankIndex.cs" />
-    <Compile Include="Scripts\Audio\GameAudioCapture.cs" />
-    <Compile Include="Scripts\Audio\GameAudioRecorder.cs" />
-    <Compile Include="Scripts\Audio\AudioAnalysis.cs" />
     <Compile Include="Scripts\Audio\WwiseObjects.cs" />
     <Compile Include="Scripts\Audio\WwiseSoundBank.cs" />
     <Compile Include="Scripts\Audio\WwiseSoundLibrary.cs" />
@@ -1164,15 +1162,7 @@
     <Compile Include="Scripts\CrashTriage\LocalDumps.cs" />
     <Compile Include="Scripts\CrashTriage\MiniDump.cs" />
     <Compile Include="Scripts\MCP\McpCrashTools.cs" />
-    <Compile Include="Popups\LaunchGame.GameAudio.cs">
-      <DependentUpon>LaunchGame.cs</DependentUpon>
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Popups\GameAudioWindow.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Popups\LaunchGame.CrashTriage.cs">
-      <DependentUpon>LaunchGame.cs</DependentUpon>
+    <Compile Include="Popups\CrashLog.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Scripts\LevelCheck\LevelCheck.cs" />
@@ -1770,7 +1760,6 @@
     <Compile Include="Scripts\MCP\McpPlatformTools.cs" />
     <Compile Include="Scripts\MCP\McpSoundTools.cs" />
     <Compile Include="Scripts\MCP\McpSoundTuneTools.cs" />
-    <Compile Include="Scripts\MCP\McpGameAudioTools.cs" />
     <Compile Include="Scripts\MCP\McpCameraTools.cs" />
     <Compile Include="Scripts\MCP\McpCameraTools.Fly.cs" />
     <Compile Include="Scripts\MCP\McpCinematicTools.cs" />

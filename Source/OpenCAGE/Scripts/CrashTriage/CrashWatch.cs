@@ -11,18 +11,21 @@ namespace OpenCAGE.CrashTriage
 {
     /// <summary>
     /// Watches each game launched from OpenCAGE until it closes. If it crashed, its dump (<see cref="LocalDumps"/>) is triaged
-    /// (<see cref="CrashAnalysis"/>) and kept as <see cref="Last"/> for the Launch Game window and the next launch_game result,
-    /// and on disk in %LOCALAPPDATA%\OpenCAGE\crash_triage.json.
+    /// (<see cref="CrashAnalysis"/>) and kept as <see cref="Last"/> for the next launch_game result and in <see cref="History"/>
+    /// for the Game Crash Log, and on disk in %LOCALAPPDATA%\OpenCAGE\crash_triage.json.
     /// </summary>
     internal static class CrashWatch
     {
         /// <summary>A launch crashed and was triaged (raised on a worker thread).</summary>
         public static event Action<CrashReport> Crashed;
 
+        private const int HistoryLength = 20;
+
         private static readonly object _lock = new object();
         private static int _generation;
         private static CrashReport _last;
         private static bool _lastReported;
+        private static readonly List<CrashReport> _history = new List<CrashReport>();
         private static bool _loaded;
 
         private static string StateFile => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OpenCAGE", "crash_triage.json");
@@ -41,13 +44,65 @@ namespace OpenCAGE.CrashTriage
         }
 
         /// <summary>
+        /// The crashes of launches from OpenCAGE, newest first. One read back from disk holds only its summary
+        /// (<see cref="CrashReport.Summary"/>) until <see cref="Full"/> reads its dump again.
+        /// </summary>
+        public static List<CrashReport> History
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    Load();
+                    return _history.ToList();
+                }
+            }
+        }
+
+        /// <summary>Empties <see cref="History"/>. The last crash is still given to launch_game's next result if it hasn't been.</summary>
+        public static void ClearHistory()
+        {
+            lock (_lock)
+            {
+                Load();
+                _history.Clear();
+                Save();
+            }
+        }
+
+        /// <summary>A report with its dump read again, if it was read back from disk as its summary. Reads the dump: not on the UI thread.</summary>
+        public static CrashReport Full(CrashReport report)
+        {
+            if (report == null || !report.Summary || report.DumpPath == null || !File.Exists(report.DumpPath))
+                return report;
+            CrashReport full = CrashAnalysis.Analyze(report.DumpPath, report.Install);
+            CopyLaunch(report, full);
+            lock (_lock)
+            {
+                int index = _history.IndexOf(report);
+                if (index != -1)
+                    _history[index] = full;
+                if (_last == report)
+                    _last = full;
+            }
+            return full;
+        }
+
+        private static void CopyLaunch(CrashReport from, CrashReport to)
+        {
+            to.Install = from.Install;
+            to.Level = from.Level;
+            to.LaunchedUtc = from.LaunchedUtc;
+            to.ExitedUtc = from.ExitedUtc;
+            to.ExitCode = from.ExitCode;
+        }
+
+        /// <summary>
         /// A game was just launched (call it straight after starting it): watch it until it closes. <paramref name="started"/> is
         /// the AI.exe started from OpenCAGE (GOG, Epic), or null when Steam starts it; the game is then found by its path.
         /// </summary>
         public static void Launched(string pathToAI, string level, Process started = null)
         {
-            //Game audio: recorded only when Record game audio is ticked or record_game_audio armed it (Scripts\Audio\GameAudioRecorder)
-            global::OpenCAGE.Audio.GameAudioRecorder.Launched(pathToAI, level, started);
             int generation = Interlocked.Increment(ref _generation);
             DateTime launchedUtc = DateTime.UtcNow;
             int startedPid = -1;
@@ -92,7 +147,7 @@ namespace OpenCAGE.CrashTriage
             {
                 LocalDumps.State dumps = LocalDumps.Read();
                 if (!dumps.On)
-                    return "Windows writes no crash dumps of the game on this PC (" + dumps.Describe() + "), so crash triage can't say why it crashed: turning them on is the user's choice, in Launch Game's Crashes box. The Windows Application log (Application Error, event 1000) names the module it crashed in.";
+                    return "Windows writes no crash dumps of the game on this PC (" + dumps.Describe() + "), so crash triage can't say why it crashed: turning them on is the user's choice, in OpenCAGE's Game Crash Log (Script Debugger menu). The Windows Application log (Application Error, event 1000) names the module it crashed in.";
                 return "The Windows Application log (Application Error, event 1000) names the module it crashed in.";
             }
             lock (_lock)
@@ -236,17 +291,21 @@ namespace OpenCAGE.CrashTriage
                         ExceptionCode = (uint)exitCode.Value,
                         ExceptionName = name,
                         Problem = "The game crashed (exit code 0x" + ((uint)exitCode.Value).ToString("X8") + (name != null ? ": " + name : "") +
-                            "), but Windows wrote no crash dump of it" + (dumps.On ? " (looked in " + string.Join(", ", LocalDumps.Folders()) + ")." : ": crash dumps are off. Turn them on in Launch Game to find out why next time."),
+                            "), but Windows wrote no crash dump of it" + (dumps.On ? " (looked in " + string.Join(", ", LocalDumps.Folders()) + ")." : ": crash dumps are off. Turn them on in the Game Crash Log to find out why next time."),
                     };
                 }
+                report.Install = pathToAI;
                 report.Level = level;
                 report.LaunchedUtc = launchedUtc;
                 report.ExitedUtc = exitedUtc;
                 report.ExitCode = exitCode;
                 lock (_lock)
                 {
-                    _loaded = true;
+                    Load();
                     _last = report;
+                    _history.Insert(0, report);
+                    if (_history.Count > HistoryLength)
+                        _history.RemoveRange(HistoryLength, _history.Count - HistoryLength);
                     //Already in launch_game's error, if that call was waiting on this game
                     _lastReported = report.DumpPath != null && _told.Contains(Path.GetFullPath(report.DumpPath));
                     Save();
@@ -293,7 +352,8 @@ namespace OpenCAGE.CrashTriage
             catch (Exception) { return otherwise; }
         }
 
-        /* The last crash as kept on disk: the dump is read again (it has all the detail); one deleted since keeps what was said */
+        /* The crashes as kept on disk. The last one's dump is read again (it has all the detail); the history's are read when
+           shown (Full). One whose dump was deleted since keeps what was said */
         private static void Load()
         {
             if (_loaded)
@@ -304,25 +364,64 @@ namespace OpenCAGE.CrashTriage
                 if (!File.Exists(StateFile))
                     return;
                 JObject state = JObject.Parse(File.ReadAllText(StateFile));
-                if (!(state["last"] is JObject last))
-                    return;
-                string dump = (string)last["dump"];
-                CrashReport report = dump != null && File.Exists(dump) ? CrashAnalysis.Analyze(dump, (string)last["install"]) : new CrashReport()
+                if (state["last"] is JObject last)
                 {
-                    DumpPath = dump,
-                    Problem = (string)last["summary"] + (dump != null ? " (its dump has since been deleted)" : ""),
-                };
-                report.Level = (string)last["level"];
-                report.LaunchedUtc = (DateTime?)last["launched_utc"];
-                report.ExitedUtc = (DateTime?)last["exited_utc"];
-                report.ExitCode = (int?)last["exit_code"];
-                _last = report;
-                _lastReported = (bool?)last["reported"] ?? true;
+                    _last = FromEntry(last, true);
+                    _lastReported = (bool?)last["reported"] ?? true;
+                }
+                if (state["history"] is JArray history)
+                {
+                    foreach (JObject entry in history.OfType<JObject>().Take(HistoryLength))
+                    {
+                        bool isLast = _last != null && _last.DumpPath != null && string.Equals((string)entry["dump"], _last.DumpPath, StringComparison.OrdinalIgnoreCase) &&
+                            (DateTime?)entry["exited_utc"] == _last.ExitedUtc;
+                        _history.Add(isLast ? _last : FromEntry(entry, false));
+                    }
+                }
+                else if (_last != null)
+                    _history.Add(_last);
             }
             catch (Exception e)
             {
                 Debug.Log("CrashTriage", "could not read " + StateFile + ": " + e.Message);
             }
+        }
+
+        private static CrashReport FromEntry(JObject entry, bool readDump)
+        {
+            string dump = (string)entry["dump"];
+            string install = (string)entry["install"];
+            bool present = dump != null && File.Exists(dump);
+            const string deleted = " (its dump has since been deleted)";
+            string summary = (string)entry["summary"] ?? "";
+            if (dump != null && !present && !summary.EndsWith(deleted, StringComparison.Ordinal))
+                summary += deleted;
+            CrashReport report = readDump && present ? CrashAnalysis.Analyze(dump, install) : new CrashReport()
+            {
+                DumpPath = dump,
+                Problem = summary,
+                Summary = present,
+            };
+            report.Install = install;
+            report.Level = (string)entry["level"];
+            report.LaunchedUtc = (DateTime?)entry["launched_utc"];
+            report.ExitedUtc = (DateTime?)entry["exited_utc"];
+            report.ExitCode = (int?)entry["exit_code"];
+            return report;
+        }
+
+        private static JObject ToEntry(CrashReport report)
+        {
+            return new JObject()
+            {
+                ["dump"] = report.DumpPath,
+                ["install"] = report.Install ?? Singleton.PathToAI,
+                ["level"] = report.Level,
+                ["launched_utc"] = report.LaunchedUtc,
+                ["exited_utc"] = report.ExitedUtc,
+                ["exit_code"] = report.ExitCode,
+                ["summary"] = report.Summary ? report.Problem : report.Headline(),
+            };
         }
 
         private static void Save()
@@ -332,18 +431,11 @@ namespace OpenCAGE.CrashTriage
                 JObject state = new JObject();
                 if (_last != null)
                 {
-                    state["last"] = new JObject()
-                    {
-                        ["dump"] = _last.DumpPath,
-                        ["install"] = Singleton.PathToAI,
-                        ["level"] = _last.Level,
-                        ["launched_utc"] = _last.LaunchedUtc,
-                        ["exited_utc"] = _last.ExitedUtc,
-                        ["exit_code"] = _last.ExitCode,
-                        ["summary"] = _last.Headline(),
-                        ["reported"] = _lastReported,
-                    };
+                    JObject last = ToEntry(_last);
+                    last["reported"] = _lastReported;
+                    state["last"] = last;
                 }
+                state["history"] = new JArray(_history.Select(ToEntry));
                 Directory.CreateDirectory(Path.GetDirectoryName(StateFile));
                 File.WriteAllText(StateFile, state.ToString());
             }

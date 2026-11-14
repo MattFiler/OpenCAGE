@@ -36,7 +36,7 @@ namespace OpenCAGE
             Text = kind == ConfigRecords.Kind.Ammo ? "Ammo Types: Used By / Spare" : "Character Attributes: Used By / Spare";
             Icon = SharedFormIcon.Icon;
             FormBorderStyle = FormBorderStyle.SizableToolWindow;
-            StartPosition = FormStartPosition.CenterParent;
+            StartPosition = FormStartPosition.CenterScreen;
             AutoSize = true;
             AutoSizeMode = AutoSizeMode.GrowAndShrink;
             EnableDocumentation(kind == ConfigRecords.Kind.Ammo ? "https://opencage.co.uk/docs/configs/ammo/#spare-records" : "https://opencage.co.uk/docs/configs/attributes/#spare-records");
