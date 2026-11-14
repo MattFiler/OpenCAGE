@@ -474,7 +474,7 @@ namespace OpenCAGE
                 TrimToComposite(judged, composite, out trimmedNodes, out trimmedConnections);
                 if (trimmedNodes != 0 || trimmedConnections != 0)
                     Debug.Log("Flowgraph Manager", "The page(s) for " + composite.name + " show " + trimmedNodes + " node(s) and " + trimmedConnections + " connection(s) the composite no longer has; judged without them");
-                SetCompatibilityInfo(composite, judged.LinksMatch(composite));
+                SetCompatibilityInfo(composite, judged.LinksMatch(composite, commands: _commands));
             }
             else
             {
@@ -702,7 +702,7 @@ namespace OpenCAGE
                     //Many levels share a set: each one is judged once
                     if (!set.Exists(IsLevelSpecific) || !tried.Add(string.Join(",", set.Select(o => pages.IndexOf(o)))))
                         continue;
-                    if (PagesMatchLinks(set, judging))
+                    if (PagesMatchLinks(set, judging, commands))
                     {
                         Debug.Log("Flowgraph Manager", "Kept the " + level + " version of the pages for " + composite.name + " (" + set.Count + " of the " + pages.Count + " that came with it)");
                         return set;
@@ -726,11 +726,11 @@ namespace OpenCAGE
         }
 
         /* The verdict EvaluateCompatibility gives, on copies trimmed to the composite the same way */
-        private static bool PagesMatchLinks(List<FlowgraphMeta> pages, Composite composite)
+        private static bool PagesMatchLinks(List<FlowgraphMeta> pages, Composite composite, Commands commands)
         {
             List<FlowgraphMeta> judged = pages.Select(o => o.Copy()).ToList();
             TrimToComposite(judged, composite, out int trimmedNodes, out int trimmedConnections);
-            return judged.LinksMatch(composite, writeDiff: false);
+            return judged.LinksMatch(composite, writeDiff: false, commands: commands);
         }
 
         //Save/add layout to db
@@ -1117,9 +1117,20 @@ namespace OpenCAGE
             return flowgraphMeta;
         }
 
-        /* Check a Composite against a set of FlowgraphMetas to see if the links are the same (writeDiff: in debug builds, dump both link lists on a mismatch) */
-        public static bool LinksMatch(this List<FlowgraphMeta> metas, Composite composite, bool writeDiff = true)
+        /* Check a Composite against a set of FlowgraphMetas to see if the links are the same (writeDiff: in debug builds, dump both link lists on a mismatch).
+           Given the composite's script, the links of an instance of a missing composite that no page shows are left out, as links to missing
+           entities are: the open-time purge used to take such instances away, and retail's own pages were laid out without them. */
+        public static bool LinksMatch(this List<FlowgraphMeta> metas, Composite composite, bool writeDiff = true, Commands commands = null)
         {
+            HashSet<ShortGuid> unshown = new HashSet<ShortGuid>();
+            if (commands?.Utils != null)
+            {
+                HashSet<ShortGuid> shown = new HashSet<ShortGuid>(metas.SelectMany(o => o.Nodes).Select(o => o.EntityGUID));
+                foreach (FunctionEntity function in composite.functions)
+                    if (!shown.Contains(function.shortGUID) && commands.Utils.IsMissingCompositeInstance(function))
+                        unshown.Add(function.shortGUID);
+            }
+
             List<LinkData> flowgraphLinks = new List<LinkData>();
             for (int i = 0; i < metas.Count; i++)
             {
@@ -1146,6 +1157,8 @@ namespace OpenCAGE
                 foreach (EntityConnector connector in entities[i].childLinks)
                 {
                     if (composite.GetEntityByID(connector.linkedEntityID) == null)
+                        continue;
+                    if (unshown.Contains(entities[i].shortGUID) || unshown.Contains(connector.linkedEntityID))
                         continue;
                     trimmedChildren.Add(connector);
                 }

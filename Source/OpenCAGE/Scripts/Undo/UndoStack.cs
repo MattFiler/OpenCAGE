@@ -23,8 +23,11 @@ namespace OpenCAGE.Undo
         private Group _group = null;
         private int _groupDepth = 0;
 
-        /// <summary>Oldest edits drop off past this.</summary>
-        public int MaxEdits = 200;
+        /// <summary>Oldest edits drop off past this. Selection steps are not counted.</summary>
+        public int MaxEdits = 250;
+
+        /// <summary>Oldest selection steps drop off past this, on top of <see cref="MaxEdits"/>.</summary>
+        public int MaxSelectionSteps = 100;
 
         /// <summary>Set while a save pumps the message loop: undo must not run underneath it.</summary>
         public bool Blocked = false;
@@ -34,6 +37,12 @@ namespace OpenCAGE.Undo
 
         /// <summary>The history changed: labels, availability. May be raised off the UI thread on level load.</summary>
         public event Action Changed;
+
+        /// <summary>
+        /// Only selection steps changed: one recorded, merged, undone, redone or dropped. Labels and availability move, nothing
+        /// in the level does, so this is kept apart from <see cref="Changed"/>.
+        /// </summary>
+        public event Action SelectionStepsChanged;
 
         /// <summary>A line for the status bar: "Undid Move Door_1".</summary>
         public event Action<string> Status;
@@ -275,14 +284,19 @@ namespace OpenCAGE.Undo
 
             if (_group != null)
             {
-                _group.Add(edit);
+                //A selection made in the middle of an edit is the edit's doing, and undoing the edit selects for itself
+                if (!(edit is ISelectionStep))
+                    _group.Add(edit);
                 return;
             }
 
             if (allowMerge && _undo.Count > 0 && _undo[_undo.Count - 1].TryMerge(edit))
             {
+                //Selection pieces that came back to where they started are no step at all
+                if (_undo[_undo.Count - 1] is ISelectionStep merged && merged.ChangesNothing)
+                    _undo.RemoveAt(_undo.Count - 1);
                 _recordCount++;
-                Changed?.Invoke();
+                Notify(edit);
                 return;
             }
 
@@ -290,9 +304,56 @@ namespace OpenCAGE.Undo
             Stamp(edit);
             _recordCount++;
             _redo.Clear();
-            while (_undo.Count > MaxEdits)
+            Trim();
+            Notify(edit);
+        }
+
+        /* Past the cap the oldest edit goes, with any selection steps older than it. Selection steps have a cap of their own,
+           and the oldest goes past that wherever it sits: they cost next to nothing, and must not push edits out. */
+        private void Trim()
+        {
+            int selections = 0;
+            foreach (IEdit step in _undo)
+                if (step is ISelectionStep)
+                    selections++;
+            int edits = _undo.Count - selections;
+
+            while (edits > MaxEdits && _undo.Count > 0)
+            {
+                if (_undo[0] is ISelectionStep)
+                    selections--;
+                else
+                    edits--;
                 _undo.RemoveAt(0);
-            Changed?.Invoke();
+            }
+            for (int i = 0; selections > MaxSelectionSteps && i < _undo.Count;)
+            {
+                if (_undo[i] is ISelectionStep)
+                {
+                    _undo.RemoveAt(i);
+                    selections--;
+                }
+                else
+                    i++;
+            }
+        }
+
+        private void Notify(IEdit edit)
+        {
+            if (edit is ISelectionStep)
+                SelectionStepsChanged?.Invoke();
+            else
+                Changed?.Invoke();
+        }
+
+        /// <summary>Drop every selection step from both histories: selections are no longer recorded.</summary>
+        public void RemoveSelectionSteps()
+        {
+            if (_applyDepth > 0 || _groupDepth > 0)
+                return;
+            int removed = _undo.RemoveAll(o => o is ISelectionStep) + _redo.RemoveAll(o => o is ISelectionStep);
+            if (removed > 0)
+                SelectionStepsChanged?.Invoke();
         }
 
         public void Undo() => Step(_undo, _redo, true);
@@ -331,6 +392,7 @@ namespace OpenCAGE.Undo
             IEdit edit = from[from.Count - 1];
             from.RemoveAt(from.Count - 1);
 
+            bool cleared = false;
             UndoContext context = MakeContext();
             _applyDepth++;
             try
@@ -354,13 +416,17 @@ namespace OpenCAGE.Undo
                 _undo.Clear();
                 _redo.Clear();
                 _generation++;
+                cleared = true;
                 Status?.Invoke("Could not " + (undo ? "undo " : "redo ") + edit.Label + " - the history has been cleared");
             }
             finally
             {
                 _applyDepth--;
             }
-            Changed?.Invoke();
+            if (cleared)
+                Changed?.Invoke();
+            else
+                Notify(edit);
         }
 
         /// <summary>Forget everything: a different level is loading.</summary>

@@ -142,6 +142,82 @@ namespace OpenCAGE.Popups.UserControls
             Singleton.OnCompositeRenamed += OnCompositeRenamed;
             Singleton.OnEntityDeleted += OnEntityDeleted;
             Singleton.OnEntityAdded += OnEntityAdded;
+            _inputWatch = new InputWatch(this, composite_content);
+        }
+
+        /// <summary>
+        /// The click or key press the list is handling, while it handles one: the selection changes raised meanwhile are the
+        /// user's own, and they all carry this same object. Null otherwise - a change raised then was made by code.
+        /// </summary>
+        public object UserInput => _inputDepth > 0 ? _input : null;
+        private InputWatch _inputWatch; //referenced for as long as the list lives, as a subclass of its window must be
+        private int _inputDepth = 0;
+        private object _input;
+        private int _lastKeyTick;
+
+        private sealed class KeyRun { }
+
+        private void BeginInput(bool key)
+        {
+            if (_inputDepth++ > 0)
+                return;
+
+            //Keys pressed in quick succession (an arrow key held down) walk the list as one change
+            int now = Environment.TickCount;
+            if (!key || !(_input is KeyRun) || unchecked(now - _lastKeyTick) > 1000)
+                _input = key ? new KeyRun() : new object();
+            if (key)
+                _lastKeyTick = now;
+        }
+
+        /* Sees the list's own mouse button and key messages go by: what the native control selects while handling one of them,
+           it selects for the user. A middle click (Ctrl to step into an instance) is navigation, not a selection. */
+        private sealed class InputWatch : NativeWindow
+        {
+            private const int WM_KEYDOWN = 0x0100;
+            private const int WM_LBUTTONDOWN = 0x0201;
+            private const int WM_LBUTTONUP = 0x0202;
+            private const int WM_LBUTTONDBLCLK = 0x0203;
+            private const int WM_RBUTTONDOWN = 0x0204;
+            private const int WM_RBUTTONDBLCLK = 0x0206;
+
+            private readonly CompositeEntityList _owner;
+
+            public InputWatch(CompositeEntityList owner, ListView list)
+            {
+                _owner = owner;
+                list.HandleCreated += (sender, e) => Watch((Control)sender);
+                if (list.IsHandleCreated)
+                    Watch(list);
+            }
+
+            private void Watch(Control list)
+            {
+                if (Handle != IntPtr.Zero)
+                    ReleaseHandle();
+                AssignHandle(list.Handle);
+            }
+
+            protected override void WndProc(ref Message m)
+            {
+                bool key = m.Msg == WM_KEYDOWN;
+                if (!key && m.Msg != WM_LBUTTONDOWN && m.Msg != WM_LBUTTONUP && m.Msg != WM_LBUTTONDBLCLK
+                    && m.Msg != WM_RBUTTONDOWN && m.Msg != WM_RBUTTONDBLCLK)
+                {
+                    base.WndProc(ref m);
+                    return;
+                }
+
+                _owner.BeginInput(key);
+                try
+                {
+                    base.WndProc(ref m);
+                }
+                finally
+                {
+                    _owner._inputDepth--;
+                }
+            }
         }
 
         private void Composite_content_MouseDown(object sender, MouseEventArgs e)
@@ -232,6 +308,8 @@ namespace OpenCAGE.Popups.UserControls
             composite_content.ItemDrag -= Composite_content_ItemDrag;
             composite_content.KeyPress -= Composite_content_KeyPress;
             composite_content.ColumnClick -= composite_content_ColumnClick;
+            if (_inputWatch != null && _inputWatch.Handle != IntPtr.Zero)
+                _inputWatch.ReleaseHandle();
             ClearGroupsAndItems();
         }
 

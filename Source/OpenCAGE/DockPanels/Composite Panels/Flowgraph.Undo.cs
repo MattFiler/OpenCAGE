@@ -39,6 +39,41 @@ namespace OpenCAGE
 
         private bool CanRecord => !IsPopulating && _composite != null && !UndoStack.Current.IsSuspended;
 
+        //The press the page is handling: every selection change one press makes (a rubber-band drag raises one per move) is one step
+        private object _selectionPress = null;
+
+        private void NoteSelectionPress(object sender, System.Windows.Forms.MouseEventArgs e)
+        {
+            _selectionPress = new object();
+        }
+
+        /* The node editor raises these only from its own mouse handling, so each is the user's choice and an undo step.
+           Go To Node and the rest, which announce a selection from code, call Owner_SelectedChanged and are not recorded. */
+        private void OnNodeEditorSelectionChanged(object sender, EventArgs e)
+        {
+            using (SelectionUndo.UserChange(_selectionPress ?? new object()))
+                Owner_SelectedChanged(sender, e);
+        }
+
+        /// <summary>Highlight exactly the nodes of these entities, announcing nothing: the selection was set elsewhere.</summary>
+        public void ShowSelection(ICollection<Entity> entities)
+        {
+            HashSet<ShortGuid> ids = new HashSet<ShortGuid>(entities.Select(o => o.shortGUID));
+            _applyingEntitySelection = true;
+            try
+            {
+                DeselectAllNodes();
+                foreach (STNode node in stNodeEditor1.Nodes.ToArray())
+                    if (node != null && ids.Contains(node.ShortGUID))
+                        SelectNode(node, centerCanvas: false);
+            }
+            finally
+            {
+                _applyingEntitySelection = false;
+            }
+            stNodeEditor1.Invalidate();
+        }
+
         private void RecordNodesMoved(STNodesMovedEventArgs e)
         {
             if (!CanRecord || e?.Movements == null)

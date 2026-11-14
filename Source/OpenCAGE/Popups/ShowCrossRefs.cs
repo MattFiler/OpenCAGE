@@ -369,6 +369,30 @@ namespace OpenCAGE
                 return;
             }
             removeReferenceToolStripMenuItem.Text = RemovalLabel(selected.Count);
+
+            //The toggle is for one sequence, and ticked while it is the one new entities go into - however that was set
+            autoAddToTriggerSequenceToolStripMenuItem.Visible = _currentDisplay == CurrentDisplay.TRIGGERSEQUENCES;
+            TriggerSequenceMembers.Target target = selected.Count == 1 ? AutoAddTargetFor(selected[0]) : null;
+            autoAddToTriggerSequenceToolStripMenuItem.Enabled = target != null;
+            autoAddToTriggerSequenceToolStripMenuItem.Checked = target != null && TriggerSequenceMembers.IsAutoAddTarget(target.Sequence);
+        }
+
+        private TriggerSequenceMembers.Target AutoAddTargetFor(EntityRef entityRef)
+        {
+            if (_currentDisplay != CurrentDisplay.TRIGGERSEQUENCES || entityRef?.composite?.GetEntityByID(entityRef.entity.shortGUID) != entityRef.entity)
+                return null;
+            return TriggerSequenceMembers.Reaching(entityRef.composite, entityRef.entity, _entity);
+        }
+
+        /* Switched here without going to the sequence: entities made beside this one from now on are added to it, written
+           down the same way as this one's entry, wherever the composite they are made in was opened from */
+        private void autoAddToTriggerSequenceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            List<EntityRef> selected = DistinctSelectedRefs();
+            TriggerSequenceMembers.Target target = selected.Count == 1 ? AutoAddTargetFor(selected[0]) : null;
+            if (target == null)
+                return;
+            TriggerSequenceMembers.ToggleAutoAdd(new TriggerSequenceMembers.MenuChoice() { Target = target });
         }
 
         /* A right-click acts on the row under the cursor, unless that row is part of the selection */

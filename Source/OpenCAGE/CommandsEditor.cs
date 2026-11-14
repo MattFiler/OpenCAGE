@@ -363,8 +363,9 @@ namespace OpenCAGE
         private void CommandsEditor_FormClosing(object sender, FormClosingEventArgs e)
         {
             //A save still writing the level (a build pumps messages as it runs, with this window disabled - the taskbar can
-            //still ask it to close): the editor isn't taken down under it. Windows shutting down, or a crash, still close it.
-            if (_saveInProgress && e.CloseReason != CloseReason.WindowsShutDown && e.CloseReason != CloseReason.TaskManagerClosing && !Program.ExitingAfterCriticalError)
+            //still ask it to close), or an import or export holding the editor (EditorBusy): the editor isn't taken down
+            //under it. Windows shutting down, or a crash, still close it.
+            if ((_saveInProgress || EditorBusy.Active) && e.CloseReason != CloseReason.WindowsShutDown && e.CloseReason != CloseReason.TaskManagerClosing && !Program.ExitingAfterCriticalError)
             {
                 e.Cancel = true;
                 return;
@@ -962,6 +963,12 @@ namespace OpenCAGE
             if (IsLevelLoaderRunning)
             {
                 MessageBox.Show("A level is still loading. Wait for it to finish, then load " + level + " again.", "Level still loading", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            //...nor under an import or export part-way through the open level (EditorBusy)
+            if (EditorBusy.Active)
+            {
+                MessageBox.Show("OpenCAGE is busy importing or exporting composites. Wait for it to finish, then load " + level + " again.", "Import or export running", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -1917,6 +1924,14 @@ namespace OpenCAGE
             //Save & Build pressed again (or the viewport asking) while a build is still writing: that one is the save
             if (_saveInProgress) return;
 
+            //...or while an import or export is part-way through the level (EditorBusy): it would be written half-done
+            if (EditorBusy.Active)
+            {
+                if (throwOnFailure)
+                    throw new IOException("OpenCAGE is busy importing or exporting composites. Save once that has finished.");
+                return;
+            }
+
             //If backup manager is working on this level, don't allow saving
             switch (Singleton.CurrentBackupState)
             {
@@ -2147,11 +2162,11 @@ namespace OpenCAGE
                 MessageBox.Show("Saved changes!", "Saved.", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        /* For a save that pumps the message loop: every open window but the progress window disabled, as a modal window
-           disables the others - a disabled window, and everything in it, takes no input and can't be closed - and added to
-           the list for EnableWindowsAfterSave. Disabled in Windows only: setting Enabled would repaint every control in each
-           window, seconds of the UI thread with a big level open. */
-        private void DisableWindowsForSave(List<Form> disabled)
+        /* For a save that pumps the message loop (and EditorBusy's jobs): every open window but the progress window disabled,
+           as a modal window disables the others - a disabled window, and everything in it, takes no input and can't be closed -
+           and added to the list for EnableWindowsAfterSave. Disabled in Windows only: setting Enabled would repaint every
+           control in each window, seconds of the UI thread with a big level open. */
+        internal void DisableWindowsForSave(List<Form> disabled)
         {
             foreach (Form form in Application.OpenForms.Cast<Form>().ToList())
             {
@@ -2161,7 +2176,7 @@ namespace OpenCAGE
                 disabled.Add(form);
             }
         }
-        private static void EnableWindowsAfterSave(List<Form> disabled)
+        internal static void EnableWindowsAfterSave(List<Form> disabled)
         {
             foreach (Form form in disabled)
                 if (!form.IsDisposed && form.IsHandleCreated)
@@ -2230,6 +2245,9 @@ namespace OpenCAGE
             }
             return string.IsNullOrEmpty(fallback) ? "unknown error" : fallback.TrimEnd('.');
         }
+
+        /// <summary>A short note in the status bar, cleared after a few seconds unless something else has taken the bar.</summary>
+        public void ShowStatusNote(string text) => ShowUndoStatus(text);
 
         /* Status text for background work nobody asked for: it may only write when the bar is idle,
          * and may only clear its own message. Otherwise a long harvest would stamp over "Saving..."

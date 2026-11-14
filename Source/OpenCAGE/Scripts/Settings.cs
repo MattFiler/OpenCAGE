@@ -79,6 +79,8 @@ namespace OpenCAGE
         public const string ControlsWindowRemainOnTop = "ControlsWindowRemainOnTop";
         public const string PopulateAllPinsOnCreateNode = "PopulateAllPinsOnCreateNode";
         public const string FocusCanvasOnNewNode = "FocusCanvasOnNewNode";
+        //Entity Display's "Undo Includes Selection Changes": selecting and deselecting entities is a step for Undo and Redo
+        public const string UndoIncludesSelection = "UndoIncludesSelection";
         //Entity Display's "Show Node Icons When Zoomed Out": script flowgraphs and animation trees draw each node as its icon
         //below EditorIcons.NodeIconZoom. Off, nodes are drawn in full at every zoom, their text just getting smaller
         public const string NodeIconsWhenZoomedOut = "NodeIconsWhenZoomedOut";

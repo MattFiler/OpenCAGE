@@ -52,4 +52,14 @@ namespace OpenCAGE.Undo
         /// <summary>The entities of <see cref="IEdit.CompositeId"/> the edit touched, first first.</summary>
         IReadOnlyList<ShortGuid> EntityIds { get; }
     }
+
+    /// <summary>
+    /// A step that changes nothing but what is selected. It counts against a cap of its own, so it never pushes an edit
+    /// out of the history, and it raises <see cref="UndoStack.SelectionStepsChanged"/> rather than <see cref="UndoStack.Changed"/>.
+    /// </summary>
+    public interface ISelectionStep
+    {
+        /// <summary>Its pieces came back to the selection it started from: the step can go.</summary>
+        bool ChangesNothing { get; }
+    }
 }

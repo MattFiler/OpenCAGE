@@ -111,7 +111,25 @@ namespace OpenCAGE
             return ApplyCore(packet);
         }
 
+        /// <summary>
+        /// The user's pick in the viewport a packet carries, as an undo step sees it: the packets of one pick (they share its
+        /// time) are one step. A viewer that sends no time makes each packet a pick of its own.
+        /// </summary>
+        internal static object ViewportInput(Packet packet)
+        {
+            if (packet == null || packet.selection_input_tick == 0)
+                return new object();
+            return Tuple.Create("viewport", packet.selection_input_tick);
+        }
+
+        //A pick in the viewport is the user's choice, and an undo step
         private static bool ApplyCore(Packet packet)
+        {
+            using (Undo.SelectionUndo.UserChange(ViewportInput(packet)))
+                return ApplySelection(packet);
+        }
+
+        private static bool ApplySelection(Packet packet)
         {
             if (packet?.path_composites == null || packet.path_composites.Count == 0
                 || packet.path_entities == null)

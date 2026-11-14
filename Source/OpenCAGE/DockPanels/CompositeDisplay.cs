@@ -1579,6 +1579,17 @@ namespace OpenCAGE.DockPanels
         }
 
         /// <summary>
+        /// What is selected as of the latest request: the selection last asked for while its inspector populate is still on its
+        /// way, what the inspector shows otherwise. Entities the composite no longer holds are left out.
+        /// </summary>
+        public List<Entity> CurrentSelection()
+        {
+            List<Entity> selected = _populatedGeneration != _loadEntityGeneration ? new List<Entity>(_requestedSelection) : CaptureSelection();
+            selected.RemoveAll(o => o == null || _composite == null || _composite.GetEntityByID(o.shortGUID) != o);
+            return selected;
+        }
+
+        /// <summary>
         /// Select again what was selected before the display was closed and opened again (<see cref="CaptureSelection"/>):
         /// as much of it as the composite on screen still holds.
         /// </summary>
@@ -1844,19 +1855,24 @@ namespace OpenCAGE.DockPanels
         {
             LoadEntity(Composite.GetEntityByID(guid), focusNode);
         }
+        //A row clicked or keyed to is the user's choice, an undo step; rows changing under code (a reload, a removal) are not
         private void OnEntityListSelectionChanged(Entity entity)
         {
-            if (entity == null)
+            using (SelectionUndo.UserChange(_entityList?.List?.UserInput))
             {
-                _entityDisplay?.ClearSelectedEntity();
-                return;
-            }
+                if (entity == null)
+                {
+                    _entityDisplay?.ClearSelectedEntity();
+                    return;
+                }
 
-            LoadEntity(entity, focusNode: false);
+                LoadEntity(entity, focusNode: false);
+            }
         }
         private void OnEntityListMultiSelectionChanged(List<Entity> entities)
         {
-            LoadEntities(entities);
+            using (SelectionUndo.UserChange(_entityList?.List?.UserInput))
+                LoadEntities(entities);
         }
 
         /* Several entities selected together in the viewport: show that selection here, in the list

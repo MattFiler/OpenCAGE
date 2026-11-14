@@ -9,6 +9,7 @@ namespace OpenCAGE
     {
         private ToolStripMenuItem _undoMenuItem;
         private ToolStripMenuItem _redoMenuItem;
+        private ToolStripMenuItem _undoSelectionMenuItem;
         private System.Windows.Forms.Timer _undoStatusTimer;
         private string _lastUndoStatus;
 
@@ -25,7 +26,18 @@ namespace OpenCAGE
             toolStripButton5.DropDownOpening += (sender, e) => RefreshUndoMenu();
 
             UndoStack.Current.Changed += RefreshUndoMenu;
+            UndoStack.Current.SelectionStepsChanged += RefreshUndoMenu;
             UndoStack.Current.Status += ShowUndoStatus;
+
+            //Options > Entity Display: whether selecting is a step of its own
+            _undoSelectionMenuItem = new ToolStripMenuItem("Undo Includes Selection Changes")
+            {
+                ToolTipText = "If enabled, selecting and deselecting entities (in the entity list, on a flowgraph or in the viewport) is a step for Undo and Redo of its own, so a selection lost to a stray click comes back with Ctrl+Z.",
+                Checked = SelectionUndo.Enabled,
+            };
+            _undoSelectionMenuItem.Click += (sender, e) => ToggleUndoIncludesSelection();
+            entityDisplayToolStripMenuItem.DropDownItems.Add(_undoSelectionMenuItem);
+            entityDisplayToolStripMenuItem.DropDownOpening += (sender, e) => _undoSelectionMenuItem.Checked = SelectionUndo.Enabled;
 
             //Edits name entities of the level they were made in; a different level makes them meaningless. Cleared as the
             //level closes too, as the edits hold on to it
@@ -33,6 +45,15 @@ namespace OpenCAGE
             Singleton.OnLevelClosing += content => UndoStack.Current.Clear();
 
             RefreshUndoMenu();
+        }
+
+        /* Off, the selection steps already taken go too: the history is as if they were never recorded */
+        private void ToggleUndoIncludesSelection()
+        {
+            SettingsManager.SetBool(Settings.UndoIncludesSelection, !SelectionUndo.Enabled);
+            _undoSelectionMenuItem.Checked = SelectionUndo.Enabled;
+            if (!SelectionUndo.Enabled)
+                UndoStack.Current.RemoveSelectionSteps();
         }
 
         private void RefreshUndoMenu()

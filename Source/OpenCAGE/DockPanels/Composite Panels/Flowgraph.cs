@@ -75,8 +75,9 @@ namespace OpenCAGE
 
             stNodeEditor1.LoadAssembly(Application.ExecutablePath);
             stNodeEditor1.AllowSameOwnerConnections = true;
-            stNodeEditor1.SelectedChanged += Owner_SelectedChanged;
-            stNodeEditor1.MultiSelectionChanged += Owner_SelectedChanged; //rubber-band/ctrl-click selection raises this, not SelectedChanged
+            stNodeEditor1.SelectedChanged += OnNodeEditorSelectionChanged;
+            stNodeEditor1.MultiSelectionChanged += OnNodeEditorSelectionChanged; //rubber-band/ctrl-click selection raises this, not SelectedChanged
+            stNodeEditor1.MouseDown += NoteSelectionPress;
             stNodeEditor1.OptionConnected += StNodeEditor1_OptionConnectionChanged;
             stNodeEditor1.OptionDisconnected += StNodeEditor1_OptionConnectionChanged;
             stNodeEditor1.PinToNodeConnected += StNodeEditor1_PinToNodeConnected;
@@ -162,8 +163,9 @@ namespace OpenCAGE
             this.VisibleChanged -= Flowgraph_VisibleChanged;
             this.FormClosed -= Flowgraph_FormClosed;
 
-            stNodeEditor1.SelectedChanged -= Owner_SelectedChanged;
-            stNodeEditor1.MultiSelectionChanged -= Owner_SelectedChanged;
+            stNodeEditor1.SelectedChanged -= OnNodeEditorSelectionChanged;
+            stNodeEditor1.MultiSelectionChanged -= OnNodeEditorSelectionChanged;
+            stNodeEditor1.MouseDown -= NoteSelectionPress;
             stNodeEditor1.OptionConnected -= StNodeEditor1_OptionConnectionChanged;
             stNodeEditor1.OptionDisconnected -= StNodeEditor1_OptionConnectionChanged;
             stNodeEditor1.NodeCtrlMiddleMouseDown -= StNodeEditor1_NodeCtrlMiddleMouseDown;
@@ -1127,8 +1129,14 @@ namespace OpenCAGE
                     break;
                 case EntityVariant.FUNCTION:
                     FunctionEntity funcEnt = (FunctionEntity)node.Entity;
+                    //An instance of a composite this level doesn't have (CommandsUtils.IsMissingCompositeInstance) is marked as a dead proxy is
+                    bool missing = _commands.Utils.IsMissingCompositeInstance(funcEnt);
+                    node.ShowDeadMarker = missing;
+                    if (missing) _deadProxies.Add(node.ShortGUID); else _deadProxies.Remove(node.ShortGUID);
                     if (funcEnt.function.IsFunctionType)
                         node.SetName(_commands.Utils.GetEntityName(_composite, node.Entity), funcEnt.function.AsFunctionType.ToString());
+                    else if (missing)
+                        node.SetName(_commands.Utils.GetEntityName(_composite, node.Entity), "MISSING COMPOSITE");
                     else
                         node.SetName(_commands.Utils.GetEntityName(_composite, node.Entity), EditorUtils.GetCompositeName(_commands.GetComposite(funcEnt.function)));
                     break;

@@ -518,13 +518,14 @@ namespace OpenCAGE.UnityConnection
                 return;
             }
 
-            QueueSelectAddedViewerAlias(commands, ownerComposite, entity);
+            QueueSelectAddedViewerAlias(commands, ownerComposite, entity, ViewerSelectionSync.ViewportInput(packet));
         }
 
         private static void QueueSelectAddedViewerAlias(
             CompositeBrowser commands,
             Composite ownerComposite,
-            Entity entity)
+            Entity entity,
+            object input)
         {
             CommandsEditor editor = Singleton.Editor;
             if (editor == null || editor.IsDisposed || commands == null || ownerComposite == null || entity == null)
@@ -535,9 +536,11 @@ namespace OpenCAGE.UnityConnection
                 ViewerSelectionSync.SuppressSyncBroadcastDepth++;
                 try
                 {
-                    //Viewer-originated: select without stealing Win32 focus from the viewer
-                    ViewerSelectionSync.RunAsViewerOriginated(
-                        () => SelectAddedViewerAlias(commands, ownerComposite, entity));
+                    //Viewer-originated: select without stealing Win32 focus from the viewer. The deep-select pick that made the
+                    //alias is the user's choice, and an undo step
+                    using (Undo.SelectionUndo.UserChange(input))
+                        ViewerSelectionSync.RunAsViewerOriginated(
+                            () => SelectAddedViewerAlias(commands, ownerComposite, entity));
                 }
                 finally
                 {

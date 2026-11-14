@@ -34,6 +34,9 @@ namespace OpenCAGE.Undo
                 return;
 
             Composite composite = _editor?.CompositeBrowser?.Content?.Level?.Commands?.GetComposite(edit.CompositeId);
+            //A selection in a composite that has gone selects nothing, which is no reason to lose the history over
+            if (composite == null && edit is ISelectionStep)
+                return;
             if (composite == null)
                 throw new InvalidOperationException("The composite this change belongs to is no longer loaded");
 
@@ -50,7 +53,7 @@ namespace OpenCAGE.Undo
             else
                 _editor.CompositeBrowser.LoadComposite(composite);
             display = Display;
-            if (display == null || display.Composite != composite)
+            if ((display == null || display.Composite != composite) && !(edit is ISelectionStep))
                 throw new InvalidOperationException("Could not open the composite this change belongs to");
         }
 
@@ -109,6 +112,33 @@ namespace OpenCAGE.Undo
 
             display.ApplyMultiSelection(entities);
             return true;
+        }
+
+        public void Select(ShortGuid composite, IReadOnlyList<ShortGuid> ids)
+        {
+            CompositeDisplay display = Display;
+            if (display == null || !display.Populated || display.Composite?.shortGUID != composite)
+                return;
+
+            List<Entity> entities = new List<Entity>();
+            foreach (ShortGuid id in ids ?? new List<ShortGuid>())
+            {
+                Entity entity = display.Composite.GetEntityByID(id);
+                if (entity != null && !entities.Contains(entity))
+                    entities.Add(entity);
+            }
+
+            if (entities.Count == 0)
+                display.ClearEntitySelection();
+            else if (entities.Count == 1)
+                display.LoadEntity(entities[0], false);
+            else
+                display.ApplyMultiSelection(entities);
+
+            //The pages highlight it as a click on them would have: a multi-selection set from here reaches no page by itself
+            foreach (Flowgraph page in display.Flowgraphs.ToList())
+                if (page != null && !page.IsDisposed)
+                    page.ShowSelection(entities);
         }
 
         public Flowgraph Page(Composite composite, string page)

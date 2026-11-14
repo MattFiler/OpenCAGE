@@ -23,6 +23,11 @@ namespace OpenCAGE
             public Entity Sequence;
             public Composite Composite;
 
+            //A composite below the sequence's and the placements stepped through to reach it, for writing entries from there
+            //when the display's path does not pass through the sequence's composite
+            internal Composite Below;
+            internal List<Entity> StepsToBelow;
+
             public bool Is(Entity sequence) => sequence != null && Sequence.shortGUID == sequence.shortGUID
                 && Composite.GetEntityByID(sequence.shortGUID) == sequence;
         }
@@ -42,6 +47,41 @@ namespace OpenCAGE
                 return null;
 
             return new Target() { Sequence = sequence, Composite = composite };
+        }
+
+        /// <summary>
+        /// The sequence in its own composite, wherever that is, carrying the way down that its entry for
+        /// <paramref name="member"/> takes - so entities made beside that member can be written in the same way
+        /// without the sequence's composite being on the display's path (opened from the browser, say). Null
+        /// when the entity is not a TriggerSequence (or a proxy to one) in <paramref name="composite"/>.
+        /// </summary>
+        public static Target Reaching(Composite composite, Entity sequence, Entity member)
+        {
+            if (composite == null || sequence == null || composite.GetEntityByID(sequence.shortGUID) != sequence)
+                return null;
+            if (!TryGetLists(sequence, out List<TriggerSequence.SequenceEntry> entries, out _))
+                return null;
+
+            Target target = new Target() { Sequence = sequence, Composite = composite };
+            Commands commands = Commands;
+            if (member == null || commands?.Utils == null)
+                return target;
+
+            foreach (TriggerSequence.SequenceEntry entry in entries)
+            {
+                if (entry?.connectedEntity?.path == null)
+                    continue;
+
+                //Only a path read from the sequence's own composite says how to get down from there
+                List<Tuple<Composite, Entity>> resolved = commands.Utils.ResolveEntityPath(entry.connectedEntity.path, composite);
+                if (resolved == null || resolved.Count == 0 || resolved[0].Item1 != composite || resolved[resolved.Count - 1].Item2 != member)
+                    continue;
+
+                target.Below = resolved[resolved.Count - 1].Item1;
+                target.StepsToBelow = resolved.Take(resolved.Count - 1).Select(o => o.Item2).ToList();
+                break;
+            }
+            return target;
         }
 
         /// <summary>
@@ -73,8 +113,9 @@ namespace OpenCAGE
         }
 
         /// <summary>
-        /// The steps the display took down from the target's composite to the composite it has open, or
-        /// null when its path does not pass through there.
+        /// The steps the display took down from the target's composite to the composite it has open - or,
+        /// when its path does not pass through there, the way down the target carries to that composite, or
+        /// else the composite's only placement under the target's. Null when there is none of these.
         /// </summary>
         private static List<Entity> StepsBelow(Target target, CompositeDisplay display)
         {
@@ -91,7 +132,100 @@ namespace OpenCAGE
                 if (composites[i] == target.Composite)
                     return entities.GetRange(i, entities.Count - i);
             }
-            return null;
+
+            if (open == target.Below && StillLeadsBelow(target))
+                return new List<Entity>(target.StepsToBelow);
+
+            //Opened some other way: one placement is unambiguous, several need the user to say which
+            return PlacementsBelow(target.Composite, open, out List<Entity> only) == 1 ? only : null;
+        }
+
+        /// <summary>
+        /// How many ways down there are from <paramref name="from"/> to a placement of <paramref name="composite"/> -
+        /// counted to 2, as more says nothing new - and the steps of the first.
+        /// </summary>
+        private static int PlacementsBelow(Composite from, Composite composite, out List<Entity> first)
+        {
+            first = null;
+            Commands commands = Commands;
+            if (commands == null || from == null || composite == null)
+                return 0;
+            int count = 0;
+            CountPlacements(commands, from, composite, new Dictionary<Composite, bool>(), new HashSet<Composite>(), new List<Entity>(), ref first, ref count);
+            return count;
+        }
+
+        private static void CountPlacements(Commands commands, Composite current, Composite composite, Dictionary<Composite, bool> reaches,
+            HashSet<Composite> onStack, List<Entity> path, ref List<Entity> first, ref int count)
+        {
+            //A composite that (however indirectly) instances itself would otherwise walk forever
+            if (!onStack.Add(current))
+                return;
+            foreach (FunctionEntity function in current.functions)
+            {
+                if (count > 1)
+                    break;
+                if (function.function.IsFunctionType)
+                    continue;
+                Composite nested = commands.GetComposite(function.function);
+                if (nested == null || !Reaches(commands, nested, composite, reaches, new HashSet<Composite>()))
+                    continue;
+
+                path.Add(function);
+                if (nested == composite)
+                {
+                    if (count++ == 0)
+                        first = new List<Entity>(path);
+                }
+                else
+                {
+                    CountPlacements(commands, nested, composite, reaches, onStack, path, ref first, ref count);
+                }
+                path.RemoveAt(path.Count - 1);
+            }
+            onStack.Remove(current);
+        }
+
+        //Whether a composite is, or instances its way down to, another; remembered, as most of a level reaches nothing
+        private static bool Reaches(Commands commands, Composite current, Composite composite, Dictionary<Composite, bool> reaches, HashSet<Composite> onStack)
+        {
+            if (current == composite)
+                return true;
+            if (reaches.TryGetValue(current, out bool known))
+                return known;
+            if (!onStack.Add(current))
+                return false;
+
+            bool found = false;
+            foreach (FunctionEntity function in current.functions)
+            {
+                if (function.function.IsFunctionType)
+                    continue;
+                Composite nested = commands.GetComposite(function.function);
+                if (nested != null && Reaches(commands, nested, composite, reaches, onStack))
+                {
+                    found = true;
+                    break;
+                }
+            }
+            onStack.Remove(current);
+            reaches[current] = found;
+            return found;
+        }
+
+        //The carried steps still walk from the sequence's composite to the one below (a placement on the way may have gone)
+        private static bool StillLeadsBelow(Target target)
+        {
+            if (target.StepsToBelow == null || target.Below == null)
+                return false;
+            Composite current = target.Composite;
+            foreach (Entity step in target.StepsToBelow)
+            {
+                if (current?.GetEntityByID(step.shortGUID) != step || !(step is FunctionEntity function) || function.function.IsFunctionType)
+                    return false;
+                current = Commands?.GetComposite(function.function);
+            }
+            return current == target.Below;
         }
 
         /// <summary>What can go in a sequence: a function or a composite instance, as the editor's picker offers.</summary>
@@ -326,7 +460,7 @@ namespace OpenCAGE
         /// <summary>
         /// Add everything placed from now on to this sequence - composite instances and the things the
         /// viewport can place (models, lights, fog spheres...) - whether it is placed in the sequence's
-        /// composite or in one stepped down to from there. Null stops it.
+        /// composite, in one stepped down to from there, or in one placed only once below it. Null stops it.
         /// </summary>
         public static void SetAutoAdd(Target target)
         {
@@ -347,6 +481,7 @@ namespace OpenCAGE
                 Singleton.OnLevelClosing -= StopOnLevelLoaded;
             }
             AutoAddTarget = target;
+            _toldNotAdded.Clear();
         }
 
         private static void AutoAddEntity(Entity entity)
@@ -371,7 +506,28 @@ namespace OpenCAGE
             if (!IsPlaced(entity))
                 return;
 
+            if (StepsBelow(target, display) == null)
+            {
+                SayNotAdded(target, display.Composite);
+                return;
+            }
             Add(target, display, new[] { entity }, automatic: true);
+        }
+
+        //The composites already told why nothing made in them went in, while this target holds
+        private static readonly HashSet<Composite> _toldNotAdded = new HashSet<Composite>();
+
+        /* Nothing is added without a way down to say where: once per composite, the status bar says why */
+        private static void SayNotAdded(Target target, Composite composite)
+        {
+            if (!_toldNotAdded.Add(composite))
+                return;
+            string sequence = UndoLabels.Entity(target.Composite, target.Sequence);
+            string name = EditorUtils.GetCompositeName(composite);
+            string why = PlacementsBelow(target.Composite, composite, out _) > 1
+                ? name + " is placed more than once under " + EditorUtils.GetCompositeName(target.Composite) + " - open it from the level root to choose which placement"
+                : name + " is not placed under " + EditorUtils.GetCompositeName(target.Composite);
+            Singleton.Editor?.ShowStatusNote("Not added to " + sequence + ": " + why);
         }
 
         /* The things a zone is made of: composite instances, and what the viewport's Create menu places */

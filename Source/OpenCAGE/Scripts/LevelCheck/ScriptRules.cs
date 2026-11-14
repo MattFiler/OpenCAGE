@@ -426,6 +426,44 @@ namespace OpenCAGE
         }
     }
 
+    /// <summary>
+    /// An instance of a composite the level doesn't have (CommandsUtils.IsMissingCompositeInstance): a composite deleted, or a script
+    /// imported without a composite it instances. The game skips it, so its links and what it stood for never happen. Retail's few are
+    /// in its own composites, mostly switched off with 'deleted'.
+    /// </summary>
+    internal sealed class MissingCompositeRule : LevelCheckRule
+    {
+        public override string Id => "missing_composite";
+        public override string Name => "Instances of missing composites";
+        public override string About => "An entity that instances a composite the level doesn't have - one an import didn't bring, or one that was deleted: the game skips it, so its links and what it stood for never happen. Importing the composite under the same ID makes it an instance again.";
+
+        public override void Run(LevelCheckContext context, List<LevelCheckFinding> found)
+        {
+            foreach (Composite composite in context.Placed)
+            {
+                if (composite == null || !context.IsUsers(composite)) continue;
+                List<FunctionEntity> missing = composite.functions.Where(o => context.Commands.Utils.IsMissingCompositeInstance(o) &&
+                    !(o.GetParameter(ShortGuids.deleted)?.content is cBool deleted && deleted.value)).ToList();
+                foreach (IGrouping<ShortGuid, FunctionEntity> group in missing.GroupBy(o => o.function))
+                {
+                    List<FunctionEntity> instances = group.ToList();
+                    LevelCheckFinding finding = new LevelCheckFinding()
+                    {
+                        Key = composite.shortGUID.ToByteString() + "/" + group.Key.ToByteString(),
+                        Severity = LevelCheckSeverity.Broken,
+                        Title = EditorUtils.GetCompositeName(composite) + " has " + (instances.Count == 1 ? "an instance" : instances.Count + " instances") + " of composite " + group.Key.ToByteString() + ", which the level doesn't have",
+                        Text = "No composite in the level has that ID, so the game skips " + (instances.Count == 1 ? "this entity" : "these entities") + ": the links into " + (instances.Count == 1 ? "it" : "them") +
+                               " do nothing. It happens when a script is imported without a composite it instances (a package that didn't include it), or when the composite is deleted. " +
+                               "Import the composite again - from the package or level it was made in - and " + (instances.Count == 1 ? "it becomes an instance" : "they become instances") + " of it again; or delete " + (instances.Count == 1 ? "it" : "them") + ".",
+                    };
+                    foreach (FunctionEntity instance in instances.Take(10))
+                        finding.Sources.Add(context.Source(composite, instance));
+                    found.Add(finding);
+                }
+            }
+        }
+    }
+
     /// <summary>Parameter values as text, to compare them.</summary>
     internal static class LevelCheckValues
     {

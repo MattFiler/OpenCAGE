@@ -51,6 +51,7 @@
             this.columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.referenceContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.jumpToToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.autoAddToTriggerSequenceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.removeReferenceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.referenceContextMenu.SuspendLayout();
@@ -215,10 +216,11 @@
             // 
             this.referenceContextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.jumpToToolStripMenuItem,
+            this.autoAddToTriggerSequenceToolStripMenuItem,
             this.toolStripSeparator1,
             this.removeReferenceToolStripMenuItem});
             this.referenceContextMenu.Name = "referenceContextMenu";
-            this.referenceContextMenu.Size = new System.Drawing.Size(181, 54);
+            this.referenceContextMenu.Size = new System.Drawing.Size(181, 76);
             this.referenceContextMenu.Opening += new System.ComponentModel.CancelEventHandler(this.referenceContextMenu_Opening);
             // 
             // jumpToToolStripMenuItem
@@ -227,7 +229,14 @@
             this.jumpToToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.jumpToToolStripMenuItem.Text = "Jump To";
             this.jumpToToolStripMenuItem.Click += new System.EventHandler(this.jumpToToolStripMenuItem_Click);
-            // 
+            //
+            // autoAddToTriggerSequenceToolStripMenuItem
+            //
+            this.autoAddToTriggerSequenceToolStripMenuItem.Name = "autoAddToTriggerSequenceToolStripMenuItem";
+            this.autoAddToTriggerSequenceToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.autoAddToTriggerSequenceToolStripMenuItem.Text = "Auto-add New Entities To TriggerSequence";
+            this.autoAddToTriggerSequenceToolStripMenuItem.Click += new System.EventHandler(this.autoAddToTriggerSequenceToolStripMenuItem_Click);
+            //
             // toolStripSeparator1
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
@@ -283,6 +292,7 @@
         private System.Windows.Forms.ColumnHeader columnHeader2;
         private System.Windows.Forms.ContextMenuStrip referenceContextMenu;
         private System.Windows.Forms.ToolStripMenuItem jumpToToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem autoAddToTriggerSequenceToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
         private System.Windows.Forms.ToolStripMenuItem removeReferenceToolStripMenuItem;
     }

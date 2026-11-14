@@ -878,6 +878,7 @@
     <Compile Include="Popups\UserControls\LevelPicker.cs" />
     <Compile Include="Scripts\FileAssociations.cs" />
     <Compile Include="Scripts\LevelEditorTables.cs" />
+    <Compile Include="Scripts\EditorBusy.cs" />
     <Compile Include="Scripts\PackageDropTarget.cs" />
     <Compile Include="Scripts\PackageFiles.cs" />
     <Compile Include="Scripts\PackageHandover.cs" />
@@ -1451,6 +1452,7 @@
     <Compile Include="Scripts\Flowgraph\WireTieLayouts.cs" />
     <Compile Include="Scripts\Undo\IEdit.cs" />
     <Compile Include="Scripts\Undo\ParameterEdits.cs" />
+    <Compile Include="Scripts\Undo\SelectionEdits.cs" />
     <Compile Include="Scripts\Undo\UndoContext.cs" />
     <Compile Include="Scripts\Undo\UndoKeys.cs" />
     <Compile Include="Scripts\Undo\UndoLabels.cs" />

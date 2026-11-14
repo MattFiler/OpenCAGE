@@ -270,7 +270,9 @@ namespace OpenCAGE
             Send.BeginSceneBatch();
             try
             {
-                result = ImportIntoLoadedLevel(ported);
+                //Minutes for a big pick: the editor is held still meanwhile, still painting (see EditorBusy)
+                using (EditorBusy.Begin())
+                    result = ImportIntoLoadedLevel(ported);
             }
             catch (Exception ex)
             {

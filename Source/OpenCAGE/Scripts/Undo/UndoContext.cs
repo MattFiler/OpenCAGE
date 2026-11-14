@@ -55,6 +55,9 @@ namespace OpenCAGE.Undo
         /// <summary>Select what the edit touched.</summary>
         void AfterEdit(IEdit edit);
 
+        /// <summary>Make these entities of the composite on screen the selection, everywhere it shows; any gone since are left out.</summary>
+        void Select(ShortGuid composite, IReadOnlyList<ShortGuid> entities);
+
         /// <summary>The live page of that name for the composite, or null if the composite is not open.</summary>
         Flowgraph Page(Composite composite, string page);
 

@@ -932,16 +932,28 @@ namespace OpenCAGE
             public string Name;
 
             /// <summary>
-            /// The entity ids stepped through from the composite the lookup started at to reach the zone.
-            /// The zone was found through the hierarchy the user is in, so this is how to go to it
-            /// through that same hierarchy rather than by opening its composite on its own.
+            /// The entity ids stepped through from <see cref="From"/> to reach the zone. The zone was found
+            /// through a hierarchy, so this is how to go to it through that same hierarchy rather than by
+            /// opening its composite on its own.
             /// </summary>
             public List<uint> InstancePath = new List<uint>();
+
+            /// <summary>
+            /// Where <see cref="InstancePath"/> starts: the composite the lookup started at, or the level root
+            /// for a zone found above it.
+            /// </summary>
+            public Composite From;
         }
 
         /// <summary>
         /// The zones an entity is in, as seen from the hierarchy the user is standing in.
         /// </summary>
+        /// <remarks>
+        /// A hierarchy starting anywhere but the level root (a composite opened from the browser or a
+        /// search) cannot see the zones above where it starts, and a level's sections are zoned from
+        /// above. So the start's placements under the level root are looked at as well: every zone that
+        /// claims the entity in any of them, as the viewport draws it from the root.
+        /// </remarks>
         /// <param name="startComposite">The composite the drill path starts at - what the user opened.</param>
         /// <param name="instancePath">
         /// The entity ids stepped through from <paramref name="startComposite"/>, ending with the entity
@@ -950,36 +962,76 @@ namespace OpenCAGE
         public List<ZoneReference> FindZonesForEntity(Composite startComposite, List<uint> instancePath, CancellationToken ct)
         {
             List<ZoneReference> found = new List<ZoneReference>();
-            if (startComposite == null || instancePath == null || instancePath.Count == 0 || Content?.Level?.Commands == null)
+            Commands commands = Content?.Level?.Commands;
+            if (startComposite == null || instancePath == null || instancePath.Count == 0 || commands == null)
                 return found;
 
-            List<UnityConnection.SyncedZone> zones = ZoneMembership.CalculateFrom(Content.Level, startComposite);
+            //The same zone entity reached down two different instance paths is two zones to the
+            //build, but one place to go and one name to show
+            HashSet<ulong> seen = new HashSet<ulong>();
+
+            List<UnityConnection.SyncedZone> zones = ZoneMembership.CalculateFrom(commands, startComposite);
             if (ct.IsCancellationRequested)
                 return found;
+            AddZonesClaiming(commands, zones, startComposite, new List<List<uint>>() { instancePath }, found, seen, ct);
 
-            HashSet<ulong> seen = new HashSet<ulong>();
+            Composite root = commands.EntryPoints != null && commands.EntryPoints.Length != 0 ? commands.EntryPoints[0] : null;
+            if (root == null || root == startComposite || ct.IsCancellationRequested)
+                return found;
+
+            List<List<uint>> placed = PlacementsUnder(commands, root, startComposite, instancePath, ct);
+            if (placed.Count == 0 || ct.IsCancellationRequested)
+                return found;
+            AddZonesClaiming(commands, ZoneMembership.CalculateFrom(commands, root), root, placed, found, seen, ct);
+            return found;
+        }
+
+        /// <summary>
+        /// Add the zones of <paramref name="zones"/> (worked out from <paramref name="from"/>) that claim any
+        /// of <paramref name="paths"/>, in the table's order. A zone claims a path when one of its roots is
+        /// the path or holds it.
+        /// </summary>
+        private static void AddZonesClaiming(Commands commands, List<UnityConnection.SyncedZone> zones, Composite from, List<List<uint>> paths,
+            List<ZoneReference> found, HashSet<ulong> seen, CancellationToken ct)
+        {
+            //Roots by their path, so each path's prefixes are looked up rather than compared with every root
+            Dictionary<string, List<UnityConnection.SyncedZone>> byRoot = new Dictionary<string, List<UnityConnection.SyncedZone>>();
             foreach (UnityConnection.SyncedZone zone in zones)
             {
-                if (ct.IsCancellationRequested)
-                    return found;
-
-                bool claimsIt = false;
                 foreach (List<uint> root in zone.roots)
                 {
-                    if (!IsPathPrefix(root, instancePath))
+                    if (root == null || root.Count == 0)
                         continue;
-                    claimsIt = true;
-                    break;
+                    string rootKey = string.Join(",", root);
+                    if (!byRoot.TryGetValue(rootKey, out List<UnityConnection.SyncedZone> named))
+                        byRoot[rootKey] = named = new List<UnityConnection.SyncedZone>();
+                    named.Add(zone);
                 }
-                if (!claimsIt)
+            }
+
+            HashSet<UnityConnection.SyncedZone> claiming = new HashSet<UnityConnection.SyncedZone>();
+            System.Text.StringBuilder key = new System.Text.StringBuilder();
+            foreach (List<uint> path in paths)
+            {
+                if (ct.IsCancellationRequested)
+                    return;
+                key.Clear();
+                for (int i = 0; i < path.Count; i++)
+                {
+                    if (i != 0)
+                        key.Append(',');
+                    key.Append(path[i]);
+                    if (byRoot.TryGetValue(key.ToString(), out List<UnityConnection.SyncedZone> named))
+                        claiming.UnionWith(named);
+                }
+            }
+
+            foreach (UnityConnection.SyncedZone zone in zones)
+            {
+                if (!claiming.Contains(zone) || !seen.Add(((ulong)zone.zone_composite << 32) | zone.zone_entity))
                     continue;
 
-                //The same zone entity reached down two different instance paths is two zones to the
-                //build, but one place to go and one name to show
-                if (!seen.Add(((ulong)zone.zone_composite << 32) | zone.zone_entity))
-                    continue;
-
-                Composite composite = Content.Level.Commands.GetComposite(new ShortGuid(zone.zone_composite));
+                Composite composite = commands.GetComposite(new ShortGuid(zone.zone_composite));
                 FunctionEntity entity = composite?.GetEntityByID(new ShortGuid(zone.zone_entity)) as FunctionEntity;
                 if (entity == null)
                     continue;
@@ -989,25 +1041,84 @@ namespace OpenCAGE
                     Composite = composite,
                     Zone = entity,
                     Name = string.IsNullOrWhiteSpace(zone.name)
-                        ? Content.Level.Commands.Utils.GetEntityName(composite, entity)
+                        ? commands.Utils.GetEntityName(composite, entity)
                         : zone.name,
                     InstancePath = new List<uint>(zone.zone_path),
+                    From = from,
                 });
             }
-            return found;
         }
 
-        private static bool IsPathPrefix(List<uint> prefix, List<uint> path)
+        /// <summary>
+        /// Every place <paramref name="composite"/> is instanced under <paramref name="root"/>, as the entity
+        /// ids stepped through from there, each with <paramref name="tail"/> on the end.
+        /// </summary>
+        private static List<List<uint>> PlacementsUnder(Commands commands, Composite root, Composite composite, List<uint> tail, CancellationToken ct)
         {
-            if (prefix == null || path == null || prefix.Count == 0 || prefix.Count > path.Count)
-                return false;
-
-            for (int i = 0; i < prefix.Count; i++)
+            //Only what can instance its way down to the composite is worth walking
+            Dictionary<ShortGuid, List<ShortGuid>> instancedBy = new Dictionary<ShortGuid, List<ShortGuid>>();
+            foreach (Composite parent in commands.Entries)
             {
-                if (prefix[i] != path[i])
-                    return false;
+                foreach (FunctionEntity function in parent.functions)
+                {
+                    if (function.function.IsFunctionType)
+                        continue;
+                    if (!instancedBy.TryGetValue(function.function, out List<ShortGuid> parents))
+                        instancedBy[function.function] = parents = new List<ShortGuid>();
+                    if (!parents.Contains(parent.shortGUID))
+                        parents.Add(parent.shortGUID);
+                }
             }
-            return true;
+            HashSet<ShortGuid> reaching = new HashSet<ShortGuid>() { composite.shortGUID };
+            Queue<ShortGuid> pending = new Queue<ShortGuid>(reaching);
+            while (pending.Count != 0)
+            {
+                if (!instancedBy.TryGetValue(pending.Dequeue(), out List<ShortGuid> parents))
+                    continue;
+                foreach (ShortGuid parent in parents)
+                {
+                    if (reaching.Add(parent))
+                        pending.Enqueue(parent);
+                }
+            }
+
+            List<List<uint>> placed = new List<List<uint>>();
+            if (reaching.Contains(root.shortGUID))
+                WalkToPlacements(commands, root, composite, reaching, new List<uint>(), new HashSet<ShortGuid>(), tail, placed, ct);
+            return placed;
+        }
+
+        private static void WalkToPlacements(Commands commands, Composite current, Composite composite, HashSet<ShortGuid> reaching,
+            List<uint> path, HashSet<ShortGuid> onStack, List<uint> tail, List<List<uint>> placed, CancellationToken ct)
+        {
+            //A composite that (however indirectly) instances itself would otherwise walk forever
+            if (ct.IsCancellationRequested || !onStack.Add(current.shortGUID))
+                return;
+
+            foreach (FunctionEntity function in current.functions)
+            {
+                if (function.function.IsFunctionType || !reaching.Contains(function.function))
+                    continue;
+                Composite nested = commands.GetComposite(function.function);
+                if (nested == null)
+                    continue;
+
+                path.Add(function.shortGUID.AsUInt32);
+                if (nested == composite)
+                {
+                    List<uint> full = new List<uint>(path.Count + tail.Count);
+                    full.AddRange(path);
+                    full.AddRange(tail);
+                    placed.Add(full);
+                }
+                else
+                {
+                    WalkToPlacements(commands, nested, composite, reaching, path, onStack, tail, placed, ct);
+                }
+                path.RemoveAt(path.Count - 1);
+            }
+
+            onStack.Remove(current.shortGUID);
         }
 
         [Obsolete("This function is safe to use but not performant. It's intended for test code only.")]

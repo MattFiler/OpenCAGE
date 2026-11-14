@@ -171,9 +171,17 @@ namespace OpenCAGE
 
             foreach (CompositeSelection.LevelPick pick in selection.Levels)
             {
-                Level source = LoadLevel(pick.Level);
-                CompositeFlowgraphTable sourceLayouts = (CompositeFlowgraphTable)CustomTable.ReadTable(source.Commands.Filepath, CustomTableType.COMPOSITE_FLOWGRAPHS);
-                CompositePreviewTable sourcePreviews = onArriving == null ? null : CustomTable.ReadTable(source.Commands.Filepath, CustomTableType.COMPOSITE_PREVIEWS) as CompositePreviewTable;
+                //Reading the source touches nothing open, so under a job holding the editor it goes to a worker; the port writes
+                //the destination, so it stays on this thread
+                Level source = null;
+                CompositeFlowgraphTable sourceLayouts = null;
+                CompositePreviewTable sourcePreviews = null;
+                EditorBusy.Run(() =>
+                {
+                    source = LoadLevel(pick.Level);
+                    sourceLayouts = (CompositeFlowgraphTable)CustomTable.ReadTable(source.Commands.Filepath, CustomTableType.COMPOSITE_FLOWGRAPHS);
+                    sourcePreviews = onArriving == null ? null : CustomTable.ReadTable(source.Commands.Filepath, CustomTableType.COMPOSITE_PREVIEWS) as CompositePreviewTable;
+                });
 
                 using (ProgressUI progress = new ProgressUI())
                 {
@@ -186,7 +194,7 @@ namespace OpenCAGE
                         OverwriteAssets = selection.OverwriteAssets,
                         Recurse = selection.IncludeChildren,
                     };
-                    porter.OnProgress = progress.DoRefresh;
+                    porter.OnProgress = CompositeArchive.RefreshAction(progress);
                     porter.OnCompositePorted = (original, copy) =>
                     {
                         result.Ported.Add(copy);
@@ -291,16 +299,13 @@ namespace OpenCAGE
             ViewerResourceSync.SyncImmediately();
         }
 
+        /// <summary>Load a level from disk, with a progress window on the UI thread (from whichever thread this runs on).</summary>
         public static Level LoadLevel(string levelName)
         {
             Level level = new Level(Singleton.PathToAI + "/DATA/ENV/" + levelName, Singleton.Global, false);
-            using (ProgressUI progress = new ProgressUI())
-            {
-                progress.ShowLevelLoading(level);
-                progress.KeepOnTop();
-                level.Load();
-                progress.Close();
-            }
+            ProgressUI progress = CompositeArchive.OpenProgress(p => p.ShowLevelLoading(level));
+            try { level.Load(); }
+            finally { CompositeArchive.CloseProgress(progress); }
             return level;
         }
     }

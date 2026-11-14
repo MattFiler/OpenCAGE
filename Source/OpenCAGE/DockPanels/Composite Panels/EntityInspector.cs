@@ -1140,7 +1140,7 @@ namespace OpenCAGE.DockPanels
             /* The drill path has to be read here, on the UI thread: it is what the user walked through
                to get to this entity, and it decides which instance's zones the answer is about. */
             Composite startComposite = HierarchyRootComposite;
-            List<uint> instancePath = ZoneLookupPathFor(_entity, startComposite);
+            List<uint> instancePath = ZoneLookupPathFor(_entity, ref startComposite);
 
             //Kept for the jump: the zones' paths are written from here, so this is where a walk to one starts
             _zoneLookupStartComposite = startComposite;
@@ -1197,8 +1197,8 @@ namespace OpenCAGE.DockPanels
         }
         /* Which zones an entity is in is decided by where it sits - except for an alias or proxy, which draws nothing of its
            own: a zone names what it points at, never the pointer, so that is what is looked up. A proxy's path is written
-           from the level root, so it can only be followed when the hierarchy starts there. */
-        private List<uint> ZoneLookupPathFor(Entity entity, Composite startComposite)
+           from the level root, so the lookup then starts there, wherever the hierarchy does. */
+        private List<uint> ZoneLookupPathFor(Entity entity, ref Composite startComposite)
         {
             List<uint> path = InstancePathFor(entity);
             if (!(entity is AliasEntity || entity is ProxyEntity))
@@ -1206,10 +1206,15 @@ namespace OpenCAGE.DockPanels
 
             CATHODE.Commands commands = Content?.Level?.Commands;
             Composite levelRoot = commands?.EntryPoints != null && commands.EntryPoints.Length != 0 ? commands.EntryPoints[0] : null;
-            if (EntityInstancePath.TryResolvePointer(commands, Composite, path.GetRange(0, path.Count - 1), entity, out List<uint> target, out bool relative)
-                && (relative || startComposite == levelRoot))
-                return target;
-            return path;
+            if (!EntityInstancePath.TryResolvePointer(commands, Composite, path.GetRange(0, path.Count - 1), entity, out List<uint> target, out bool relative))
+                return path;
+            if (!relative)
+            {
+                if (levelRoot == null)
+                    return path;
+                startComposite = levelRoot;
+            }
+            return target;
         }
 
         private List<EditorUtils.ZoneReference> _zonesForSelectedEntity = null;
@@ -1276,7 +1281,10 @@ namespace OpenCAGE.DockPanels
             if (zones.Count == 1)
                 return ZoneButtonText(zones);
 
-            return "In " + zones.Count + " zones: " + string.Join(", ", zones.Select(o => o.Name));
+            //A composite opened on its own answers for every place it is instanced, which can be dozens of zones
+            const int named = 10;
+            string tip = "In " + zones.Count + " zones: " + string.Join(", ", zones.Take(named).Select(o => o.Name));
+            return zones.Count > named ? tip + " and " + (zones.Count - named) + " more" : tip;
         }
 
         //A square in the zone's colour, beside the entity's name; made the first time there is one to show
@@ -1639,7 +1647,7 @@ namespace OpenCAGE.DockPanels
             if (zone?.Zone == null || zone.Composite == null || _compositeDisplay == null)
                 return;
 
-            Composite start = _zoneLookupStartComposite;
+            Composite start = zone.From ?? _zoneLookupStartComposite;
             if (start != null && zone.InstancePath != null)
             {
                 List<uint> path = new List<uint>(zone.InstancePath) { zone.Zone.shortGUID.AsUInt32 };

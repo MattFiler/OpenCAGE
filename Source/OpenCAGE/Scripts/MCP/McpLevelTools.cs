@@ -749,6 +749,7 @@ namespace OpenCAGE.MCP
             new BoolOption() { Arg = "focus_canvas_on_new_node", Key = Settings.FocusCanvasOnNewNode, Description = "Entity Display > Focus Canvas On Newly Created Node." },
             new BoolOption() { Arg = "node_icons_when_zoomed_out", Key = Settings.NodeIconsWhenZoomedOut, Description = "Entity Display > Show Node Icons When Zoomed Out: zoomed far out, flowgraph and animation tree nodes are drawn as their icons. false: nodes are drawn in full at every zoom, their text just getting smaller." },
             new BoolOption() { Arg = "confirm_node_delete", Key = Settings.AskBeforeDeletingNode, Description = "Entity Display > Show Confirmation When Deleting Node." },
+            new BoolOption() { Arg = "undo_includes_selection", Key = Settings.UndoIncludesSelection, Description = "Entity Display > Undo Includes Selection Changes: the user's own selecting and deselecting (entity list, flowgraph, viewport) is an undo step. On by default; the editor's own selection changes and an AI assistant's are never recorded." },
             new BoolOption() { Arg = "confirm_on_save", Key = Settings.ShowSavedMsgOpt, Description = "Save/Build > Show Confirmation When Saving (save_level never shows it)." },
             new BoolOption() { Arg = "prompt_save_on_close", Key = Settings.PromptSaveOnClose, Description = "Save/Build > Prompt to Save on Close." },
             new BoolOption() { Arg = "textured_model_view", Key = Settings.ShowTexOpt, Description = "Misc > Use Textured Model View." },

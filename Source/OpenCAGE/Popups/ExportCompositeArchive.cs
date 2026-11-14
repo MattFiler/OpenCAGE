@@ -85,7 +85,9 @@ namespace OpenCAGE
             CompositeArchive.Manifest manifest;
             try
             {
-                manifest = CompositeArchive.Export(Content.Level, composites, archivePath, info);
+                //Minutes for a big export: the editor is held still meanwhile, still painting (see EditorBusy)
+                using (EditorBusy.Begin())
+                    manifest = CompositeArchive.Export(Content.Level, composites, archivePath, info);
             }
             catch (Exception ex)
             {

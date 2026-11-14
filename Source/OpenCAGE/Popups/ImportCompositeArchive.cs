@@ -492,7 +492,9 @@ namespace OpenCAGE
             Send.BeginSceneBatch();
             try
             {
-                result = ImportIntoLoadedLevel(options, ported);
+                //Minutes for a big package: the editor is held still meanwhile, still painting (see EditorBusy)
+                using (EditorBusy.Begin())
+                    result = ImportIntoLoadedLevel(options, ported);
             }
             catch (Exception ex)
             {
@@ -596,26 +598,16 @@ namespace OpenCAGE
             /* Loading, porting and saving a level - let alone building every level - takes minutes, so it
                runs on a worker while this thread pumps messages, the way the editor's own Save and Build
                does: the progress windows paint, and the editor is not reported as hung. Everything that
-               could edit or load a level underneath it is held off - the editor window is disabled, the
-               level picker closed, the undo stack blocked. */
-            CommandsEditor editor = Singleton.Editor;
+               could edit or load a level underneath it is held off meanwhile (see EditorBusy). */
             List<uint> ids = CompositesToImport();
             bool build = buildAfterImport.Checked;
             Enabled = false;
             Cursor.Current = Cursors.WaitCursor;
             List<CompositeArchive.LevelResult> results;
-            editor?.CloseLevelPicker();
-            if (editor != null) editor.Enabled = false;
-            if (OpenCAGE.Undo.UndoStack.Current != null) OpenCAGE.Undo.UndoStack.Current.Blocked = true;
             try
             {
-                Task<List<CompositeArchive.LevelResult>> work = Task.Run(() => CompositeArchive.ImportIntoLevelsOnDisk(_archivePath, ids, options, levels, build));
-                while (!work.IsCompleted)
-                {
-                    Application.DoEvents();
-                    Thread.Sleep(16);
-                }
-                results = work.GetAwaiter().GetResult();
+                using (EditorBusy.Begin())
+                    results = EditorBusy.Run(() => CompositeArchive.ImportIntoLevelsOnDisk(_archivePath, ids, options, levels, build));
             }
             catch (Exception ex)
             {
@@ -623,11 +615,6 @@ namespace OpenCAGE
                 Enabled = true;
                 MessageBox.Show("The import did not complete:\n\n" + ex.Message + "\n\nLevels written before the failure are saved; the one it failed on may be part-written. The Backup Manager can restore it.", "Import failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
-            }
-            finally
-            {
-                if (OpenCAGE.Undo.UndoStack.Current != null) OpenCAGE.Undo.UndoStack.Current.Blocked = false;
-                if (editor != null && !editor.IsDisposed) editor.Enabled = true;
             }
             Cursor.Current = Cursors.Default;
 

@@ -293,7 +293,8 @@ namespace OpenCAGE
                 //Havok scaffolds the game ships - the base for every blank level (see CreateLevel). Only its
                 //files are wanted, straight from its folder: nothing here needs it loaded.
                 string frontend = Path.Combine(Singleton.PathToAI, "DATA", "ENV", EditorUtils.FrontendLevel.Replace('/', Path.DirectorySeparatorChar));
-                Level scratch = Level.MakeBlankLevel(levelPath, frontend, Singleton.Global, absorbGlobalTextures: false);
+                //Only the scratch level is touched outside the port itself: under a job holding the editor, on a worker
+                Level scratch = EditorBusy.Run(() => Level.MakeBlankLevel(levelPath, frontend, Singleton.Global, absorbGlobalTextures: false));
 
                 CompositeFlowgraphTable layouts = new CompositeFlowgraphTable();
                 CompositeParameterModificationTable modifications = new CompositeParameterModificationTable();
@@ -312,7 +313,7 @@ namespace OpenCAGE
                         Recurse = true,
                         DoNotDescendInto = new HashSet<ShortGuid>(LevelEntryPoints),
                     };
-                    porter.OnProgress = progress.DoRefresh;
+                    porter.OnProgress = RefreshAction(progress);
                     porter.OnCompositePorted = (original, copy) =>
                     {
                         //What the porter cannot know about: the editor's own metadata for the composite. Pages
@@ -339,27 +340,6 @@ namespace OpenCAGE
                     scratch.Commands.GetComposite(new ShortGuid("1D-2E-CE-E5")),
                     scratch.Commands.GetComposite(new ShortGuid("FE-7B-FE-B3")));
 
-                /* Materials that came across still pointing into global would be written as raw global
-                   indices - which only mean the same thing on another install as long as its global is
-                   the retail one. Bring just the textures they name into the scratch instead, so the
-                   package stands on its own; with absorption off, Save will not add the rest. */
-                int absorbed = scratch.AbsorbReferencedGlobalTextures();
-                Debug.Log("Composite Archive", "Absorbed " + absorbed + " global texture reference(s) into the package");
-                //When the composites were last changed is the history of the level they came from: a package carries none
-                scratch.Commands.Utils.ClearModificationInfo();
-
-                using (ProgressUI progress = new ProgressUI())
-                {
-                    progress.ShowLevelSaving(scratch, false);
-                    progress.KeepOnTop();
-                    scratch.Save();
-                    progress.Close();
-                }
-                string commandsPath = scratch.Commands.Filepath;
-                CustomTable.WriteTable(commandsPath, CustomTableType.COMPOSITE_FLOWGRAPHS, layouts);
-                CustomTable.WriteTable(commandsPath, CustomTableType.COMPOSITE_PARAMETER_MODIFICATION, modifications);
-                CustomTable.WriteTable(commandsPath, CustomTableType.ENTITY_APPLIED_DEFAULTS, defaults);
-
                 Manifest manifest = new Manifest()
                 {
                     FormatVersion = FormatVersion,
@@ -375,14 +355,35 @@ namespace OpenCAGE
                 HashSet<ShortGuid> roots = new HashSet<ShortGuid>(composites.Select(o => o.shortGUID));
                 foreach (Composite ported in porter.PortedComposites)
                     manifest.Composites.Add(new CompositeEntry() { Guid = ported.shortGUID.AsUInt32, Name = ported.name, IsRoot = roots.Contains(ported.shortGUID) });
-
-                //The level is on disk now; let go of it before the folder is packed and removed
-                scratch = null;
                 porter = null;
-                Collect();
 
-                WriteArchive(archivePath, levelPath, manifest);
-                return manifest;
+                //From here on only the scratch level and the package are touched
+                return EditorBusy.Run(() =>
+                {
+                    /* Materials that came across still pointing into global would be written as raw global
+                       indices - which only mean the same thing on another install as long as its global is
+                       the retail one. Bring just the textures they name into the scratch instead, so the
+                       package stands on its own; with absorption off, Save will not add the rest. */
+                    int absorbed = scratch.AbsorbReferencedGlobalTextures();
+                    Debug.Log("Composite Archive", "Absorbed " + absorbed + " global texture reference(s) into the package");
+                    //When the composites were last changed is the history of the level they came from: a package carries none
+                    scratch.Commands.Utils.ClearModificationInfo();
+
+                    ProgressUI saving = OpenProgress(p => p.ShowLevelSaving(scratch, false));
+                    try { scratch.Save(); }
+                    finally { CloseProgress(saving); }
+                    string commandsPath = scratch.Commands.Filepath;
+                    CustomTable.WriteTable(commandsPath, CustomTableType.COMPOSITE_FLOWGRAPHS, layouts);
+                    CustomTable.WriteTable(commandsPath, CustomTableType.COMPOSITE_PARAMETER_MODIFICATION, modifications);
+                    CustomTable.WriteTable(commandsPath, CustomTableType.ENTITY_APPLIED_DEFAULTS, defaults);
+
+                    //The level is on disk now; let go of it before the folder is packed and removed
+                    scratch = null;
+                    Collect();
+
+                    WriteArchive(archivePath, levelPath, manifest);
+                    return manifest;
+                });
             }
             finally
             {
@@ -627,7 +628,8 @@ namespace OpenCAGE
                 Layouts = null;
                 Modifications = null;
                 Defaults = null;
-                TryDeleteTemp(TempRoot);
+                //Hundreds of megabytes of files for a big package
+                EditorBusy.Run(() => TryDeleteTemp(TempRoot));
             }
         }
 
@@ -668,7 +670,8 @@ namespace OpenCAGE
             });
         }
 
-        /* A repaint per porter tick, coalesced when the ticks come from a worker thread */
+        /* A repaint per porter tick, coalesced when the ticks come from a worker thread. On the UI thread under a job holding
+           the editor, the tick repaints every window instead (see EditorBusy.Pump), this one among them. */
         internal static Action RefreshAction(ProgressUI progress)
         {
             int pending = 0;
@@ -676,7 +679,10 @@ namespace OpenCAGE
             {
                 if (!progress.InvokeRequired)
                 {
-                    progress.DoRefresh();
+                    if (EditorBusy.Active)
+                        EditorBusy.Pump();
+                    else
+                        progress.DoRefresh();
                     return;
                 }
                 if (System.Threading.Interlocked.CompareExchange(ref pending, 1, 0) != 0)
@@ -748,6 +754,7 @@ namespace OpenCAGE
                     DoNotDescendInto = new HashSet<ShortGuid>(LevelEntryPoints),
                     //The user's own edits to composites the package also holds stay, unless they said otherwise
                     KeepExisting = EditedToKeep(options, destination),
+                    PackagedFrom = archive.Manifest?.SourceLevel,
                 };
                 porter.OnProgress = RefreshAction(progress);
                 porter.OnCompositePorted = (original, copy) =>
@@ -797,7 +804,9 @@ namespace OpenCAGE
                 return new Result();
 
             Stopwatch timer = Stopwatch.StartNew();
-            using (OpenedArchive archive = OpenArchive(archivePath))
+            //Unpacking and loading the package touch nothing open, so under a job holding the editor they go to a worker; the
+            //port writes the destination, so it stays on this thread
+            using (OpenedArchive archive = EditorBusy.Run(() => OpenArchive(archivePath)))
             {
                 long opened = timer.ElapsedMilliseconds;
                 Result result = PortInto(archive, compositeIds, options, destination, "Importing from " + Path.GetFileName(archivePath) + "...", (original, copy) =>

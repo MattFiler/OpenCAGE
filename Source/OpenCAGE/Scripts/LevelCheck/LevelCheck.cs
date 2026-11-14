@@ -141,6 +141,7 @@ namespace OpenCAGE
             new RandomFloatDelayRule(),
             new DeadAnimationTracksRule(),
             new NestedAnimationRule(),
+            new MissingCompositeRule(),
             new HavokWorldBoundsRule(),
             new SoundEnvironmentMarkerRule(),
             new NavMeshCoverageRule(),

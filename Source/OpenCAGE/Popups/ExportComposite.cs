@@ -85,9 +85,7 @@ namespace OpenCAGE
             /* Loading, porting and saving a level - let alone building several - takes minutes, so the
                loop runs on a worker while this thread pumps messages, the way the editor's own Save and
                Build does: the progress windows paint, and the editor is not reported as hung. Everything
-               that could edit the open level underneath the porter is held off - the editor window is
-               disabled, the level picker closed, the undo stack blocked. */
-            CommandsEditor editor = Singleton.Editor;
+               that could edit the open level underneath the porter is held off meanwhile (see EditorBusy). */
             Level source = Content.Level;
             bool overwriteComposites = overwrite.Checked, overwriteAssetsToo = overwriteAssets.Checked;
             List<string> written = new List<string>();
@@ -97,12 +95,9 @@ namespace OpenCAGE
             int portedPerLevel = 0;
             Enabled = false;
             Cursor.Current = Cursors.WaitCursor;
-            editor?.CloseLevelPicker();
-            if (editor != null) editor.Enabled = false;
-            if (OpenCAGE.Undo.UndoStack.Current != null) OpenCAGE.Undo.UndoStack.Current.Blocked = true;
-            try
+            using (EditorBusy.Begin())
             {
-                Task work = Task.Run(() =>
+                EditorBusy.Run(() =>
                 {
                     foreach (string levelName in targetLevels)
                     {
@@ -122,17 +117,6 @@ namespace OpenCAGE
                         written.Add(levelName);
                     }
                 });
-                while (!work.IsCompleted)
-                {
-                    Application.DoEvents();
-                    Thread.Sleep(16);
-                }
-                work.GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (OpenCAGE.Undo.UndoStack.Current != null) OpenCAGE.Undo.UndoStack.Current.Blocked = false;
-                if (editor != null && !editor.IsDisposed) editor.Enabled = true;
             }
             Cursor.Current = Cursors.Default;
 
