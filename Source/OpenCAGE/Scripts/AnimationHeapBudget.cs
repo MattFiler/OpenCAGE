@@ -12,9 +12,9 @@ namespace OpenCAGE
 {
     /// <summary>
     /// The game's resident animation memory, and the Launch Game option that doubles it. A character spawns only once every RESIDENT clip
-    /// section its set (and the set's parents) needs fits in the resident heap (ca_allocator 4, 22,532,096 bytes, shared between sets; see
-    /// Actor::AnimationDataDb::acquire_resident_sections_for_set). A set that doesn't fit never loads and its characters silently never spawn.
-    /// AI.exe's g_animHeapsCanExceedBudget doubles every ca_allocator budget (PatchManager.PatchAnimHeapBudget).
+    /// section its set (and the set's parents) needs fits in the resident heap (22,532,096 bytes, shared between sets). A set that doesn't
+    /// fit never loads and its characters silently never spawn. The game has a start-up switch that doubles every animation heap's budget
+    /// (PatchManager.PatchAnimHeapBudget).
     /// </summary>
     public static class AnimationHeapBudget
     {
@@ -24,7 +24,7 @@ namespace OpenCAGE
         public const string LaunchOptionName = "larger_animation_memory";
         public const string Label = "Allow larger animation memory";
 
-        /// <summary>ca_allocator 4, the resident animation heap, as AI.exe's ca_allocator_initialisers table gives it (all three PC builds).</summary>
+        /// <summary>The resident animation heap's size, the same in all three PC builds.</summary>
         public const long ResidentHeapBytes = 22532096;
 
         public static long Budget(bool larger) => larger ? ResidentHeapBytes * 2 : ResidentHeapBytes;
