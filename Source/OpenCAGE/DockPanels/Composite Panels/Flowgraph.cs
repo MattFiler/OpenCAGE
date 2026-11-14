@@ -235,6 +235,10 @@ namespace OpenCAGE
             //or the viewport did nothing at all.
             if (IsSelectionExactlyEntity(entity))
                 return;
+            //One of its nodes selected alone (Jump To frames them one at a time) is kept
+            STNode[] selected = stNodeEditor1.GetSelectedNode();
+            if (selected.Length == 1 && selected[0].ShortGUID == entity.shortGUID)
+                return;
 
             SelectAllNodesForEntity(entity, centerCanvas: true);
         }
@@ -483,6 +487,27 @@ namespace OpenCAGE
             }
 
             //The canvas needs repainting for the new highlight (and its off-screen arrows)
+            stNodeEditor1.Invalidate();
+        }
+
+        /// <summary>
+        /// Select this node alone and bring it to the middle of the page (Jump To), announcing nothing: the selection was set elsewhere.
+        /// </summary>
+        public void FrameNode(STNode node)
+        {
+            if (node == null || node.Owner != stNodeEditor1)
+                return;
+
+            _applyingEntitySelection = true;
+            try
+            {
+                DeselectAllNodes();
+                SelectNode(node, centerCanvas: true);
+            }
+            finally
+            {
+                _applyingEntitySelection = false;
+            }
             stNodeEditor1.Invalidate();
         }
 
@@ -822,19 +847,10 @@ namespace OpenCAGE
             }
             return count;
         }
+        //On any of the composite's pages: Go To Entity's Next Node goes on to the others
         private bool HasMultipleNodesForEntity(Entity entity)
         {
-            bool foundOnce = false;
-            foreach (STNode node in stNodeEditor1.Nodes)
-            {
-                if (node.Entity == entity)
-                {
-                    if (foundOnce)
-                        return true;
-                    foundOnce = true;
-                }
-            }
-            return false;
+            return (Singleton.Editor?.CompositeDisplay?.CountEntityNodes(entity) ?? 0) > 1;
         }
 
         //NOTE: This assumes you've already checked with FlowgraphLayoutManager that LinksMatch!
@@ -2216,39 +2232,18 @@ namespace OpenCAGE
         }
         private void goToNextNodeInFlowgraphToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            //From the node under the mouse, else the one selected alone (the last one gone to, when F3 is pressed again)
             STNode startNode = stNodeEditor1.GetHoveredNode();
+            if (startNode == null)
+            {
+                STNode[] selected = stNodeEditor1.GetSelectedNode();
+                startNode = selected.Length == 1 ? selected[0] : null;
+            }
             if (startNode == null || startNode.Entity == null)
                 return;
 
-            bool startListening = false;
-            foreach (STNode node in stNodeEditor1.Nodes)
-            {
-                if (node == startNode)
-                {
-                    startListening = true;
-                    continue;
-                }
-
-                if (!startListening)
-                    continue;
-
-                if (node.Entity == startNode.Entity)
-                {
-                    SelectNode(node);
-                    return;
-                }
-            }
-            foreach (STNode node in stNodeEditor1.Nodes)
-            {
-                if (node.Entity == startNode.Entity)
-                {
-                    SelectNode(node);
-                    return;
-                }
-
-                if (node == startNode)
-                    break;
-            }
+            //On through the entity's nodes on every page, in the order Jump To steps through them
+            Singleton.Editor?.CompositeDisplay?.GoToNextNode(startNode);
         }
 
         /* Show Connected Links: a window listing the clicked node's links, kept up to date as links are made and broken,

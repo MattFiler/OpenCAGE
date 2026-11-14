@@ -2256,39 +2256,75 @@ namespace OpenCAGE.DockPanels
 
         private void FocusEntityOnFlowgraph(Entity entity)
         {
+            GoToEntityNode(entity, null);
+        }
+
+        /* Going to an entity frames one of its nodes and selects it alone (framed together, an entity drawn several times put the
+           view in the space between them). Going to it again steps on to its next node: the page showing's, then the other pages'
+           (or only those of the page given), with a status note saying which it is. Given a node to step from, the one after it. */
+        private void GoToEntityNode(Entity entity, Flowgraph onlyPage, STNode from = null)
+        {
             if (entity == null)
                 return;
 
-            Flowgraph activePage = _flowgraphs.FirstOrDefault(o => o.Visible);
-            if (activePage != null && FlowgraphContainsEntity(activePage, entity))
+            //Page by page, top to bottom: not the page's own order, which a node selected moves to the end of
+            List<(Flowgraph Page, STNode Node)> nodes = new List<(Flowgraph, STNode)>();
+            foreach (Flowgraph page in _flowgraphs)
             {
-                FocusEntityOnFlowgraphDeferred(activePage, entity);
-                return;
-            }
-
-            foreach (Flowgraph flowgraph in _flowgraphs)
-            {
-                if (flowgraph.Visible || !FlowgraphContainsEntity(flowgraph, entity))
+                if (page == null || page.IsDisposed || (onlyPage != null && page != onlyPage))
                     continue;
-
-                flowgraph.Show();
-                FocusEntityOnFlowgraphDeferred(flowgraph, entity);
-                return;
+                foreach (STNode node in page.Nodegraph.Nodes.ToArray().Where(o => o?.Entity != null && o.ShortGUID == entity.shortGUID).OrderBy(o => o.Top).ThenBy(o => o.Left))
+                    nodes.Add((page, node));
             }
-        }
-
-        private void FocusEntityOnFlowgraphDeferred(Flowgraph flowgraph, Entity entity)
-        {
-            if (flowgraph == null || entity == null || flowgraph.IsDisposed)
+            if (nodes.Count == 0)
                 return;
+
+            //The one after the node of it selected alone on the page showing; else that page's first, else the first
+            Flowgraph showing = onlyPage ?? _flowgraphs.FirstOrDefault(o => o != null && !o.IsDisposed && o.Visible);
+            int current = from != null ? nodes.FindIndex(o => o.Node == from) : nodes.FindIndex(o => o.Page == showing && IsOnlySelectedNode(o.Page, o.Node));
+            int next = current >= 0 ? (current + 1) % nodes.Count : Math.Max(0, nodes.FindIndex(o => o.Page == showing));
+            (Flowgraph target, STNode framed) = nodes[next];
+
+            if (!target.Visible)
+                target.Show();
 
             // ShowFlowgraph restores canvas position via BeginInvoke; defer focus so it is not overwritten - but only while that entity
             // is still what was last selected, or a click made meanwhile would lose its highlight to this one
-            flowgraph.BeginInvoke(new Action(() =>
+            target.BeginInvoke(new Action(() =>
             {
-                if (!flowgraph.IsDisposed && IsRequestedSelection(entity))
-                    flowgraph.SelectAllNodesForEntity(entity);
+                if (!target.IsDisposed && IsRequestedSelection(entity))
+                    target.FrameNode(framed);
             }));
+
+            if (nodes.Count > 1)
+            {
+                bool severalPages = nodes.Any(o => o.Page != target);
+                Singleton.Editor?.ShowStatusNote("Node " + (next + 1) + " of " + nodes.Count + (severalPages ? " (page " + target.FlowgraphName + ")" : "") + " - Jump To again for the next");
+            }
+        }
+
+        private static bool IsOnlySelectedNode(Flowgraph page, STNode node)
+        {
+            STNode[] selected = page.Nodegraph.GetSelectedNode();
+            return selected.Length == 1 && selected[0] == node;
+        }
+
+        /// <summary>Go To Entity's Next Node: from this node on to the next of its entity's, in the order Jump To steps through them.</summary>
+        public void GoToNextNode(STNode from)
+        {
+            Entity entity = from == null || _composite == null ? null : _composite.GetEntityByID(from.ShortGUID);
+            if (entity == null)
+                return;
+            GoToEntityNode(entity, null, from);
+            LoadEntity(entity, false);
+        }
+
+        /// <summary>How many nodes this entity has over all of the composite's pages.</summary>
+        public int CountEntityNodes(Entity entity)
+        {
+            if (entity == null)
+                return 0;
+            return _flowgraphs.Where(o => o != null && !o.IsDisposed).Sum(o => o.Nodegraph.Nodes.ToArray().Count(n => n?.Entity != null && n.ShortGUID == entity.shortGUID));
         }
 
         private static bool FlowgraphContainsEntity(Flowgraph flowgraph, Entity entity)
@@ -3488,12 +3524,13 @@ namespace OpenCAGE.DockPanels
             return flowgraph;
         }
 
+        /* The entity selected, and one of its nodes on that page framed - the next of them there when one is already */
         public void SelectEntityOnFlowgraph(string flowgraph, Entity entity)
         {
             Flowgraph fg = _flowgraphs.FirstOrDefault(o => o.FlowgraphName == flowgraph);
-            if (fg == null) return;
-            fg.Show();
-            fg.SelectAllNodesForEntity(entity);
+            if (fg == null || entity == null) return;
+            GoToEntityNode(entity, fg);
+            LoadEntity(entity, false);
         }
     }
 }
