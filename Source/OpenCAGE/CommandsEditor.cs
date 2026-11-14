@@ -118,20 +118,12 @@ namespace OpenCAGE
             Theming.ThemeManager.ApplyToForm(this);
             //File > Level Check..., under Save and Build Level
             OpenCAGE.Popups.LevelCheckWindow.AttachMenu(saveAndBuildLevelToolStripMenuItem);
-            //View > Replace Weapon Model..., under Model Editor
-            OpenCAGE.Popups.ReplaceWeaponModel.AttachMenu(modelsToolStripMenuItem);
-            //View > Sky and Outdoor Lighting, under Galaxy Editor
-            OpenCAGE.Popups.SkyAndSunWindow.AttachMenu(galaxyToolStripMenuItem);
             //File > Compare Levels... and Record Edits..., after the Level Check
             OpenCAGE.Popups.CompareLevelsWindow.AttachMenu(saveAndBuildLevelToolStripMenuItem);
             //File > Alien Vents..., after the Level Check
             OpenCAGE.Popups.AlienVentsWindow.AttachMenu(saveAndBuildLevelToolStripMenuItem);
             //File > Import Scene..., after Import Composites
             OpenCAGE.Popups.SceneImportWindow.AttachMenu(importCompositesMenu);
-            //View > Find Z-Fighting..., under Model Editor
-            OpenCAGE.Popups.ZFightWindow.AttachMenu(modelsToolStripMenuItem);
-            //View > Cinematic Shot Builder, under Animations
-            OpenCAGE.Popups.CinematicShotBuilder.AttachMenu(animationsToolStripMenuItem);
             //Options > Save/Build > Walk On Downward-Facing Floors, at the end
             NavMeshBakeOptions.AttachMenu(saveBuildToolStripMenuItem);
 
@@ -302,11 +294,9 @@ namespace OpenCAGE
             //beside the game's menus - straight away, as they'd be in place whether the game is launched from OpenCAGE or not
             if (Singleton.IsPrimaryInstance && UiMovieOverrides.PutBackOldMenus(Singleton.PathToAI) && UiMovieOverrides.All.Any(UiMovieOverrides.IsOn))
                 UiMovieOverrides.Sync(Singleton.PathToAI);
-            //Level UI movies an earlier launch left in come out (the game closed after OpenCAGE did), and the Level UI Overrides menu
-            //item is added (CommandsEditor.LevelUi.cs)
+            //Level UI movies an earlier launch left in come out (the game closed after OpenCAGE did), and View > Level Config is
+            //added (CommandsEditor.LevelUi.cs)
             SetUpLevelUi();
-            //HUD Overlay Builder in the menu, after Level UI Overrides (CommandsEditor.Hud.cs)
-            SetUpHudBuilder();
             Modding.ModServices.CaptureSmallFilesInBackground();
 
             versionToolStripMenuItem.Text = "Version " + ProductVersion;

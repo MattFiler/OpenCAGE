@@ -92,11 +92,50 @@ namespace OpenCAGE
             if (submeshFilterGroup != null)
                 submeshFilterGroup.SizeChanged += SubmeshFilterGroup_SizeChanged;
             selectModelBtn.Visible = showSelectBtn;
+            if (!showSelectBtn)
+                AddLevelTools();
 
             this.Disposed += SelectModel_Disposed;
             FileTree.ImageList = EditorIcons.FileTree;
 
             this.Load += EditModel_LoadSyncPanel2Widths;
+        }
+
+        /* A "Level Tools" button under Export All, for the tools that work on the level's models as a whole: Find Z-Fighting
+           and Replace Weapon Model. The list and the two buttons above move up a row to make room. */
+        private void AddLevelTools()
+        {
+            int row = exportAllModelsBtn.Top - importModelBtn.Top;
+            Button tools = new Button()
+            {
+                Text = "Level Tools ▾",
+                Anchor = exportAllModelsBtn.Anchor,
+                Location = exportAllModelsBtn.Location,
+                Size = exportAllModelsBtn.Size,
+                UseVisualStyleBackColor = true,
+            };
+            FileTree.Height -= row;
+            importModelBtn.Top -= row;
+            exportAllModelsBtn.Top -= row;
+            exportAllModelsBtn.Parent.Controls.Add(tools);
+
+            ToolStripMenuItem zFighting = new ToolStripMenuItem("Find Z-Fighting...") { ToolTipText = "Find placed models whose surfaces lie over each other at the same depth (they flicker in game), and fix them" };
+            zFighting.Click += (s, e) => Popups.ZFightWindow.OpenForLevel();
+            ToolStripMenuItem weapon = new ToolStripMenuItem("Replace Weapon Model...") { ToolTipText = "Put a model of your own on a weapon or held item: first person, third person and pickups, keeping its animation" };
+            weapon.Click += (s, e) => Popups.ReplaceWeaponModel.ShowFor(null);
+            ContextMenuStrip menu = new ContextMenuStrip();
+            menu.Items.AddRange(new ToolStripItem[] { zFighting, weapon });
+            menu.Opening += (s, e) =>
+            {
+                bool level = Content?.Level?.Commands != null;
+                zFighting.Enabled = level;
+                weapon.Enabled = level;
+            };
+            tools.Click += (s, e) => menu.Show(tools, new Point(0, tools.Height));
+            Disposed += (s, e) => menu.Dispose();
+
+            Theming.ThemeManager.ApplyCurrent(tools);
+            Theming.ThemeManager.ApplyCurrent(menu);
         }
 
         private void EditModel_LoadSyncPanel2Widths(object sender, EventArgs e)

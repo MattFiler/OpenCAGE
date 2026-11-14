@@ -24,7 +24,27 @@ namespace OpenCAGE.Popups
             gridEntries.CellValidating += GridEntries_CellValidating;
             this.FormClosing += GalaxyEditor_FormClosing;
 
+            AddSkyButton();
             LoadFromDefinition();
+        }
+
+        /* "Sky and Outdoor Lighting..." beside Generate Galaxy: the level's sky dome and outdoor sun / fill / bounce (SkyAndSunWindow) */
+        private void AddSkyButton()
+        {
+            Button sky = new Button()
+            {
+                Text = "Sky and Outdoor Lighting...",
+                Anchor = btnSave.Anchor,
+                UseVisualStyleBackColor = true,
+            };
+            sky.Size = new Size(Math.Max(btnSave.Width, sky.PreferredSize.Width + 12), btnSave.Height);
+            sky.Location = new Point(btnSave.Left - sky.Width - 6, btnSave.Top);
+            Controls.Add(sky);
+            sky.Click += (s, e) => SkyAndSunWindow.Open();
+            ToolTip tip = new ToolTip();
+            tip.SetToolTip(sky, "Give the level a sky dome from a panorama picture, and light an outdoor area with a sun, sky fill and bounce");
+            Disposed += (s, e) => tip.Dispose();
+            Theming.ThemeManager.ApplyCurrent(sky);
         }
 
         private void GalaxyEditor_FormClosing(object sender, FormClosingEventArgs e)

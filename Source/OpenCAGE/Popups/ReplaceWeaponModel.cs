@@ -67,18 +67,6 @@ namespace OpenCAGE.Popups
             if (!string.IsNullOrEmpty(weapon)) _open.SelectWeapon(weapon);
         }
 
-        /// <summary>A menu entry after <paramref name="after"/> (the Model Editor's): CommandsEditor attaches it once at start, as the Level Check's.</summary>
-        public static void AttachMenu(ToolStripMenuItem after)
-        {
-            ToolStripDropDownItem menu = after?.OwnerItem as ToolStripDropDownItem;
-            ToolStrip owner = after?.Owner;
-            if (owner == null) return;
-            ToolStripMenuItem item = new ToolStripMenuItem("Replace Weapon Model...") { Name = "replaceWeaponModelToolStripMenuItem", ToolTipText = "Put a model of your own on a weapon or held item: first person, third person and pickups, keeping its animation" };
-            item.Click += (s, e) => ShowFor(null);
-            owner.Items.Insert(owner.Items.IndexOf(after) + 1, item);
-            if (menu != null)
-                menu.DropDownOpening += (s, e) => item.Enabled = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Commands != null;
-        }
         /// <summary>Right-clicking a weapon's composite in the composite browser offers the window (the browser calls this before showing its menu).</summary>
         public static void PrepareMenu(ContextMenuStrip menu, Composite composite)
         {

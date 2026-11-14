@@ -15,36 +15,35 @@ using System.Windows.Forms;
 namespace OpenCAGE.Popups
 {
     /// <summary>
-    /// View > Cinematic Shot Builder: a shot list (camera, move, lens, focus, timing) built into an in-game cutscene. Each button runs
-    /// the MCP tool for the same job (build_cinematic, get_cinematic, preview_cage_animation). Shot lists are kept per level.
+    /// Create Entity > Create Cinematic... (Composite Display): a shot list (camera, move, lens, focus, timing) built into an in-game
+    /// cutscene. Each button runs the MCP tool for the same job (build_cinematic, get_cinematic, preview_cage_animation). Shot lists are
+    /// kept per level.
     /// </summary>
     public class CinematicShotBuilder : BaseWindow
     {
         private static CinematicShotBuilder _open;
 
-        /// <summary>Adds "Cinematic Shot Builder..." under <paramref name="after"/> in its menu.</summary>
-        public static void AttachMenu(ToolStripMenuItem after)
-        {
-            ToolStripDropDownItem menu = after?.OwnerItem as ToolStripDropDownItem;
-            ToolStrip owner = after?.Owner;
-            if (owner == null) return;
-            ToolStripMenuItem item = new ToolStripMenuItem("Cinematic Shot Builder") { Name = "cinematicShotBuilderToolStripMenuItem", ToolTipText = "Build a multi-shot cutscene from a shot list: cameras, cuts, lens, focus and timing, wired the way the game needs them" };
-            item.Click += (s, e) => Open();
-            owner.Items.Insert(owner.Items.IndexOf(after) + 1, item);
-            if (menu != null)
-                menu.DropDownOpening += (s, e) => item.Enabled = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Commands != null;
-        }
-
-        public static CinematicShotBuilder Open()
+        /// <summary>The window (one at a time), shown. A new one builds into <paramref name="composite"/> when it is given.</summary>
+        public static CinematicShotBuilder Open(string composite = null)
         {
             if (_open == null || _open.IsDisposed)
             {
                 _open = new CinematicShotBuilder();
+                if (!string.IsNullOrEmpty(composite))
+                    _open._composite.Text = composite;
                 _open.Show();
             }
             else
                 _open.BringToFront();
             return _open;
+        }
+
+        /// <summary>The Create Entity menu's entry: the window, building into <paramref name="composite"/>'s composite.</summary>
+        public static ToolStripMenuItem MenuItem(Func<CATHODE.Scripting.Composite> composite)
+        {
+            ToolStripMenuItem item = new ToolStripMenuItem("Create Cinematic...") { ToolTipText = "Build a multi-shot cutscene in this composite from a shot list: cameras, cuts, lens, focus and timing, wired the way the game needs them (the Cinematic Shot Builder)." };
+            item.Click += (s, e) => Open(composite?.Invoke()?.name);
+            return item;
         }
 
         #region Shots as the property grid shows them

@@ -102,6 +102,8 @@ namespace OpenCAGE.DockPanels
             createEntity.DropDownItems.Add(createBrush);
             //Create Entity > Insert Prefab...: ready-made gameplay script from the Prefabs folder (Prefabs\InsertPrefabWindow)
             createEntity.DropDownItems.Add(Prefabs.InsertPrefabWindow.MenuItem(() => Composite));
+            //Create Entity > Create Cinematic...: a cutscene built in this composite from a shot list (Popups\CinematicShotBuilder)
+            createEntity.DropDownItems.Add(Popups.CinematicShotBuilder.MenuItem(() => Composite));
 
             /* Made outside the designer's container, so nothing disposed it: a ToolTip hooks the top-level form and holds
                every control it has a tip for, so each closed display (and its inspector and level content) lived as long as

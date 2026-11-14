@@ -14,25 +14,12 @@ using System.Windows.Forms;
 namespace OpenCAGE.Popups
 {
     /// <summary>
-    /// View > Sky and Outdoor Lighting: a sky dome from a panorama, and a sun, sky fill and bounce for an outdoor area. Each button
+    /// Galaxy Editor > Sky and Outdoor Lighting: a sky dome from a panorama, and a sun, sky fill and bounce for an outdoor area. Each button
     /// runs the matching MCP tool (add_sky_dome, add_outdoor_lighting) on a worker thread; Check / Plan change nothing.
     /// </summary>
     public class SkyAndSunWindow : BaseWindow
     {
         private static SkyAndSunWindow _open;
-
-        /// <summary>Adds "Sky and Outdoor Lighting..." under <paramref name="after"/> (View > Galaxy Editor) in its menu.</summary>
-        public static void AttachMenu(ToolStripMenuItem after)
-        {
-            ToolStripDropDownItem menu = after?.OwnerItem as ToolStripDropDownItem;
-            ToolStrip owner = after?.Owner;
-            if (owner == null) return;
-            ToolStripMenuItem item = new ToolStripMenuItem("Sky and Outdoor Lighting") { Name = "skyAndOutdoorLightingToolStripMenuItem", ToolTipText = "Give the level a sky dome from a panorama picture, and light an outdoor area with a sun, sky fill and bounce" };
-            item.Click += (s, e) => Open();
-            owner.Items.Insert(owner.Items.IndexOf(after) + 1, item);
-            if (menu != null)
-                menu.DropDownOpening += (s, e) => item.Enabled = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Commands != null;
-        }
 
         public static SkyAndSunWindow Open()
         {

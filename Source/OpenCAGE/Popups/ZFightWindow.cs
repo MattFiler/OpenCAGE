@@ -18,8 +18,8 @@ using System.Windows.Forms;
 namespace OpenCAGE.Popups
 {
     /// <summary>
-    /// "Find Z-Fighting...": surfaces drawn over each other at the same depth, which flicker in game, between placed models (View menu)
-    /// or inside one model (Model Editor). Fix pushes one surface out until they are the clearance apart, as one undo step
+    /// "Find Z-Fighting...": surfaces drawn over each other at the same depth, which flicker in game, between placed models (Model
+    /// Editor > Level Tools) or inside one model (a model's right-click in the Model Editor). Fix pushes one surface out until they are the clearance apart, as one undo step
     /// (find_z_fighting / fix_z_fighting do the same).
     /// </summary>
     public class ZFightWindow : BaseWindow
@@ -134,7 +134,7 @@ namespace OpenCAGE.Popups
             return row;
         }
 
-        /// <summary>The window for the open level (View > Find Z-Fighting...).</summary>
+        /// <summary>The window for the open level (Model Editor > Level Tools > Find Z-Fighting...).</summary>
         public static ZFightWindow ForLevel() => new ZFightWindow(null, null);
 
         /// <summary>The window for one model's own meshes (the Model Editor). <paramref name="changed"/> runs after a fix, an undo or a redo.</summary>
@@ -364,16 +364,6 @@ namespace OpenCAGE.Popups
 
         #region Menus
         private static ZFightWindow _levelWindow;
-
-        /// <summary>Add "Find Z-Fighting..." under a menu item (View, beside the Model Editor): the window for the open level.</summary>
-        public static void AttachMenu(ToolStripMenuItem after)
-        {
-            if (after?.Owner == null) return;
-            ToolStripMenuItem item = new ToolStripMenuItem("Find Z-Fighting...") { ToolTipText = "Find placed models whose surfaces lie over each other at the same depth (they flicker in game), and fix them" };
-            ToolStrip owner = after.Owner;
-            owner.Items.Insert(owner.Items.IndexOf(after) + 1, item);
-            item.Click += (s, e) => OpenForLevel();
-        }
 
         /// <summary>The level's window (one at a time), shown.</summary>
         public static ZFightWindow OpenForLevel()
