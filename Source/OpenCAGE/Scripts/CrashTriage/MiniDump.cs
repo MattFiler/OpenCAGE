@@ -9,7 +9,7 @@ namespace OpenCAGE.CrashTriage
     /// The parts of a Windows minidump (the .dmp Windows Error Reporting writes to its LocalDumps folder when a program
     /// crashes) that crash triage reads: the modules that were loaded (file, base address, size, PE time stamp), the
     /// exception (code, address, read / write and the address it touched) and the crashing thread's registers and stack
-    /// memory. Read straight from the file: no symbols, no dbghelp, nothing written.
+    /// memory. Read straight from the file, nothing written.
     /// </summary>
     internal sealed class MiniDump : IDisposable
     {

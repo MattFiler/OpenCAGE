@@ -42,8 +42,7 @@ namespace OpenCAGE.CrashTriage
         public CrashTable.Crash Known;
         /// <summary>certain, likely or possible (<see cref="Known"/> set), else null.</summary>
         public string Confidence;
-        /// <summary>The function of AI.exe it crashed in, when the table names it.</summary>
-        public string Function;
+        /// <summary>The known crash's callers found on the stack, as offsets into AI.exe.</summary>
         public List<string> Callers = new List<string>();
 
         //Filled by the watch on a launch (CrashWatch), not from the dump
@@ -104,8 +103,8 @@ namespace OpenCAGE.CrashTriage
             {
                 text.AppendLine("This is not one of the crashes OpenCAGE knows the cause of.");
                 text.AppendLine();
-                text.AppendLine("Check what changed in the level since it last ran, and the Error Log (Live Link). The dump and the addresses below are what " +
-                    "someone with the game's symbols needs to name the crash - add it to OpenCAGE's table of known crashes (" + CrashTable.UserFile + ") once it is.");
+                text.AppendLine("Check what changed in the level since it last ran, and the Error Log (Live Link). Once its cause is known, the addresses " +
+                    "below can be added to OpenCAGE's table of known crashes (" + CrashTable.UserFile + ").");
             }
             else if (Problem != null)
                 text.AppendLine(Problem);
@@ -115,7 +114,7 @@ namespace OpenCAGE.CrashTriage
                 text.AppendLine("  " + (Level != null ? Level + ", " : "") + "launched " + LaunchedUtc.Value.ToLocalTime().ToString("d MMM HH:mm:ss", CultureInfo.InvariantCulture) +
                     ", crashed " + Math.Round((ExitedUtc.Value - LaunchedUtc.Value).TotalSeconds, 1).ToString("0.#", CultureInfo.InvariantCulture) + " s later");
             if (FaultModule != null)
-                text.AppendLine("  " + Where() + (Function != null ? ", in " + Function : ""));
+                text.AppendLine("  " + Where());
             if (Callers.Count != 0)
                 text.AppendLine("  called from " + string.Join(", ", Callers));
             if (Frames.Count != 0)
@@ -161,7 +160,6 @@ namespace OpenCAGE.CrashTriage
                 json["module"] = FaultModule;
                 json["offset"] = "0x" + FaultOffset.ToString("X");
                 if (FaultInGame) json["build"] = BuildKey ?? ("unknown (stamp 0x" + ExeTimeDateStamp.ToString("X8") + ", size 0x" + ExeSize.ToString("X8") + ")");
-                if (Function != null) json["function"] = Function;
                 if (Callers.Count != 0) json["called_from"] = new JArray(Callers);
                 if (Frames.Count != 0) json["stack"] = new JArray(Frames.Take(12).Select(o => "0x" + o.ToString("X")));
             }
@@ -172,7 +170,7 @@ namespace OpenCAGE.CrashTriage
     }
 
     /// <summary>
-    /// Crash triage: read a crash dump of AI.exe (no symbols needed) and match where it crashed against the table of known
+    /// Crash triage: read a crash dump of AI.exe and match where it crashed against the table of known
     /// crashes (<see cref="CrashTable"/>).
     /// </summary>
     internal static class CrashAnalysis
@@ -282,7 +280,6 @@ namespace OpenCAGE.CrashTriage
                         best = moduleLevel;
                         report.Known = crash;
                         report.Confidence = _confidences[moduleLevel];
-                        report.Function = null;
                         report.Callers.Clear();
                     }
                     continue;
@@ -290,13 +287,13 @@ namespace OpenCAGE.CrashTriage
                 if (!report.FaultInGame || report.BuildKey == null)
                     continue;
                 uint rva = (uint)report.FaultOffset;
-                List<CrashTable.Function> vias = crash.Vias.Where(o => o.Build == report.BuildKey).ToList();
-                foreach (CrashTable.Function site in crash.Sites.Where(o => o.Build == report.BuildKey && o.Contains(rva)))
+                List<CrashTable.Range> vias = crash.Vias.Where(o => o.Build == report.BuildKey).ToList();
+                foreach (CrashTable.Range site in crash.Sites.Where(o => o.Build == report.BuildKey && o.Contains(rva)))
                 {
                     bool exact = site.Exact.Contains(rva);
                     //Its usual callers: within the first frames, so a stale address deep in the stack doesn't count
-                    List<CrashTable.Function> seen = vias.Where(via => report.Frames.Take(24).Any(f => via.Contains(f))).ToList();
-                    //A function many things call counts only by the route this crash takes
+                    List<CrashTable.Range> seen = vias.Where(via => report.Frames.Take(24).Any(f => via.Contains(f))).ToList();
+                    //Code many things call counts only by the route this crash takes
                     if (site.NeedVia && seen.Count == 0)
                         continue;
                     int level;
@@ -309,21 +306,9 @@ namespace OpenCAGE.CrashTriage
                     best = level;
                     report.Known = crash;
                     report.Confidence = _confidences[level];
-                    report.Function = NameOf(crash, site, report.BuildKey);
-                    report.Callers = seen.Select(o => NameOf(crash, o, report.BuildKey) ?? ("+0x" + o.Start.ToString("X"))).Distinct().ToList();
+                    report.Callers = seen.Select(o => "+0x" + o.Start.ToString("X")).Distinct().ToList();
                 }
             }
-        }
-
-        /* A function's name: on its own line, else on the Steam line the same position among the crash's sites or vias */
-        private static string NameOf(CrashTable.Crash crash, CrashTable.Function function, string build)
-        {
-            if (function.Name != null)
-                return function.Name;
-            List<CrashTable.Function> list = crash.Sites.Contains(function) ? crash.Sites : crash.Vias;
-            int index = list.Where(o => o.Build == build).ToList().IndexOf(function);
-            List<CrashTable.Function> named = list.Where(o => o.Name != null).ToList();
-            return index >= 0 && index < named.Count ? named[index].Name : null;
         }
 
         private static bool Wildcard(string pattern, string name)
