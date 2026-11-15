@@ -1,5 +1,4 @@
 using OpenCAGE.CrashTriage;
-using OpenCAGE.Popups.Base;
 using OpenCAGE.RuntimeUtilsConnection;
 using System;
 using System.Collections.Generic;
@@ -16,29 +15,21 @@ namespace OpenCAGE
     /// <summary>
     /// The Game Crash Log: the crashes of games launched from OpenCAGE, newest first, each named by crash triage
     /// (<see cref="CrashWatch"/>) with what happened and what to do about it. It opens by itself when a launch crashes (Open on
-    /// Crash, on unless switched off, and remembered), and from the Script Debugger menu. Open Dump... triages any crash dump of
-    /// the game; Crash Dumps turns Windows' crash dumps of the game on or off (<see cref="LocalDumps"/>).
+    /// Crash, on unless switched off, and remembered), and from the Script Debugger menu, docked under the composite browser's
+    /// tabs unless it was popped out into a window of its own (see DockableLog). Open Dump... triages any crash dump of the
+    /// game; Crash Dumps turns Windows' crash dumps of the game on or off (<see cref="LocalDumps"/>).
     /// </summary>
-    public class CrashLog : BaseWindow
+    public class CrashLog : DockableLog
     {
         private static CrashLog _open;
         private static bool _watching;
 
-        /// <summary>Open the Crash Log (or bring it to the front), with a crash selected, else the newest. UI thread.</summary>
+        /// <summary>Open the Crash Log where it was last put (or bring it forward), with a crash selected, else the newest. UI thread.</summary>
         internal static void Open(CrashReport select = null)
         {
-            if (_open == null || _open.IsDisposed)
-            {
+            if (_open == null || !_open.IsLogOpen)
                 _open = new CrashLog();
-                _open.Show();
-            }
-            else
-            {
-                if (_open.WindowState == FormWindowState.Minimized)
-                    _open.WindowState = FormWindowState.Normal;
-                _open.Show();
-                _open.BringToFront();
-            }
+            _open.ShowLog();
             _open.Rebuild(select);
         }
 
@@ -56,7 +47,7 @@ namespace OpenCAGE
                         return;
                     ui.BeginInvoke((Action)(() =>
                     {
-                        if (_open != null && !_open.IsDisposed)
+                        if (_open != null && _open.IsLogOpen)
                             _open.Rebuild(report);
                         else if (SettingsManager.GetBool(Settings.CrashLogOpenOnCrash, true))
                             Open(report);
@@ -86,16 +77,8 @@ namespace OpenCAGE
         private readonly List<CrashReport> _opened = new List<CrashReport>();
         private int _reading;
 
-        public CrashLog() : base(WindowClosesOn.NONE)
+        public CrashLog() : base("Game Crash Log", Settings.CrashLogDocked, "https://opencage.co.uk/docs/launch-game/#crash-triage", new Size(900, 480), new Size(560, 320))
         {
-            Text = "Game Crash Log";
-            Icon = SharedFormIcon.Icon;
-            ClientSize = new Size(900, 480);
-            MinimumSize = new Size(560, 320);
-            StartPosition = FormStartPosition.CenterScreen;
-            ShowInTaskbar = true;
-            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/launch-game/#crash-triage");
-
             icons.Images.Add(ScriptErrorLog.SignImage(true, 16));
             list.SmallImageList = icons;
             list.Columns.Add("When", 110);
@@ -128,8 +111,8 @@ namespace OpenCAGE
             };
             openOnCrashBtn.CheckedChanged += (s, e) => SettingsManager.SetBool(Settings.CrashLogOpenOnCrash, openOnCrashBtn.Checked);
             dumpsBtn.Click += (s, e) => SwitchCrashDumps();
-            //Right-aligned items are laid out from the right: Crash Dumps outermost, Open on Crash beside it
-            toolStrip.Items.AddRange(new ToolStripItem[] { clearBtn, new ToolStripSeparator(), openDumpBtn, showDumpBtn, copyBtn, dumpsBtn, openOnCrashBtn });
+            //Right-aligned items are laid out from the right: Help outermost, then Pop Out (or Dock), Crash Dumps and Open on Crash
+            toolStrip.Items.AddRange(new ToolStripItem[] { clearBtn, new ToolStripSeparator(), openDumpBtn, showDumpBtn, copyBtn, DocsButton, PlaceButton, dumpsBtn, openOnCrashBtn });
             statusStrip.Items.Add(dumpsLabel);
 
             list.SelectedIndexChanged += (s, e) => ShowDetails(Selected());
@@ -140,14 +123,19 @@ namespace OpenCAGE
             Controls.Add(details);
             Controls.Add(statusStrip);
             Controls.Add(toolStrip);
+            FitDetails(details, 190, toolStrip, statusStrip);
+        }
 
-            Activated += (s, e) => ShowDumpsState();
-            FormClosed += (s, e) =>
-            {
-                icons.Dispose();
-                if (_open == this)
-                    _open = null;
-            };
+        protected override void OnHostActivated()
+        {
+            ShowDumpsState();
+        }
+
+        protected override void OnLogClosed()
+        {
+            icons.Dispose();
+            if (_open == this)
+                _open = null;
         }
 
         #region THE LIST

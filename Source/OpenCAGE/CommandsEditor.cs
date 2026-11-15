@@ -1582,17 +1582,26 @@ namespace OpenCAGE
         {
             EnsureDockPanelsCreated();
 
-            HideLeftDockPanelsForRelayout();
+            //Docked logs (the Error Log, the Crash Log) are taken out while the area is laid out, and go back under the browser's tabs
+            DockableLog.ReleaseDocked();
+            try
+            {
+                HideLeftDockPanelsForRelayout();
 
-            _entitySearch.Show(dockPanel, DockState.DockLeft);
+                _entitySearch.Show(dockPanel, DockState.DockLeft);
 
-            if (Singleton.ViewportEnabled)
-                _renderFiltersPanel.Show(_entitySearch.Pane, (IDockContent)null);
+                if (Singleton.ViewportEnabled)
+                    _renderFiltersPanel.Show(_entitySearch.Pane, (IDockContent)null);
 
-            _compositeBrowser.Show(_entitySearch.Pane, DockAlignment.Bottom, 1.0 - DefaultLeftSearchPortion);
-            _entityBrowser.Show(_compositeBrowser.Pane, (IDockContent)null);
-            _entityList.Show(_compositeBrowser.Pane, (IDockContent)null);
-            
+                _compositeBrowser.Show(_entitySearch.Pane, DockAlignment.Bottom, 1.0 - DefaultLeftSearchPortion);
+                _entityBrowser.Show(_compositeBrowser.Pane, (IDockContent)null);
+                _entityList.Show(_compositeBrowser.Pane, (IDockContent)null);
+            }
+            finally
+            {
+                DockableLog.RedockReleased();
+            }
+
             _compositeBrowser.Activate();
         }
 
@@ -3895,6 +3904,20 @@ namespace OpenCAGE
         /// </summary>
         /// <returns>False if the panels couldn't be rebuilt, in which case a restart is still needed.</returns>
         public bool RebuildDockChromeForTheme()
+        {
+            //Docked logs leave the panel while it is rebuilt, and dock again in the new theme after
+            DockableLog.ReleaseDocked();
+            try
+            {
+                return RebuildDockedPanelsForTheme();
+            }
+            finally
+            {
+                DockableLog.RedockReleased();
+            }
+        }
+
+        private bool RebuildDockedPanelsForTheme()
         {
             if (_compositeBrowser == null)
             {

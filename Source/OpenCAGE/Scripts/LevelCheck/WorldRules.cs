@@ -257,7 +257,7 @@ namespace OpenCAGE
     /// Pins the game cannot find: it finds a composite's pin by a binary search on the pin's name id over its VARIABLES block as stored.
     /// Retail stores that block sorted; older CathodeLib wrote it in creation order (CommandsPAK now sorts it). A pin the search misses
     /// breaks: an output or target pin never fires its parent's links, an input reads no value. A load keeps file order, so replaying
-    /// the search finds them; a save with the current CathodeLib fixes all of them.
+    /// the search finds them; a save with the current CathodeLib fixes all of them and leaves the pins in memory in the stored order.
     /// </summary>
     internal sealed class PinOrderRule : LevelCheckRule
     {
@@ -293,7 +293,7 @@ namespace OpenCAGE
                 Severity = LevelCheckSeverity.Broken,
                 Text = "The game finds a composite's pin by a binary search over its pins as stored, and these are stored out of order (an older OpenCAGE saved them in the order they " +
                        "were made), so links through them to and from the composite's instances don't work: an output pin never fires, an input reads no value. Saving the level fixes " +
-                       "every composite (pins made since the level was opened show here until it is saved).",
+                       "every composite (pins made since the level was last saved show here until it is saved again).",
             };
             foreach (Composite composite in context.Commands.Entries)
             {

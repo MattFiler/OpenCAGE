@@ -468,6 +468,9 @@
     <Compile Include="DockPanels\RenderFiltersPanel.Designer.cs">
       <DependentUpon>RenderFiltersPanel.cs</DependentUpon>
     </Compile>
+    <Compile Include="DockPanels\DockableLog.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="DockPanels\Composite Panels\EntityInspector.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -780,7 +783,7 @@
       <DependentUpon>GalaxyEditor.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\ErrorLog.cs">
-      <SubType>Form</SubType>
+      <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="Popups\LevelSoundOverrideEditor.cs">
       <SubType>Form</SubType>
@@ -1164,7 +1167,7 @@
     <Compile Include="Scripts\CrashTriage\MiniDump.cs" />
     <Compile Include="Scripts\MCP\McpCrashTools.cs" />
     <Compile Include="Popups\CrashLog.cs">
-      <SubType>Form</SubType>
+      <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="Scripts\LevelCheck\LevelCheck.cs" />
     <Compile Include="Scripts\LevelCheck\LevelCheckContext.cs" />

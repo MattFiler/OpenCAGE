@@ -1,4 +1,3 @@
-using OpenCAGE.Popups.Base;
 using OpenCAGE.RuntimeUtilsConnection;
 using System;
 using System.Collections.Generic;
@@ -11,33 +10,27 @@ namespace OpenCAGE
 {
     /// <summary>
     /// The Runtime Error Log: the level's script errors as the running game finds them, like a game engine's console. It opens as the
-    /// game is launched with Launch Game's Error log ticked (and from the Script Debugger menu). Each line is an error the game
+    /// game is launched with Launch Game's Error log ticked (and from the Script Debugger menu), docked under the composite
+    /// browser's tabs unless it was popped out into a window of its own (see DockableLog). Each line is an error the game
     /// reported or a check of an entity it made that failed, with the entity it is about and the composite that entity is in;
     /// double-click one to go to its entity. Clear empties it; Clear on Play empties it as the game is launched from OpenCAGE
     /// (on unless switched off, and remembered); Group by Entity lists the lines under their entities. While it is open, the
     /// flowgraph nodes of entities with errors show a warning sign: clearing it, or closing it, takes them away. The lines come
     /// from ScriptErrorLog. Built in code: a toolbar, a list and the selected line's details.
     /// </summary>
-    public class ErrorLog : BaseWindow
+    public class ErrorLog : DockableLog
     {
         private static ErrorLog _open;
 
-        /// <summary>Open the Error Log, or bring it to the front. UI thread.</summary>
+        /// <summary>Open the Error Log where it was last put (docked unless popped out), or bring it forward. UI thread.</summary>
         public static void Open()
         {
-            if (_open != null && !_open.IsDisposed)
-            {
-                if (_open.WindowState == FormWindowState.Minimized)
-                    _open.WindowState = FormWindowState.Normal;
-                _open.Show();
-                _open.BringToFront();
-                return;
-            }
-            _open = new ErrorLog();
-            _open.Show();
+            if (_open == null || !_open.IsLogOpen)
+                _open = new ErrorLog();
+            _open.ShowLog();
         }
 
-        public static bool IsOpen => _open != null && !_open.IsDisposed;
+        public static bool IsOpen => _open != null && _open.IsLogOpen;
 
         private readonly ToolStrip toolStrip = new ToolStrip { GripStyle = ToolStripGripStyle.Hidden, Dock = DockStyle.Top };
         //Clear acts on the log, on the left; the two settings sit on the right
@@ -52,16 +45,8 @@ namespace OpenCAGE
 
         private const int ErrorIcon = 0, WarningIcon = 1;
 
-        public ErrorLog() : base(WindowClosesOn.NONE)
+        public ErrorLog() : base("Runtime Error Log", Settings.ErrorLogDocked, "https://opencage.co.uk/docs/live-link/#error-log", new Size(960, 440), new Size(600, 280))
         {
-            Text = "Runtime Error Log";
-            Icon = SharedFormIcon.Icon;
-            ClientSize = new Size(960, 440);
-            MinimumSize = new Size(600, 280);
-            StartPosition = FormStartPosition.CenterScreen;
-            ShowInTaskbar = true;
-            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/live-link/#error-log");
-
             icons.Images.Add(ScriptErrorLog.SignImage(true, 16));
             icons.Images.Add(ScriptErrorLog.SignImage(false, 16));
             list.SmallImageList = icons;
@@ -87,8 +72,8 @@ namespace OpenCAGE
                 SettingsManager.SetBool(Settings.ErrorLogGroupByEntity, groupBtn.Checked);
                 Rebuild();
             };
-            //Right-aligned items are laid out from the right: Group by Entity outermost, Clear on Play beside it
-            toolStrip.Items.AddRange(new ToolStripItem[] { clearBtn, groupBtn, clearOnPlayBtn });
+            //Right-aligned items are laid out from the right: Help outermost, then Pop Out (or Dock), Group by Entity and Clear on Play
+            toolStrip.Items.AddRange(new ToolStripItem[] { clearBtn, DocsButton, PlaceButton, groupBtn, clearOnPlayBtn });
 
             list.DoubleClick += (s, e) => GoTo(Selected());
             list.KeyDown += (s, e) =>
@@ -103,22 +88,24 @@ namespace OpenCAGE
             Controls.Add(list);
             Controls.Add(details);
             Controls.Add(toolStrip);
+            FitDetails(details, 96, toolStrip);
 
             ScriptErrorLog.Added += OnAdded;
             ScriptErrorLog.Cleared += OnCleared;
             ScriptErrorLog.StatusChanged += OnStatusChanged;
             Load += (s, e) => Rebuild();
-            FormClosed += (s, e) =>
-            {
-                ScriptErrorLog.Added -= OnAdded;
-                ScriptErrorLog.Cleared -= OnCleared;
-                ScriptErrorLog.StatusChanged -= OnStatusChanged;
-                ScriptErrorLog.Stop();
-                icons.Dispose();
-                if (_open == this)
-                    _open = null;
-            };
             ScriptErrorLog.Start();
+        }
+
+        protected override void OnLogClosed()
+        {
+            ScriptErrorLog.Added -= OnAdded;
+            ScriptErrorLog.Cleared -= OnCleared;
+            ScriptErrorLog.StatusChanged -= OnStatusChanged;
+            ScriptErrorLog.Stop();
+            icons.Dispose();
+            if (_open == this)
+                _open = null;
         }
 
         #region EVENTS (any thread)
