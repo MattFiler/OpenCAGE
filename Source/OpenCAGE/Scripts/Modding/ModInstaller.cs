@@ -1529,6 +1529,25 @@ namespace OpenCAGE.Modding
             return _store.Retrieve(record.Sha256Hex);
         }
 
+        /// <summary>
+        /// A file as the game shipped it: from the game folder while it is still as shipped, else the original kept for it.
+        /// Null when neither is available.
+        /// </summary>
+        public byte[] ShippedBytes(string normalisedPath)
+        {
+            string from = ModToolkit.Denormalise(_gameRoot, normalisedPath);
+            byte[] hash = File.Exists(from) ? _cache.Hash(normalisedPath) : null;
+            if (hash != null && _manifest.IsVanilla(normalisedPath, hash))
+                return File.ReadAllBytes(from);
+            ModState.BaselineRecord record;
+            lock (_mutex)
+            {
+                if (!_state.Baseline.TryGetValue(normalisedPath, out record) || !record.IsVanilla || record.Sha256Hex == null)
+                    return null;
+            }
+            return _store.Retrieve(record.Sha256Hex);
+        }
+
         /* What a file holds with no mods applied: its baseline (vanilla, or the user's own bytes adopted as the
            restore point), or null when it doesn't exist then */
         private byte[] BaselineBytes(string normalisedPath)

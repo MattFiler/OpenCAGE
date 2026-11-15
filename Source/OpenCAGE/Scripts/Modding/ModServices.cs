@@ -239,6 +239,43 @@ namespace OpenCAGE.Modding
         }
 
         /// <summary>
+        /// A level's radiosity files as the game shipped them, with the files they index into, so a bake can put the shipped
+        /// lighting back (RadiosityBakeSettings.ShippedSource). Each comes from the game folder while it is still as shipped,
+        /// else from the originals kept for it; a WORLD file from the level's _PATCH folder when the game shipped one there.
+        /// Null when any file the bake needs is unavailable, and without ENABLE_MOD_PACKAGES.
+        /// </summary>
+        public static CathodeLib.Radiosity.ShippedRadiosity ShippedRadiosity(string levelName)
+        {
+#if ENABLE_MOD_PACKAGES
+            try
+            {
+                EnsureBuilt();
+                if (_installer == null || !ManifestAvailable || levelName == null)
+                    return null;
+                string level = ModToolkit.LevelFolder(levelName), patch = ModToolkit.LevelFolder(levelName + "_PATCH");
+                byte[] World(string file) => _installer.ShippedBytes(patch + "WORLD/" + file) ?? _installer.ShippedBytes(level + "WORLD/" + file);
+                var shipped = new CathodeLib.Radiosity.ShippedRadiosity()
+                {
+                    Runtime = _installer.ShippedBytes(level + "RENDERABLE/RADIOSITY_RUNTIME.BIN"),
+                    InstanceMap = _installer.ShippedBytes(level + "RENDERABLE/RADIOSITY_INSTANCE_MAP.TXT"),
+                    CollisionMap = World("RADIOSITY_COLLISION_MAPPING.BIN"),
+                    Resources = World("RESOURCES.BIN"),
+                    Movers = World("MODELS.MVR"),
+                };
+                if (shipped.Runtime == null || shipped.Runtime.Length == 0 || shipped.InstanceMap == null || shipped.Resources == null || shipped.Movers == null)
+                    return null;
+                return shipped;
+            }
+            catch
+            {
+                return null;
+            }
+#else
+            return null;
+#endif
+        }
+
+        /// <summary>
         /// One-off background capture of every small still-vanilla file outside the level and sound
         /// folders (configs, text, UI definitions) - so config edits never need their own hooks.
         /// Does nothing without ENABLE_MOD_PACKAGES.

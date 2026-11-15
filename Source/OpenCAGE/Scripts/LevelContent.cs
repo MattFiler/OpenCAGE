@@ -215,8 +215,9 @@ namespace OpenCAGE
 
         /// <summary>
         /// Which bakers an instanced save runs. One left out keeps what that system already has on disk
-        /// (which may no longer match the geometry) - except radiosity, whose files are cleared, since
-        /// they would light the wrong movers.
+        /// (which may no longer match the geometry) - except radiosity: with Options > Save/Build > Don't
+        /// Rebuild Radiosity on it is kept, re-bound to the rebuilt models, and otherwise its files are
+        /// cleared, since as they are they would light the wrong movers.
         /// </summary>
         public class BakeSelection
         {
@@ -249,15 +250,19 @@ namespace OpenCAGE
         /// changed. Don't Rebuild Radiosity (when <paramref name="allowSkippingTheBake"/>) bakes nothing: the level keeps the
         /// radiosity it has, re-bound to the rebuilt models so the game can still read it - moved models keep the lighting of
         /// where they were, added ones are drawn without any until a build with it off. It wins over Always Fully Rebuild.
+        /// With both off, a level whose radiosity is empty or was fully rebuilt by an earlier save gets the shipped lighting
+        /// back from the originals OpenCAGE keeps (when it has them), and only what changed since the game shipped is baked.
         /// </summary>
         /// <param name="allowSkippingTheBake">False for a build whose result is shipped rather than edited further (the Mod
         /// Manager's), which always bakes.</param>
-        public static CathodeLib.Radiosity.RadiosityBakeSettings RadiositySettingsFromOptions(bool allowSkippingTheBake = true)
+        /// <param name="levelName">The level being saved, for the shipped lighting; null never restores it.</param>
+        public static CathodeLib.Radiosity.RadiosityBakeSettings RadiositySettingsFromOptions(bool allowSkippingTheBake = true, string levelName = null)
         {
             return new CathodeLib.Radiosity.RadiosityBakeSettings()
             {
                 PatchRetailRuntime = !SettingsManager.GetBool(Settings.AlwaysFullyRebuildRadiosity),
                 KeepExisting = allowSkippingTheBake && SettingsManager.GetBool(Settings.SkipRadiosityRebuild),
+                ShippedSource = levelName == null ? null : (Func<CathodeLib.Radiosity.ShippedRadiosity>)(() => Modding.ModServices.ShippedRadiosity(levelName)),
             };
         }
 
@@ -268,7 +273,7 @@ namespace OpenCAGE
         public static Instancing SaveInstancedWithOptions(Level level, bool allowSkippingTheBake = true)
         {
             ApplyCollisionCompaction(level);
-            return level.SaveInstanced(NavMeshBakeOptions.FromOptions(), new CathodeLib.NavMesh.CoverBakeSettings(), RadiositySettingsFromOptions(allowSkippingTheBake),
+            return level.SaveInstanced(NavMeshBakeOptions.FromOptions(), new CathodeLib.NavMesh.CoverBakeSettings(), RadiositySettingsFromOptions(allowSkippingTheBake, level.Name),
                 new CathodeLib.NavMesh.JobPositionBakeSettings(), new CathodeLib.Alphalight.AlphalightBakeSettings(), new CathodeLib.Sound.SoundNetworkBakeSettings());
         }
 
@@ -323,7 +328,7 @@ namespace OpenCAGE
                                 pass = Level.SaveInstanced(
                                     bakers.NavMesh ? NavMeshBakeOptions.FromOptions() : null,
                                     bakers.Cover ? new CathodeLib.NavMesh.CoverBakeSettings() : null,
-                                    bakers.Radiosity ? RadiositySettingsFromOptions() : null,
+                                    bakers.Radiosity || SettingsManager.GetBool(Settings.SkipRadiosityRebuild) ? RadiositySettingsFromOptions(true, Level.Name) : null,
                                     bakers.JobPositions ? new CathodeLib.NavMesh.JobPositionBakeSettings() : null,
                                     bakers.Alphalight ? new CathodeLib.Alphalight.AlphalightBakeSettings() : null,
                                     bakers.SoundNetworks ? new CathodeLib.Sound.SoundNetworkBakeSettings() : null);

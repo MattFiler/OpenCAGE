@@ -166,7 +166,7 @@ namespace OpenCAGE.MCP
                 Description = "Write the open level to the game install. A plain save writes the script and assets: enough for logic changes (links, triggers, parameters of logic entities, CAGEAnimations of cameras). build=true is Save & Build: it also regenerates what the game derives from the script - the movers that draw models and lights, collision and physics, zone membership, navmesh, cover, job positions, sound networks, radiosity - needed after placing, moving or deleting models, lights, collision, zones, navigation or sound entities, or composites holding them. build='auto' builds only when get_editor_state's level.build says it is needed (and says why). 'bakers' can skip slow ones. A build also checks the level for what will crash the game and says so in level_warnings (an alien that can spawn with no PathfindingAlienBackstageNode crashes the game the first time it retreats or despawns: add vent composites such as Archetypes\\Jobs\\VentTraversalMarker6M); it saves all the same. Takes seconds (plain) to minutes (build). Closes the game if it runs, as the editor's Save does (closed_game says so; Live Link drops). Not undoable.",
                 InputSchema = McpSchema.Object(
                     McpSchema.Any("build", "true: Save & Build; false (default): a plain save; 'auto': build only if the level needs it (get_editor_state level.build)."),
-                    McpSchema.Nested("bakers", "With build: which bakers run (default all). Skipping radiosity CLEARS the baked lighting - on a level still carrying its original lighting that loses it for good, as later bakes then regenerate it from scratch; skipped navmesh/cover/jobs/sound keep their old data. To build faster while KEEPING the lighting instead, turn on editor_options skip_radiosity_rebuild (Options > Save/Build > Don't Rebuild Radiosity).", BakersSchema)),
+                    McpSchema.Nested("bakers", "With build: which bakers run (default all). Skipping radiosity CLEARS the baked lighting unless editor_options skip_radiosity_rebuild (Options > Save/Build > Don't Rebuild Radiosity) is on - on a level still carrying its original lighting a clear loses it for good, as later bakes then regenerate it from scratch. With that option on, radiosity is never baked but kept, re-bound to the rebuilt models (moved ones keep the lighting of where they were, added ones have none until a build with it off). Skipped navmesh/cover/jobs/sound keep their old data.", BakersSchema)),
                 Destructive = true,
                 Run = SaveLevel,
             };
@@ -1531,12 +1531,12 @@ namespace OpenCAGE.MCP
                     ["alphalight"] = ran.Alphalight,
                     ["sound"] = ran.SoundNetworks,
                 };
-                if (!ran.Radiosity)
-                    call.Note("Radiosity was skipped, so the level's baked lighting files were CLEARED: static geometry renders without it until a build with radiosity.");
+                //Options > Save/Build > Don't Rebuild Radiosity: the bake was skipped and the lighting kept, also when the bakers left radiosity out
+                CathodeLib.Radiosity.RadiosityBaker.BakeResult radiosity = McpEditor.UI(() => Singleton.Editor.CompositeBrowser?.Content?.LastRadiosityResult);
+                if (!ran.Radiosity && (radiosity == null || !radiosity.Kept))
+                    call.Note("Radiosity was skipped, so the level's baked lighting files were CLEARED: static geometry renders without it until a build with radiosity. To skip it and keep them instead, turn on editor_options skip_radiosity_rebuild (Options > Save/Build > Don't Rebuild Radiosity).");
                 else
                 {
-                    //Options > Save/Build > Don't Rebuild Radiosity: the bake was skipped and the lighting kept
-                    CathodeLib.Radiosity.RadiosityBaker.BakeResult radiosity = McpEditor.UI(() => Singleton.Editor.CompositeBrowser?.Content?.LastRadiosityResult);
                     if (radiosity != null && radiosity.Kept)
                     {
                         result["radiosity_kept"] = true;
