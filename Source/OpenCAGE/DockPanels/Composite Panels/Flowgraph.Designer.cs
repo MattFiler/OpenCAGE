@@ -40,6 +40,7 @@ namespace OpenCAGE
             this.arrangeSeparator = new System.Windows.Forms.ToolStripSeparator();
             this.arrangePageToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.arrangeSelectedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.removeUnusedPinsFromAllToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator5 = new System.Windows.Forms.ToolStripSeparator();
             this.findReferencesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.goToNextNodeInFlowgraphToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -109,6 +110,7 @@ namespace OpenCAGE
             this.arrangeSeparator,
             this.arrangePageToolStripMenuItem,
             this.arrangeSelectedToolStripMenuItem,
+            this.removeUnusedPinsFromAllToolStripMenuItem,
             this.deleteLinkToolStripMenuItem,
             this.addReroutePointToolStripMenuItem,
             this.removeReroutePointToolStripMenuItem,
@@ -218,6 +220,15 @@ namespace OpenCAGE
             this.arrangeSelectedToolStripMenuItem.Text = "Arrange Selected Nodes";
             this.arrangeSelectedToolStripMenuItem.ToolTipText = "Lays out just the selected nodes, by the links between them, starting where they start. Only node positions change, and Undo puts them back.";
             this.arrangeSelectedToolStripMenuItem.Click += new System.EventHandler(this.arrangeSelectedToolStripMenuItem_Click);
+            //
+            // removeUnusedPinsFromAllToolStripMenuItem
+            //
+            this.removeUnusedPinsFromAllToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("removeUnusedPinsToolStripMenuItem.Image")));
+            this.removeUnusedPinsFromAllToolStripMenuItem.Name = "removeUnusedPinsFromAllToolStripMenuItem";
+            this.removeUnusedPinsFromAllToolStripMenuItem.Size = new System.Drawing.Size(228, 22);
+            this.removeUnusedPinsFromAllToolStripMenuItem.Text = "Remove Unused Pins From All Entities";
+            this.removeUnusedPinsFromAllToolStripMenuItem.ToolTipText = "Removes the pins with no links from every node on this page, as Remove Unused Pins does for one node. Undo puts them back.";
+            this.removeUnusedPinsFromAllToolStripMenuItem.Click += new System.EventHandler(this.removeUnusedPinsFromAllToolStripMenuItem_Click);
             //
             // toolStripSeparator5
             // 
@@ -580,6 +591,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripSeparator arrangeSeparator;
         private System.Windows.Forms.ToolStripMenuItem arrangePageToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem arrangeSelectedToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem removeUnusedPinsFromAllToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem arrangeFGToolStripMenuItem;
     }
 }

@@ -364,6 +364,10 @@ namespace OpenCAGE
             string levelUiProblem = LevelUiOverrides.ApplyForLaunch(Singleton.PathToAI, MapName, out _);
             if (levelUiProblem != null)
                 MessageBox.Show("The game's UI could not be set up as this level asks: " + levelUiProblem + ".", "Level UI", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            //The level's launch settings (texture heap, collisions, loading playlist), the game's own for any other level
+            string launchSettingsProblem = LevelLaunch.ApplyForLaunch(Singleton.PathToAI, MapName, out _);
+            if (launchSettingsProblem != null)
+                MessageBox.Show("The level's launch settings could not all be set: " + launchSettingsProblem + ".", "Level Launch Settings", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
             //Start game process
             if (Singleton.Platform == PatchManager.Platform.STEAM)
@@ -377,8 +381,9 @@ namespace OpenCAGE
                 alienProcess.FileName = Singleton.PathToAI + "/AI.exe";
                 Process.Start(alienProcess);
             }
-            //The level's own UI movies come out again once this game has closed
+            //The level's own UI movies and launch settings come out again once this game has closed
             LevelUiOverrides.PutBackWhenGameCloses(Singleton.PathToAI);
+            LevelLaunch.PutBackWhenGameCloses(Singleton.PathToAI);
             //Crash triage watches the game until it closes, and names the cause should it crash (Scripts\CrashTriage)
             CrashTriage.CrashWatch.Launched(Singleton.PathToAI, MapName);
             Steam.UnlockAchievement(Steam.Achievements.LAUNCHED_GAME);

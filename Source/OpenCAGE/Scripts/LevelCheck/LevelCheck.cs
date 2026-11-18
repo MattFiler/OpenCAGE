@@ -148,6 +148,7 @@ namespace OpenCAGE
             new PinOrderRule(),
             new PhysicsBodyKeysRule(),
             new WaterCullingRule(),
+            new MapItemFloorRule(),
         };
 
         /// <summary>

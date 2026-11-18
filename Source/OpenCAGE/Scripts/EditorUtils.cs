@@ -83,10 +83,14 @@ namespace OpenCAGE
 
             _prevTaskToken = new CancellationTokenSource();
 
+            Composite root = commands?.EntryPoints != null && commands.EntryPoints.Length != 0 ? commands.EntryPoints[0] : null;
+            if (root == null)
+                return;
+
             //if (runOnThread)
-            //    Task.Run(() => Content.EditorUtils.GenerateCompositeInstancesRecursive(commands, commands.EntryPoints[0], new List<ShortGuid>(), _prevTaskToken.Token), _prevTaskToken.Token);
+            //    Task.Run(() => GenerateCompositeInstancesRecursive(commands, root, new List<ShortGuid>(), _prevTaskToken.Token), _prevTaskToken.Token);
             //else
-                Content.EditorUtils.GenerateCompositeInstancesRecursive(commands, commands.EntryPoints[0], new List<ShortGuid>(), _prevTaskToken.Token);
+                GenerateCompositeInstancesRecursive(commands, root, new List<ShortGuid>(), _prevTaskToken.Token);
         }
         private void GenerateCompositeInstancesRecursive(Commands commands, Composite composite, List<ShortGuid> hierarchy, CancellationToken ct)
         {

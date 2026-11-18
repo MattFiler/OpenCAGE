@@ -13,7 +13,7 @@ using System.Windows.Forms;
 namespace OpenCAGE.Popups
 {
     /// <summary>
-    /// File > Level Check: what the Level Check (Scripts\LevelCheck) finds in the open level, crashes first, with Fix where the fix is
+    /// File > Check Level: what the Level Check (Scripts\LevelCheck) finds in the open level, crashes first, with Fix where the fix is
     /// mechanical and Dismiss (kept per level on this PC). Modeless, because the script editor's tools refuse to run under a modal window.
     /// </summary>
     public class LevelCheckWindow : BaseWindow
@@ -108,7 +108,7 @@ namespace OpenCAGE.Popups
         }
 
         /// <summary>
-        /// File > Level Check..., put in after <paramref name="after"/> (Save and Build Level) in its menu: enabled while a level is open.
+        /// File > Check Level, put in after <paramref name="after"/> (Recapture All Cubemaps) in its menu: enabled while a level is open.
         /// Called once from the editor's constructor.
         /// </summary>
         public static void AttachMenu(ToolStripMenuItem after)
@@ -116,7 +116,7 @@ namespace OpenCAGE.Popups
             ToolStripDropDownItem menu = after?.OwnerItem as ToolStripDropDownItem;
             ToolStrip owner = after?.Owner;
             if (owner == null) return;
-            ToolStripMenuItem item = new ToolStripMenuItem("Level Check...") { Name = "levelCheckToolStripMenuItem", ToolTipText = "What in the open level will crash the game or silently not work in it" };
+            ToolStripMenuItem item = new ToolStripMenuItem("Check Level") { Name = "levelCheckToolStripMenuItem", ToolTipText = "What in the open level will crash the game or silently not work in it" };
             item.Click += (s, e) => Open();
             owner.Items.Insert(owner.Items.IndexOf(after) + 1, item);
             if (menu != null)

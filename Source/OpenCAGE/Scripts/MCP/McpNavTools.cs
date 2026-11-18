@@ -54,6 +54,9 @@ namespace OpenCAGE.MCP
             //The alien vents helper (Scripts\AlienVents): add_alien_vents, check_alien_vents
             foreach (McpTool tool in McpAlienVentTools.Tools())
                 yield return tool;
+            //The Tab map helper (Scripts\MapAssets): generate_map_assets, check_map_items
+            foreach (McpTool tool in McpMapAssetTools.Tools())
+                yield return tool;
         }
 
         #region Cache

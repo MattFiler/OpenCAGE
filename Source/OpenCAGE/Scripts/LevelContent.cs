@@ -129,8 +129,14 @@ namespace OpenCAGE
         }
         #endregion
 
+        /// <summary>Load() has run to the end: the composites are sorted and the editor utils built.</summary>
+        public bool IsLoadFinished { get; private set; }
+
+        private readonly object _editorUtilsLock = new object();
+
         public void Load()
         {
+            IsLoadFinished = false;
             Level.Load();
             if (!Level.Commands.Loaded || Level.Commands.EntryPoints == null || Level.Commands.EntryPoints[0] == null)
             {
@@ -173,6 +179,7 @@ namespace OpenCAGE
             //What the level places as it is opened, to tell later whether it needs a Save & Build
             BuildTracker.LevelLoaded(this);
 
+            IsLoadFinished = true;
             Singleton.OnLevelLoaded?.Invoke(this);
         }
 
@@ -187,9 +194,17 @@ namespace OpenCAGE
             if (Level?.Commands == null || !Level.Commands.Loaded)
                 return;
 
-            EditorUtils = new EditorUtils(this);
-            if (generateCompositeInstances)
-                EditorUtils.GenerateCompositeInstances(Level.Commands, false);
+            //The loader thread and the UI thread can both get here: build once, and publish it only when complete
+            lock (_editorUtilsLock)
+            {
+                if (EditorUtils != null)
+                    return;
+
+                EditorUtils utils = new EditorUtils(this);
+                if (generateCompositeInstances)
+                    utils.GenerateCompositeInstances(Level.Commands, false);
+                EditorUtils = utils;
+            }
         }
 
         /// <summary>

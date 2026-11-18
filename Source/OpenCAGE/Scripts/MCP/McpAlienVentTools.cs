@@ -19,7 +19,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "add_alien_vents",
                 Title = "Add alien vents",
-                Description = "Give the alien vents to go backstage through, as File > Alien Vents does: a level with an alien and no PathfindingAlienBackstageNode crashes the game the first time the alien retreats (flamed, sent away, after an ambush), " +
+                Description = "Give the alien vents to go backstage through, as File > Calculate Alien Vents does: a level with an alien and no PathfindingAlienBackstageNode crashes the game the first time the alien retreats (flamed, sent away, after an ambush), " +
                     "and without vents it never uses the backstage. Finds spots on the navmesh (as last built) under a ceiling a retail vent fits - 4m VentTraversalMarker (ceilings 3.2-5.1 m), 6m VentTraversalMarker6M (5.1-7.6 m), 9m VentTraversalMarker9m (7.6-12 m) - " +
                     "with a clear column up, flat floor and no wall within 1 m, spread 'spacing' apart and from the level's own vents; or takes 'spots' you give. Brings the vent composites the level lacks in from a retail level of this install (as port_composites: NOT undoable), " +
                     "then places every vent as ONE undo step: instances AlienVent_N whose origin is the vent (its kind's height over the floor point), kill traps off on reset unless 'killtraps'. " +

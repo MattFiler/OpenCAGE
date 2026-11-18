@@ -116,12 +116,14 @@ namespace OpenCAGE
 
             InitializeComponent();
             Theming.ThemeManager.ApplyToForm(this);
-            //File > Level Check..., under Save and Build Level
-            OpenCAGE.Popups.LevelCheckWindow.AttachMenu(saveAndBuildLevelToolStripMenuItem);
-            //File > Compare Levels... and Record Edits..., after the Level Check
-            OpenCAGE.Popups.CompareLevelsWindow.AttachMenu(saveAndBuildLevelToolStripMenuItem);
-            //File > Alien Vents..., after the Level Check
-            OpenCAGE.Popups.AlienVentsWindow.AttachMenu(saveAndBuildLevelToolStripMenuItem);
+            //File > Check Level, under Recapture All Cubemaps
+            OpenCAGE.Popups.LevelCheckWindow.AttachMenu(recaptureAllCubemapsToolStripMenuItem);
+            //File > Compare Levels after Check Level, and Record Edits in its own section at the end
+            OpenCAGE.Popups.CompareLevelsWindow.AttachMenu(recaptureAllCubemapsToolStripMenuItem);
+            //File > Calculate Alien Vents, after Check Level
+            OpenCAGE.Popups.AlienVentsWindow.AttachMenu(recaptureAllCubemapsToolStripMenuItem);
+            //File > Generate Map Assets, after Calculate Alien Vents
+            OpenCAGE.Popups.MapAssetsWindow.AttachMenu(recaptureAllCubemapsToolStripMenuItem);
             //File > Import Scene..., after Import Composites
             OpenCAGE.Popups.SceneImportWindow.AttachMenu(importCompositesMenu);
             //Options > Save/Build > Walk On Downward-Facing Floors, at the end
@@ -297,6 +299,8 @@ namespace OpenCAGE
             //Level UI movies an earlier launch left in come out (the game closed after OpenCAGE did), and View > Level Config is
             //added (CommandsEditor.LevelUi.cs)
             SetUpLevelUi();
+            //...a level's launch settings likewise, and View > Level Config > Level Launch Settings (CommandsEditor.LevelLaunch.cs)
+            SetUpLevelLaunch();
             Modding.ModServices.CaptureSmallFilesInBackground();
 
             versionToolStripMenuItem.Text = "Version " + ProductVersion;
@@ -2122,6 +2126,7 @@ namespace OpenCAGE
                 LaunchGame.CloseGameAndOldInjector();
                 //The level's own UI movies, then the UI options as their settings say, as a launch from the Launch Game window does
                 LevelUiOverrides.ApplyForLaunch(Singleton.PathToAI, _compositeBrowser.Content.Level.Name, out _);
+                LevelLaunch.ApplyForLaunch(Singleton.PathToAI, _compositeBrowser.Content.Level.Name, out _);
 
                 if (Singleton.Platform == PatchManager.Platform.STEAM)
                 {
@@ -2136,6 +2141,7 @@ namespace OpenCAGE
                 }
                 //...which come out again once this game has closed
                 LevelUiOverrides.PutBackWhenGameCloses(Singleton.PathToAI);
+                LevelLaunch.PutBackWhenGameCloses(Singleton.PathToAI);
                 //Crash triage watches the game until it closes, and names the cause should it crash (Scripts\CrashTriage)
                 CrashTriage.CrashWatch.Launched(Singleton.PathToAI, _compositeBrowser.Content.Level.Name);
                 Steam.UnlockAchievement(Steam.Achievements.LAUNCHED_GAME);

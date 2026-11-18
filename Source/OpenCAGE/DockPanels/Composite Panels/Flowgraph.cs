@@ -1299,6 +1299,8 @@ namespace OpenCAGE
             arrangePageToolStripMenuItem.Enabled = stNodeEditor1.Nodes.Count > 1;
             arrangeSelectedToolStripMenuItem.Visible = arrangeSelection;
             arrangeSeparator.Visible = onCanvas || arrangeSelection;
+            removeUnusedPinsFromAllToolStripMenuItem.Visible = onCanvas;
+            removeUnusedPinsFromAllToolStripMenuItem.Enabled = stNodeEditor1.Nodes.Count > 0;
 
             deleteLinkToolStripMenuItem.Visible = linkIn != null;
             addReroutePointToolStripMenuItem.Visible = linkIn != null && _menuReroutePoint == null;
@@ -1492,20 +1494,36 @@ namespace OpenCAGE
                 nodes = new List<STNode>() { hovered };
             if (nodes.Count == 0) return;
 
-            using (UndoStack.Current.BeginGroup("Remove unused pins from " + UndoLabels.Count(nodes.Count, "node", "nodes")))
+            RemoveUnusedPins(nodes, "Remove unused pins from " + UndoLabels.Count(nodes.Count, "node", "nodes"));
+        }
+
+        //The canvas menu's version: every node on this page
+        private void removeUnusedPinsFromAllToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            List<STNode> nodes = stNodeEditor1.Nodes.Cast<STNode>().Where(o => o?.Entity != null).ToList();
+            if (nodes.Count == 0) return;
+
+            RemoveUnusedPins(nodes, "Remove unused pins from all entities");
+        }
+
+        //Remove the unconnected pins from each node as one undo step, each node keeping its centre where it was
+        private void RemoveUnusedPins(List<STNode> nodes, string label)
+        {
+            bool changed = false;
+            using (UndoStack.Current.BeginGroup(label))
             {
                 foreach (STNode node in nodes)
                 {
-                    Point newPos = node.Location;
-                    newPos.X += node.Width / 2;
-                    newPos.Y += node.Height / 2;
+                    Point centre = new Point(node.Location.X + node.Width / 2, node.Location.Y + node.Height / 2);
                     PinSet pinsBefore = SnapshotPins(node);
                     node.RemoveUnusedPins(_composite, _commands);
-                    node.SetPosition(newPos);
-                    MarkFlowgraphEdit(); //the pin layout is saved with the composite
+                    node.SetPosition(new Point(centre.X - node.Width / 2, centre.Y - node.Height / 2));
+                    changed |= node.Location != pinsBefore.Location || SnapshotPins(node).Pins.Count != pinsBefore.Pins.Count;
                     RecordPinChange(node, pinsBefore, "Remove unused pins from " + UndoLabels.Entity(_composite, node.Entity));
                 }
             }
+            if (changed)
+                MarkFlowgraphEdit(); //the pin layout is saved with the composite
         }
 
         private void managePinsToolStripMenuItem_Click(object sender, EventArgs e)

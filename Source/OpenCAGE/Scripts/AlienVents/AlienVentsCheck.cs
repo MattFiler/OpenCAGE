@@ -61,7 +61,7 @@ namespace OpenCAGE
                         Kind = "no_sheet", Key = "network:" + network.Key, Network = network.Key, Severity = LevelCheckSeverity.Broken, Vents = vents,
                         Title = which + " alien vents make no backstage (" + vents.Count + " vent" + (vents.Count == 1 ? "" : "s") + ")",
                         Text = which + " " + vents.Count + " vent" + (vents.Count == 1 ? "" : "s") + " cannot carry the alien anywhere: the navmesh baker triangulates the alien's backstage 6 m over 3 or more vents of one network (Network_ID), not in a line (" + sheet.Warning + "). " +
-                            "The alien climbs into a vent with no backstage to move along. Add vents (File > Alien Vents..., or MCP add_alien_vents) until the network has 3 or more spread over the area, then Save & Build with the navmesh baker.",
+                            "The alien climbs into a vent with no backstage to move along. Add vents (File > Calculate Alien Vents, or MCP add_alien_vents) until the network has 3 or more spread over the area, then Save & Build with the navmesh baker.",
                     });
                     continue;
                 }

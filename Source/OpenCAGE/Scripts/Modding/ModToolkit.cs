@@ -37,10 +37,11 @@ namespace OpenCAGE.Modding
 
         #region OPENCAGE'S OWN CONTENT
         /* Content OpenCAGE puts into a game file for its own use - today the movies for the Launch Game UI options, added to
-         * UI.PAK beside the game's (UiMovieOverrides). The mod system looks past it everywhere: a file's hash, its original,
-         * the user's own version of it and what a mod ships are all of the file WITHOUT it, so switching an option never reads
-         * as a change of the user's - and whatever the mod system writes has it put back as OpenCAGE's settings say. Set by the
-         * editor (ModServices); null where this code runs on its own, which sets nothing aside and puts nothing back. */
+         * UI.PAK beside the game's (UiMovieOverrides), and a launched level's loading playlist in GBL_ITEM.BML (LevelLoadingMovies).
+         * The mod system looks past it everywhere: a file's hash, its original, the user's own version of it and what a mod ships
+         * are all of the file WITHOUT it, so switching an option never reads as a change of the user's - and whatever the mod
+         * system writes has it put back as OpenCAGE's settings say. Set by the editor (ModServices); null where this code runs on
+         * its own, which sets nothing aside and puts nothing back. */
 
         /// <summary>(normalised path, bytes) -> the bytes without OpenCAGE's own content, or null when they hold none.</summary>
         public static Func<string, byte[], byte[]> WithoutOwnContent;
@@ -50,7 +51,8 @@ namespace OpenCAGE.Modding
 
         /// <summary>Whether a file can hold OpenCAGE's own content at all.</summary>
         public static bool MayHoldOwnContent(string normalisedPath) =>
-            string.Equals(normalisedPath, "DATA/UI.PAK", StringComparison.OrdinalIgnoreCase);
+            string.Equals(normalisedPath, "DATA/UI.PAK", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(normalisedPath, "DATA/GBL_ITEM.BML", StringComparison.OrdinalIgnoreCase);
 
         /// <summary>A file's bytes as the mod system sees them: without OpenCAGE's own content.</summary>
         public static byte[] ContentOf(string normalisedPath, byte[] bytes)
@@ -155,6 +157,8 @@ namespace OpenCAGE.Modding
             "DATA/LOGS/",
             //OpenCAGE copies its debug text fonts here on every start (Program.cs): every install has them, no mod carries them
             "DATA/DEBUG_FONT/",
+            //A launched level's own loading movies, copied in for that launch only (LevelLoadingMovies)
+            "DATA/UI/MOVIES/OCLVL_",
         };
         private static readonly string[] _excludedFiles =
         {

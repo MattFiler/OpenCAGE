@@ -175,7 +175,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "launch_game",
                 Title = "Launch the game",
-                Description = "Start Alien: Isolation straight into a level (Steam, Epic or GOG). Closes this install's game first if running, and writes the launch_options AI.exe patches and UI mods as set (and puts those of options Launch Game no longer has back off). The level's own UI movies (list_ui_overrides) go in for this launch (level_ui lists them; one the level brings is used over the matching UI mod) and come out again once the game closes or anything else is launched. The game loads what is on disk: save (or save_level first) - a level needing a Save & Build is refused unless allow_stale_build (get_editor_state level.build says why). A level starts playing straight away: the title screen is skipped, as Launch Game's Load straight into does. wait_for 'level' or 'playing' waits until the game reports it through Live Link (launch_options live_link on), 'process' until AI.exe runs. Installs or removes the runtime utils ASI (the Debug tools - debug_menu and its dont_write_saves, debug_entities, hot_reload, live_link - and cap_fps, unlock_mouse, possess_characters) as launch_options say. Without a level it starts at the main menu. If the game crashes, crash triage names the cause and the fix from its crash dump: in the error when a wait_for ends in a crash, else as previous_crash in the next launch's result (crash_triage reads it any time).",
+                Description = "Start Alien: Isolation straight into a level (Steam, Epic or GOG). Closes this install's game first if running, and writes the launch_options AI.exe patches and UI mods as set (and puts those of options Launch Game no longer has back off). The level's own UI movies (list_ui_overrides) go in for this launch (level_ui lists them; one the level brings is used over the matching UI mod) and come out again once the game closes or anything else is launched. So do its launch settings (get_level_launch_settings: texture heap, character collisions, loading playlist; launch_settings lists them). The game loads what is on disk: save (or save_level first) - a level needing a Save & Build is refused unless allow_stale_build (get_editor_state level.build says why). A level starts playing straight away: the title screen is skipped, as Launch Game's Load straight into does. wait_for 'level' or 'playing' waits until the game reports it through Live Link (launch_options live_link on), 'process' until AI.exe runs. Installs or removes the runtime utils ASI (the Debug tools - debug_menu and its dont_write_saves, debug_entities, hot_reload, live_link - and cap_fps, unlock_mouse, possess_characters) as launch_options say. Without a level it starts at the main menu. If the game crashes, crash triage names the cause and the fix from its crash dump: in the error when a wait_for ends in a crash, else as previous_crash in the next launch's result (crash_triage reads it any time).",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("level", "The level to start in, as list_levels names it. Defaults to the open level; 'menu' for the main menu."),
                     McpSchema.String("save", "Save the open level first when it is the one launched: none (default), save, build (Save & Build), or auto (build if it needs one, else save if it has unsaved changes).", options: new[] { "none", "save", "build", "auto" }),
@@ -482,6 +482,10 @@ namespace OpenCAGE.MCP
 
             //A level's own UI movies and launching a mod (McpUiOverrideTools.cs: the 'game' toolset)
             foreach (McpTool tool in McpUiOverrideTools.Tools())
+                yield return tool;
+
+            //A level's launch settings: texture heap, character collisions, loading playlist (McpLevelLaunchTools.cs, the 'game' toolset)
+            foreach (McpTool tool in McpLevelLaunchTools.Tools())
                 yield return tool;
 
             //Why the game crashed (McpCrashTools.cs: crash_triage, the 'game' toolset)
@@ -1703,6 +1707,9 @@ namespace OpenCAGE.MCP
                 List<LevelUiOverrides.Movie> wouldUse = LevelUiOverrides.Of(Singleton.PathToAI, level).Keys.ToList();
                 if (wouldUse.Count != 0)
                     result["level_ui"] = new JArray(wouldUse.Select(o => o.Name));
+                List<string> wouldSet = menu ? new List<string>() : LevelLaunchSettings.Of(Singleton.PathToAI, level).Describe();
+                if (wouldSet.Count != 0)
+                    result["launch_settings"] = new JArray(wouldSet);
                 result["wait_for"] = waitFor;
                 if (save != "none") result["would_save"] = launchesOpen ? save : "nothing (the launched level is not open)";
                 return result;
@@ -1732,6 +1739,12 @@ namespace OpenCAGE.MCP
                 call.Note("The level's UI and the UI mods could not all be set (" + uiModProblem + "): the game runs with UI.PAK as it is.");
             if (levelUi.Count != 0)
                 result["level_ui"] = new JArray(levelUi.Select(o => o.Name));
+            //The level's launch settings (texture heap, collisions, loading playlist), the game's own for what it doesn't set
+            string launchSettingsProblem = LevelLaunch.ApplyForLaunch(Singleton.PathToAI, menu ? null : level, out List<string> launchSettings);
+            if (launchSettingsProblem != null)
+                call.Note("The level's launch settings could not all be set (" + launchSettingsProblem + ").");
+            if (launchSettings.Count != 0)
+                result["launch_settings"] = new JArray(launchSettings);
             //The level to start in, the integrity check and the popup are what a launch needs; the rest are options
             bool launchPatched = PatchManager.PatchLaunchMode(platform, Singleton.PathToAI, level) && !patchFailures.Contains("file integrity check") && !patchFailures.Contains("popup message");
             if (!launchPatched)
@@ -1761,6 +1774,7 @@ namespace OpenCAGE.MCP
                 started = Process.Start(new ProcessStartInfo() { FileName = Singleton.PathToAI + "/AI.exe", WorkingDirectory = Singleton.PathToAI });
             //The level's own UI movies come out again once this game has closed
             LevelUiOverrides.PutBackWhenGameCloses(Singleton.PathToAI);
+            LevelLaunch.PutBackWhenGameCloses(Singleton.PathToAI);
             //Crash triage: the last launch's crash if no result has said so yet, and a watch on this one (Scripts\CrashTriage)
             CrashTriage.CrashReport previousCrash = CrashTriage.CrashWatch.TakeUnreported();
             CrashTriage.CrashWatch.Launched(Singleton.PathToAI, menu ? "menu" : level, started);

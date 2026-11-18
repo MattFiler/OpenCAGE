@@ -210,9 +210,9 @@ build: epic  5FD25676 01F9F000 Epic Games Store
 [character_cap]
 title: The 19th character
 cause: A 19th character came into play. The game holds 18 characters at once, the player included, and a dead body keeps its place until it is despawned.
-cause: A spawn does not check that a place is free, so the 19th crashes the game.
+cause: A spawn does not check that a place is free, so the 19th crashes the game. A launch from OpenCAGE puts a guard against it into the game (the spawn waits, or is left out).
 fix: Keep the characters that can be alive or lying dead at once (the player, allies, aliens and NPCs) to 18 at most: despawn bodies before more spawn, spawn in waves, or lower the spawners' counts.
-docs: https://opencage.co.uk/docs/launch-game/#crash-triage
+docs: https://opencage.co.uk/docs/level-launch-settings/#characters
 site: steam 3D0470 3F0 3D0546
 site: gog   3D0420 3F0 3D04F6
 site: epic  3E1470 3F0 3E1546
@@ -220,7 +220,7 @@ site: epic  3E1470 3F0 3E1546
 [alien_no_backstage]
 title: The alien has no vents to retreat into
 cause: The alien tried to go backstage into the vents (it was flamed, sent away by the script, or finished an ambush), but the level has no PathfindingAlienBackstageNode, so there was nowhere to go.
-fix: Give the alien vents to go backstage through: File > Alien Vents... (MCP add_alien_vents) finds spots under ceilings and places the game's own vent composites, 3 or more spread out - then Save & Build with the navmesh baker on, to bake the backstage navmesh. Save & Build warns about this.
+fix: Give the alien vents to go backstage through: File > Calculate Alien Vents (MCP add_alien_vents) finds spots under ceilings and places the game's own vent composites, 3 or more spread out - then Save & Build with the navmesh baker on, to bake the backstage navmesh. Save & Build warns about this.
 docs: https://opencage.co.uk/docs/alien-vents/
 site: steam 1EA270 B0 1EA27E
 site: gog   1EA770 B0 1EA77E

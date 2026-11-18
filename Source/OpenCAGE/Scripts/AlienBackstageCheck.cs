@@ -88,7 +88,7 @@ namespace OpenCAGE
             return "The alien can spawn in this level (" + where + "), but the level has no PathfindingAlienBackstageNode" +
                 (result.UnplacedNodes != 0 ? " placed (it holds " + result.UnplacedNodes + " in composites it never places)" : "") +
                 ", so the game will crash the first time the alien retreats or despawns: when it is flamed, sent away by the script, or after an ambush. " +
-                "Give the alien vents to go backstage through - File > Alien Vents... (or MCP add_alien_vents) finds spots under ceilings and places retail's vent composites " +
+                "Give the alien vents to go backstage through - File > Calculate Alien Vents (or MCP add_alien_vents) finds spots under ceilings and places retail's vent composites " +
                 "(Archetypes\\Jobs\\VentTraversalMarker, 6M, 9m), 3 or more spread out - then Save & Build again, with the navmesh baker on, to bake the backstage navmesh.";
         }
 

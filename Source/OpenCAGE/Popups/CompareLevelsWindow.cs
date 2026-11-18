@@ -112,8 +112,8 @@ namespace OpenCAGE.Popups
         }
 
         /// <summary>
-        /// File > Compare Levels... and File > Record Edits..., put in after the Level Check (or <paramref name="after"/>, Save and Build
-        /// Level) in its menu: enabled while a level is open. Called once from the editor's constructor.
+        /// File > Compare Levels, put in after Check Level (or <paramref name="after"/>), and File > Record Edits in its own section at the
+        /// end of the menu: Record Edits is enabled while a level is open. Called once from the editor's constructor.
         /// </summary>
         public static void AttachMenu(ToolStripMenuItem after)
         {
@@ -121,20 +121,20 @@ namespace OpenCAGE.Popups
             ToolStrip owner = after?.Owner;
             if (owner == null) return;
             ToolStripItem anchor = owner.Items.Cast<ToolStripItem>().FirstOrDefault(o => o.Name == "levelCheckToolStripMenuItem") ?? after;
-            ToolStripMenuItem compare = new ToolStripMenuItem("Compare Levels...") { Name = "compareLevelsToolStripMenuItem", ToolTipText = "What differs between two copies of a level: script, models, materials, collision, navigation, sound, files..." };
+            ToolStripMenuItem compare = new ToolStripMenuItem("Compare Levels") { Name = "compareLevelsToolStripMenuItem", ToolTipText = "What differs between two copies of a level: script, models, materials, collision, navigation, sound, files..." };
             compare.Click += (s, e) => Open();
-            ToolStripMenuItem record = new ToolStripMenuItem("Record Edits...") { Name = "recordEditsToolStripMenuItem", ToolTipText = "Record your edits as a recipe, and replay a recipe onto another copy of the level or another level" };
+            ToolStripMenuItem record = new ToolStripMenuItem("Record Edits") { Name = "recordEditsToolStripMenuItem", ToolTipText = "Record your edits as a recipe, and replay a recipe onto another copy of the level or another level" };
             record.Click += (s, e) => RecordEditsWindow.Open();
-            int at = owner.Items.IndexOf(anchor) + 1;
-            owner.Items.Insert(at, compare);
-            owner.Items.Insert(at + 1, record);
+            owner.Items.Insert(owner.Items.IndexOf(anchor) + 1, compare);
+            owner.Items.Add(new ToolStripSeparator() { Name = "recordEditsToolStripSeparator" });
+            owner.Items.Add(record);
             if (menu != null)
                 menu.DropDownOpening += (s, e) =>
                 {
                     bool open = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Commands != null;
                     record.Enabled = open;
                     compare.Enabled = true; //two folders on disk need no open level
-                    record.Text = Recipes.RecipeRecorder.Recording ? "Record Edits... (recording)" : "Record Edits...";
+                    record.Text = Recipes.RecipeRecorder.Recording ? "Record Edits (recording)" : "Record Edits";
                 };
         }
         #endregion

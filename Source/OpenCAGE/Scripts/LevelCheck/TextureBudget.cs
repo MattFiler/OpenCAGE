@@ -61,10 +61,12 @@ namespace OpenCAGE
             public List<Item> Top = new List<Item>();
             public int LevelTextures;
             public int? HeapDefaultMB, HeapUltraMB;
+            /// <summary>The level's own launch setting (LevelLaunchSettings), or null.</summary>
+            public int? LevelHeapMB;
             public string SettingsPath;
 
-            /// <summary>The heap the game uses on a PC with 2.2 GB free (any PC that runs it): Ultra's, else Default's.</summary>
-            public int HeapMB => HeapUltraMB ?? HeapDefaultMB ?? RetailHeapMB;
+            /// <summary>The heap the game uses on a PC with 2.2 GB free (any PC that runs it): Ultra's, else Default's; the level's own when larger.</summary>
+            public int HeapMB => Math.Max(HeapUltraMB ?? HeapDefaultMB ?? RetailHeapMB, LevelHeapMB ?? 0);
             public double PeakMB => PeakBytes / 1048576.0;
 
             public JObject ToJson(int top = 10) => new JObject()
@@ -78,6 +80,7 @@ namespace OpenCAGE
                 ["heap_mb"] = HeapMB,
                 ["heap_default_mb"] = HeapDefaultMB,
                 ["heap_ultra_mb"] = HeapUltraMB,
+                ["level_heap_mb"] = LevelHeapMB,
                 ["level_textures"] = LevelTextures,
                 ["zones"] = new JArray(Zones.OrderByDescending(o => o.Bytes).Take(20).Select(o => new JObject() { ["zone"] = o.Name, ["mb"] = Math.Round(o.Bytes / 1048576.0, 1), ["textures"] = o.Textures })),
                 ["top"] = new JArray(Top.Take(top).Select(o => new JObject()
@@ -175,6 +178,8 @@ namespace OpenCAGE
             }).ToList();
 
             ReadHeap(estimate);
+            //The level's own launch setting raises it for launches into the level
+            estimate.LevelHeapMB = LevelLaunchSettings.Of(Singleton.PathToAI, level.Name).TextureHeapMB;
             return estimate;
         }
 
@@ -192,7 +197,7 @@ namespace OpenCAGE
                 if (estimate.PeakMB > heap * 0.85)
                     notes.Add("Texture memory: the level now needs about " + estimate.PeakMB.ToString("0") + " MB of the game's " + heap + " MB texture heap at once (" + estimate.PeakWhere + ")" +
                               (estimate.PeakMB > heap ? ": textures past it draw blocky" : ": close to full") + ". Import big texture sets with generate.compact_textures (half the memory), " +
-                              "or see check_level {checks: ['texture_budget']} for the biggest; set_texture_heap raises the heap (global).");
+                              "or see check_level {checks: ['texture_budget']} for the biggest; set_level_launch_settings texture_heap_mb raises the heap for this level's launches.");
             }
             catch (Exception e) { Debug.Log("LevelCheck", "Could not estimate the texture memory after an import: " + e.Message); }
         }
@@ -298,19 +303,28 @@ namespace OpenCAGE
                 Title = (estimate.Zones.Count == 0 ? "The level's textures can need up to about " + peak.ToString("0") + " MB at once (it has one zone, so none are released)" : "About " + peak.ToString("0") + " MB of textures stream at once " + estimate.PeakWhere) + ", " + (over ? "more than" : "close to") + " the game's " + heap + " MB texture heap",
                 Text = (over ? "Textures that don't fit are drawn from their small 128 px copies: blurry, blocky surfaces. " : "Little is left for fragmentation and for what no placed model draws (characters, weapons, effects), so some textures may draw blocky. ") +
                        "The biggest: " + top + ". Import big texture sets with Compact Textures (DXT1 instead of BC7: half the memory), use smaller images, split the level into zones, " +
-                       (heap < TextureBudget.RaisedHeapMB ? "or raise the heap to " + TextureBudget.RaisedHeapMB + " MB (global: every level and every player of your mod)." : "or cut the textures down - " + heap + " MB is already as far as the 32-bit game's memory allows (768 took it past 2 GiB)."),
+                       (heap < LevelLaunchSettings.MaxHeapMB ? "or give the level a larger texture heap (View > Level Config > Level Launch Settings: for launches into this level only)." : "or cut the textures down - " + heap + " MB is as far as the 32-bit game's memory allows."),
             };
             foreach (TextureBudget.Item item in estimate.Top.Take(10))
                 finding.Sources.Add(new LevelCheckSource() { Text = item.Texture.Name + ": " + (item.Bytes / 1048576.0).ToString("0.0") + " MB, " + item.Texture.Format + " " + (item.Texture.TextureStreamed?.Width ?? 0) + "x" + (item.Texture.TextureStreamed?.Height ?? 0) + ", " + item.Where });
-            if (heap < TextureBudget.RaisedHeapMB)
+            if (heap < LevelLaunchSettings.MaxHeapMB)
             {
+                //What fits the peak with a sixth to spare for fragmentation and unplaced textures, in 64 MB steps
+                int wanted = Math.Min(LevelLaunchSettings.MaxHeapMB, Math.Max(heap + 64, (int)Math.Ceiling(peak * 1.17 / 64.0) * 64));
+                string level = context.Level.Name;
                 finding.Fix = new LevelCheckFix()
                 {
-                    Global = true,
-                    Label = "Raise the texture heap to " + TextureBudget.RaisedHeapMB + " MB (GLOBAL)",
-                    Detail = "Sets Streaming Texture Heap Size (Default and Ultra) to " + TextureBudget.RaisedHeapMB + " MB in the game's DATA\\ENGINE_SETTINGS.XML. This is not part of the level: " +
-                             "every level uses it, and a mod exported with its config changes carries it to everyone who plays it. 512 MB is tested; Reset Configs > Graphics puts 300 back.",
-                    Apply = fromTool => TextureBudget.SetHeap(Singleton.PathToAI, TextureBudget.RaisedHeapMB),
+                    Label = "Give this level a " + wanted + " MB texture heap",
+                    Detail = "Sets the level's launch settings (DATA\\ENV\\" + level.Replace('/', '\\') + "\\" + LevelLaunchSettings.FileName + ", carried with the level by a mod): launches " +
+                             "into it from OpenCAGE give the game a texture heap of at least " + wanted + " MB; every other level keeps the player's own.",
+                    Apply = fromTool =>
+                    {
+                        LevelLaunchSettings settings = LevelLaunchSettings.Of(Singleton.PathToAI, level);
+                        settings.TextureHeapMB = wanted;
+                        string problem = LevelLaunchSettings.Save(Singleton.PathToAI, level, settings);
+                        if (problem != null) throw new InvalidOperationException("The launch settings could not be saved: " + problem);
+                        return level + "'s launches now give the game a texture heap of at least " + wanted + " MB.";
+                    },
                 };
             }
             found.Add(finding);

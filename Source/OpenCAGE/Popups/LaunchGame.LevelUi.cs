@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -71,6 +72,10 @@ namespace OpenCAGE
             }
             catch { }
             _levelUiLine.Text = text ?? (loadToLevel.Checked ? "Level UI: the game's own (this level brings none)" : "Level UI: the game's own");
+            //...and the level's launch settings (View > Level Config > Level Launch Settings), when it has any
+            List<string> launchSettings = loadToLevel.Checked ? LevelLaunchSettings.Of(Singleton.PathToAI, LaunchedLevel()).Describe() : new List<string>();
+            if (launchSettings.Count != 0)
+                _levelUiLine.Text += " Launch settings: " + string.Join(", ", launchSettings) + ".";
             _levelUiTips.SetToolTip(_levelUiLine, _levelUiLine.Text + "\n\n" + LevelUiTip);
         }
     }

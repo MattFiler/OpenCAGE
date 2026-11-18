@@ -49,7 +49,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "launch_mod",
                 Title = "Launch a mod",
-                Description = "The Mod Manager's Launch Mod: start the game for an installed mod (ticked and applied, its files as installed - mods action list / apply / repair) into the level it starts in: as its package says (Create a Mod's 'Launch Mod starts it in'), else its only level; 'level' picks one (required when the mod has several and says none). That level's own UI movies go in for this launch (list_ui_overrides; they come out again once the game closes or anything else is launched) and the launch options the package asks for (no_ui, patch_current_gen_optimisations, render_constant_ambient, larger_animation_memory) are written over the player's for this launch only; the rest is as launch_game does with launch_options as set (closes a running game first; Steam starts its registered install). Use game_status / runtime_utils to wait for the level.",
+                Description = "The Mod Manager's Launch Mod: start the game for an installed mod (ticked and applied, its files as installed - mods action list / apply / repair) into the level it starts in: as its package says (Create a Mod's 'Launch Mod starts it in'), else its only level; 'level' picks one (required when the mod has several and says none). That level's own UI movies go in for this launch (list_ui_overrides; they come out again once the game closes or anything else is launched), and its launch settings (get_level_launch_settings) and the launch options the package asks for (no_ui, patch_current_gen_optimisations, render_constant_ambient, larger_animation_memory) are written over the player's for this launch only; the rest is as launch_game does with launch_options as set (closes a running game first; Steam starts its registered install). Use game_status / runtime_utils to wait for the level.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("mod", "The mod's id or name (mods action list shows them).", required: true),
                     McpSchema.String("level", "Start in this level instead of the mod's own choice ('menu' for the main menu)."),
@@ -119,6 +119,7 @@ namespace OpenCAGE.MCP
             {
                 result["dry_run"] = true;
                 result["level_ui"] = new JArray(LevelUiOverrides.Of(Singleton.PathToAI, startIn).Keys.Select(o => o.Name));
+                result["launch_settings"] = new JArray(LevelLaunchSettings.Of(Singleton.PathToAI, startIn).Describe());
                 result["game_running"] = EditorUtils.ThisInstallsGameRunning();
                 return result;
             }
@@ -138,6 +139,8 @@ namespace OpenCAGE.MCP
             }
             result["launched"] = true;
             result["level_ui"] = new JArray(launched.LevelUi.Select(o => o.Name));
+            if (launched.LaunchSettings.Count != 0)
+                result["launch_settings"] = new JArray(launched.LaunchSettings);
             if (launched.Closed.Count != 0)
                 call.Note("The game was already running (" + string.Join(", ", launched.Closed) + ") and was closed first.");
             foreach (string problem in launched.Problems)

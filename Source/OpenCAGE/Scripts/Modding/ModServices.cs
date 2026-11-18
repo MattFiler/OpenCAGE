@@ -51,8 +51,20 @@ namespace OpenCAGE.Modding
                 //every hash, original, own version and package, and put back after every write (ModToolkit.WithoutOwnContent)
                 if (ModToolkit.WithoutOwnContent == null)
                 {
-                    ModToolkit.WithoutOwnContent = (path, bytes) => UiMovieOverrides.WithoutOwnedEntries(bytes);
-                    ModToolkit.WithOwnContent = (path, bytes) => UiMovieOverrides.WithOwnedEntries(bytes);
+                    ModToolkit.WithoutOwnContent = (path, bytes) =>
+                    {
+                        if (LevelLoadingMovies.MayHold(path))
+                            return LevelLoadingMovies.WithoutPlaylist(bytes);
+                        byte[] withoutEntries = UiMovieOverrides.WithoutOwnedEntries(bytes);
+                        return LevelLoadingMovies.WithoutScreenChange(withoutEntries ?? bytes) ?? withoutEntries;
+                    };
+                    ModToolkit.WithOwnContent = (path, bytes) =>
+                    {
+                        if (LevelLoadingMovies.MayHold(path))
+                            return LevelLoadingMovies.WithPlaylistInUse(bytes);
+                        byte[] withEntries = UiMovieOverrides.WithOwnedEntries(bytes);
+                        return LevelLoadingMovies.WithScreenChangeInUse(withEntries ?? bytes) ?? withEntries;
+                    };
                 }
 
                 string root = Singleton.PathToAI;

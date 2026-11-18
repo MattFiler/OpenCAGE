@@ -89,6 +89,7 @@ namespace OpenCAGE.Modding
         {
             public string Level;                                        //what the game starts in (PRODUCTION/FRONTEND for the menu)
             public List<LevelUiOverrides.Movie> LevelUi = new List<LevelUiOverrides.Movie>();
+            public List<string> LaunchSettings = new List<string>();    //the level's launch settings that went in, in words
             public Dictionary<string, bool> Options = new Dictionary<string, bool>();
             public List<string> Closed = new List<string>();            //the game, running before, closed first
             public List<string> Problems = new List<string>();          //what couldn't be set up (the game still starts)
@@ -142,6 +143,10 @@ namespace OpenCAGE.Modding
             string ui = LevelUiOverrides.ApplyForLaunch(pathToAI, result.Level, out result.LevelUi);
             if (ui != null)
                 result.Problems.Add(ui);
+            //...and its launch settings (texture heap, collisions, loading playlist)
+            string settings = LevelLaunch.ApplyForLaunch(pathToAI, menu ? null : result.Level, out result.LaunchSettings);
+            if (settings != null)
+                result.Problems.Add(settings);
 
             if (platform == PatchManager.Platform.STEAM)
                 Process.Start("steam://rungameid/214490");
@@ -149,6 +154,7 @@ namespace OpenCAGE.Modding
                 result.Started = Process.Start(new ProcessStartInfo() { FileName = Path.Combine(pathToAI, "AI.exe"), WorkingDirectory = pathToAI });
             //...which come out again once this game has closed
             LevelUiOverrides.PutBackWhenGameCloses(pathToAI);
+            LevelLaunch.PutBackWhenGameCloses(pathToAI);
             //Crash triage watches the game until it closes and names the cause if it crashes
             CrashTriage.CrashWatch.Launched(pathToAI, result.Level, result.Started);
             return result;

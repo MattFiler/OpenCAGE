@@ -17,7 +17,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "check_level",
                 Title = "Check the level for crashes and silent failures",
-                Description = "The Level Check (File > Level Check): what in the open level will crash the game or silently not work in it - each a lesson found the hard way in game. " +
+                Description = "The Level Check (File > Check Level): what in the open level will crash the game or silently not work in it - each a lesson found the hard way in game. " +
                     "Checks: " + string.Join("; ", LevelCheck.Checks.Select(o => o.Id + " (" + o.About + ")")) + ". " +
                     "save_level with build=true runs it too and lists what it finds (not dismissed) as level_warnings. Each finding has an id, severity (crash, broken, warning), " +
                     "where it comes from, and a fix when one is mechanical (fix_level_check applies it, or dismisses a finding for this level). figures carries what the checks " +

@@ -64,7 +64,7 @@ namespace OpenCAGE
                 Label = "Add vents...",
                 Detail = "Finds spots on the navmesh under ceilings retail's vent composites fit (VentTraversalMarker 4.25 m, 6M, 9m) and places " +
                     (count > 0 ? count + " more vent(s)" : "3 or more vents, spread out,") + " in network " + network + " as one undo step, bringing the vent composites in from a retail level of this install first " +
-                    "(not undoable, as any import). From the Level Check window it opens File > Alien Vents to pick the spots. Then Save & Build with the navmesh baker to bake the alien's backstage.",
+                    "(not undoable, as any import). From the Level Check window it opens File > Calculate Alien Vents to pick the spots. Then Save & Build with the navmesh baker to bake the alien's backstage.",
                 Apply = fromTool =>
                 {
                     if (!fromTool)
@@ -82,10 +82,10 @@ namespace OpenCAGE
     }
 
     /// <summary>
-    /// The game holds at most 18 characters at once (player and undespawned corpses included) in one fixed pool (ACTIVE_CHARACTERS,
-    /// 0x12 entries). A spawn checks for a free slot without reserving it, so a 19th character or two spawns racing for the last slot
-    /// write through a null pointer (request_character, GOG AI+0x3d04f6 / Steam 0x7D0546). Each placed Character is one the script
-    /// can have alive, so the count is what the level CAN reach; its script may keep some apart.
+    /// The game holds at most 18 characters at once (player and undespawned corpses included) in one fixed pool of 0x12 entries. A spawn
+    /// checks for a free slot without reserving it, so two spawns racing for the last slot write through a null pointer (GOG AI+0x3d04f6 /
+    /// Steam 0x7D0546) - unless the launch put in the spawn guard (LevelLaunchPatches): the extra spawn waits, or is refused. Each placed
+    /// Character is one the script can have alive, so the count is what the level CAN reach; its script may keep some apart.
     /// </summary>
     internal sealed class CharacterCapRule : LevelCheckRule
     {
@@ -95,7 +95,7 @@ namespace OpenCAGE
 
         public override string Id => "character_cap";
         public override string Name => "Character cap";
-        public override string About => "The game holds 18 characters at once, the player and corpses included; the 19th crashes it. Counts the Characters the level places (each can be alive at once).";
+        public override string About => "The game holds 18 characters at once, the player and corpses included; past that a spawn crashes the game, or waits for a free slot in OpenCAGE's launches. Counts the Characters the level places (each can be alive at once).";
         public override IEnumerable<FunctionType> Walks => new[] { FunctionType.Character };
 
         /* How many Characters each retail level places as shipped (this rule's own count: NPCs placed plus the player). Their scripts
@@ -182,16 +182,19 @@ namespace OpenCAGE
                 ["by_kind"] = new JObject(slots.GroupBy(o => o.Kind).OrderByDescending(o => o.Count()).Select(o => new JProperty(o.Key, o.Count()))),
             };
 
-            //Spawned together as the level starts: past the pool that is a crash on load, whatever the script does next
+            //Spawned together as the level starts: past the pool that is a crash on load, whatever the script does next - or, with
+            //the spawn guard OpenCAGE's launches put in, characters that are left out
+            bool guarded = LevelLaunch.SpawnGuardOn;
             if (atStart > Pool)
             {
                 LevelCheckFinding start = new LevelCheckFinding()
                 {
                     Key = "at_start",
-                    Severity = LevelCheckSeverity.Crash,
+                    Severity = guarded ? LevelCheckSeverity.Warning : LevelCheckSeverity.Crash,
                     Title = atStart + " characters spawn as the level starts (the game holds " + Pool + ", the player included)",
-                    Text = "Every Character with spawn_on_reset spawns when the level loads, and the 19th character crashes the game. Untick spawn_on_reset on " +
-                           (atStart - Safe) + " or more of them and spawn them later from the script, after others are despawned.",
+                    Text = "Every Character with spawn_on_reset spawns when the level loads, and " + (guarded ?
+                           "only " + Pool + " fit: launched from OpenCAGE, the ones past that are left out (they don't appear) instead of crashing the game; started any other way, the game crashes. " :
+                           "the 19th character crashes the game. ") + "Untick spawn_on_reset on " + (atStart - Safe) + " or more of them and spawn them later from the script, after others are despawned.",
                 };
                 foreach (Slot slot in slots.Where(o => o.OnReset && !o.Player))
                     start.Sources.Add(context.Source(slot.Placement, slot.Kind));
@@ -204,10 +207,11 @@ namespace OpenCAGE
             LevelCheckFinding finding = new LevelCheckFinding()
             {
                 Key = "can_reach",
-                Severity = LevelCheckSeverity.Crash,
+                Severity = guarded ? LevelCheckSeverity.Warning : LevelCheckSeverity.Crash,
                 Title = "The level can have " + total + " characters alive at once (the game holds " + Pool + ", the player included)",
                 Text = "The game keeps every character - the player, each NPC and alien, and each corpse until it is despawned - in a pool of " + Pool +
-                       "; the 19th crashes it, and so can a spawn racing another for the last slot. This level places " + total + " Characters" +
+                       (guarded ? "; launched from OpenCAGE, a spawn with no free slot waits until one frees (corpses are despawned for it) or, spawning in the same moment as others, is left out, instead of crashing; started any other way it can crash the game. " :
+                       "; the 19th crashes it, and so can a spawn racing another for the last slot. ") + "This level places " + total + " Characters" +
                        (retail ? " (the level shipped with " + shipped + ")" : "") + ", each of which the script can have alive. " +
                        "If the script never has more than " + Safe + " at a time (an intro actor despawned before the player spawns, one of two aliens chosen), dismiss this; " +
                        "otherwise despawn characters (and corpses: DespawnCharacter) before spawning more, or place fewer. The Debug Menu's Characters line shows the slots in use in game.",

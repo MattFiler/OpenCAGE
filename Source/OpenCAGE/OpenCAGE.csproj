@@ -1018,6 +1018,19 @@
     <Compile Include="Scripts\AssetUsage.cs" />
     <Compile Include="Scripts\UiMovieOverrides.cs" />
     <Compile Include="Scripts\LevelUiOverrides.cs" />
+    <Compile Include="Scripts\LevelUiOverrides.Files.cs" />
+    <Compile Include="Scripts\MapAssets\MapAssets.cs" />
+    <Compile Include="Scripts\MapAssets\MapFloorPlan.cs" />
+    <Compile Include="Scripts\MapAssets\MapFloors.cs" />
+    <Compile Include="Scripts\MapAssets\MapItemCheck.cs" />
+    <Compile Include="Scripts\MapAssets\MapMovie.cs" />
+    <Compile Include="Scripts\MapAssets\MapPagePatch.cs" />
+    <Compile Include="Scripts\MapAssets\MapPlanner.cs" />
+    <Compile Include="Scripts\MapAssets\MapTransform.cs" />
+    <Compile Include="Scripts\MCP\McpMapAssetTools.cs" />
+    <Compile Include="Popups\MapAssetsWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Scripts\MCP\McpUiOverrideTools.cs" />
     <Compile Include="Popups\LevelUiOverridesEditor.cs">
       <SubType>Form</SubType>
@@ -1027,6 +1040,18 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="CommandsEditor.LevelUi.cs">
+      <DependentUpon>CommandsEditor.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Scripts\LevelLaunch\LevelLaunch.cs" />
+    <Compile Include="Scripts\LevelLaunch\LevelLaunchPatches.cs" />
+    <Compile Include="Scripts\LevelLaunch\LevelLaunchSettings.cs" />
+    <Compile Include="Scripts\LevelLaunch\LevelLoadingMovies.cs" />
+    <Compile Include="Scripts\MCP\McpLevelLaunchTools.cs" />
+    <Compile Include="Popups\LevelLaunchSettingsEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="CommandsEditor.LevelLaunch.cs">
       <DependentUpon>CommandsEditor.cs</DependentUpon>
       <SubType>Form</SubType>
     </Compile>

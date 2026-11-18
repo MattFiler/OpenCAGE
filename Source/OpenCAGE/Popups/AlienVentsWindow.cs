@@ -13,7 +13,7 @@ using System.Windows.Forms;
 namespace OpenCAGE.Popups
 {
     /// <summary>
-    /// File > Alien Vents...: finds spots on the navmesh for retail's vent composites (<see cref="AlienVents.Propose"/>), places the
+    /// File > Calculate Alien Vents: finds spots on the navmesh for retail's vent composites (<see cref="AlienVents.Propose"/>), places the
     /// ticked ones as one undo step and runs Save &amp; Build to bake the backstage. Importing the vent composites is not undoable.
     /// </summary>
     internal class AlienVentsWindow : BaseWindow
@@ -147,13 +147,13 @@ namespace OpenCAGE.Popups
             return window;
         }
 
-        /// <summary>File > Alien Vents..., after the Level Check item (or after <paramref name="after"/>).</summary>
+        /// <summary>File > Calculate Alien Vents, after the Check Level item (or after <paramref name="after"/>).</summary>
         public static void AttachMenu(ToolStripMenuItem after)
         {
             ToolStrip owner = after?.Owner;
             if (owner == null) return;
             ToolStripDropDownItem menu = after.OwnerItem as ToolStripDropDownItem;
-            ToolStripMenuItem item = new ToolStripMenuItem("Alien Vents...") { Name = "alienVentsToolStripMenuItem", ToolTipText = "Give the alien vents to go backstage through: find spots under ceilings, place retail's vent composites, bake the backstage (an alien with no vents crashes the game when it retreats)" };
+            ToolStripMenuItem item = new ToolStripMenuItem("Calculate Alien Vents") { Name = "alienVentsToolStripMenuItem", ToolTipText = "Give the alien vents to go backstage through: find spots under ceilings, place retail's vent composites, bake the backstage (an alien with no vents crashes the game when it retreats)" };
             item.Click += (s, e) => Open();
             int at = owner.Items.IndexOf(after) + 1;
             ToolStripItem check = owner.Items.Cast<ToolStripItem>().FirstOrDefault(o => o.Name == "levelCheckToolStripMenuItem");

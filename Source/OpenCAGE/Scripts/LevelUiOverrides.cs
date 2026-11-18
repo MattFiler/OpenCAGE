@@ -18,7 +18,7 @@ namespace OpenCAGE
     /// anything else, the game closing or OpenCAGE starting takes them out again. A level's movie is used over a UI tweak for the same movie.
     /// The entries are OpenCAGE's, not the user's work (<see cref="UiMovieOverrides.IsOwnedEntry"/>).
     /// </summary>
-    public static class LevelUiOverrides
+    public static partial class LevelUiOverrides
     {
         public class Movie
         {
@@ -103,7 +103,7 @@ namespace OpenCAGE
         public static bool IsOwnedEntry(string entryName)
         {
             string name = (entryName ?? "").Replace('\\', '/').TrimStart('/');
-            return All.Any(o => string.Equals(name, o.Entry, StringComparison.OrdinalIgnoreCase));
+            return All.Any(o => string.Equals(name, o.Entry, StringComparison.OrdinalIgnoreCase)) || IsOwnedFileEntry(name);
         }
 
         #region THE LEVEL'S FILES
@@ -438,6 +438,9 @@ namespace OpenCAGE
                         pakChanged = true;
                     }
                 }
+                //The files the level's movies load themselves: in with them, out with them
+                if (WriteFiles(pak, pathToAI, bytes.Count != 0 ? level : null, problems))
+                    pakChanged = true;
                 if (pakChanged)
                 {
                     //Kept first if it's still as shipped - but this isn't the user's edit (the Mod Manager looks past these entries)
@@ -524,6 +527,8 @@ namespace OpenCAGE
                     continue;
                 changed = true;
             }
+            if (AddFilesInUse(pak, pathToAI))
+                changed = true;
             return changed;
         }
         #endregion

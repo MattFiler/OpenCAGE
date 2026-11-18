@@ -415,7 +415,8 @@ namespace OpenCAGE.DockPanels
 
         public void EnsureCompositeTreePopulated()
         {
-            if (Content?.Level?.Commands == null || !Content.Level.Commands.Loaded)
+            //Commands reads as loaded before the loader thread is done with it; the panels build once it is (OnLevelLoaded)
+            if (Content?.Level?.Commands == null || !Content.Level.Commands.Loaded || !Content.IsLoadFinished)
                 return;
 
             if (treeView1 == null || treeView1.IsDisposed || _treeUtility == null)
