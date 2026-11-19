@@ -20,102 +20,84 @@ namespace OpenCAGE.Popups.Rigging
     /// while it plays the gameplay rig's animations (<see cref="DisplayRigBuilder"/>), and optionally a DisplayModel of the open
     /// level resized onto it and the NPC archetypes that should use it (<see cref="DisplayRigFit"/>).
     /// </summary>
-    public class DisplayRigDialog : Form
+    public partial class DisplayRigDialog : Form
     {
-        private readonly ComboBox _gameplay = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 160 };
-        private readonly TextBox _name = new TextBox() { Width = 200, CharacterCasing = CharacterCasing.Upper };
-        private readonly NumericUpDown _scale = new NumericUpDown() { Minimum = 0.05m, Maximum = 20m, DecimalPlaces = 3, Increment = 0.05m, Value = 0.5m, Width = 80 };
-        private readonly DataGridView _bones = new DataGridView();
-        private readonly CheckBox _fit = new CheckBox() { Text = "Also make a display model for it from:", AutoSize = true };
-        private readonly ComboBox _source = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 260 };
-        private readonly TextBox _newDisplay = new TextBox() { Width = 260 };
-        private readonly TextBox _archetypes = new TextBox() { Multiline = true, Height = 54, Width = 520, ScrollBars = ScrollBars.Vertical };
-        private readonly PictureBox _picture = new PictureBox() { Width = 520, Height = 300, SizeMode = PictureBoxSizeMode.Zoom, BackColor = Color.FromArgb(40, 40, 40) };
-        private readonly Label _status = new Label() { AutoSize = true, MaximumSize = new Size(1040, 0) };
-        private readonly Button _create = new Button() { Text = "Create", AutoSize = true };
-        private readonly Button _cancel = new Button() { Text = "Cancel", AutoSize = true, DialogResult = DialogResult.Cancel };
-        private readonly Timer _redraw = new Timer() { Interval = 250 };
         private List<Skeleton> _rigs;
-
-        private const string Limits = "What a display rig can't change (engine): weapons, CharacterAttachmentNode attachments and the muzzle follow the GAMEPLAY rig, so a gun "
-            + "floats where a gameplay-size hand would be; feet slide, as the character still moves at the gameplay rig's speed; AI, capsule and navigation stay gameplay size; "
-            + "the rig keeps the gameplay rig's ragdoll, so a corpse is posed on gameplay-size joints. A Character uses the rig through reference_skeleton - set it on every placement that passes its own value "
-            + "(a placement's value wins over the archetype's).";
 
         public DisplayRigDialog(string gameplay)
         {
-            Text = "Create display rig";
+            InitializeComponent();
             Icon = SharedFormIcon.Icon;
-            StartPosition = FormStartPosition.CenterParent;
-            AutoSize = true;
-            AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            AcceptButton = _create;
-            CancelButton = _cancel;
             _rigs = RebindImport.CharacterRigs(Singleton.Animations);
             foreach (Skeleton s in _rigs) _gameplay.Items.Add(s.Name);
             int pick = _rigs.FindIndex(o => string.Equals(o.Name, gameplay ?? "MALE", StringComparison.OrdinalIgnoreCase));
             if (_rigs.Count != 0) _gameplay.SelectedIndex = Math.Max(0, pick);
-            BuildLayout();
             FillSources();
             _name.Text = (Gameplay?.Name ?? "MALE") + "_SMALL";
-            _gameplay.SelectedIndexChanged += (s, e) => { FillSources(); Changed(); };
-            _scale.ValueChanged += (s, e) => Changed();
-            _bones.CellValueChanged += (s, e) => Changed();
-            _bones.RowsRemoved += (s, e) => Changed();
-            _source.SelectedIndexChanged += (s, e) => SuggestDisplayName();
-            _name.TextChanged += (s, e) => SuggestDisplayName();
-            _fit.CheckedChanged += (s, e) => { _source.Enabled = _newDisplay.Enabled = _fit.Checked; };
-            _redraw.Tick += (s, e) => { _redraw.Stop(); Redraw(); };
-            _create.Click += (s, e) => CreateRig();
-            FormClosed += (s, e) => { _redraw.Dispose(); _picture.Image?.Dispose(); };
+            //attached once the lists and name are filled in, so filling them doesn't redraw or suggest a display model name
+            _gameplay.SelectedIndexChanged += Gameplay_SelectedIndexChanged;
+            _source.SelectedIndexChanged += SuggestDisplayName_Changed;
+            _name.TextChanged += SuggestDisplayName_Changed;
             OpenCAGE.Theming.ThemeManager.ApplyToForm(this);
             Redraw();
         }
 
         private Skeleton Gameplay => _gameplay.SelectedIndex >= 0 && _gameplay.SelectedIndex < _rigs.Count ? _rigs[_gameplay.SelectedIndex] : null;
 
-        private void BuildLayout()
+        private void Gameplay_SelectedIndexChanged(object sender, EventArgs e)
         {
-            FlowLayoutPanel root = new FlowLayoutPanel() { FlowDirection = FlowDirection.TopDown, AutoSize = true, Padding = new Padding(10), WrapContents = false };
-            FlowLayoutPanel row1 = Row();
-            row1.Controls.Add(Caption("Plays the animations of:")); row1.Controls.Add(_gameplay);
-            row1.Controls.Add(Caption("  New rig's name:")); row1.Controls.Add(_name);
-            row1.Controls.Add(Caption("  Size:")); row1.Controls.Add(_scale);
-            root.Controls.Add(row1);
-            root.Controls.Add(new Label() { AutoSize = true, Text = "Proportions (optional): a bone's scale multiplies its distance from its parent; an offset (metres, in the parent's frame) moves it.", MaximumSize = new Size(1040, 0) });
-
-            _bones.Width = 520; _bones.Height = 150;
-            _bones.RowHeadersVisible = false;
-            _bones.AllowUserToAddRows = true;
-            _bones.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            _bones.Columns.Add(new DataGridViewComboBoxColumn() { HeaderText = "Bone", FillWeight = 40, FlatStyle = FlatStyle.Flat });
-            _bones.Columns.Add(new DataGridViewTextBoxColumn() { HeaderText = "Scale", FillWeight = 15 });
-            _bones.Columns.Add(new DataGridViewTextBoxColumn() { HeaderText = "Offset X", FillWeight = 15 });
-            _bones.Columns.Add(new DataGridViewTextBoxColumn() { HeaderText = "Y", FillWeight = 15 });
-            _bones.Columns.Add(new DataGridViewTextBoxColumn() { HeaderText = "Z", FillWeight = 15 });
-            _bones.DataError += (s, e) => e.ThrowException = false;
-            FlowLayoutPanel middle = Row();
-            middle.Controls.Add(_bones);
-            middle.Controls.Add(_picture);
-            root.Controls.Add(middle);
-
-            FlowLayoutPanel row3 = Row();
-            row3.Controls.Add(_fit); row3.Controls.Add(_source); row3.Controls.Add(Caption("  as")); row3.Controls.Add(_newDisplay);
-            root.Controls.Add(row3);
-            root.Controls.Add(new Label() { AutoSize = true, Text = "NPC archetypes to put on it (one composite path per line; reference_skeleton, and the display model, set on each and on every placement passing its own):", MaximumSize = new Size(1040, 0) });
-            root.Controls.Add(_archetypes);
-            root.Controls.Add(new Label() { AutoSize = true, ForeColor = Color.DarkOrange, Text = Limits, MaximumSize = new Size(1040, 0) });
-            root.Controls.Add(_status);
-            FlowLayoutPanel buttons = Row();
-            buttons.Controls.Add(_create); buttons.Controls.Add(_cancel);
-            root.Controls.Add(buttons);
-            Controls.Add(root);
-            _source.Enabled = _newDisplay.Enabled = false;
-            _archetypes.Width = 1040;
+            FillSources();
+            Changed();
         }
 
-        private static FlowLayoutPanel Row() => new FlowLayoutPanel() { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false, Margin = new Padding(0, 2, 0, 2) };
-        private static Label Caption(string text) => new Label() { Text = text, AutoSize = true, Margin = new Padding(3, 6, 3, 0) };
+        private void SuggestDisplayName_Changed(object sender, EventArgs e)
+        {
+            SuggestDisplayName();
+        }
+
+        private void Scale_ValueChanged(object sender, EventArgs e)
+        {
+            Changed();
+        }
+
+        private void Bones_CellValueChanged(object sender, DataGridViewCellEventArgs e)
+        {
+            //a column's header text being set is not an edit
+            if (e.RowIndex < 0) return;
+            Changed();
+        }
+
+        private void Bones_RowsRemoved(object sender, DataGridViewRowsRemovedEventArgs e)
+        {
+            Changed();
+        }
+
+        private void Bones_DataError(object sender, DataGridViewDataErrorEventArgs e)
+        {
+            e.ThrowException = false;
+        }
+
+        private void Fit_CheckedChanged(object sender, EventArgs e)
+        {
+            _source.Enabled = _newDisplay.Enabled = _fit.Checked;
+        }
+
+        private void Redraw_Tick(object sender, EventArgs e)
+        {
+            _redraw.Stop();
+            Redraw();
+        }
+
+        private void Create_Click(object sender, EventArgs e)
+        {
+            CreateRig();
+        }
+
+        private void DisplayRigDialog_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            _redraw.Dispose();
+            _picture.Image?.Dispose();
+        }
 
         private Level OpenLevel => Singleton.Editor?.CompositeBrowser?.Content?.Level;
 
@@ -276,7 +258,7 @@ namespace OpenCAGE.Popups.Rigging
                     }, new McpScriptEdit.RunOptions() { Show = false, AlsoTouches = DisplayRigFit_Placers(level.Commands, archetypeComposites) });
                     report.Add(archetypeComposites.Count + " archetype(s) put on " + o.Name + "; " + placements + " placement(s) that passed their own reference_skeleton changed too.");
                 }
-                MessageBox.Show(this, string.Join("\r\n\r\n", report) + "\r\n\r\n" + Limits, "Display rig created", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, string.Join("\r\n\r\n", report) + "\r\n\r\n" + _limits.Text, "Display rig created", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 DialogResult = DialogResult.OK;
                 Close();
             }

@@ -16,70 +16,30 @@ namespace OpenCAGE.Popups
     /// File > Check Level: what the Level Check (Scripts\LevelCheck) finds in the open level, crashes first, with Fix where the fix is
     /// mechanical and Dismiss (kept per level on this PC). Modeless, because the script editor's tools refuse to run under a modal window.
     /// </summary>
-    public class LevelCheckWindow : BaseWindow
+    public partial class LevelCheckWindow : BaseWindow
     {
         private static LevelCheckWindow _open;
 
-        private readonly ListView _list;
-        private readonly TextBox _details;
-        private readonly Button _run, _fix, _dismiss, _goTo;
-        private readonly CheckBox _showDismissed;
-        private readonly Label _summary, _status;
         private LevelCheckReport _report;
 
         public LevelCheckWindow() : base(WindowClosesOn.COMMANDS_RELOAD)
         {
-            Text = "Level Check";
+            InitializeComponent();
             Icon = SharedFormIcon.Icon;
-            Size = new Size(1000, 640);
-            MinimumSize = new Size(720, 420);
-            StartPosition = FormStartPosition.CenterScreen;
-            ShowInTaskbar = false;
             BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/level-check/");
 
-            Panel top = new Panel() { Dock = DockStyle.Top, Height = 58, Padding = new Padding(8, 8, 8, 4) };
-            _run = new Button() { Text = "Check Now", AutoSize = true, Location = new Point(8, 8) };
-            _run.Click += (s, e) => RunCheck();
-            _showDismissed = new CheckBox() { Text = "Show dismissed", AutoSize = true, Location = new Point(110, 12) };
-            _showDismissed.CheckedChanged += (s, e) => Fill();
-            _summary = new Label() { AutoSize = false, Location = new Point(8, 36), Size = new Size(960, 18), Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right };
-            top.Controls.Add(_run);
-            top.Controls.Add(_showDismissed);
-            top.Controls.Add(_summary);
-
-            SplitContainer split = new SplitContainer() { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal, SplitterDistance = 260 };
-            _list = new ListView() { Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true, HideSelection = false, MultiSelect = false };
-            _list.Columns.Add("", 90);
-            _list.Columns.Add("Finding", 760);
-            _list.Columns.Add("Fix", 110);
-            _list.SelectedIndexChanged += (s, e) => ShowSelected();
-            _list.DoubleClick += (s, e) => GoTo();
-            split.Panel1.Controls.Add(_list);
-
-            Panel buttons = new Panel() { Dock = DockStyle.Bottom, Height = 36, Padding = new Padding(0, 4, 0, 0) };
-            _fix = new Button() { Text = "Fix", AutoSize = true, Location = new Point(0, 6), Enabled = false };
-            _fix.Click += (s, e) => ApplyFix();
-            _dismiss = new Button() { Text = "Dismiss", AutoSize = true, Location = new Point(0, 6), Enabled = false, Anchor = AnchorStyles.Top | AnchorStyles.Right };
-            _dismiss.Click += (s, e) => ToggleDismiss();
-            _goTo = new Button() { Text = "Go To", AutoSize = true, Location = new Point(0, 6), Enabled = false, Anchor = AnchorStyles.Top | AnchorStyles.Right };
-            _goTo.Click += (s, e) => GoTo();
-            buttons.Controls.Add(_fix);
-            buttons.Controls.Add(_dismiss);
-            buttons.Controls.Add(_goTo);
-            buttons.Resize += (s, e) => LayoutButtons(buttons);
-            _details = new TextBox() { Dock = DockStyle.Fill, Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, WordWrap = true };
-            split.Panel2.Controls.Add(_details);
-            split.Panel2.Controls.Add(buttons);
-            split.Panel2.Padding = new Padding(8, 4, 8, 4);
-
-            _status = new Label() { Dock = DockStyle.Bottom, Height = 22, Padding = new Padding(8, 4, 8, 0), Text = "Fixes are ordinary edits (Undo puts them back); Save & Build takes them into the game." };
-
-            Controls.Add(split);
-            Controls.Add(top);
-            Controls.Add(_status);
             Theming.ThemeManager.ApplyCurrent(this);
-            LayoutButtons(buttons);
+            LayoutButtons(_buttonsPanel);
         }
+
+        private void _run_Click(object sender, EventArgs e) => RunCheck();
+        private void _showDismissed_CheckedChanged(object sender, EventArgs e) => Fill();
+        private void _list_SelectedIndexChanged(object sender, EventArgs e) => ShowSelected();
+        private void _list_DoubleClick(object sender, EventArgs e) => GoTo();
+        private void _fix_Click(object sender, EventArgs e) => ApplyFix();
+        private void _dismiss_Click(object sender, EventArgs e) => ToggleDismiss();
+        private void _goTo_Click(object sender, EventArgs e) => GoTo();
+        private void _buttonsPanel_Resize(object sender, EventArgs e) => LayoutButtons(_buttonsPanel);
 
         private void LayoutButtons(Panel panel)
         {

@@ -21,16 +21,10 @@ namespace OpenCAGE.Popups
     /// File > Compare Levels: compares two copies of a level (as saved or now, a backup, another level, any level folder) beyond the
     /// script - models, materials, placements, lights, collision, navigation, sound, configs and more. The compare runs in the background.
     /// </summary>
-    public class CompareLevelsWindow : BaseWindow
+    public partial class CompareLevelsWindow : BaseWindow
     {
         private static CompareLevelsWindow _open;
 
-        private readonly ComboBox _before, _after;
-        private readonly CheckedListBox _categories;
-        private readonly Button _compare, _copy, _save, _goTo;
-        private readonly TreeView _tree;
-        private readonly TextBox _details;
-        private readonly Label _status;
         private LevelDiffReport _report;
         private CancellationTokenSource _running;
 
@@ -43,51 +37,25 @@ namespace OpenCAGE.Popups
 
         public CompareLevelsWindow() : base(WindowClosesOn.NONE)
         {
-            Text = "Compare Levels";
+            InitializeComponent();
             Icon = SharedFormIcon.Icon;
-            Size = new Size(1100, 720);
-            MinimumSize = new Size(760, 480);
-            StartPosition = FormStartPosition.CenterScreen;
-            ShowInTaskbar = false;
             BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/compare-levels/");
 
-            Panel top = new Panel() { Dock = DockStyle.Top, Height = 104, Padding = new Padding(8) };
-            Label beforeLabel = new Label() { Text = "Before:", AutoSize = true, Location = new Point(8, 13) };
-            _before = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(64, 9), Width = 430, Anchor = AnchorStyles.Left | AnchorStyles.Top };
-            Label afterLabel = new Label() { Text = "After:", AutoSize = true, Location = new Point(8, 43) };
-            _after = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(64, 39), Width = 430, Anchor = AnchorStyles.Left | AnchorStyles.Top };
-            foreach (ComboBox box in new[] { _before, _after }) box.SelectedIndexChanged += SideChanged;
-            _categories = new CheckedListBox() { Location = new Point(510, 8), Size = new Size(380, 88), CheckOnClick = true, MultiColumn = true, ColumnWidth = 125, Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right };
             foreach ((string key, string title) in LevelComparer.Categories) _categories.Items.Add(title, true);
-            _compare = new Button() { Text = "Compare", AutoSize = true, Location = new Point(64, 70) };
-            _compare.Click += (s, e) => RunCompare();
-            top.Controls.Add(beforeLabel); top.Controls.Add(_before); top.Controls.Add(afterLabel); top.Controls.Add(_after); top.Controls.Add(_categories); top.Controls.Add(_compare);
-
-            SplitContainer split = new SplitContainer() { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal, SplitterDistance = 420 };
-            _tree = new TreeView() { Dock = DockStyle.Fill, HideSelection = false, ShowNodeToolTips = true };
-            _tree.AfterSelect += (s, e) => ShowSelected();
-            _tree.NodeMouseDoubleClick += (s, e) => GoTo();
-            split.Panel1.Controls.Add(_tree);
-            Panel buttons = new Panel() { Dock = DockStyle.Bottom, Height = 36, Padding = new Padding(0, 4, 0, 0) };
-            _copy = new Button() { Text = "Copy Report", AutoSize = true, Location = new Point(0, 6), Enabled = false };
-            _copy.Click += (s, e) => { if (_report != null) Clipboard.SetText(_report.ToText(9, 5000)); };
-            _save = new Button() { Text = "Save Report...", AutoSize = true, Location = new Point(110, 6), Enabled = false };
-            _save.Click += (s, e) => SaveReport();
-            _goTo = new Button() { Text = "Go To", AutoSize = true, Location = new Point(230, 6), Enabled = false };
-            _goTo.Click += (s, e) => GoTo();
-            buttons.Controls.Add(_copy); buttons.Controls.Add(_save); buttons.Controls.Add(_goTo);
-            _details = new TextBox() { Dock = DockStyle.Fill, Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Both, WordWrap = false, Font = new Font(FontFamily.GenericMonospace, 9f) };
-            split.Panel2.Controls.Add(_details);
-            split.Panel2.Controls.Add(buttons);
-            split.Panel2.Padding = new Padding(8, 4, 8, 4);
-
-            _status = new Label() { Dock = DockStyle.Bottom, Height = 22, Padding = new Padding(8, 4, 8, 0), Text = "Pick two copies of a level and Compare. Loading each takes a few seconds (big levels longer)." };
-            Controls.Add(split);
-            Controls.Add(top);
-            Controls.Add(_status);
             FillSides();
-            FormClosed += (s, e) => _running?.Cancel();
             Theming.ThemeManager.ApplyCurrent(this);
+        }
+
+        private void CompareLevelsWindow_FormClosed(object sender, FormClosedEventArgs e) => _running?.Cancel();
+        private void _compare_Click(object sender, EventArgs e) => RunCompare();
+        private void _tree_AfterSelect(object sender, TreeViewEventArgs e) => ShowSelected();
+        private void _tree_NodeMouseDoubleClick(object sender, TreeNodeMouseClickEventArgs e) => GoTo();
+        private void _save_Click(object sender, EventArgs e) => SaveReport();
+        private void _goTo_Click(object sender, EventArgs e) => GoTo();
+
+        private void _copy_Click(object sender, EventArgs e)
+        {
+            if (_report != null) Clipboard.SetText(_report.ToText(9, 5000));
         }
 
         #region Opening it

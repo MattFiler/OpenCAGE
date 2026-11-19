@@ -17,25 +17,11 @@ namespace OpenCAGE
     /// from the Sound Editor. A .wav goes in with Import WAV (made into the game's own format here, in place of a sound of
     /// the game's or as a stream of its own); whole files can be added (a soundbank built with Wwise, or a stream named for
     /// its id), exported, or taken out - a soundbank or stream taken out is read from DATA/SOUND again on this level, and a
-    /// sound changed in a soundbank goes back to the base game's audio. Built in code: a summary, a search box, the list and
-    /// a row of buttons.
+    /// sound changed in a soundbank goes back to the base game's audio. A summary, a search box, the list and a row of buttons.
     /// </summary>
-    public class LevelSoundOverrideEditor : BaseWindow
+    public partial class LevelSoundOverrideEditor : BaseWindow
     {
         private readonly string _package;
-
-        private readonly Label summary = new Label { Dock = DockStyle.Top, Height = 72, Padding = new Padding(6, 6, 6, 0) };
-        private readonly TextBox search = new TextBox { Dock = DockStyle.Fill };
-        private readonly ListView list = new ListView { Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true, HideSelection = false, MultiSelect = true, ShowItemToolTips = true };
-        private readonly FlowLayoutPanel buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 38, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(4) };
-        private readonly Button closeBtn = new Button { Text = "Close", Width = 90, Height = 26 };
-        private readonly Button removeBtn = new Button { Text = "Remove", Width = 90, Height = 26 };
-        private readonly Button exportBtn = new Button { Text = "Export...", Width = 90, Height = 26 };
-        private readonly Button addBtn = new Button { Text = "Add Files...", Width = 100, Height = 26 };
-        private readonly Button importBtn = new Button { Text = "Import WAV...", Width = 110, Height = 26 };
-        private readonly Button bankBtn = new Button { Text = "New Soundbank...", Width = 120, Height = 26 };
-        private readonly Button tuneBtn = new Button { Text = "Tune Event...", Width = 105, Height = 26 };
-        private readonly ToolTip tips = new ToolTip();
 
         private enum RowKind { Bank, BankSound, Stream, TunedEvent }
 
@@ -71,79 +57,50 @@ namespace OpenCAGE
 
         public LevelSoundOverrideEditor(string package)
         {
+            InitializeComponent();
             _package = package;
 
-            Text = "Level Sound Override";
             Icon = SharedFormIcon.Icon;
-            ClientSize = new Size(1000, 460);
-            MinimumSize = new Size(780, 300);
-            StartPosition = FormStartPosition.CenterParent;
-            ShowInTaskbar = false;
-            MinimizeBox = false;
             BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/sound-events/#level-sound-override");
 
-            list.Columns.Add("Name", 270);
-            list.Columns.Add("File", 175);
-            list.Columns.Add("Kind", 115);
-            list.Columns.Add("Size", 65, HorizontalAlignment.Right);
-            list.Columns.Add("On this level", 350);
-
-            tips.SetToolTip(importBtn, "Make game audio from a .wav: pick the sound it replaces on this level (by the sound events that play it), or give it a stream id of its own. Encoded the way the game's own audio is - no Wwise needed.");
-            tips.SetToolTip(addBtn, "Put a soundbank (.bnk, built with the game's Wwise version) or a stream (.wem named for its id) in the package as it is. One with the same id as the base game's is read instead of it on this level - except a permanent soundbank, which the game loads before any level.");
-            tips.SetToolTip(exportBtn, "Save the selected soundbank or stream - or a sound from inside a soundbank - out of the package, as Wwise audio (.wem) or as a .wav.");
-            tips.SetToolTip(removeBtn, "Take the selected files out of the package (on this level the game reads the base game's instead, or nothing for a file only this level has), and put the base game's audio back in place of the selected sounds in soundbanks.");
-            importBtn.Click += (s, e) => ImportWav();
-            tuneBtn.Click += (s, e) => TuneEvent();
-            tips.SetToolTip(tuneBtn, "Change how a sound event plays on this level alone: volume, pitch, start delay, fades, what its stop reaches, looping and how far away it can be heard - in this package's copies of its soundbanks.");
-            bankBtn.Click += (s, e) => EditBank();
-            tips.SetToolTip(bankBtn, "Make a soundbank of the level's own: new sound events, each playing a .wav and sounding like a sound of the game's you pick. With a soundbank of the level's own selected, add events to it or take them out.");
-            addBtn.Click += (s, e) => AddFiles();
-            exportBtn.Click += (s, e) => Export();
-            removeBtn.Click += (s, e) => RemoveSelected();
-            closeBtn.Click += (s, e) => Close();
-            search.TextChanged += (s, e) => Fill();
-            list.SelectedIndexChanged += (s, e) => UpdateButtons();
-            list.DoubleClick += (s, e) =>
-            {
-                List<Row> rows = Selected();
-                if (rows.Count == 1 && rows[0].Kind == RowKind.Bank && rows[0].Own)
-                    EditBank();
-                else if (rows.Count == 1 && rows[0].Kind == RowKind.TunedEvent)
-                    TuneEvent();
-                else
-                    ImportWav();
-            };
-            list.KeyDown += (s, e) =>
-            {
-                if (e.KeyCode != Keys.Delete) return;
-                e.Handled = true;
-                RemoveSelected();
-            };
-
-            //Right to left: Close at the far right, then what acts on the selection, then what adds
-            buttons.Controls.AddRange(new Control[] { closeBtn, removeBtn, exportBtn, addBtn, bankBtn, tuneBtn, importBtn });
-
-            TableLayoutPanel searchRow = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, RowCount = 1, Height = 28, Padding = new Padding(3, 0, 3, 2) };
-            searchRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            searchRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            searchRow.Controls.Add(new Label { Text = "Search:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(3, 5, 3, 3) }, 0, 0);
-            searchRow.Controls.Add(search, 1, 0);
-
-            //Docked from the edges in: the summary, search and buttons first, then the list in what is left
-            Controls.Add(list);
-            Controls.Add(buttons);
-            Controls.Add(searchRow);
-            Controls.Add(summary);
-
-            CancelButton = closeBtn;
-            Load += (s, e) => Rebuild();
             LevelSoundOverride.Changed += OnChanged;
-            FormClosed += (s, e) =>
-            {
-                _building++;
-                LevelSoundOverride.Changed -= OnChanged;
-                tips.Dispose();
-            };
+        }
+
+        private void LevelSoundOverrideEditor_Load(object sender, EventArgs e) => Rebuild();
+
+        private void LevelSoundOverrideEditor_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            _building++;
+            LevelSoundOverride.Changed -= OnChanged;
+            tips.Dispose();
+        }
+
+        private void importBtn_Click(object sender, EventArgs e) => ImportWav();
+        private void tuneBtn_Click(object sender, EventArgs e) => TuneEvent();
+        private void bankBtn_Click(object sender, EventArgs e) => EditBank();
+        private void addBtn_Click(object sender, EventArgs e) => AddFiles();
+        private void exportBtn_Click(object sender, EventArgs e) => Export();
+        private void removeBtn_Click(object sender, EventArgs e) => RemoveSelected();
+        private void closeBtn_Click(object sender, EventArgs e) => Close();
+        private void search_TextChanged(object sender, EventArgs e) => Fill();
+        private void list_SelectedIndexChanged(object sender, EventArgs e) => UpdateButtons();
+
+        private void list_DoubleClick(object sender, EventArgs e)
+        {
+            List<Row> rows = Selected();
+            if (rows.Count == 1 && rows[0].Kind == RowKind.Bank && rows[0].Own)
+                EditBank();
+            else if (rows.Count == 1 && rows[0].Kind == RowKind.TunedEvent)
+                TuneEvent();
+            else
+                ImportWav();
+        }
+
+        private void list_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Delete) return;
+            e.Handled = true;
+            RemoveSelected();
         }
 
         private void OnChanged()

@@ -24,36 +24,12 @@ namespace OpenCAGE.Popups
     /// Replace Weapon Model: put a model file on a weapon or held item, choosing what happens to each part and lining it up against the
     /// retail model. Everything goes through the replace_weapon_model MCP tool (Scripts\Weapons\WeaponModelReplace.cs).
     /// </summary>
-    public class ReplaceWeaponModel : BaseWindow
+    public partial class ReplaceWeaponModel : BaseWindow
     {
         private static ReplaceWeaponModel _open;
 
-        private readonly ComboBox _weapon = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 230 };
-        private readonly TextBox _path = new TextBox() { Width = 420 };
-        private readonly Button _browse = new Button() { Text = "Browse...", AutoSize = true };
-        private readonly Button _reference = new Button() { Text = "Export Reference...", AutoSize = true };
-        private readonly NumericUpDown _ox = Number(-2, 2, 4, 0.005m), _oy = Number(-2, 2, 4, 0.005m), _oz = Number(-2, 2, 4, 0.005m);
-        private readonly NumericUpDown _rx = Number(-360, 360, 2, 1), _ry = Number(-360, 360, 2, 1), _rz = Number(-360, 360, 2, 1);
-        private readonly NumericUpDown _scale = Number(0.0001m, 1000, 4, 0.01m);
-        private readonly DataGridView _parts = new DataGridView()
-        {
-            Dock = DockStyle.Fill, AllowUserToAddRows = false, AllowUserToDeleteRows = false, RowHeadersVisible = false, SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-            AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, EditMode = DataGridViewEditMode.EditOnEnter,
-        };
-        private readonly CheckedListBox _targets = new CheckedListBox() { Dock = DockStyle.Fill, CheckOnClick = true, IntegralHeight = false };
-        private readonly CheckedListBox _npcTypes = new CheckedListBox() { Dock = DockStyle.Fill, CheckOnClick = true, IntegralHeight = false };
-        private readonly ComboBox _muzzle = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 90 };
-        private readonly ComboBox _physics = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 90 };
-        private readonly TextBox _prefix = new TextBox() { Width = 200 };
-        private readonly TextBox _suffix = new TextBox() { Width = 90, Text = "CUSTOM" };
+        //a private nested control the designer can't create: the constructor puts it in the split's right-hand panel
         private readonly GhostView _view = new GhostView() { Dock = DockStyle.Fill };
-        private readonly SplitContainer _middle = new SplitContainer() { Dock = DockStyle.Fill, Orientation = Orientation.Vertical };
-        private readonly TextBox _output = new TextBox() { Dock = DockStyle.Fill, Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Both, WordWrap = false, Font = new Font(FontFamily.GenericMonospace, 8.5f) };
-        private readonly Button _check = new Button() { Text = "Check Plan", AutoSize = true };
-        private readonly Button _apply = new Button() { Text = "Replace", AutoSize = true };
-        private readonly Button _visibility = new Button() { Text = "Apply Visibility Only", AutoSize = true };
-        private readonly Button _close = new Button() { Text = "Close", AutoSize = true };
-        private readonly Label _status = new Label() { AutoSize = true };
 
         private WeaponInfo _info;
         private WeaponModelSource _source;
@@ -92,104 +68,110 @@ namespace OpenCAGE.Popups
 
         public ReplaceWeaponModel() : base(WindowClosesOn.COMMANDS_RELOAD)
         {
-            Text = "Replace Weapon Model";
+            InitializeComponent();
             Icon = SharedFormIcon.Icon;
-            Size = new Size(1280, 860);
-            MinimumSize = new Size(900, 600);
-            StartPosition = FormStartPosition.CenterScreen;
-            KeyPreview = true;
-            BuildLayout();
-            _muzzle.Items.AddRange(new object[] { "auto", "keep" });
+            _middle.Panel2.Controls.Add(_view);
             _muzzle.SelectedIndex = 0;
-            _physics.Items.AddRange(new object[] { "auto", "hull", "keep" });
             _physics.SelectedIndex = 0;
-            _scale.Value = 1;
             FillWeapons();
-            _weapon.SelectedIndexChanged += (o, e) => { if (!_loading) LoadWeapon(); };
-            _browse.Click += (o, e) => Browse();
-            _reference.Click += (o, e) => ExportReference();
-            _path.Leave += (o, e) => LoadSource();
-            _path.KeyDown += (o, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; LoadSource(); } };
-            foreach (NumericUpDown n in new[] { _ox, _oy, _oz, _rx, _ry, _rz }) n.ValueChanged += (o, e) => RefreshGhost();
-            _scale.ValueChanged += (o, e) => LoadSource();
-            _check.Click += async (o, e) => await RunTool(true);
-            _apply.Click += async (o, e) => await RunTool(false);
-            _visibility.Click += async (o, e) => await RunVisibility();
-            _close.Click += (o, e) => Close();
-            KeyDown += (o, e) => { if (e.KeyCode == Keys.Escape) { e.SuppressKeyPress = true; Close(); } };
-            FormClosed += (o, e) => { if (ReferenceEquals(_open, this)) _open = null; };
-            //The split can only be placed once the window has its size (a SplitContainer refuses a distance wider than itself)
-            Load += (o, e) => { try { _middle.SplitterDistance = Math.Max(200, Math.Min(_middle.Width - 260, (int)(_middle.Width * 0.55))); } catch (Exception) { } };
+            _weapon.SelectedIndexChanged += Weapon_SelectedIndexChanged;
             //The list was filled before its handler was attached: load the weapon it shows
             if (_weapon.SelectedItem != null) LoadWeapon();
             BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/replace-weapon-model/");
             Theming.ThemeManager.ApplyToForm(this);
         }
 
-        private static NumericUpDown Number(decimal min, decimal max, int decimals, decimal step) => new NumericUpDown()
+        //The split can only be placed once the window has its size (a SplitContainer refuses a distance wider than itself)
+        private void ReplaceWeaponModel_Load(object sender, EventArgs e)
         {
-            Minimum = min, Maximum = max, DecimalPlaces = decimals, Increment = step, Width = 72,
-        };
+            try { _middle.SplitterDistance = Math.Max(200, Math.Min(_middle.Width - 260, (int)(_middle.Width * 0.55))); } catch (Exception) { }
+        }
 
-        private static Label Caption(string text) => new Label() { Text = text, AutoSize = true, Margin = new Padding(6, 7, 2, 0) };
-
-        private void BuildLayout()
+        private void ReplaceWeaponModel_KeyDown(object sender, KeyEventArgs e)
         {
-            TableLayoutPanel root = new TableLayoutPanel() { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 5, Padding = new Padding(6) };
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            root.RowStyles.Add(new RowStyle(SizeType.Percent, 62));
-            root.RowStyles.Add(new RowStyle(SizeType.Percent, 38));
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            if (e.KeyCode == Keys.Escape) { e.SuppressKeyPress = true; Close(); }
+        }
 
-            FlowLayoutPanel top = new FlowLayoutPanel() { AutoSize = true, WrapContents = false, Dock = DockStyle.Fill };
-            top.Controls.AddRange(new Control[] { Caption("Weapon"), _weapon, Caption("Model (in weapon space)"), _path, _browse, _reference });
-            root.Controls.Add(top, 0, 0);
+        private void ReplaceWeaponModel_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            if (ReferenceEquals(_open, this)) _open = null;
+        }
 
-            FlowLayoutPanel fit = new FlowLayoutPanel() { AutoSize = true, WrapContents = true, Dock = DockStyle.Fill };
-            fit.Controls.AddRange(new Control[] { Caption("Offset (m)  X"), _ox, Caption("Y"), _oy, Caption("Z"), _oz, Caption("Rotation  X"), _rx, Caption("Y"), _ry, Caption("Z"), _rz, Caption("Scale"), _scale,
-                Caption("Muzzle"), _muzzle, Caption("Physics"), _physics, Caption("Prefix"), _prefix });
-            root.Controls.Add(fit, 0, 1);
+        private void Weapon_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (!_loading) LoadWeapon();
+        }
 
-            SplitContainer middle = _middle;
-            TableLayoutPanel left = new TableLayoutPanel() { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 3 };
-            left.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60));
-            left.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40));
-            left.RowStyles.Add(new RowStyle(SizeType.Percent, 68));
-            left.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            left.RowStyles.Add(new RowStyle(SizeType.Percent, 32));
-            left.Controls.Add(_parts, 0, 0);
-            left.SetColumnSpan(_parts, 2);
-            left.Controls.Add(new Label() { Text = "Change these composites", AutoSize = true }, 0, 1);
-            FlowLayoutPanel npcCaption = new FlowLayoutPanel() { AutoSize = true, WrapContents = false };
-            npcCaption.Controls.AddRange(new Control[] { new Label() { Text = "Third person only for (none = every NPC); copies named", AutoSize = true, Margin = new Padding(0, 4, 2, 0) }, _suffix });
-            left.Controls.Add(npcCaption, 1, 1);
-            left.Controls.Add(_targets, 0, 2);
-            left.Controls.Add(_npcTypes, 1, 2);
-            middle.Panel1.Controls.Add(left);
-            middle.Panel2.Controls.Add(_view);
-            root.Controls.Add(middle, 0, 2);
-            root.Controls.Add(_output, 0, 3);
+        private void Browse_Click(object sender, EventArgs e)
+        {
+            Browse();
+        }
 
-            FlowLayoutPanel buttons = new FlowLayoutPanel() { AutoSize = true, Dock = DockStyle.Fill, WrapContents = false };
-            buttons.Controls.AddRange(new Control[] { _check, _apply, _visibility, _close, _status });
-            root.Controls.Add(buttons, 0, 4);
-            Controls.Add(root);
+        private void Reference_Click(object sender, EventArgs e)
+        {
+            ExportReference();
+        }
 
-            _parts.Columns.Add(new DataGridViewTextBoxColumn() { Name = "part", HeaderText = "Part", ReadOnly = true, FillWeight = 18 });
-            _parts.Columns.Add(new DataGridViewTextBoxColumn() { Name = "bone", HeaderText = "Bone", ReadOnly = true, FillWeight = 14 });
-            _parts.Columns.Add(new DataGridViewTextBoxColumn() { Name = "moved", HeaderText = "Moved by (clips)", ReadOnly = true, FillWeight = 26 });
-            _parts.Columns.Add(new DataGridViewTextBoxColumn() { Name = "script", HeaderText = "Script", ReadOnly = true, FillWeight = 12 });
-            _parts.Columns.Add(new DataGridViewTextBoxColumn() { Name = "shown", HeaderText = "Shown now", ReadOnly = true, FillWeight = 10 });
-            DataGridViewComboBoxColumn action = new DataGridViewComboBoxColumn() { Name = "action", HeaderText = "Action", FillWeight = 12, FlatStyle = FlatStyle.Flat };
-            action.Items.AddRange("auto", "replace", "keep", "hide", "show");
-            _parts.Columns.Add(action);
-            _parts.Columns.Add(new DataGridViewTextBoxColumn() { Name = "meshes", HeaderText = "Meshes (replace)", FillWeight = 18 });
-            _parts.CellValueChanged += (o, e) => { if (!_loading) RefreshGhost(); };
-            _parts.CurrentCellDirtyStateChanged += (o, e) => { if (_parts.IsCurrentCellDirty) _parts.CommitEdit(DataGridViewDataErrorContexts.Commit); };
-            _parts.DataError += (o, e) => { e.ThrowException = false; };
-            //The selected part shows in blue in the views: which piece of the gun each bone carries
-            _parts.SelectionChanged += (o, e) => { _view.Highlight = (_parts.CurrentRow?.Tag as WeaponPart) == null ? null : WeaponModelReplace.RestCorners((WeaponPart)_parts.CurrentRow.Tag); _view.Invalidate(); };
+        private void Path_Leave(object sender, EventArgs e)
+        {
+            LoadSource();
+        }
+
+        private void Path_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; LoadSource(); }
+        }
+
+        private void Placement_ValueChanged(object sender, EventArgs e)
+        {
+            RefreshGhost();
+        }
+
+        private void Scale_ValueChanged(object sender, EventArgs e)
+        {
+            LoadSource();
+        }
+
+        private async void Check_Click(object sender, EventArgs e)
+        {
+            await RunTool(true);
+        }
+
+        private async void Apply_Click(object sender, EventArgs e)
+        {
+            await RunTool(false);
+        }
+
+        private async void Visibility_Click(object sender, EventArgs e)
+        {
+            await RunVisibility();
+        }
+
+        private void Close_Click(object sender, EventArgs e)
+        {
+            Close();
+        }
+
+        private void Parts_CellValueChanged(object sender, DataGridViewCellEventArgs e)
+        {
+            if (!_loading) RefreshGhost();
+        }
+
+        private void Parts_CurrentCellDirtyStateChanged(object sender, EventArgs e)
+        {
+            if (_parts.IsCurrentCellDirty) _parts.CommitEdit(DataGridViewDataErrorContexts.Commit);
+        }
+
+        private void Parts_DataError(object sender, DataGridViewDataErrorEventArgs e)
+        {
+            e.ThrowException = false;
+        }
+
+        //The selected part shows in blue in the views: which piece of the gun each bone carries
+        private void Parts_SelectionChanged(object sender, EventArgs e)
+        {
+            _view.Highlight = (_parts.CurrentRow?.Tag as WeaponPart) == null ? null : WeaponModelReplace.RestCorners((WeaponPart)_parts.CurrentRow.Tag);
+            _view.Invalidate();
         }
 
         private Level Level => Singleton.Editor?.CompositeBrowser?.Content?.Level;
@@ -219,7 +201,7 @@ namespace OpenCAGE.Popups
             LoadSource();
             _ox.Value = (decimal)offset.X; _oy.Value = (decimal)offset.Y; _oz.Value = (decimal)offset.Z;
             foreach (DataGridViewRow row in _parts.Rows)
-                if (actions != null && actions.TryGetValue(((WeaponPart)row.Tag).Name, out string action)) row.Cells["action"].Value = action;
+                if (actions != null && actions.TryGetValue(((WeaponPart)row.Tag).Name, out string action)) row.Cells[_actionColumn.Index].Value = action;
             await RunTool(true);
             return _status.Text + Environment.NewLine + _output.Text;
         }
@@ -241,9 +223,9 @@ namespace OpenCAGE.Popups
                 int row = _parts.Rows.Add(part.Name, part.Bone >= 0 ? (part.BoneName ?? part.Bone.ToString(CultureInfo.InvariantCulture)) : "-",
                     part.MovedBy.Count == 0 ? (part.Bone >= 0 ? "(none)" : "-") : string.Join(", ", part.MovedBy) + (part.Travel > 0 ? "  [" + WeaponModelReplace.Cm(part.Travel) + "]" : ""),
                     part.Scripted.Count == 0 ? "" : "shown/hidden", part.ShowOnReset ? "yes" : "HIDDEN", "auto", "");
-                if (!part.ShowOnReset) _parts.Rows[row].Cells["shown"].ToolTipText = "show_on_reset is off: the part is hidden (an earlier replace, or retail). Set Action to show and press Apply Visibility Only to bring it back - nothing is imported.";
+                if (!part.ShowOnReset) _parts.Rows[row].Cells[_shownColumn.Index].ToolTipText = "show_on_reset is off: the part is hidden (an earlier replace, or retail). Set Action to show and press Apply Visibility Only to bring it back - nothing is imported.";
                 _parts.Rows[row].Tag = part;
-                if (part.Scripted.Count != 0) _parts.Rows[row].Cells["script"].ToolTipText = string.Join("\n", part.Scripted);
+                if (part.Scripted.Count != 0) _parts.Rows[row].Cells[_scriptColumn.Index].ToolTipText = string.Join("\n", part.Scripted);
             }
             _targets.Items.Clear();
             foreach (WeaponComposite target in _info.All)
@@ -331,8 +313,8 @@ namespace OpenCAGE.Popups
             foreach (DataGridViewRow row in _parts.Rows)
             {
                 WeaponPart part = row.Tag as WeaponPart;
-                string action = (row.Cells["action"].Value as string) ?? "auto";
-                string meshes = (row.Cells["meshes"].Value as string ?? "").Trim();
+                string action = (row.Cells[_actionColumn.Index].Value as string) ?? "auto";
+                string meshes = (row.Cells[_meshesColumn.Index].Value as string ?? "").Trim();
                 if (action == "keep" || action == "hide" || action == "show") options.PartActions[part.Name] = action;
                 else if (meshes.Length != 0) options.PartMeshes[part.Name] = meshes.Split(',').Select(o => o.Trim()).Where(o => o.Length != 0).ToList();
             }
@@ -367,7 +349,7 @@ namespace OpenCAGE.Popups
             JObject parts = new JObject();
             foreach (DataGridViewRow row in _parts.Rows)
             {
-                string action = (row.Cells["action"].Value as string) ?? "auto";
+                string action = (row.Cells[_actionColumn.Index].Value as string) ?? "auto";
                 if (action == "show" || action == "hide") parts[((WeaponPart)row.Tag).Name] = action;
             }
             if (parts.Count == 0) { Say("Set a part's Action to show or hide first.", true); return; }
@@ -454,7 +436,7 @@ namespace OpenCAGE.Popups
         {
             if (_info == null) return;
             Dictionary<string, string> actions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (DataGridViewRow row in _parts.Rows) actions[((WeaponPart)row.Tag).Name] = (row.Cells["action"].Value as string) ?? "auto";
+            foreach (DataGridViewRow row in _parts.Rows) actions[((WeaponPart)row.Tag).Name] = (row.Cells[_actionColumn.Index].Value as string) ?? "auto";
             _view.Retail = _info.FirstPerson.Parts.Where(o => o.Lod0.Count != 0).Select(o => Tuple.Create(WeaponModelReplace.RestCorners(o), actions.TryGetValue(o.Name, out string a) && a == "hide")).ToList();
             WeaponOptions options = Options();
             System.Numerics.Matrix4x4 transform = WeaponModelReplace.UserTransform(options);

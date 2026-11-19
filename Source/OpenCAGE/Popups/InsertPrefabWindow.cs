@@ -17,7 +17,7 @@ namespace OpenCAGE.Prefabs
     /// Create Entity > Insert Prefab...: the prefab library (Prefabs folder beside OpenCAGE) by category. Insert imports the prefab's
     /// package if the level lacks it (not undoable, as any composite import) and places an instance in the composite (one undo step).
     /// </summary>
-    internal class InsertPrefabWindow : BaseWindow
+    internal partial class InsertPrefabWindow : BaseWindow
     {
         private static InsertPrefabWindow _open;
         private static string _lastPrefab = "EnemySpawner";
@@ -26,13 +26,6 @@ namespace OpenCAGE.Prefabs
         private readonly string _page;
         private readonly Point? _nodeAt;
 
-        private readonly TreeView _tree;
-        private readonly Label _title, _status;
-        private readonly TextBox _about, _name;
-        private readonly Label _characterLabel, _boxLabel;
-        private readonly ComboBox _character;
-        private readonly NumericUpDown _boxX, _boxY, _boxZ;
-        private readonly Button _insert;
         private readonly List<string> _problems = new List<string>();
         private string _suggestedName;
 
@@ -48,67 +41,30 @@ namespace OpenCAGE.Prefabs
             _into = into;
             _page = page;
             _nodeAt = nodeAt;
-            Text = "Insert Prefab";
+            InitializeComponent();
             Icon = SharedFormIcon.Icon;
-            Size = new Size(900, 560);
-            MinimumSize = new Size(700, 440);
-            StartPosition = FormStartPosition.CenterScreen;
-            ShowInTaskbar = false;
             StayAboveEditor = true;
             BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/prefabs/");
 
-            SplitContainer split = new SplitContainer() { Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel1 };
-            _tree = new TreeView() { Dock = DockStyle.Fill, HideSelection = false, FullRowSelect = true, ShowLines = false };
-            _tree.AfterSelect += (s, e) => ShowSelected();
-            _tree.NodeMouseDoubleClick += (s, e) => { if (e.Node?.Tag is Prefab) Insert(); };
-            split.Panel1.Controls.Add(_tree);
-            split.Panel1.Padding = new Padding(8, 8, 0, 8);
-
-            Panel right = new Panel() { Dock = DockStyle.Fill, Padding = new Padding(8) };
-            _title = new Label() { Dock = DockStyle.Top, Height = 26, Font = new Font(Font.FontFamily, 11f, FontStyle.Bold) };
-            _about = new TextBox() { Dock = DockStyle.Fill, Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, WordWrap = true };
-
-            Panel options = new Panel() { Dock = DockStyle.Bottom, Height = 150 };
-            Label nameLabel = new Label() { Text = "Name:", AutoSize = true, Location = new Point(0, 12) };
-            _name = new TextBox() { Location = new Point(110, 8), Width = 300, Anchor = AnchorStyles.Left | AnchorStyles.Top };
-            _characterLabel = new Label() { Text = "Character:", AutoSize = true, Location = new Point(0, 41) };
-            _character = new ComboBox() { Location = new Point(110, 37), Width = 420, DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Left | AnchorStyles.Top };
-            _boxLabel = new Label() { Text = "Box half size (m):", AutoSize = true, Location = new Point(0, 41) };
-            _boxX = Size3(110); _boxY = Size3(190); _boxZ = Size3(270);
-            _status = new Label() { AutoSize = false, Location = new Point(0, 70), Height = 40, Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right };
-            _insert = new Button() { Text = "Insert", Width = 100, Height = 28, Anchor = AnchorStyles.Right | AnchorStyles.Bottom };
-            _insert.Click += (s, e) => Insert();
-            Button folder = new Button() { Text = "Open Prefab Folder", AutoSize = true, Height = 28, Anchor = AnchorStyles.Left | AnchorStyles.Bottom };
-            folder.Click += (s, e) => OpenFolder();
-            options.Controls.AddRange(new Control[] { nameLabel, _name, _characterLabel, _character, _boxLabel, _boxX, _boxY, _boxZ, _status, _insert, folder });
-            options.Resize += (s, e) =>
-            {
-                _status.Width = options.ClientSize.Width;
-                _insert.Location = new Point(options.ClientSize.Width - _insert.Width, options.ClientSize.Height - _insert.Height - 2);
-                folder.Location = new Point(0, options.ClientSize.Height - folder.Height - 2);
-            };
-
-            right.Controls.Add(_about);
-            right.Controls.Add(options);
-            right.Controls.Add(_title);
-            split.Panel2.Controls.Add(right);
-
-            Label footer = new Label()
-            {
-                Dock = DockStyle.Bottom, Height = 22, Padding = new Padding(8, 4, 8, 0),
-                Text = "Add your own: export composites as a package (File > Export Composites > To Disk) into the Prefabs folder, and they are listed under " + PrefabCatalog.Mine + ".",
-            };
-            Controls.Add(split);
-            //Set once the split has the window's size (given in the initialiser, it is clamped to the control's default 150 px width)
-            split.SplitterDistance = 230;
-            Controls.Add(footer);
-            AcceptButton = _insert;
             Theming.ThemeManager.ApplyCurrent(this);
             Fill();
         }
 
-        private static NumericUpDown Size3(int x) =>
-            new NumericUpDown() { Location = new Point(x, 37), Width = 72, DecimalPlaces = 2, Minimum = 0.05m, Maximum = 500m, Increment = 0.5m, Value = 1m, Anchor = AnchorStyles.Left | AnchorStyles.Top };
+        private void _tree_AfterSelect(object sender, TreeViewEventArgs e) => ShowSelected();
+        private void _insert_Click(object sender, EventArgs e) => Insert();
+        private void _folder_Click(object sender, EventArgs e) => OpenFolder();
+
+        private void _tree_NodeMouseDoubleClick(object sender, TreeNodeMouseClickEventArgs e)
+        {
+            if (e.Node?.Tag is Prefab) Insert();
+        }
+
+        private void _optionsPanel_Resize(object sender, EventArgs e)
+        {
+            _status.Width = _optionsPanel.ClientSize.Width;
+            _insert.Location = new Point(_optionsPanel.ClientSize.Width - _insert.Width, _optionsPanel.ClientSize.Height - _insert.Height - 2);
+            _folder.Location = new Point(0, _optionsPanel.ClientSize.Height - _folder.Height - 2);
+        }
 
         #region Opening it
         /// <summary>The window for <paramref name="into"/> (one at a time): the node goes on <paramref name="page"/> at <paramref name="nodeAt"/> when given.</summary>

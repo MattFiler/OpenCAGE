@@ -24,33 +24,11 @@ namespace OpenCAGE
     /// package change - is worked out as the choices change, and both the original and the new audio can be played first
     /// (the new one decoded from the very .wem that will go in).
     /// </summary>
-    public class LevelSoundImportDialog : BaseWindow
+    public partial class LevelSoundImportDialog : BaseWindow
     {
         private readonly string _package;
         private uint? _preselect;
         private readonly HashSet<uint> _bankMedia;
-
-        private readonly TextBox wavPath = new TextBox { ReadOnly = true, Dock = DockStyle.Fill };
-        private readonly Button browseBtn = new Button { Text = "Browse...", Width = 90, Height = 24 };
-        private readonly RadioButton replaceRadio = new RadioButton { Text = "Replace a sound of the game's on this level:", AutoSize = true, Checked = true };
-        private readonly RadioButton streamRadio = new RadioButton { Text = "Add it as a stream of its own, with the id:", AutoSize = true };
-        private readonly TextBox streamId = new TextBox { Width = 120 };
-        private readonly TextBox search = new TextBox { Dock = DockStyle.Fill };
-        private readonly CheckBox onlyBank = new CheckBox { AutoSize = true, Visible = false };
-        private readonly ListView list = new ListView { Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true, HideSelection = false, MultiSelect = false };
-        private readonly ComboBox channels = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 230 };
-        private readonly ComboBox rate = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 230 };
-        private readonly NumericUpDown quality = new NumericUpDown { Minimum = 0.3M, Maximum = 1M, Increment = 0.1M, DecimalPlaces = 1, Value = 0.6M, Width = 52 };
-        private readonly NumericUpDown gain = new NumericUpDown { Minimum = -40M, Maximum = 40M, Increment = 1M, DecimalPlaces = 1, Value = 0M, Width = 58 };
-        private readonly CheckBox normalise = new CheckBox { Text = "Normalise to -1 dBFS", AutoSize = true };
-        private readonly TextBox summary = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill };
-        private readonly Button importBtn = new Button { Text = "Import", Width = 90, Height = 26, Enabled = false };
-        private readonly Button cancelBtn = new Button { Text = "Cancel", Width = 90, Height = 26 };
-        private readonly Button playNewBtn = new Button { Text = "Play New", Width = 90, Height = 26, Enabled = false };
-        private readonly Button playOriginalBtn = new Button { Text = "Play Original", Width = 100, Height = 26, Enabled = false };
-        private readonly Button stopBtn = new Button { Text = "Stop", Width = 60, Height = 26, Enabled = false };
-        private readonly ToolTip tips = new ToolTip();
-        private readonly Timer debounce = new Timer { Interval = 350 };
 
         private WwiseSoundLibrary _library;
         private List<Candidate> _candidates = new List<Candidate>();
@@ -81,24 +59,13 @@ namespace OpenCAGE
         /// <param name="bankName">That soundbank's name, for the box that narrows the list to it.</param>
         public LevelSoundImportDialog(string package, uint? preselect, IEnumerable<uint> bankMedia, string bankName)
         {
+            InitializeComponent();
             _package = package;
             _preselect = preselect;
             _bankMedia = bankMedia == null ? null : new HashSet<uint>(bankMedia);
 
-            Text = "Import WAV";
             Icon = SharedFormIcon.Icon;
-            ClientSize = new Size(860, 660);
-            MinimumSize = new Size(640, 520);
-            StartPosition = FormStartPosition.CenterParent;
-            ShowInTaskbar = false;
-            MinimizeBox = false;
-            AllowDrop = true;
             BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/sound-events/#import-wav");
-
-            list.Columns.Add("Sound", 310);
-            list.Columns.Add("Id", 85);
-            list.Columns.Add("Kept in", 220);
-            list.Columns.Add("Also played by", 165);
 
             if (_bankMedia != null)
             {
@@ -113,66 +80,65 @@ namespace OpenCAGE
             rate.SelectedIndex = 0;
             UpdateLayoutChoices(null);
 
-            tips.SetToolTip(browseBtn, "The audio to import: an uncompressed .wav (8 to 32 bit, or floating point), any sample rate and channel count. A .wav can also be dropped on this window.");
-            tips.SetToolTip(replaceRadio, "Put the new audio in place of one of the game's sounds, for this level only: streamed audio goes in as a stream of its own, audio held in a soundbank goes into the package's copy of that soundbank.");
-            tips.SetToolTip(streamRadio, "Put the new audio in the package as a stream with an id of your choosing - for a soundbank of your own (added with Add Files) that streams audio by that id.");
-            tips.SetToolTip(channels, "Mono or stereo. Matching the sound it replaces keeps it positioned and mixed as the game's designers had it; the game's codebooks only cover mono and stereo, so wider audio is always mixed down.");
-            tips.SetToolTip(rate, "The sample rate to encode at. A rate the game's decoder isn't set up for (below 16000 Hz mono or 32000 Hz stereo, or above 48000 Hz) moves to the nearest one it is.");
-            tips.SetToolTip(quality, "Vorbis quality, 0.3 to 1.0. Raised automatically to the nearest setting the game's decoder is set up for (0.5 or 0.6 for most audio).");
-            tips.SetToolTip(gain, "Decibels added to the audio; negative makes it quieter.");
-            tips.SetToolTip(normalise, "Scale the audio so its loudest moment peaks at -1 dBFS (any gain is folded into it).");
-            tips.SetToolTip(playOriginalBtn, "Play the game's audio for the selected sound.");
-            tips.SetToolTip(playNewBtn, "Play the new audio, decoded from the very .wem that will go in the level's package.");
-
-            BuildLayout();
-
-            browseBtn.Click += (s, e) => Browse();
-            search.TextChanged += (s, e) => Fill();
-            onlyBank.CheckedChanged += (s, e) => Fill();
-            list.SelectedIndexChanged += (s, e) =>
-            {
-                if (_filling)
-                    return;
-                UpdateLayoutChoices(SelectedOriginal());
-                UpdateEnabled();
-                Changed();
-            };
-            //The two choices sit in different rows of the layout, so they don't group themselves: each clears the other
-            replaceRadio.CheckedChanged += (s, e) =>
-            {
-                if (replaceRadio.Checked) streamRadio.Checked = false;
-                UpdateLayoutChoices(SelectedOriginal());
-                UpdateEnabled();
-                Changed();
-            };
-            streamRadio.CheckedChanged += (s, e) => { if (streamRadio.Checked) replaceRadio.Checked = false; };
-            streamId.TextChanged += (s, e) => { if (streamRadio.Checked) Changed(); };
-            streamId.Enter += (s, e) => streamRadio.Checked = true;
-            channels.SelectedIndexChanged += (s, e) => Changed();
-            rate.SelectedIndexChanged += (s, e) => Changed();
-            quality.ValueChanged += (s, e) => Changed();
-            gain.ValueChanged += (s, e) => Changed();
-            normalise.CheckedChanged += (s, e) => Changed();
-            playOriginalBtn.Click += (s, e) => PlayOriginal();
-            playNewBtn.Click += (s, e) => PlayNew();
-            stopBtn.Click += (s, e) => StopPlaying();
-            importBtn.Click += (s, e) => Import();
-            cancelBtn.Click += (s, e) => Close();
-            debounce.Tick += (s, e) => { debounce.Stop(); Examine(); };
+            //Wired after the choices above are filled in, which are not changes
+            onlyBank.CheckedChanged += onlyBank_CheckedChanged;
+            channels.SelectedIndexChanged += Option_Changed;
+            rate.SelectedIndexChanged += Option_Changed;
 
             AcceptDrops(this);
-
-            CancelButton = cancelBtn;
-            Load += (s, e) => LoadCandidates();
-            FormClosed += (s, e) =>
-            {
-                _listing++;
-                _examining++;
-                StopPlaying();
-                debounce.Dispose();
-                tips.Dispose();
-            };
             UpdateEnabled();
+        }
+
+        private void LevelSoundImportDialog_Load(object sender, EventArgs e) => LoadCandidates();
+
+        private void LevelSoundImportDialog_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            _listing++;
+            _examining++;
+            StopPlaying();
+            debounce.Dispose();
+            tips.Dispose();
+        }
+
+        private void browseBtn_Click(object sender, EventArgs e) => Browse();
+        private void search_TextChanged(object sender, EventArgs e) => Fill();
+        private void onlyBank_CheckedChanged(object sender, EventArgs e) => Fill();
+
+        private void list_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_filling)
+                return;
+            UpdateLayoutChoices(SelectedOriginal());
+            UpdateEnabled();
+            Changed();
+        }
+
+        //The two choices sit in different rows of the layout, so they don't group themselves: each clears the other
+        private void replaceRadio_CheckedChanged(object sender, EventArgs e)
+        {
+            if (replaceRadio.Checked) streamRadio.Checked = false;
+            UpdateLayoutChoices(SelectedOriginal());
+            UpdateEnabled();
+            Changed();
+        }
+
+        private void streamRadio_CheckedChanged(object sender, EventArgs e) { if (streamRadio.Checked) replaceRadio.Checked = false; }
+        private void streamId_TextChanged(object sender, EventArgs e) { if (streamRadio.Checked) Changed(); }
+        private void streamId_Enter(object sender, EventArgs e) => streamRadio.Checked = true;
+
+        /// <summary>Channels, sample rate, quality, gain or normalise changed.</summary>
+        private void Option_Changed(object sender, EventArgs e) => Changed();
+
+        private void playOriginalBtn_Click(object sender, EventArgs e) => PlayOriginal();
+        private void playNewBtn_Click(object sender, EventArgs e) => PlayNew();
+        private void stopBtn_Click(object sender, EventArgs e) => StopPlaying();
+        private void importBtn_Click(object sender, EventArgs e) => Import();
+        private void cancelBtn_Click(object sender, EventArgs e) => Close();
+
+        private void debounce_Tick(object sender, EventArgs e)
+        {
+            debounce.Stop();
+            Examine();
         }
 
         /// <summary>A .wav dropped anywhere on the window is the one to import.</summary>
@@ -191,67 +157,6 @@ namespace OpenCAGE
         }
 
         #region LAYOUT
-
-        private void BuildLayout()
-        {
-            TableLayoutPanel wavRow = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 1, AutoSize = true, Margin = new Padding(0) };
-            wavRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            wavRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            wavRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            wavRow.Controls.Add(new Label { Text = "Audio file (.wav):", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(3, 7, 3, 3) }, 0, 0);
-            wavRow.Controls.Add(wavPath, 1, 0);
-            wavRow.Controls.Add(browseBtn, 2, 0);
-
-            TableLayoutPanel searchRow = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 1, AutoSize = true, Margin = new Padding(16, 0, 0, 0) };
-            searchRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            searchRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            searchRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            searchRow.Controls.Add(new Label { Text = "Search (sound event or id):", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(3, 6, 3, 3) }, 0, 0);
-            searchRow.Controls.Add(search, 1, 0);
-            searchRow.Controls.Add(onlyBank, 2, 0);
-
-            FlowLayoutPanel streamRow = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, WrapContents = false, Margin = new Padding(0, 4, 0, 0) };
-            streamRadio.Margin = new Padding(3, 5, 3, 3);
-            streamRow.Controls.AddRange(new Control[] { streamRadio, streamId });
-
-            FlowLayoutPanel optionsRow = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, WrapContents = true, Margin = new Padding(0, 6, 0, 0) };
-            optionsRow.Controls.AddRange(new Control[]
-            {
-                Caption("Channels:"), channels, Caption("Sample rate:"), rate,
-                Caption("Quality:"), quality, Caption("Gain (dB):"), gain, normalise,
-            });
-            normalise.Margin = new Padding(8, 6, 3, 3);
-
-            FlowLayoutPanel buttonRow = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, FlowDirection = FlowDirection.RightToLeft, WrapContents = false, Margin = new Padding(0, 4, 0, 0) };
-            buttonRow.Controls.AddRange(new Control[] { cancelBtn, importBtn, stopBtn, playNewBtn, playOriginalBtn });
-
-            TableLayoutPanel root = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 8, Padding = new Padding(8) };
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 150));
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            replaceRadio.Margin = new Padding(3, 8, 3, 3);
-            list.Margin = new Padding(19, 3, 3, 3);
-            summary.Margin = new Padding(3, 6, 3, 3);
-            root.Controls.Add(wavRow, 0, 0);
-            root.Controls.Add(replaceRadio, 0, 1);
-            root.Controls.Add(searchRow, 0, 2);
-            root.Controls.Add(list, 0, 3);
-            root.Controls.Add(streamRow, 0, 4);
-            root.Controls.Add(optionsRow, 0, 5);
-            root.Controls.Add(summary, 0, 6);
-            root.Controls.Add(buttonRow, 0, 7);
-            Controls.Add(root);
-        }
-
-        private static Label Caption(string text)
-        {
-            return new Label { Text = text, AutoSize = true, Margin = new Padding(8, 7, 0, 3) };
-        }
 
         /// <summary>The channel and rate choices, naming the layout each "match" or "keep" comes to for this .wav and sound.</summary>
         private void UpdateLayoutChoices(SoundImport.MediaLayout original)

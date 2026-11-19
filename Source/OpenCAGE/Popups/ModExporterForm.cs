@@ -131,19 +131,6 @@ namespace OpenCAGE.Popups
             return _deleted.Contains(normalisedPath) ? "deleted" : ModExportBuilder.PrettySize(FileSize(normalisedPath));
         }
 
-        private TreeView _tree;
-        private ComboBox _updates;
-        private ComboBox _installs;
-        private Label _installsInfo;
-        private TextBox _name;
-        private TextBox _author;
-        private TextBox _version;
-        private TextBox _description;
-        private TextBox _changes;
-        private PictureBox _picture;
-        private Button _exportButton;
-        private Label _summary;
-
         /* The mod this export is a new version of (its id is kept, so it replaces the old one in people's lists), or null */
         private ModState.InstalledMod _updating;
         private byte[] _preview;
@@ -156,124 +143,78 @@ namespace OpenCAGE.Popups
         {
             _scan = scan;
 
-            Text = "Create a Mod";
+            InitializeComponent();
             Icon = SharedFormIcon.Icon;
-            Size = new Size(980, 680);
-            MinimumSize = new Size(760, 520);
-            StartPosition = FormStartPosition.CenterParent;
 
-            BuildLayout();
-            Theming.ThemeManager.ApplyToForm(this);
-            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/making-mods/");
-
-            Shown += (s, e) => PopulateTree();
-        }
-
-        private void BuildLayout()
-        {
             //Tick boxes drawn here rather than the tree's own, which have no "some of it" state: a level part of which goes in
             //read as all of it
-            _tree = new TreeView() { Dock = DockStyle.Fill, CheckBoxes = false, ShowNodeToolTips = true, StateImageList = TickGlyphs() };
-            _tree.AfterCheck += OnAfterCheck;
-            _tree.NodeMouseClick += (s, e) =>
-            {
-                if (e.Button == MouseButtons.Left && _tree.HitTest(e.Location).Location == TreeViewHitTestLocations.StateImage)
-                    Toggle(e.Node);
-            };
-            _tree.KeyDown += (s, e) =>
-            {
-                if (e.KeyCode != Keys.Space || _tree.SelectedNode == null) return;
-                Toggle(_tree.SelectedNode);
-                e.Handled = e.SuppressKeyPress = true;
-            };
-            FormClosed += (s, e) => _tree.StateImageList?.Dispose();
-            Label treeTip = new Label() { Dock = DockStyle.Top, Height = 36, Text = "Everything you've changed in the game is listed here. Untick anything that shouldn't go in the mod.", Padding = new Padding(2, 4, 2, 0) };
+            _tree.StateImageList = TickGlyphs();
             if (ModServices.State?.Mods.Any(o => o.Enabled) == true)
-                { treeTip.Text += " Changes your installed mods made aren't listed - only your own work goes in."; treeTip.Height = 52; }
-            Panel treePanel = new Panel() { Dock = DockStyle.Fill };
-            treePanel.Controls.Add(_tree);
-            treePanel.Controls.Add(treeTip);
+                { _treeTip.Text += " Changes your installed mods made aren't listed - only your own work goes in."; _treeTip.Height = 52; }
 
-            //Details on the right
-            TableLayoutPanel meta = new TableLayoutPanel() { Dock = DockStyle.Fill, ColumnCount = 1, Padding = new Padding(8), AutoScroll = true };
-            meta.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            Label saveAs = new Label() { Text = "Save this as", AutoSize = true };
-            meta.Controls.Add(saveAs);
-            _updates = new ComboBox() { Dock = DockStyle.Top, DropDownStyle = ComboBoxStyle.DropDownList };
-            _updates.Items.Add("A new mod");
+            //Each installed mod a new version can replace. Both pickers are listened to only after their first pick is set
             foreach (ModState.InstalledMod mod in ModServices.State?.ModsInPriorityOrder() ?? new List<ModState.InstalledMod>())
                 _updates.Items.Add(new UpdateChoice(mod));
             _updates.SelectedIndex = 0;
             _updates.SelectedIndexChanged += (s, e) => ChooseUpdate();
-            meta.Controls.Add(_updates);
-            ToolTip tips = new ToolTip() { AutoPopDelay = 15000 };
-            string saveAsTip = "A new version of a mod you've installed takes its place: anyone who installs this gets it instead of the old one, not as well as it.\n"
-                + "Its name, author, description and picture are filled in from the old one, and its version goes up by one.";
-            tips.SetToolTip(saveAs, saveAsTip);
-            tips.SetToolTip(_updates, saveAsTip);
-            FormClosed += (s, e) => tips.Dispose();
-            meta.Controls.Add(new Label() { Text = "How it installs", AutoSize = true, Margin = new Padding(0, 8, 0, 0) });
-            _installs = new ComboBox() { Dock = DockStyle.Top, DropDownStyle = ComboBoxStyle.DropDownList };
-            _installs.Items.Add("Combines with other mods");
-            _installs.Items.Add("Replaces what it changes");
             _installs.SelectedIndex = 0;
-            _installsInfo = new Label() { Dock = DockStyle.Top, AutoSize = true, MaximumSize = new Size(360, 0), Margin = new Padding(0, 2, 0, 0) };
             _installs.SelectedIndexChanged += (s, e) => InstallsChanged();
-            meta.Controls.Add(_installs);
-            meta.Controls.Add(_installsInfo);
             DescribeInstalls();
             //How Launch Mod starts the game for it (ModExporterForm.Launch.cs)
-            AddLaunchChoice(meta, tips);
-            meta.Controls.Add(new Label() { Text = "Mod name", AutoSize = true, Margin = new Padding(0, 8, 0, 0) });
-            _name = new TextBox() { Dock = DockStyle.Top };
-            meta.Controls.Add(_name);
-            meta.Controls.Add(new Label() { Text = "Author", AutoSize = true, Margin = new Padding(0, 8, 0, 0) });
-            _author = new TextBox() { Dock = DockStyle.Top };
-            meta.Controls.Add(_author);
-            meta.Controls.Add(new Label() { Text = "Version", AutoSize = true, Margin = new Padding(0, 8, 0, 0) });
-            _version = new TextBox() { Dock = DockStyle.Top, Text = "1.0" };
-            meta.Controls.Add(_version);
-            meta.Controls.Add(new Label() { Text = "Description (what players should know)", AutoSize = true, Margin = new Padding(0, 8, 0, 0) });
-            _description = new TextBox() { Dock = DockStyle.Fill, Multiline = true, ScrollBars = ScrollBars.Vertical, Height = 110 };
-            meta.Controls.Add(_description);
-            meta.Controls.Add(new Label() { Text = "What it changes (filled in for you - edit it if you like)", AutoSize = true, Margin = new Padding(0, 8, 0, 0) });
-            _changes = new TextBox() { Dock = DockStyle.Top, Multiline = true, Height = 46 };
-            _changes.TextChanged += (s, e) => { if (_changes.Focused && !_summarising) _changesEdited = true; };
-            meta.Controls.Add(_changes);
-            FlowLayoutPanel pictureRow = new FlowLayoutPanel() { Dock = DockStyle.Top, AutoSize = true, Margin = new Padding(0, 8, 0, 0) };
-            Button choosePicture = new Button() { Text = "Picture...", AutoSize = true };
-            choosePicture.Click += (s, e) => ChoosePicture();
-            Button clearPicture = new Button() { Text = "No picture", AutoSize = true };
-            clearPicture.Click += (s, e) => ClearPicture();
-            pictureRow.Controls.Add(choosePicture);
-            pictureRow.Controls.Add(clearPicture);
-            meta.Controls.Add(pictureRow);
-            _picture = new PictureBox() { Dock = DockStyle.Top, Height = 120, SizeMode = PictureBoxSizeMode.Zoom };
-            meta.Controls.Add(_picture);
-            meta.RowStyles.Clear();
-            for (int i = 0; i < 12; i++) meta.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            meta.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            for (int i = 0; i < 6; i++) meta.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            FillLaunchChoice();
 
-            //The details keep their width as the window grows: the list of changes takes the rest
-            SplitContainer split = new SplitContainer() { Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel2 };
-            split.Panel1.Controls.Add(treePanel);
-            split.Panel2.Controls.Add(meta);
-            Shown += (s, e) => { try { split.SplitterDistance = Math.Max(split.Panel1MinSize, split.Width - 400); } catch { } };
+            Theming.ThemeManager.ApplyToForm(this);
+            OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/making-mods/");
+        }
 
-            _summary = new Label() { Dock = DockStyle.Bottom, Height = 22, TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(8, 0, 0, 0) };
+        private void ModExporterForm_Shown(object sender, EventArgs e)
+        {
+            //The details keep their width as the window grows (their panel is the fixed one): the list of changes takes the rest
+            try { _split.SplitterDistance = Math.Max(_split.Panel1MinSize, _split.Width - 400); } catch { }
+            PopulateTree();
+        }
 
-            FlowLayoutPanel buttons = new FlowLayoutPanel() { Dock = DockStyle.Bottom, Height = 42, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(6) };
-            _exportButton = new Button() { Text = "Save Mod...", AutoSize = true, Height = 28 };
-            _exportButton.Click += (s, e) => Export();
-            Button close = new Button() { Text = "Close", AutoSize = true, Height = 28 };
-            close.Click += (s, e) => Close();
-            buttons.Controls.Add(close);
-            buttons.Controls.Add(_exportButton);
+        private void ModExporterForm_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            _tree.StateImageList?.Dispose();
+        }
 
-            Controls.Add(split);
-            Controls.Add(_summary);
-            Controls.Add(buttons);
+        private void _tree_NodeMouseClick(object sender, TreeNodeMouseClickEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left && _tree.HitTest(e.Location).Location == TreeViewHitTestLocations.StateImage)
+                Toggle(e.Node);
+        }
+
+        private void _tree_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Space || _tree.SelectedNode == null) return;
+            Toggle(_tree.SelectedNode);
+            e.Handled = e.SuppressKeyPress = true;
+        }
+
+        private void _changes_TextChanged(object sender, EventArgs e)
+        {
+            if (_changes.Focused && !_summarising) _changesEdited = true;
+        }
+
+        private void _choosePicture_Click(object sender, EventArgs e)
+        {
+            ChoosePicture();
+        }
+
+        private void _clearPicture_Click(object sender, EventArgs e)
+        {
+            ClearPicture();
+        }
+
+        private void _exportButton_Click(object sender, EventArgs e)
+        {
+            Export();
+        }
+
+        private void _closeButton_Click(object sender, EventArgs e)
+        {
+            Close();
         }
 
         #region DETAILS

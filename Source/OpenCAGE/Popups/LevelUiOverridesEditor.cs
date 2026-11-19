@@ -13,20 +13,9 @@ namespace OpenCAGE
     /// A level's own UI movies (LevelUiOverrides): every movie the game opens by name, and whether the level replaces it with a .gfx
     /// in its UI folder. Changes apply from the next launch into the level.
     /// </summary>
-    public class LevelUiOverridesEditor : BaseWindow
+    public partial class LevelUiOverridesEditor : BaseWindow
     {
         private readonly string _level;
-
-        private readonly Label summary = new Label { Dock = DockStyle.Top, Height = 66, Padding = new Padding(6, 6, 6, 0) };
-        private readonly ListView list = new ListView { Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true, HideSelection = false, MultiSelect = false, ShowItemToolTips = true };
-        private readonly FlowLayoutPanel buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 38, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(4) };
-        private readonly Button closeBtn = new Button { Text = "Close", Width = 90, Height = 26 };
-        private readonly Button removeBtn = new Button { Text = "Remove", Width = 90, Height = 26 };
-        private readonly Button exportBtn = new Button { Text = "Export...", Width = 90, Height = 26 };
-        private readonly Button exportGameBtn = new Button { Text = "Export Game's...", Width = 115, Height = 26 };
-        private readonly Button importBtn = new Button { Text = "Import...", Width = 90, Height = 26 };
-        private readonly Button folderBtn = new Button { Text = "Open Folder", Width = 100, Height = 26 };
-        private readonly ToolTip tips = new ToolTip() { AutoPopDelay = 15000 };
 
         /// <summary>Show a level's UI overrides (one window per level: an open one comes to the front).</summary>
         public static void ShowFor(IWin32Window owner, string level)
@@ -50,52 +39,33 @@ namespace OpenCAGE
 
         public LevelUiOverridesEditor(string level)
         {
+            InitializeComponent();
             _level = level.Replace('\\', '/');
 
             Text = "Level UI Overrides - " + _level;
             Icon = SharedFormIcon.Icon;
-            ClientSize = new Size(860, 520);
-            MinimumSize = new Size(560, 300);
-            StartPosition = FormStartPosition.CenterScreen;
-            ShowInTaskbar = false;
-            MinimizeBox = false;
             BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/ui-editor/#level-ui-overrides");
+        }
 
-            list.Columns.Add("Movie", 280);
-            list.Columns.Add("File", 230);
-            list.Columns.Add("On this level", 320);
+        private void LevelUiOverridesEditor_Load(object sender, EventArgs e) => Fill();
+        private void LevelUiOverridesEditor_Activated(object sender, EventArgs e) => Fill();
+        private void LevelUiOverridesEditor_FormClosed(object sender, FormClosedEventArgs e) => tips.Dispose();
 
-            tips.SetToolTip(importBtn, "Give the level its own version of the selected movie: a .gfx (or the .swf it is made from), copied into the level's UI folder. Used from the next launch into the level.");
-            tips.SetToolTip(exportGameBtn, "Save the game's own version of the selected movie, from UI.PAK - a starting point for the level's own.");
-            tips.SetToolTip(exportBtn, "Save the level's own version of the selected movie.");
-            tips.SetToolTip(removeBtn, "Take the level's own version of the selected movie out: the game's is used again.");
-            tips.SetToolTip(folderBtn, "Open the level's UI folder (DATA\\ENV\\<level>\\UI), where its movies are kept under the game's file names.");
-            importBtn.Click += (s, e) => Import();
-            exportGameBtn.Click += (s, e) => Export(game: true);
-            exportBtn.Click += (s, e) => Export(game: false);
-            removeBtn.Click += (s, e) => Remove();
-            folderBtn.Click += (s, e) => OpenFolder();
-            closeBtn.Click += (s, e) => Close();
-            list.SelectedIndexChanged += (s, e) => UpdateButtons();
-            list.DoubleClick += (s, e) => Import();
-            list.KeyDown += (s, e) =>
-            {
-                if (e.KeyCode != Keys.Delete) return;
-                e.Handled = true;
-                Remove();
-            };
+        private void importBtn_Click(object sender, EventArgs e) => Import();
+        private void exportGameBtn_Click(object sender, EventArgs e) => Export(game: true);
+        private void exportBtn_Click(object sender, EventArgs e) => Export(game: false);
+        private void removeBtn_Click(object sender, EventArgs e) => Remove();
+        private void folderBtn_Click(object sender, EventArgs e) => OpenFolder();
+        private void closeBtn_Click(object sender, EventArgs e) => Close();
 
-            //Right to left: Close at the far right, then what acts on the selection
-            buttons.Controls.AddRange(new Control[] { closeBtn, removeBtn, exportBtn, exportGameBtn, importBtn, folderBtn });
+        private void list_SelectedIndexChanged(object sender, EventArgs e) => UpdateButtons();
+        private void list_DoubleClick(object sender, EventArgs e) => Import();
 
-            Controls.Add(list);
-            Controls.Add(buttons);
-            Controls.Add(summary);
-
-            CancelButton = closeBtn;
-            Load += (s, e) => Fill();
-            Activated += (s, e) => Fill();
-            FormClosed += (s, e) => tips.Dispose();
+        private void list_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Delete) return;
+            e.Handled = true;
+            Remove();
         }
 
         private LevelUiOverrides.Movie SelectedMovie => list.SelectedItems.Count == 0 ? null : list.SelectedItems[0].Tag as LevelUiOverrides.Movie;

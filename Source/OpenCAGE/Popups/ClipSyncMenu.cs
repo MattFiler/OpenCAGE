@@ -16,7 +16,7 @@ namespace OpenCAGE.Popups
     /// "Sync to a CAGEAnimation..." on a CMD_PlayAnimation: links the command's ExternalTime to a CAGEAnimation in its composite, so the
     /// clip runs on the CAGEAnimation's clock and stays in step with the cutscene (<see cref="ClipSync"/>). One undo step.
     /// </summary>
-    public class ClipSyncMenu : BaseWindow
+    public partial class ClipSyncMenu : BaseWindow
     {
         /// <summary>
         /// Add "Sync to a CAGEAnimation..." to an entity context menu: shown when the entity under it (<paramref name="entity"/>, read as the menu
@@ -52,54 +52,21 @@ namespace OpenCAGE.Popups
         private readonly Composite _composite;
         private readonly Entity _command;
         private readonly List<Entity> _cages;
-        private readonly ComboBox _cageBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 330 };
-        private readonly NumericUpDown _offset = new NumericUpDown { DecimalPlaces = 3, Minimum = 0, Maximum = 36000, Increment = 0.1m, Width = 90 };
-        private readonly Label _notes = new Label { AutoSize = false, Width = 470, Height = 150 };
-        private readonly Button _sync = new Button { Text = "Sync", Width = 90 };
-        private readonly Button _unsync = new Button { Text = "Unsync", Width = 90 };
-        private readonly Button _cancel = new Button { Text = "Cancel", Width = 90, DialogResult = DialogResult.Cancel };
 
         private ClipSyncMenu(Composite composite, Entity command) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
             _composite = composite;
             _command = command;
             _cages = ClipSync.CageAnimations(composite);
+            //docked throughout, so it lays out the same at any display scaling (fixed positions cut the buttons off at 150%)
+            InitializeComponent();
             Commands commands = Singleton.Editor?.CompositeBrowser?.Content?.Level?.Commands;
             string name = commands != null ? McpScript.EntityName(commands, composite, command) : "the command";
 
             Text = "Sync " + name + " to a CAGEAnimation";
             Icon = SharedFormIcon.Icon;
-            FormBorderStyle = FormBorderStyle.Sizable;
-            MaximizeBox = MinimizeBox = false;
-            StartPosition = FormStartPosition.CenterParent;
-            ClientSize = new Size(520, 330);
-            MinimumSize = new Size(420, 300);
-            CancelButton = _cancel;
-            Padding = new Padding(10);
-
-            //docked, so it lays out the same at any display scaling (fixed positions cut the buttons off at 150%)
-            Label intro = new Label
-            {
-                AutoSize = false, Dock = DockStyle.Top, Height = 48,
-                Text = "Links " + name + "'s ExternalTime to the CAGEAnimation: the clip's time is then the CAGEAnimation's time every frame, "
-                    + "so it can't drift behind on slow frames (a clip's own clock gains at most 1/24 s a frame).",
-            };
-            TableLayoutPanel rows = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 2, RowCount = 2 };
-            rows.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            rows.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            rows.Controls.Add(new Label { Text = "CAGEAnimation", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 0);
-            rows.Controls.Add(_cageBox, 1, 0);
-            rows.Controls.Add(new Label { Text = "Clip starts at (s)", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 1);
-            rows.Controls.Add(_offset, 1, 1);
-            _cageBox.Anchor = AnchorStyles.Left | AnchorStyles.Right;
-            _notes.Dock = DockStyle.Fill;
-            _notes.Padding = new Padding(0, 8, 0, 0);
-            FlowLayoutPanel buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, FlowDirection = FlowDirection.RightToLeft };
-            foreach (Button b in new[] { _cancel, _unsync, _sync }) { b.AutoSize = true; buttons.Controls.Add(b); }
-            Controls.Add(_notes);
-            Controls.Add(rows);
-            Controls.Add(intro);
-            Controls.Add(buttons);
+            introLabel.Text = "Links " + name + "'s ExternalTime to the CAGEAnimation: the clip's time is then the CAGEAnimation's time every frame, "
+                + "so it can't drift behind on slow frames (a clip's own clock gains at most 1/24 s a frame).";
 
             Entity current = ClipSync.LinkedTo(composite, command, ClipSync.ExternalTime);
             foreach (Entity cage in _cages) _cageBox.Items.Add(commands != null ? McpScript.EntityName(commands, composite, cage) : cage.shortGUID.ToByteString());
@@ -109,14 +76,14 @@ namespace OpenCAGE.Popups
                 _offset.Value = (decimal)Math.Max(0, Math.Min(36000, was));
             _unsync.Enabled = current != null;
             _sync.Enabled = _cages.Count != 0;
-
-            _cageBox.SelectedIndexChanged += (s, e) => Describe();
-            _offset.ValueChanged += (s, e) => Describe();
-            _sync.Click += (s, e) => Run(false);
-            _unsync.Click += (s, e) => Run(true);
-            _cancel.Click += (s, e) => Close();
             Describe();
         }
+
+        private void _cageBox_SelectedIndexChanged(object sender, EventArgs e) => Describe();
+        private void _offset_ValueChanged(object sender, EventArgs e) => Describe();
+        private void _sync_Click(object sender, EventArgs e) => Run(false);
+        private void _unsync_Click(object sender, EventArgs e) => Run(true);
+        private void _cancel_Click(object sender, EventArgs e) => Close();
 
         private Entity Cage { get { return _cageBox.SelectedIndex >= 0 && _cageBox.SelectedIndex < _cages.Count ? _cages[_cageBox.SelectedIndex] : null; } }
 

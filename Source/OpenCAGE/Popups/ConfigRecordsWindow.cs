@@ -16,15 +16,9 @@ namespace OpenCAGE
     /// "Used by" and "spare records" for a global configuration table: what uses each ammo type or character attribute set, and which
     /// records nothing uses (free for a new weapon or character). Opened from the Ammo and Attributes editors' banner.
     /// </summary>
-    public class ConfigRecordsWindow : BaseWindow
+    public partial class ConfigRecordsWindow : BaseWindow
     {
         private readonly ConfigRecords.Kind _kind;
-        private readonly ListView _records = new ListView() { View = View.Details, FullRowSelect = true, HideSelection = false, Width = 470, Height = 330, MultiSelect = false };
-        private readonly TextBox _detail = new TextBox() { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Width = 470, Height = 330, WordWrap = true };
-        private readonly ComboBox _scope = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 230 };
-        private readonly Button _scan = new Button() { Text = "Find Uses", AutoSize = true };
-        private readonly CheckBox _spareOnly = new CheckBox() { Text = "Spare records only", AutoSize = true };
-        private readonly Label _status = new Label() { AutoSize = true, MaximumSize = new Size(940, 0) };
         private ConfigRecords.Report _report;
         private CancellationTokenSource _cancel;
         private string _select;
@@ -33,39 +27,25 @@ namespace OpenCAGE
         {
             _kind = kind;
             _select = select;
+            InitializeComponent();
             Text = kind == ConfigRecords.Kind.Ammo ? "Ammo Types: Used By / Spare" : "Character Attributes: Used By / Spare";
             Icon = SharedFormIcon.Icon;
-            FormBorderStyle = FormBorderStyle.SizableToolWindow;
-            StartPosition = FormStartPosition.CenterScreen;
-            AutoSize = true;
-            AutoSizeMode = AutoSizeMode.GrowAndShrink;
             EnableDocumentation(kind == ConfigRecords.Kind.Ammo ? "https://opencage.co.uk/docs/configs/ammo/#spare-records" : "https://opencage.co.uk/docs/configs/attributes/#spare-records");
 
-            _records.Columns.Add("Record", 170);
-            _records.Columns.Add("Built on", 110);
-            _records.Columns.Add("Uses", 60);
-            _records.Columns.Add("", 110);
-            _scope.Items.AddRange(new object[] { "Every level on disk", "The game's own levels", "The open level only" });
             _scope.SelectedIndex = 0;
 
-            FlowLayoutPanel root = new FlowLayoutPanel() { FlowDirection = FlowDirection.TopDown, AutoSize = true, Padding = new Padding(10), WrapContents = false };
-            root.Controls.Add(ConfigRecordsBanner.MakeLabel(kind, 940));
-            FlowLayoutPanel top = new FlowLayoutPanel() { AutoSize = true, WrapContents = false };
-            top.Controls.Add(new Label() { Text = "Look in:", AutoSize = true, Padding = new Padding(0, 6, 0, 0) });
-            top.Controls.AddRange(new Control[] { _scope, _scan, _spareOnly });
-            root.Controls.Add(top);
-            FlowLayoutPanel lists = new FlowLayoutPanel() { AutoSize = true, WrapContents = false };
-            lists.Controls.AddRange(new Control[] { _records, _detail });
-            root.Controls.Add(lists);
-            root.Controls.Add(_status);
-            Controls.Add(root);
-
-            _scan.Click += (s, e) => Scan();
-            _spareOnly.CheckedChanged += (s, e) => Fill();
-            _records.SelectedIndexChanged += (s, e) => ShowDetail();
-            FormClosing += (s, e) => _cancel?.Cancel();
-            Shown += (s, e) => Scan();
+            //The banner leads the window, ahead of the designer's rows
+            Label banner = ConfigRecordsBanner.MakeLabel(kind, 940);
+            banner.TabIndex = 0;
+            _root.Controls.Add(banner);
+            _root.Controls.SetChildIndex(banner, 0);
         }
+
+        private void _scan_Click(object sender, EventArgs e) => Scan();
+        private void _spareOnly_CheckedChanged(object sender, EventArgs e) => Fill();
+        private void _records_SelectedIndexChanged(object sender, EventArgs e) => ShowDetail();
+        private void ConfigRecordsWindow_FormClosing(object sender, FormClosingEventArgs e) => _cancel?.Cancel();
+        private void ConfigRecordsWindow_Shown(object sender, EventArgs e) => Scan();
 
         private void Scan()
         {

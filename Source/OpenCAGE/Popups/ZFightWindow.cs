@@ -22,35 +22,15 @@ namespace OpenCAGE.Popups
     /// Editor > Level Tools) or inside one model (a model's right-click in the Model Editor). Fix pushes one surface out until they are the clearance apart, as one undo step
     /// (find_z_fighting / fix_z_fighting do the same).
     /// </summary>
-    public class ZFightWindow : BaseWindow
+    public partial class ZFightWindow : BaseWindow
     {
         private readonly Models.CS2 _model;
         private readonly Action _modelChanged;
-
-        private readonly ComboBox _scope = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200 };
-        private readonly NumericUpDown _radius = new NumericUpDown() { Minimum = 1, Maximum = 500, Value = 15, Width = 55 };
-        private readonly NumericUpDown _gap = new NumericUpDown() { Minimum = 0.05m, Maximum = 200, DecimalPlaces = 2, Increment = 0.5m, Width = 60 };
-        private readonly NumericUpDown _angle = new NumericUpDown() { Minimum = 0, Maximum = 30, DecimalPlaces = 1, Increment = 0.5m, Width = 50 };
-        private readonly NumericUpDown _minArea = new NumericUpDown() { Minimum = 0, Maximum = 10000, DecimalPlaces = 1, Width = 60 };
-        private readonly CheckBox _inside = new CheckBox() { Text = "Inside one model too", AutoSize = true, Checked = true };
-        private readonly CheckBox _hidden = new CheckBox() { Text = "Models hidden at the start", AutoSize = true };
-        private readonly CheckBox _decals = new CheckBox() { Text = "Mesh decals on what they decorate", AutoSize = true };
-        private readonly Button _find = new Button() { Text = "Find", AutoSize = true };
-        private readonly ListView _list = new ListView() { View = View.Details, FullRowSelect = true, HideSelection = false, MultiSelect = true, Width = 760, Height = 190 };
-        private readonly PictureBox _preview = new PictureBox() { Width = 760, Height = 380, BorderStyle = BorderStyle.FixedSingle, BackColor = Color.FromArgb(32, 34, 38) };
-        private readonly ComboBox _action = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 230 };
-        private readonly NumericUpDown _clearance = new NumericUpDown() { Minimum = 0.1m, Maximum = 500, DecimalPlaces = 1, Increment = 1, Width = 60 };
-        private readonly Button _fixSelected = new Button() { Text = "Fix Selected", AutoSize = true, Enabled = false };
-        private readonly Button _fixAll = new Button() { Text = "Fix All Listed", AutoSize = true, Enabled = false };
-        private readonly Button _close = new Button() { Text = "Close", AutoSize = true };
-        private readonly Label _status = new Label() { AutoSize = true, MaximumSize = new Size(760, 0) };
-        private readonly Label _title = new Label() { AutoSize = true, Font = new Font(SystemFonts.DefaultFont, FontStyle.Bold), MaximumSize = new Size(760, 0) };
 
         private ZScan _scan;
         private ZFixPlan _plan;
         private bool _busy;
         private CancellationTokenSource _cancel;
-        private readonly System.Windows.Forms.Timer _replan = new System.Windows.Forms.Timer() { Interval = 250 };
 
         /// <summary>The window opened last (for UI automation).</summary>
         public static ZFightWindow Latest { get; private set; }
@@ -61,15 +41,12 @@ namespace OpenCAGE.Popups
 
         private ZFightWindow(Models.CS2 model, Action modelChanged) : base(WindowClosesOn.COMMANDS_RELOAD)
         {
+            InitializeComponent();
             _model = model;
             _modelChanged = modelChanged;
             Latest = this;
             Text = model == null ? "Find Z-Fighting" : "Find Z-Fighting - " + System.IO.Path.GetFileName(model.Name);
             Icon = SharedFormIcon.Icon;
-            FormBorderStyle = FormBorderStyle.FixedToolWindow;
-            StartPosition = FormStartPosition.CenterScreen;
-            AutoSize = true;
-            AutoSizeMode = AutoSizeMode.GrowAndShrink;
             StayAboveEditor = true;
             EnableDocumentation("https://opencage.co.uk/docs/z-fighting/");
 
@@ -77,61 +54,51 @@ namespace OpenCAGE.Popups
             _angle.Value = (decimal)McpSurfaceTools.Defaults.MaxAngle;
             _minArea.Value = (decimal)(McpSurfaceTools.Defaults.MinArea * 10000);
             _clearance.Value = (decimal)(McpSurfaceTools.Defaults.Clearance * 1000);
-            _scope.Items.AddRange(new object[] { "The whole level", "Round the selected entity", "The composite on screen" });
             _scope.SelectedIndex = 0;
-            _action.Items.AddRange(new object[] { "Push the one on top out", "Sink the one underneath back" });
             _action.SelectedIndex = 0;
-            _list.Columns.Add("#", 40);
-            _list.Columns.Add("Overlap", 70);
-            _list.Columns.Add("Apart", 95);
-            _list.Columns.Add("On top", 240);
-            _list.Columns.Add("Underneath", 210);
-            _list.Columns.Add("Kind", 95);
 
-            FlowLayoutPanel root = new FlowLayoutPanel() { FlowDirection = FlowDirection.TopDown, AutoSize = true, Padding = new Padding(10), WrapContents = false };
             _title.Text = model == null ? "Surfaces of placed models drawn over each other at the same depth" : "Meshes of " + model.Name + " drawn over each other at the same depth";
-            root.Controls.Add(_title);
-            root.Controls.Add(new Label()
+            introLabel.Text = "Two surfaces that face the same way and lie within the gap of each other flicker in game as the camera moves: the graphics card picks either from pixel to pixel. " +
+                "Fix pushes the one on top out (or sinks the one underneath) until they are the clearance apart" + (model == null ? ": a placed model moves, or a model's own vertices for a fight inside one model." : ": the model's vertices move (every placement of the model changes).");
+            if (model != null)
             {
-                AutoSize = true,
-                MaximumSize = new Size(760, 0),
-                Text = "Two surfaces that face the same way and lie within the gap of each other flicker in game as the camera moves: the graphics card picks either from pixel to pixel. " +
-                    "Fix pushes the one on top out (or sinks the one underneath) until they are the clearance apart" + (model == null ? ": a placed model moves, or a model's own vertices for a fight inside one model." : ": the model's vertices move (every placement of the model changes)."),
-            });
-            if (model == null)
-                root.Controls.Add(Row(Lbl("Search:"), _scope, Lbl("  within"), _radius, Lbl("m of it")));
-            root.Controls.Add(Row(Lbl("Closer than"), _gap, Lbl("mm, within"), _angle, Lbl("degrees of parallel, at least"), _minArea, Lbl("cm²"), _find));
-            if (model == null) root.Controls.Add(Row(_inside, _hidden, _decals));
-            else root.Controls.Add(Row(_decals));
-            root.Controls.Add(_list);
-            root.Controls.Add(_preview);
-            root.Controls.Add(Row(Lbl("Fix:"), _action, Lbl("until"), _clearance, Lbl("mm apart"), _fixSelected, _fixAll, _close));
-            root.Controls.Add(_status);
-            Controls.Add(root);
+                //One model's own meshes: no area to search, and nothing outside the model to take in
+                rootPanel.Controls.Remove(searchRow);
+                optionsRow.Controls.Remove(_inside);
+                optionsRow.Controls.Remove(_hidden);
+                //The panel only grows to fit (AutoSize GrowOnly): start it from nothing so it fits this shorter layout
+                rootPanel.Size = Size.Empty;
+            }
 
             //Named for UI automation
             _find.Name = "zfFind"; _list.Name = "zfList"; _fixSelected.Name = "zfFixSelected"; _fixAll.Name = "zfFixAll"; _scope.Name = "zfScope"; _gap.Name = "zfGap"; _clearance.Name = "zfClearance"; _action.Name = "zfAction";
-            _scope.SelectedIndexChanged += (s, e) => _radius.Enabled = _scope.SelectedIndex == 1;
-            _radius.Enabled = false;
-            _find.Click += (s, e) => Find();
-            _list.SelectedIndexChanged += (s, e) => QueueReplan();
-            _action.SelectedIndexChanged += (s, e) => QueueReplan();
-            _clearance.ValueChanged += (s, e) => QueueReplan();
-            _replan.Tick += (s, e) => { _replan.Stop(); Replan(); };
-            _fixSelected.Click += (s, e) => Fix(Selected());
-            _fixAll.Click += (s, e) => Fix(_scan?.Fights);
-            _close.Click += (s, e) => Close();
-            FormClosed += (s, e) => { _cancel?.Cancel(); _replan.Stop(); _replan.Dispose(); _preview.Image?.Dispose(); };
+            //After the starting values, so opening queues no replan
+            _action.SelectedIndexChanged += Replan_Changed;
+            _clearance.ValueChanged += Replan_Changed;
             Say(model == null ? "Pick where to search and press Find." : "Press Find.", false);
         }
 
-        private static Label Lbl(string text) => new Label() { Text = text, AutoSize = true, Padding = new Padding(0, 5, 0, 0) };
+        private void _scope_SelectedIndexChanged(object sender, EventArgs e) => _radius.Enabled = _scope.SelectedIndex == 1;
+        private void _find_Click(object sender, EventArgs e) => Find();
+        private void _list_SelectedIndexChanged(object sender, EventArgs e) => QueueReplan();
+        private void Replan_Changed(object sender, EventArgs e) => QueueReplan();
 
-        private static FlowLayoutPanel Row(params Control[] controls)
+        private void _replan_Tick(object sender, EventArgs e)
         {
-            FlowLayoutPanel row = new FlowLayoutPanel() { AutoSize = true, WrapContents = false, Margin = new Padding(0, 2, 0, 2) };
-            row.Controls.AddRange(controls);
-            return row;
+            _replan.Stop();
+            Replan();
+        }
+
+        private void _fixSelected_Click(object sender, EventArgs e) => Fix(Selected());
+        private void _fixAll_Click(object sender, EventArgs e) => Fix(_scan?.Fights);
+        private void _close_Click(object sender, EventArgs e) => Close();
+
+        private void ZFightWindow_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            _cancel?.Cancel();
+            _replan.Stop();
+            _replan.Dispose();
+            _preview.Image?.Dispose();
         }
 
         /// <summary>The window for the open level (Model Editor > Level Tools > Find Z-Fighting...).</summary>

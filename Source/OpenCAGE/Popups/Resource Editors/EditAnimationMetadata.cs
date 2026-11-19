@@ -17,9 +17,9 @@ namespace OpenCAGE
     /// timeline - a foot striking the floor, a sound starting - each entry of which may fire one of the block's settings).
     /// Everything shows as it is stored, names and all, whether or not what it means is known. The edits are made to a copy,
     /// and only Save puts them into the animation (every stored copy of it at once); the Animation Editor then writes
-    /// ANIMATION.PAK. Built in code: it is three lists and the fields to change them.
+    /// ANIMATION.PAK.
     /// </summary>
-    public class EditAnimationMetadata : BaseWindow
+    public partial class EditAnimationMetadata : BaseWindow
     {
         private readonly CathodeLib.Animation _animations;
         private readonly CathodeLib.Animation.ClipReference _clip;
@@ -47,39 +47,11 @@ namespace OpenCAGE
         //What a sound setting holds, in the form every one the game ships with is in
         private const string AudioTemplate = "[ArgumentList={},Bone={},Event={},Offset={0,0,0},UseArguments={No}]";
 
-        private readonly Label infoLabel = new Label { Dock = DockStyle.Top, Height = 58, Padding = new Padding(8, 8, 8, 0), AutoEllipsis = true };
-        private readonly ComboBox blockBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 420 };
-        private readonly ListView trackList = NewList();
-        private readonly GroupBox tracksBox = new GroupBox { Text = "Tracks", Dock = DockStyle.Fill, Padding = new Padding(6) };
-        private readonly GroupBox entriesBox = new GroupBox { Text = "Entries of the track", Dock = DockStyle.Fill, Padding = new Padding(6) };
-        private readonly GroupBox settingsBox = new GroupBox { Text = "Settings in this block", Dock = DockStyle.Bottom, Height = 250, Padding = new Padding(6) };
-        private readonly TextBox trackNameBox = new TextBox { Width = 130 };
-        private readonly Button addTrackBtn = NewButton("Add", 56);
-        private readonly Button renameTrackBtn = NewButton("Rename", 64);
-        private readonly Button removeTrackBtn = NewButton("Remove", 64);
-        private readonly ListView entryList = NewList();
-        private readonly TextBox timeBox = new TextBox { Width = 80 };
-        private readonly ComboBox firesBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDown, Width = 200 };
-        private readonly Button addEntryBtn = NewButton("Add", 56);
-        private readonly Button applyEntryBtn = NewButton("Apply", 60);
-        private readonly Button removeEntryBtn = NewButton("Remove", 64);
-        private readonly ListView settingList = NewList();
-        private readonly TextBox settingNameBox = new TextBox { Width = 200 };
-        private readonly ComboBox typeBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 150 };
-        private readonly CheckBox mirrorCheck = new CheckBox { Text = "Can mirror", AutoSize = true, Margin = new Padding(8, 7, 3, 3) };
-        private readonly CheckBox speedCheck = new CheckBox { Text = "Scales with play speed", AutoSize = true, Margin = new Padding(8, 7, 3, 3) };
-        private readonly TextBox valueBox = new TextBox { Width = 480 };
-        private readonly Button addSettingBtn = NewButton("Add", 56);
-        private readonly Button applySettingBtn = NewButton("Apply", 60);
-        private readonly Button removeSettingBtn = NewButton("Remove", 64);
-        private readonly Label statusLabel = new Label { Dock = DockStyle.Fill, AutoEllipsis = true, TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(8, 0, 0, 0) };
-        private readonly Button saveBtn = NewButton("Save", 100);
-        private readonly Button cancelBtn = NewButton("Cancel", 100);
-        private readonly ToolTip _tips = new ToolTip();
-
         public EditAnimationMetadata(CathodeLib.Animation animations, CathodeLib.Animation.ClipReference clip)
             : base(WindowClosesOn.COMMANDS_RELOAD)
         {
+            InitializeComponent();
+
             _animations = animations;
             _clip = clip;
             _working = Copy(clip.Metadata);
@@ -87,137 +59,14 @@ namespace OpenCAGE
 
             Text = "Metadata of '" + ClipName + "' (" + (clip.Context?.Set?.Name ?? "") + ")";
             Icon = SharedFormIcon.Icon;
-            ClientSize = new Size(1000, 680);
-            MinimumSize = new Size(920, 580);
-            StartPosition = FormStartPosition.CenterParent;
-            MinimizeBox = MaximizeBox = false;
-            ShowInTaskbar = false;
 
-            Build();
-            infoLabel.Text = Describe();
-            FillBlocks();
-            UpdateButtons();
+            /* The times read right-aligned under a dark theme's header. A first column can only be given that before it is
+             * one: set on it there, it goes back to the left */
+            entryList.Columns.Remove(entryTimeColumn);
+            entryTimeColumn.TextAlign = HorizontalAlignment.Right;
+            entryList.Columns.Insert(0, entryTimeColumn);
 
-            FormClosing += EditAnimationMetadata_FormClosing;
-            FormClosed += (s, e) => _tips.Dispose();
-        }
-
-        private string ClipName => string.IsNullOrEmpty(_clip.Name) ? Path.GetFileName(_clip.Path ?? "") : _clip.Name;
-
-        #region LAYOUT
-        private static ListView NewList()
-        {
-            return new ListView { Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true, HideSelection = false, MultiSelect = false, GridLines = false };
-        }
-
-        private static Button NewButton(string text, int width)
-        {
-            return new Button { Text = text, Width = width, Height = 25, UseVisualStyleBackColor = true, Margin = new Padding(3, 3, 3, 3) };
-        }
-
-        private static Label NewLabel(string text)
-        {
-            return new Label { Text = text, AutoSize = true, Margin = new Padding(6, 8, 0, 3) };
-        }
-
-        private static FlowLayoutPanel NewRow(DockStyle dock)
-        {
-            return new FlowLayoutPanel { Dock = dock, Height = 32, WrapContents = false, Padding = new Padding(2, 2, 2, 0) };
-        }
-
-        /* Docked from the edges in: the window's top and bottom first, then the settings, then the tracks and entries
-         * side by side in what is left */
-        private void Build()
-        {
-            trackList.Columns.Add("Track", 170);
-            trackList.Columns.Add("Entries", 56, HorizontalAlignment.Right);
-            trackList.Columns.Add("Fires settings", 90);
-            entryList.Columns.Add("Time (s)", 80, HorizontalAlignment.Right);
-            entryList.Columns.Add("Fires", 200);
-            entryList.Columns.Add("Which is", 300);
-            settingList.Columns.Add("Setting", 200);
-            settingList.Columns.Add("Type", 130);
-            settingList.Columns.Add("Value", 400);
-            settingList.Columns.Add("Mirrors", 60);
-            settingList.Columns.Add("Play speed", 75);
-            settingList.Columns.Add("Convert", 60, HorizontalAlignment.Right);
             foreach (MetadataValueType type in EditableTypes) typeBox.Items.Add(type);
-
-            //Tracks, beside their entries
-            FlowLayoutPanel trackRow = NewRow(DockStyle.Bottom);
-            trackRow.Controls.AddRange(new Control[] { trackNameBox, addTrackBtn, renameTrackBtn, removeTrackBtn });
-            tracksBox.Controls.Add(trackList);
-            tracksBox.Controls.Add(trackRow);
-
-            FlowLayoutPanel entryRow = NewRow(DockStyle.Bottom);
-            entryRow.Controls.AddRange(new Control[] { NewLabel("Time"), timeBox, NewLabel("Fires"), firesBox, addEntryBtn, applyEntryBtn, removeEntryBtn });
-            entriesBox.Controls.Add(entryList);
-            entriesBox.Controls.Add(entryRow);
-
-            //Sized before the splitter is placed, which must sit inside it
-            SplitContainer split = new SplitContainer { Size = new Size(1000, 360), Orientation = Orientation.Vertical, SplitterDistance = 350, FixedPanel = FixedPanel.Panel1, Dock = DockStyle.Fill };
-            split.Panel1.Controls.Add(tracksBox);
-            split.Panel2.Controls.Add(entriesBox);
-
-            //The block's settings, below them
-            GroupBox settings = settingsBox;
-            FlowLayoutPanel settingRow1 = NewRow(DockStyle.Bottom);
-            settingRow1.Controls.AddRange(new Control[] { NewLabel("Setting"), settingNameBox, NewLabel("Type"), typeBox, mirrorCheck, speedCheck });
-            FlowLayoutPanel settingRow2 = NewRow(DockStyle.Bottom);
-            settingRow2.Controls.AddRange(new Control[] { NewLabel("Value"), valueBox, addSettingBtn, applySettingBtn, removeSettingBtn });
-            settings.Controls.Add(settingList);
-            settings.Controls.Add(settingRow2);
-            settings.Controls.Add(settingRow1);
-
-            FlowLayoutPanel blockRow = NewRow(DockStyle.Top);
-            blockRow.Controls.AddRange(new Control[] { NewLabel("Block"), blockBox });
-
-            Panel bottom = new Panel { Dock = DockStyle.Bottom, Height = 42 };
-            FlowLayoutPanel buttons = new FlowLayoutPanel { Dock = DockStyle.Right, Width = 224, FlowDirection = FlowDirection.RightToLeft, WrapContents = false, Padding = new Padding(0, 6, 6, 0) };
-            buttons.Controls.Add(saveBtn);
-            buttons.Controls.Add(cancelBtn);
-            bottom.Controls.Add(statusLabel);
-            bottom.Controls.Add(buttons);
-
-            Controls.Add(split);
-            Controls.Add(settings);
-            Controls.Add(bottom);
-            Controls.Add(blockRow);
-            Controls.Add(infoLabel);
-
-            _tips.SetToolTip(blockBox, "The animation's own block holds what goes for it however it plays; each use has a block of its own tags.");
-            _tips.SetToolTip(trackNameBox, "A track's name, as the game asks for it - e.g. AUDIO_Foley, LeftStrike, start_rag_doll.");
-            _tips.SetToolTip(timeBox, "Seconds from the start of the animation.");
-            _tips.SetToolTip(firesBox, "The setting of this block the entry fires (a sound, normally) - or nothing, for a plain moment.");
-            _tips.SetToolTip(settingNameBox, "The setting's name, which a track's entries name to fire it.");
-            _tips.SetToolTip(valueBox, "Numbers in the form 1.5; a vector as x, y, z; a sound as " + AudioTemplate + " with the sound event and the bone it plays from filled in.");
-            _tips.SetToolTip(mirrorCheck, "Stored with the setting as the game's own flag: whether its value follows a mirrored play.");
-            _tips.SetToolTip(speedCheck, "Stored with the setting as the game's own flag: whether its value scales with how fast the animation plays.");
-            _tips.SetToolTip(saveBtn, "Put these changes into the animation. ANIMATION.PAK is written straight away.");
-
-            blockBox.SelectedIndexChanged += (s, e) => { if (_filling == 0) UseBlock((blockBox.SelectedItem as BlockEntry)?.Block); };
-            trackList.SelectedIndexChanged += (s, e) => { if (_filling == 0) UseTrack(trackList.SelectedItems.Count == 0 ? null : trackList.SelectedItems[0].Tag as AnimClipDBSec.MetadataProperty); };
-            entryList.SelectedIndexChanged += (s, e) => { if (_filling == 0) ShowEntry(); };
-            settingList.SelectedIndexChanged += (s, e) => { if (_filling == 0) ShowSetting(); };
-            typeBox.SelectedIndexChanged += (s, e) =>
-            {
-                if (_filling != 0) return;
-                if (typeBox.SelectedItem is MetadataValueType type && type == MetadataValueType.AUDIO && valueBox.Text.Trim().Length == 0)
-                    valueBox.Text = AudioTemplate;
-            };
-
-            addTrackBtn.Click += (s, e) => AddTrack();
-            renameTrackBtn.Click += (s, e) => RenameTrack();
-            removeTrackBtn.Click += (s, e) => RemoveTrack();
-            addEntryBtn.Click += (s, e) => PutEntry(false);
-            applyEntryBtn.Click += (s, e) => PutEntry(true);
-            removeEntryBtn.Click += (s, e) => RemoveEntry();
-            addSettingBtn.Click += (s, e) => PutSetting(false);
-            applySettingBtn.Click += (s, e) => PutSetting(true);
-            removeSettingBtn.Click += (s, e) => RemoveSetting();
-            saveBtn.Click += (s, e) => Save();
-            cancelBtn.Click += (s, e) => { _closing = true; DialogResult = DialogResult.Cancel; Close(); };
-
             if (_readOnly != null)
             {
                 foreach (Control control in new Control[] { trackNameBox, addTrackBtn, renameTrackBtn, removeTrackBtn, timeBox, firesBox, addEntryBtn, applyEntryBtn, removeEntryBtn,
@@ -226,7 +75,101 @@ namespace OpenCAGE
                 saveBtn.Visible = false;
                 cancelBtn.Text = "Close";
             }
+
+            infoLabel.Text = Describe();
+            FillBlocks();
+            UpdateButtons();
         }
+
+        private string ClipName => string.IsNullOrEmpty(_clip.Name) ? Path.GetFileName(_clip.Path ?? "") : _clip.Name;
+
+        #region EVENTS
+        private void blockBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_filling == 0) UseBlock((blockBox.SelectedItem as BlockEntry)?.Block);
+        }
+
+        private void trackList_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_filling == 0) UseTrack(trackList.SelectedItems.Count == 0 ? null : trackList.SelectedItems[0].Tag as AnimClipDBSec.MetadataProperty);
+        }
+
+        private void entryList_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_filling == 0) ShowEntry();
+        }
+
+        private void settingList_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_filling == 0) ShowSetting();
+        }
+
+        private void typeBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_filling != 0) return;
+            if (typeBox.SelectedItem is MetadataValueType type && type == MetadataValueType.AUDIO && valueBox.Text.Trim().Length == 0)
+                valueBox.Text = AudioTemplate;
+        }
+
+        private void addTrackBtn_Click(object sender, EventArgs e)
+        {
+            AddTrack();
+        }
+
+        private void renameTrackBtn_Click(object sender, EventArgs e)
+        {
+            RenameTrack();
+        }
+
+        private void removeTrackBtn_Click(object sender, EventArgs e)
+        {
+            RemoveTrack();
+        }
+
+        private void addEntryBtn_Click(object sender, EventArgs e)
+        {
+            PutEntry(false);
+        }
+
+        private void applyEntryBtn_Click(object sender, EventArgs e)
+        {
+            PutEntry(true);
+        }
+
+        private void removeEntryBtn_Click(object sender, EventArgs e)
+        {
+            RemoveEntry();
+        }
+
+        private void addSettingBtn_Click(object sender, EventArgs e)
+        {
+            PutSetting(false);
+        }
+
+        private void applySettingBtn_Click(object sender, EventArgs e)
+        {
+            PutSetting(true);
+        }
+
+        private void removeSettingBtn_Click(object sender, EventArgs e)
+        {
+            RemoveSetting();
+        }
+
+        private void saveBtn_Click(object sender, EventArgs e)
+        {
+            Save();
+        }
+
+        private void cancelBtn_Click(object sender, EventArgs e)
+        {
+            _closing = true;
+            DialogResult = DialogResult.Cancel;
+            Close();
+        }
+        #endregion
+
+        #region DESCRIPTION
 
         private string Describe()
         {

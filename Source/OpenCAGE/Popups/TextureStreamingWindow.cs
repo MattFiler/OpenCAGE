@@ -12,62 +12,26 @@ namespace OpenCAGE
     /// Texture Editor > Texture Streaming...: how many of the level's textures stream at once against the about 1,020 the game holds at
     /// full size (TextureStreaming), and two ways to fit: keep small textures loaded, or merge identical textures. Each is one undo step.
     /// </summary>
-    public class TextureStreamingWindow : Form
+    public partial class TextureStreamingWindow : Form
     {
         private readonly Level _level;
-        private readonly Label _summary = new Label();
-        private readonly ComboBox _edge = new ComboBox();
-        private readonly Label _keepCost = new Label();
-        private readonly Button _keep = new Button();
-        private readonly Button _merge = new Button();
         private List<TextureStreaming.DuplicateGroup> _groups = new List<TextureStreaming.DuplicateGroup>();
 
         public TextureStreamingWindow(Level level)
         {
+            InitializeComponent();
             _level = level;
-            Text = "Texture Streaming";
             Icon = SharedFormIcon.Icon;
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            MaximizeBox = false;
-            MinimizeBox = false;
-            ShowInTaskbar = false;
-            StartPosition = FormStartPosition.CenterParent;
-            Font = SystemFonts.MessageBoxFont;
-            ClientSize = new Size(560, 330);
 
-            _summary.Location = new Point(12, 12);
-            _summary.Size = new Size(536, 170);
-            Controls.Add(_summary);
-
-            Controls.Add(new Label { AutoSize = true, Location = new Point(12, 196), Text = "Keep textures up to" });
-            _edge.DropDownStyle = ComboBoxStyle.DropDownList;
-            _edge.Location = new Point(130, 192);
-            _edge.Size = new Size(70, 21);
             foreach (int edge in new[] { 64, 128, 256, 512 }) _edge.Items.Add(edge);
             _edge.SelectedItem = TextureStreaming.DefaultKeepLoadedEdge;
-            _edge.SelectedIndexChanged += (s, e) => UpdateKeep();
-            Controls.Add(_edge);
-            Controls.Add(new Label { AutoSize = true, Location = new Point(206, 196), Text = "px loaded" });
-            _keepCost.Location = new Point(12, 220);
-            _keepCost.Size = new Size(400, 34);
-            Controls.Add(_keepCost);
-            _keep.Text = "Keep Loaded";
-            _keep.Location = new Point(428, 191);
-            _keep.Size = new Size(120, 24);
-            _keep.Click += Keep_Click;
-            Controls.Add(_keep);
-
-            _merge.Location = new Point(12, 262);
-            _merge.Size = new Size(536, 24);
-            _merge.Click += Merge_Click;
-            Controls.Add(_merge);
-
-            Button close = new Button { Text = "Close", DialogResult = DialogResult.Cancel, Location = new Point(473, 296), Size = new Size(75, 23) };
-            Controls.Add(close);
-            CancelButton = close;
-
-            Shown += (s, e) => Reload(true);
+            //Wired after the first pick, which is not a change
+            _edge.SelectedIndexChanged += Edge_SelectedIndexChanged;
         }
+
+        private void TextureStreamingWindow_Shown(object sender, EventArgs e) => Reload(true);
+
+        private void Edge_SelectedIndexChanged(object sender, EventArgs e) => UpdateKeep();
 
         private int Edge => _edge.SelectedItem is int edge ? edge : TextureStreaming.DefaultKeepLoadedEdge;
 

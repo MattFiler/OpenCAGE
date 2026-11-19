@@ -18,34 +18,14 @@ namespace OpenCAGE.Breakables
     /// "Make Breakable...": a placed model that breaks into physics debris when shot, hit or its Break pin is triggered. From the Model
     /// Editor, "Fracture into Debris..." makes only the pieces, as spawnable physics assets. Make runs <see cref="BreakableBuilder"/>.
     /// </summary>
-    public class FractureWindow : BaseWindow
+    public partial class FractureWindow : BaseWindow
     {
         private readonly ShortGuid _compositeId, _entityId;
         private readonly Models.CS2 _model;
         private readonly bool _debrisOnly;
 
-        private readonly NumericUpDown _pieces = new NumericUpDown() { Minimum = FractureGeometry.MinPieces, Maximum = 16, Value = 6, Width = 50 };
-        private readonly NumericUpDown _seed = new NumericUpDown() { Minimum = 0, Maximum = 99999, Value = 7, Width = 65 };
-        private readonly Button _reseed = new Button() { Text = "Another Way", AutoSize = true };
-        private readonly ComboBox _interior = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 95 };
-        private readonly CheckBox _skin = new CheckBox() { Text = "Inner skin", AutoSize = true, Checked = true };
-        private readonly CheckBox _autoMass = new CheckBox() { Text = "Mass from size", AutoSize = true, Checked = true };
-        private readonly NumericUpDown _mass = new NumericUpDown() { Minimum = 0.05m, Maximum = 10000, DecimalPlaces = 2, Value = 10, Width = 75, Enabled = false };
-        private readonly NumericUpDown _kick = new NumericUpDown() { Minimum = 0, Maximum = 30, DecimalPlaces = 1, Increment = 0.5m, Value = 2.5m, Width = 55 };
-        private readonly CheckBox _damage = new CheckBox() { Text = "Breaks when shot or hit, damage at least", AutoSize = true, Checked = true };
-        private readonly NumericUpDown _threshold = new NumericUpDown() { Minimum = 0, Maximum = 10000, Value = 20, Width = 60 };
-        private readonly CheckBox _monitor = new CheckBox() { Text = "Also pistol / shotgun hits anywhere round it", AutoSize = true, Checked = true };
-        private readonly NumericUpDown _despawn = new NumericUpDown() { Minimum = 0, Maximum = 3600, Value = 0, Width = 60 };
-        private readonly TrackBar _explode = new TrackBar() { Minimum = 0, Maximum = 100, Value = 35, TickStyle = TickStyle.None, Width = 160 };
-        private readonly PictureBox _preview = new PictureBox() { Width = 560, Height = 320, BorderStyle = BorderStyle.FixedSingle, BackColor = Color.FromArgb(32, 34, 38), SizeMode = PictureBoxSizeMode.Normal };
-        private readonly Label _title = new Label() { AutoSize = true, Font = new Font(SystemFonts.DefaultFont, FontStyle.Bold), MaximumSize = new Size(560, 0) };
-        private readonly Label _stats = new Label() { AutoSize = true, MaximumSize = new Size(560, 0) };
-        private readonly Label _status = new Label() { AutoSize = true, MaximumSize = new Size(560, 0) };
-        private readonly Button _make = new Button() { AutoSize = true };
-        private readonly Button _close = new Button() { Text = "Close", AutoSize = true };
         private BreakablePlan _plan;
         private bool _busy;
-        private readonly Timer _recut = new Timer() { Interval = 350 };
 
         /// <summary>The last result: what Make did, or the error.</summary>
         public JObject LastResult { get; private set; }
@@ -56,69 +36,52 @@ namespace OpenCAGE.Breakables
             _model = model;
             if (composite != null) _compositeId = composite.shortGUID;
             if (entity != null) _entityId = entity.shortGUID;
-            Text = _debrisOnly ? "Fracture into Debris" : "Make Breakable";
+            InitializeComponent();
             Icon = SharedFormIcon.Icon;
-            FormBorderStyle = FormBorderStyle.FixedToolWindow;
-            StartPosition = FormStartPosition.CenterScreen;
-            AutoSize = true;
-            AutoSizeMode = AutoSizeMode.GrowAndShrink;
             StayAboveEditor = true;
             EnableDocumentation("https://opencage.co.uk/docs/breakables/");
 
-            _interior.Items.AddRange(new object[] { "Dark inside", "Texture inside" });
+            //Picked before it is wired, so it does not queue a recut
             _interior.SelectedIndex = 0;
-            _make.Text = _debrisOnly ? "Make Debris Pieces" : "Make Breakable";
+            _interior.SelectedIndexChanged += _option_Changed;
 
-            FlowLayoutPanel root = new FlowLayoutPanel() { FlowDirection = FlowDirection.TopDown, AutoSize = true, Padding = new Padding(10), WrapContents = false };
-            root.Controls.Add(_title);
-            root.Controls.Add(new Label()
+            if (_debrisOnly)
             {
-                AutoSize = true,
-                MaximumSize = new Size(560, 0),
-                Text = _debrisOnly
-                    ? "Each piece becomes a physics asset of its own (its model, collision and a one-body physics system, kicked outwards as it spawns). Spawn one with an AssetSpawner (allow_physics) whose asset is an is_template instance of it, placed at the piece's place relative to the whole model (a spawned asset appears where its template instance is)."
-                    : "The model is cut into pieces, each a physics asset of its own, spawned where it was when the model breaks: when it is shot or hit, or when a script calls its Break pin (Broken fires after). It goes into a composite of its own, placed where it was.",
-            });
-            root.Controls.Add(Row(new Label() { Text = "Pieces:", AutoSize = true, Padding = new Padding(0, 4, 0, 0) }, _pieces,
-                new Label() { Text = "  Cut:", AutoSize = true, Padding = new Padding(0, 4, 0, 0) }, _seed, _reseed,
-                new Label() { Text = "  Cut faces:", AutoSize = true, Padding = new Padding(0, 4, 0, 0) }, _interior, _skin));
-            root.Controls.Add(Row(_autoMass, _mass, new Label() { Text = "kg in all    Thrown out at", AutoSize = true, Padding = new Padding(0, 4, 0, 0) }, _kick, new Label() { Text = "m/s", AutoSize = true, Padding = new Padding(0, 4, 0, 0) }));
-            if (!_debrisOnly)
-            {
-                root.Controls.Add(Row(_damage, _threshold));
-                root.Controls.Add(Row(_monitor, new Label() { Text = "   Pieces go after", AutoSize = true, Padding = new Padding(0, 4, 0, 0) }, _despawn, new Label() { Text = "s (0 = they stay)", AutoSize = true, Padding = new Padding(0, 4, 0, 0) }));
+                Text = "Fracture into Debris";
+                _make.Text = "Make Debris Pieces";
+                _intro.Text = "Each piece becomes a physics asset of its own (its model, collision and a one-body physics system, kicked outwards as it spawns). Spawn one with an AssetSpawner (allow_physics) whose asset is an is_template instance of it, placed at the piece's place relative to the whole model (a spawned asset appears where its template instance is).";
+                //Only a placed model breaks when hit. The root grew to fit those rows, so it sizes again to what is left
+                _root.Controls.Remove(_damageRow);
+                _root.Controls.Remove(_monitorRow);
+                _root.Size = Size.Empty;
             }
-            root.Controls.Add(_preview);
-            root.Controls.Add(Row(new Label() { Text = "Pushed apart:", AutoSize = true, Padding = new Padding(0, 4, 0, 0) }, _explode));
-            root.Controls.Add(_stats);
-            root.Controls.Add(_status);
-            root.Controls.Add(Row(_make, _close));
-            Controls.Add(root);
-
-            foreach (Control c in new Control[] { _pieces, _seed, _skin, _interior })
-            {
-                if (c is NumericUpDown n) n.ValueChanged += (s, e) => QueueRecut();
-                else if (c is CheckBox b) b.CheckedChanged += (s, e) => QueueRecut();
-                else if (c is ComboBox x) x.SelectedIndexChanged += (s, e) => QueueRecut();
-            }
-            _mass.ValueChanged += (s, e) => QueueRecut();
-            _kick.ValueChanged += (s, e) => QueueRecut();
-            _autoMass.CheckedChanged += (s, e) => { _mass.Enabled = !_autoMass.Checked; QueueRecut(); };
-            _damage.CheckedChanged += (s, e) => _threshold.Enabled = _damage.Checked;
-            _reseed.Click += (s, e) => _seed.Value = (_seed.Value * 7919 + 101) % 99999;
-            _explode.ValueChanged += (s, e) => DrawPreview();
-            _recut.Tick += (s, e) => { _recut.Stop(); Recut(); };
-            _make.Click += (s, e) => Make();
-            _close.Click += (s, e) => Close();
-            Shown += (s, e) => Recut();
-            FormClosed += (s, e) => { _recut.Stop(); _recut.Dispose(); _preview.Image?.Dispose(); };
         }
 
-        private static FlowLayoutPanel Row(params Control[] controls)
+        private void _option_Changed(object sender, EventArgs e) => QueueRecut();
+        private void _damage_CheckedChanged(object sender, EventArgs e) => _threshold.Enabled = _damage.Checked;
+        private void _reseed_Click(object sender, EventArgs e) => _seed.Value = (_seed.Value * 7919 + 101) % 99999;
+        private void _explode_ValueChanged(object sender, EventArgs e) => DrawPreview();
+        private void _make_Click(object sender, EventArgs e) => Make();
+        private void _close_Click(object sender, EventArgs e) => Close();
+        private void FractureWindow_Shown(object sender, EventArgs e) => Recut();
+
+        private void _autoMass_CheckedChanged(object sender, EventArgs e)
         {
-            FlowLayoutPanel row = new FlowLayoutPanel() { AutoSize = true, WrapContents = false, Margin = new Padding(0, 2, 0, 2) };
-            row.Controls.AddRange(controls);
-            return row;
+            _mass.Enabled = !_autoMass.Checked;
+            QueueRecut();
+        }
+
+        private void _recut_Tick(object sender, EventArgs e)
+        {
+            _recut.Stop();
+            Recut();
+        }
+
+        private void FractureWindow_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            _recut.Stop();
+            _recut.Dispose();
+            _preview.Image?.Dispose();
         }
 
         /// <summary>The window for a placed model (the entity list's Make Breakable...).</summary>

@@ -9,9 +9,9 @@ namespace OpenCAGE
 {
     /// <summary>
     /// Asks which character - and optionally which of its contexts - should be able to reach a
-    /// blend set. Built in code rather than the designer because it is one list and two buttons.
+    /// blend set.
     /// </summary>
-    public class BlendSetUserPicker : Form
+    public partial class BlendSetUserPicker : Form
     {
         /// <summary>The character database chosen, or null if the dialog was cancelled.</summary>
         public AnimClipDB Database { get; private set; }
@@ -19,50 +19,40 @@ namespace OpenCAGE
         /// <summary>The context chosen, or null for the character itself.</summary>
         public AnimClipDB.Context Context { get; private set; }
 
-        private readonly TreeView _tree = new TreeView { Dock = DockStyle.Fill, HideSelection = false };
-        private readonly TextBox _search = new TextBox { Dock = DockStyle.Fill };
-        private readonly Button _ok = new Button { Text = "Add", Width = 90, Enabled = false };
-        private readonly Button _cancel = new Button { Text = "Cancel", Width = 90, DialogResult = DialogResult.Cancel };
         private readonly CathodeLib.Animation _animations;
         private readonly GlobalAnimClipDB.BlendSet _set;
 
         public BlendSetUserPicker(CathodeLib.Animation animations, GlobalAnimClipDB.BlendSet set)
         {
+            InitializeComponent();
+
             _animations = animations;
             _set = set;
 
             Text = "Give '" + set + "' to";
-            ClientSize = new Size(460, 480);
-            StartPosition = FormStartPosition.CenterParent;
-            MinimizeBox = MaximizeBox = false;
             Icon = SharedFormIcon.Icon;
-            AcceptButton = _ok;
-            CancelButton = _cancel;
-
-            Panel top = new Panel { Dock = DockStyle.Top, Height = 30, Padding = new Padding(8, 5, 8, 0) };
-            top.Controls.Add(_search);
-            top.Controls.Add(new Label { Text = "Search", Dock = DockStyle.Left, Width = 46, TextAlign = ContentAlignment.MiddleLeft });
-
-            Panel bottom = new Panel { Dock = DockStyle.Bottom, Height = 42, Width = ClientSize.Width };   //sized before the buttons anchor to its right edge, or they land 66 px past it
-            _ok.Location = new Point(ClientSize.Width - 194, 9);
-            _cancel.Location = new Point(ClientSize.Width - 98, 9);
-            _ok.Anchor = _cancel.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            _ok.Click += (s, e) => { Accept(); };
-            bottom.Controls.Add(_ok);
-            bottom.Controls.Add(_cancel);
-
-            Panel body = new Panel { Dock = DockStyle.Fill, Padding = new Padding(8, 4, 8, 4) };
-            body.Controls.Add(_tree);
-
-            Controls.Add(body);
-            Controls.Add(top);
-            Controls.Add(bottom);
-
-            _search.TextChanged += (s, e) => Build();
-            _tree.AfterSelect += (s, e) => _ok.Enabled = _tree.SelectedNode?.Tag != null;
-            _tree.DoubleClick += (s, e) => { if (_tree.SelectedNode?.Tag != null) Accept(); };
 
             Build();
+        }
+
+        private void _search_TextChanged(object sender, EventArgs e)
+        {
+            Build();
+        }
+
+        private void _tree_AfterSelect(object sender, TreeViewEventArgs e)
+        {
+            _ok.Enabled = _tree.SelectedNode?.Tag != null;
+        }
+
+        private void _tree_DoubleClick(object sender, EventArgs e)
+        {
+            if (_tree.SelectedNode?.Tag != null) Accept();
+        }
+
+        private void _ok_Click(object sender, EventArgs e)
+        {
+            Accept();
         }
 
         /* Characters that already carry blend sets first: those are the ones a blend set is likely

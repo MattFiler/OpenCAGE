@@ -22,18 +22,14 @@ namespace OpenCAGE
     /// movie, writes it to the level's UI/OVERLAYS/&lt;NAME&gt;.GFX and makes the composite HUD\&lt;Name&gt; that loads and drives it
     /// (HudScript).
     /// </summary>
-    public class HudOverlayBuilder : BaseWindow
+    public partial class HudOverlayBuilder : BaseWindow
     {
         private readonly string _level;
         private HudDesign _design = HudDesign.Example();
         private bool _dirty;
 
-        private readonly ComboBox overlays = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200 };
-        private readonly ListBox slots = new ListBox { Dock = DockStyle.Fill, IntegralHeight = false };
-        private readonly PropertyGrid grid = new PropertyGrid { Dock = DockStyle.Fill, ToolbarVisible = false, PropertySort = PropertySort.Categorized };
         private readonly PreviewPanel preview = new PreviewPanel { Dock = DockStyle.Fill };
-        private readonly TextBox status = new TextBox { Dock = DockStyle.Bottom, Height = 96, Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical };
-        private readonly ToolTip tips = new ToolTip() { AutoPopDelay = 20000 };
+        private readonly ContextMenuStrip kinds;
 
         /// <summary>Show the builder for a level (one window per level: an open one comes to the front).</summary>
         public static void ShowFor(IWin32Window owner, string level)
@@ -57,81 +53,58 @@ namespace OpenCAGE
 
         public HudOverlayBuilder(string level)
         {
+            InitializeComponent();
             _level = level.Replace('\\', '/');
             Text = "HUD Overlay Builder - " + _level;
             Icon = SharedFormIcon.Icon;
-            ClientSize = new Size(1320, 780);
-            MinimumSize = new Size(980, 560);
-            StartPosition = FormStartPosition.CenterScreen;
-            ShowInTaskbar = false;
-            MinimizeBox = false;
-            KeyPreview = true;
             BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/hud-overlay-builder/");
 
-            //Top: which overlay, and starting points
-            FlowLayoutPanel top = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 34, Padding = new Padding(4, 4, 4, 0), WrapContents = false };
-            Button newBtn = Btn("New", 70, "Start a new overlay from the example (objective, timer, health bar, counter).", () => { if (Discard()) LoadDesign(HudDesign.Example(FreeOverlayName())); });
-            Button importBtn = Btn("Import Movie...", 110, "Use a movie made elsewhere (.gfx / .swf) as one of the level's overlays: it is checked first (a movie the game can't make its root object from would crash it) and refused if it fails.", ImportMovie);
-            Button folderBtn = Btn("Open Folder", 95, "Open the level's overlay folder (DATA\\ENV\\<level>\\UI\\OVERLAYS).", OpenFolder);
-            overlays.SelectedIndexChanged += (s, e) => OpenSelected();
-            tips.SetToolTip(overlays, "The level's overlays (each a movie in its folder). Pick one to edit it.");
-            top.Controls.AddRange(new Control[] { new Label { Text = "Overlay:", AutoSize = true, Padding = new Padding(0, 6, 0, 0) }, overlays, newBtn, importBtn, folderBtn });
-
-            //Left: the slots
-            Panel left = new Panel { Dock = DockStyle.Left, Width = 230, Padding = new Padding(4) };
-            FlowLayoutPanel slotButtons = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 64 };
-            Button addBtn = Btn("Add", 66, "Add a slot: a text, number, timer, bar, reticle or panel.", null);
-            ContextMenuStrip kinds = new ContextMenuStrip();
+            //Add's menu: one entry per kind of slot
+            kinds = new ContextMenuStrip();
             foreach (HudSlotKind kind in Enum.GetValues(typeof(HudSlotKind)))
             {
                 HudSlotKind k = kind;
                 kinds.Items.Add(kind.ToString(), null, (s, e) => AddSlot(k));
             }
-            addBtn.Click += (s, e) => kinds.Show(addBtn, new Point(0, addBtn.Height));
-            slotButtons.Controls.AddRange(new Control[] { addBtn, Btn("Copy", 66, "Duplicate the selected slot.", DuplicateSlot), Btn("Remove", 66, "Remove the selected slot.", RemoveSlot),
-                Btn("Up", 66, "Earlier in the list: drawn under the slots after it.", () => MoveSlot(-1)), Btn("Down", 66, "Later in the list: drawn over the slots before it.", () => MoveSlot(1)) });
-            slots.SelectedIndexChanged += (s, e) => SelectionChanged();
-            left.Controls.Add(slots);
-            left.Controls.Add(slotButtons);
 
-            //Right: properties
-            Panel right = new Panel { Dock = DockStyle.Right, Width = 340, Padding = new Padding(4) };
-            right.Controls.Add(grid);
-            grid.PropertyValueChanged += (s, e) => { Changed(); if (e.ChangedItem?.PropertyDescriptor?.Name == nameof(HudSlot.ImageFile)) grid.Refresh(); };
-
-            //Bottom: the check's result and the actions
-            FlowLayoutPanel buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 38, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(4) };
-            Button closeBtn = Btn("Close", 90, null, Close);
-            buttons.Controls.AddRange(new Control[] {
-                closeBtn,
-                Btn("Save to Level", 120, "Check the overlay's movie, write it into the level's folder and make (or remake) the composite HUD\\<Name> that loads and drives it, as one undo step. Save the level afterwards.", SaveToLevel),
-                Btn("Check", 90, "Build the movie and check it the way the game will use it (nothing is written).", CheckOnly),
-                Btn("Export .gfx...", 110, "Save the checked movie somewhere else.", ExportMovie),
-                Btn("Remove from Level", 140, "Take this overlay's movie and its composite's contents out of the level.", RemoveFromLevel),
-            });
-
+            //The preview is a private control, so it is made here and fills its place in the layout
             preview.Builder = this;
-            Controls.Add(preview);
-            Controls.Add(right);
-            Controls.Add(left);
-            Controls.Add(status);
-            Controls.Add(buttons);
-            Controls.Add(top);
-            CancelButton = closeBtn;
-
-            KeyDown += OnKey;
-            Shown += (s, e) => { FillOverlays(null); };
-            FormClosing += (s, e) => { if (!Discard()) e.Cancel = true; };
-            FormClosed += (s, e) => tips.Dispose();
+            previewHost.Controls.Add(preview);
         }
 
-        private Button Btn(string text, int width, string tip, Action click)
+        private void HudOverlayBuilder_Shown(object sender, EventArgs e) => FillOverlays(null);
+
+        private void HudOverlayBuilder_FormClosing(object sender, FormClosingEventArgs e)
         {
-            Button b = new Button { Text = text, Width = width, Height = 26 };
-            if (tip != null) tips.SetToolTip(b, tip);
-            if (click != null) b.Click += (s, e) => click();
-            return b;
+            if (!Discard()) e.Cancel = true;
         }
+
+        private void overlays_SelectedIndexChanged(object sender, EventArgs e) => OpenSelected();
+        private void slots_SelectedIndexChanged(object sender, EventArgs e) => SelectionChanged();
+
+        private void grid_PropertyValueChanged(object sender, PropertyValueChangedEventArgs e)
+        {
+            Changed();
+            if (e.ChangedItem?.PropertyDescriptor?.Name == nameof(HudSlot.ImageFile)) grid.Refresh();
+        }
+
+        private void newButton_Click(object sender, EventArgs e)
+        {
+            if (Discard()) LoadDesign(HudDesign.Example(FreeOverlayName()));
+        }
+
+        private void importButton_Click(object sender, EventArgs e) => ImportMovie();
+        private void folderButton_Click(object sender, EventArgs e) => OpenFolder();
+        private void addButton_Click(object sender, EventArgs e) => kinds.Show(addButton, new Point(0, addButton.Height));
+        private void copyButton_Click(object sender, EventArgs e) => DuplicateSlot();
+        private void removeButton_Click(object sender, EventArgs e) => RemoveSlot();
+        private void upButton_Click(object sender, EventArgs e) => MoveSlot(-1);
+        private void downButton_Click(object sender, EventArgs e) => MoveSlot(1);
+        private void closeButton_Click(object sender, EventArgs e) => Close();
+        private void saveButton_Click(object sender, EventArgs e) => SaveToLevel();
+        private void checkButton_Click(object sender, EventArgs e) => CheckOnly();
+        private void exportButton_Click(object sender, EventArgs e) => ExportMovie();
+        private void removeFromLevelButton_Click(object sender, EventArgs e) => RemoveFromLevel();
 
         #region The design
         internal HudDesign Design => _design;

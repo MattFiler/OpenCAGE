@@ -15,102 +15,48 @@ namespace OpenCAGE.Popups
     /// floors; the user names them and moves their heights; Preview draws each as the game will; Generate writes the map's movies into
     /// the level's UI folder and sets the anchor, floor boxes and map items' floors as one undo step.
     /// </summary>
-    internal class MapAssetsWindow : BaseWindow
+    internal partial class MapAssetsWindow : BaseWindow
     {
         private static MapAssetsWindow _open;
 
-        private readonly TextBox _summary;
-        private readonly DataGridView _floors;
-        private readonly NumericUpDown _scale;
-        private readonly TextBox _mapName;
-        private readonly TextBox _labels;
-        private readonly ComboBox _previewFloor;
-        private readonly PictureBox _preview;
-        private readonly Label _status;
-        private readonly Button _find, _add, _remove, _show, _generate;
         private MapAssetsPlan _plan;
 
         public MapAssetsWindow() : base(WindowClosesOn.COMMANDS_RELOAD)
         {
-            Text = "Generate Map Assets";
+            InitializeComponent();
             Icon = SharedFormIcon.Icon;
-            Size = new Size(980, 720);
-            MinimumSize = new Size(820, 560);
-            StartPosition = FormStartPosition.CenterScreen;
-            ShowInTaskbar = false;
             StayAboveEditor = true;
             BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/map-assets/");
 
-            _summary = new TextBox()
-            {
-                Dock = DockStyle.Top, Height = 70, Multiline = true, ReadOnly = true, WordWrap = true, ScrollBars = ScrollBars.Vertical,
-                Text = "Makes the level's Tab map from its walk mesh (as last built): each floor is drawn in the game's map style, the level's own hub and map page and a movie per floor go in the level's UI folder, " +
-                       "and a MapAnchor, floor boxes per floor and every map item's floor are set in the root composite (one undo step). The game only opens maps for keyframes on its own list, so the level " +
-                       "BORROWS the game's (RnD_HzdLab_1, RnD_HzdLab_2, And_Lab_0...): only this level shows its map under them. Launch the level through OpenCAGE to see it.",
-            };
-
-            Panel left = new Panel() { Dock = DockStyle.Left, Width = 430, Padding = new Padding(8) };
-            _floors = new DataGridView()
-            {
-                Dock = DockStyle.Fill, AllowUserToAddRows = false, AllowUserToDeleteRows = false, RowHeadersVisible = false, SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, MultiSelect = false,
-            };
-            _floors.Columns.Add(new DataGridViewTextBoxColumn() { Name = "name", HeaderText = "Floor name", FillWeight = 40 });
-            _floors.Columns.Add(new DataGridViewTextBoxColumn() { Name = "from", HeaderText = "Above (m)", FillWeight = 20 });
-            _floors.Columns.Add(new DataGridViewTextBoxColumn() { Name = "to", HeaderText = "Up to (m)", FillWeight = 20 });
-            _floors.Columns.Add(new DataGridViewTextBoxColumn() { Name = "keyframe", HeaderText = "Borrows", FillWeight = 26, ReadOnly = true });
-            _floors.CellEndEdit += (s, e) => { _plan = null; Renumber(); };
-            Panel floorButtons = new Panel() { Dock = DockStyle.Bottom, Height = 36 };
-            _find = new Button() { Text = "Find Floors", Width = 100, Height = 28, Location = new Point(0, 4) };
-            _find.Click += (s, e) => FindFloors();
-            _add = new Button() { Text = "Add Floor", Width = 90, Height = 28, Location = new Point(106, 4) };
-            _add.Click += (s, e) => { if (_floors.Rows.Count < MapPlanner.MaxFloors) { _floors.Rows.Add("LEVEL " + (_floors.Rows.Count + 1), "", "", ""); _plan = null; Renumber(); } };
-            _remove = new Button() { Text = "Remove Floor", Width = 100, Height = 28, Location = new Point(202, 4) };
-            _remove.Click += (s, e) => { if (_floors.SelectedRows.Count != 0) { _floors.Rows.Remove(_floors.SelectedRows[0]); _plan = null; Renumber(); } };
-            floorButtons.Controls.AddRange(new Control[] { _find, _add, _remove });
-            Panel options = new Panel() { Dock = DockStyle.Bottom, Height = 156 };
-            options.Controls.Add(new Label() { Text = "Map scale:", AutoSize = true, Location = new Point(0, 8) });
-            _scale = new NumericUpDown() { Location = new Point(90, 4), Width = 70, Minimum = 0, Maximum = 10, DecimalPlaces = 2, Increment = 0.05m, Value = 0 };
-            options.Controls.Add(_scale);
-            options.Controls.Add(new Label() { Text = "(0: chosen to fit)", AutoSize = true, Location = new Point(166, 8) });
-            options.Controls.Add(new Label() { Text = "Map name:", AutoSize = true, Location = new Point(0, 40) });
-            _mapName = new TextBox() { Location = new Point(90, 36), Width = 300 };
-            options.Controls.Add(_mapName);
-            options.Controls.Add(new Label() { Text = "Labels:", AutoSize = true, Location = new Point(0, 70) });
-            _labels = new TextBox() { Location = new Point(90, 66), Width = 300, Height = 84, Multiline = true, ScrollBars = ScrollBars.Vertical, AcceptsReturn = true };
-            options.Controls.Add(_labels);
-            new ToolTip().SetToolTip(_labels, "Room names, one per line: name, x, z (world), and the floor's name when it isn't the lowest floor walkable there. Drawn in capitals.");
-            _scale.ValueChanged += (s, e) => _plan = null;
-            _mapName.TextChanged += (s, e) => _plan = null;
-            _labels.TextChanged += (s, e) => _plan = null;
-            left.Controls.Add(_floors);
-            left.Controls.Add(floorButtons);
-            left.Controls.Add(options);
-
-            Panel right = new Panel() { Dock = DockStyle.Fill, Padding = new Padding(8) };
-            _preview = new PictureBox() { Dock = DockStyle.Fill, BackColor = Color.FromArgb(4, 8, 9), SizeMode = PictureBoxSizeMode.Zoom };
-            Panel previewBar = new Panel() { Dock = DockStyle.Top, Height = 34 };
-            _show = new Button() { Text = "Preview", Width = 90, Height = 28, Location = new Point(0, 2) };
-            _show.Click += (s, e) => Preview();
-            _previewFloor = new ComboBox() { Location = new Point(98, 5), Width = 240, DropDownStyle = ComboBoxStyle.DropDownList };
-            _previewFloor.SelectedIndexChanged += (s, e) => DrawPreview();
-            previewBar.Controls.AddRange(new Control[] { _show, _previewFloor });
-            right.Controls.Add(_preview);
-            right.Controls.Add(previewBar);
-
-            Panel bottom = new Panel() { Dock = DockStyle.Bottom, Height = 76, Padding = new Padding(8) };
-            _status = new Label() { AutoSize = false, Location = new Point(8, 4), Height = 34, Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right };
-            _generate = new Button() { Text = "Generate", Width = 120, Height = 28, Anchor = AnchorStyles.Right | AnchorStyles.Bottom };
-            _generate.Click += (s, e) => Generate();
-            bottom.Controls.AddRange(new Control[] { _status, _generate });
-            bottom.Resize += (s, e) => { _status.Width = bottom.ClientSize.Width - 16; _generate.Location = new Point(bottom.ClientSize.Width - _generate.Width - 8, bottom.ClientSize.Height - 34); };
-
-            Controls.Add(right);
-            Controls.Add(left);
-            Controls.Add(_summary);
-            Controls.Add(bottom);
             Theming.ThemeManager.ApplyCurrent(this);
-            _status.Text = "Find Floors reads the walk mesh; rename the floors and move their heights, Preview, then Generate.";
+        }
+
+        private void _option_Changed(object sender, EventArgs e) => _plan = null;
+        private void _find_Click(object sender, EventArgs e) => FindFloors();
+        private void _show_Click(object sender, EventArgs e) => Preview();
+        private void _previewFloor_SelectedIndexChanged(object sender, EventArgs e) => DrawPreview();
+        private void _generate_Click(object sender, EventArgs e) => Generate();
+
+        private void _floors_CellEndEdit(object sender, DataGridViewCellEventArgs e)
+        {
+            _plan = null;
+            Renumber();
+        }
+
+        private void _add_Click(object sender, EventArgs e)
+        {
+            if (_floors.Rows.Count < MapPlanner.MaxFloors) { _floors.Rows.Add("LEVEL " + (_floors.Rows.Count + 1), "", "", ""); _plan = null; Renumber(); }
+        }
+
+        private void _remove_Click(object sender, EventArgs e)
+        {
+            if (_floors.SelectedRows.Count != 0) { _floors.Rows.Remove(_floors.SelectedRows[0]); _plan = null; Renumber(); }
+        }
+
+        private void _bottomPanel_Resize(object sender, EventArgs e)
+        {
+            _status.Width = _bottomPanel.ClientSize.Width - 16;
+            _generate.Location = new Point(_bottomPanel.ClientSize.Width - _generate.Width - 8, _bottomPanel.ClientSize.Height - 34);
         }
 
         #region Opening it

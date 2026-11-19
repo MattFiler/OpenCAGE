@@ -16,17 +16,10 @@ namespace OpenCAGE.Popups
     /// File > Calculate Alien Vents: finds spots on the navmesh for retail's vent composites (<see cref="AlienVents.Propose"/>), places the
     /// ticked ones as one undo step and runs Save &amp; Build to bake the backstage. Importing the vent composites is not undoable.
     /// </summary>
-    internal class AlienVentsWindow : BaseWindow
+    internal partial class AlienVentsWindow : BaseWindow
     {
         private static AlienVentsWindow _open;
 
-        private readonly TextBox _summary;
-        private readonly NumericUpDown _count, _spacing, _network;
-        private readonly ComboBox _kind;
-        private readonly CheckBox _killtraps;
-        private readonly Label _intoLabel, _status;
-        private readonly ListView _spots;
-        private readonly Button _find, _check, _place, _build, _useShown, _useRoot;
         private Composite _into;
         private VentProposal _proposal;
 
@@ -38,85 +31,46 @@ namespace OpenCAGE.Popups
 
         public AlienVentsWindow() : base(WindowClosesOn.COMMANDS_RELOAD)
         {
-            Text = "Alien Vents";
+            InitializeComponent();
             Icon = SharedFormIcon.Icon;
-            Size = new Size(860, 640);
-            MinimumSize = new Size(720, 520);
-            StartPosition = FormStartPosition.CenterScreen;
-            ShowInTaskbar = false;
             StayAboveEditor = true;
             BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/alien-vents/");
 
-            _summary = new TextBox() { Dock = DockStyle.Top, Height = 84, Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, WordWrap = true };
-
-            Panel options = new Panel() { Dock = DockStyle.Top, Height = 112, Padding = new Padding(8, 6, 8, 0) };
-            options.Controls.Add(new Label() { Text = "Vents to add:", AutoSize = true, Location = new Point(8, 12) });
-            _count = new NumericUpDown() { Location = new Point(110, 8), Width = 60, Minimum = 0, Maximum = 64, Value = 0 };
-            options.Controls.Add(_count);
-            options.Controls.Add(new Label() { Text = "(0: as the floor area calls for)", AutoSize = true, Location = new Point(176, 12) });
-            options.Controls.Add(new Label() { Text = "Spacing (m):", AutoSize = true, Location = new Point(380, 12) });
-            _spacing = new NumericUpDown() { Location = new Point(470, 8), Width = 60, Minimum = 1, Maximum = 100, DecimalPlaces = 1, Increment = 1, Value = 8 };
-            options.Controls.Add(_spacing);
-            options.Controls.Add(new Label() { Text = "Kind:", AutoSize = true, Location = new Point(8, 42) });
-            _kind = new ComboBox() { Location = new Point(110, 38), Width = 260, DropDownStyle = ComboBoxStyle.DropDownList };
             _kind.Items.Add(new KindChoice());
             foreach (VentKind kind in AlienVents.Kinds) _kind.Items.Add(new KindChoice() { Kind = kind });
             _kind.SelectedIndex = 0;
-            options.Controls.Add(_kind);
-            options.Controls.Add(new Label() { Text = "Network ID:", AutoSize = true, Location = new Point(380, 42) });
-            _network = new NumericUpDown() { Location = new Point(470, 38), Width = 60, Minimum = 0, Maximum = 99, Value = 0 };
-            options.Controls.Add(_network);
-            _killtraps = new CheckBox() { Text = "Kill traps on", AutoSize = true, Location = new Point(546, 40) };
-            new ToolTip().SetToolTip(_killtraps, "Leave the vents' kill traps on (the game's default): the alien in a vent can drag a player standing under it up into it. Off sets DisableKilltrapOnReset.");
-            options.Controls.Add(_killtraps);
-            options.Controls.Add(new Label() { Text = "Put them in:", AutoSize = true, Location = new Point(8, 74) });
-            _intoLabel = new Label() { AutoSize = false, Location = new Point(110, 74), Width = 360, Height = 18, AutoEllipsis = true };
-            options.Controls.Add(_intoLabel);
-            _useShown = new Button() { Text = "Composite on Display", AutoSize = true, Location = new Point(476, 68) };
-            _useShown.Click += (s, e) => { Composite shown = Singleton.Editor?.CompositeDisplay?.Composite; if (shown != null) SetInto(shown); };
-            _useRoot = new Button() { Text = "Root", AutoSize = true, Location = new Point(620, 68) };
-            _useRoot.Click += (s, e) => SetInto(null);
-            options.Controls.AddRange(new Control[] { _useShown, _useRoot });
 
-            _spots = new ListView() { Dock = DockStyle.Fill, View = View.Details, CheckBoxes = true, FullRowSelect = true, HideSelection = false };
-            _spots.Columns.Add("#", 40);
-            _spots.Columns.Add("Floor (x, y, z)", 200);
-            _spots.Columns.Add("Ceiling", 70);
-            _spots.Columns.Add("Kind", 210);
-            _spots.Columns.Add("Facing", 70);
-            _spots.Columns.Add("Open ahead", 90);
-            _spots.ItemChecked += (s, e) => UpdateButtons();
-
-            Panel bottom = new Panel() { Dock = DockStyle.Bottom, Height = 92, Padding = new Padding(8) };
-            _status = new Label() { AutoSize = false, Location = new Point(8, 4), Height = 48, Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right };
-            _find = new Button() { Text = "Find Spots", Width = 110, Height = 28, Anchor = AnchorStyles.Left | AnchorStyles.Bottom };
-            _find.Click += (s, e) => FindSpots();
-            _check = new Button() { Text = "Check Vents", Width = 110, Height = 28, Anchor = AnchorStyles.Left | AnchorStyles.Bottom };
-            _check.Click += (s, e) => { Summarise(); _status.Text = "Checked the level's vents (above)."; };
-            _place = new Button() { Text = "Place Ticked Vents", Width = 150, Height = 28, Anchor = AnchorStyles.Right | AnchorStyles.Bottom, Enabled = false };
-            _place.Click += (s, e) => PlaceTicked();
-            _build = new Button() { Text = "Save && Build", Width = 120, Height = 28, Anchor = AnchorStyles.Right | AnchorStyles.Bottom };
-            _build.Click += (s, e) => SaveAndBuild();
-            bottom.Controls.AddRange(new Control[] { _status, _find, _check, _place, _build });
-            bottom.Resize += (s, e) =>
-            {
-                int w = bottom.ClientSize.Width, y = bottom.ClientSize.Height - 34;
-                _status.Width = w - 16;
-                _find.Location = new Point(8, y);
-                _check.Location = new Point(_find.Right + 8, y);
-                _build.Location = new Point(w - _build.Width - 8, y);
-                _place.Location = new Point(_build.Left - _place.Width - 8, y);
-            };
-
-            Controls.Add(_spots);
-            Controls.Add(options);
-            Controls.Add(_summary);
-            Controls.Add(bottom);
-            AcceptButton = _find;
             Theming.ThemeManager.ApplyCurrent(this);
             SetInto(null);
             Summarise();
-            _status.Text = "Find Spots looks over the navmesh (as last built) for ceilings a retail vent fits; tick the ones to keep, then Place Ticked Vents.";
+        }
+
+        private void _useShown_Click(object sender, EventArgs e)
+        {
+            Composite shown = Singleton.Editor?.CompositeDisplay?.Composite;
+            if (shown != null) SetInto(shown);
+        }
+
+        private void _useRoot_Click(object sender, EventArgs e) => SetInto(null);
+        private void _find_Click(object sender, EventArgs e) => FindSpots();
+        private void _place_Click(object sender, EventArgs e) => PlaceTicked();
+        private void _build_Click(object sender, EventArgs e) => SaveAndBuild();
+        private void _spots_ItemChecked(object sender, ItemCheckedEventArgs e) => UpdateButtons();
+
+        private void _check_Click(object sender, EventArgs e)
+        {
+            Summarise();
+            _status.Text = "Checked the level's vents (above).";
+        }
+
+        private void _bottomPanel_Resize(object sender, EventArgs e)
+        {
+            int w = _bottomPanel.ClientSize.Width, y = _bottomPanel.ClientSize.Height - 34;
+            _status.Width = w - 16;
+            _find.Location = new Point(8, y);
+            _check.Location = new Point(_find.Right + 8, y);
+            _build.Location = new Point(w - _build.Width - 8, y);
+            _place.Location = new Point(_build.Left - _place.Width - 8, y);
         }
 
         #region Opening it

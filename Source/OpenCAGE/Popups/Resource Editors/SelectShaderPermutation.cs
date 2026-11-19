@@ -20,7 +20,7 @@ namespace OpenCAGE
     /// closest thing to "tick the features you want" that a fixed pool of permutations can honestly
     /// offer.
     /// </summary>
-    public class SelectShaderPermutation : Form
+    public partial class SelectShaderPermutation : Form
     {
         /// <summary>The feature mask the user settled on.</summary>
         public long Mask { get; private set; }
@@ -36,14 +36,11 @@ namespace OpenCAGE
         private readonly Dictionary<int, CheckBox> _filterBoxes = new Dictionary<int, CheckBox>();
         private readonly List<ShaderPermutationService.Permutation> _shown = new List<ShaderPermutationService.Permutation>();
 
-        private readonly ListView _list = new ListView();
-        private readonly Label _status = new Label();
-        private readonly Button _ok = new Button();
-        private readonly Panel _filterPanel = new Panel();
-
         public SelectShaderPermutation(SHADER_LIST family, long currentMask, List<ShaderPermutationService.Permutation> permutations,
                                        Materials.Material material = null)
         {
+            InitializeComponent();
+
             _family = family;
             _currentMask = currentMask;
             _material = material;
@@ -61,113 +58,41 @@ namespace OpenCAGE
             }
             MatchCurrent();
 
-            Text = "Choose a feature combination";
             Icon = SharedFormIcon.Icon;
-            StartPosition = FormStartPosition.CenterParent;
-            ShowInTaskbar = false;
-            MinimizeBox = false;
+            //The system's message font, which the designer's Segoe UI 9 stands in for
             Font = SystemFonts.MessageBoxFont;
-            ClientSize = new Size(900, 580);
-            MinimumSize = new Size(720, 420);
 
-            Label intro = new Label
-            {
-                Text = EditMaterial.FixedFeatureReason(family)
-                     + " so no new permutation can be compiled for " + family + "."
-                     + " These are the " + _all.Count + " combination" + (_all.Count == 1 ? "" : "s")
-                     + " your game data already ships - pick one.",
-                Location = new Point(12, 10),
-                Size = new Size(876, 32),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                ForeColor = SystemColors.GrayText
-            };
+            _intro.Text = EditMaterial.FixedFeatureReason(family)
+                        + " so no new permutation can be compiled for " + family + "."
+                        + " These are the " + _all.Count + " combination" + (_all.Count == 1 ? "" : "s")
+                        + " your game data already ships - pick one.";
 
-            Label filterLabel = new Label
-            {
-                Text = "Features wanted  (right click = don't care)",
-                Location = new Point(12, 48),
-                Size = new Size(280, 18),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left
-            };
-
-            _filterPanel.Location = new Point(12, 68);
-            _filterPanel.Size = new Size(288, 452);
-            _filterPanel.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
-            _filterPanel.AutoScroll = true;
-            _filterPanel.BorderStyle = BorderStyle.FixedSingle;
             BuildFilterBoxes();
-
-            Button clear = new Button
-            {
-                Text = "Clear filters",
-                Location = new Point(12, 526),
-                Size = new Size(92, 26),
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Left
-            };
-            clear.Click += (s, e) =>
-            {
-                foreach (Tuple<string, int> f in _features) _filter[f.Item2] = Want.Any;
-                RepaintFilters();
-                Refill();
-            };
-
-            Button matchCurrent = new Button
-            {
-                Text = "Match current",
-                Location = new Point(110, 526),
-                Size = new Size(100, 26),
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Left
-            };
-            matchCurrent.Click += (s, e) => { MatchCurrent(); RepaintFilters(); Refill(); };
-
-            _list.Location = new Point(308, 68);
-            _list.Size = new Size(580, 452);
-            _list.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            _list.View = View.Details;
-            _list.FullRowSelect = true;
-            _list.MultiSelect = false;
-            _list.HideSelection = false;
-            _list.Columns.Add("Features", 270);
-            _list.Columns.Add("Mask", 90);
-            _list.Columns.Add("Source", 80);
-            _list.Columns.Add("Used by", 55, HorizontalAlignment.Right);
-            _list.Columns.Add("Needs", 80);
-            _list.SelectedIndexChanged += (s, e) => Revalidate();
-            _list.DoubleClick += (s, e) => { if (_ok.Enabled) { DialogResult = DialogResult.OK; Close(); } };
-
-            _status.Location = new Point(308, 526);
-            _status.Size = new Size(400, 30);
-            _status.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            _status.ForeColor = SystemColors.GrayText;
-
-            _ok.Text = "Use this";
-            _ok.DialogResult = DialogResult.OK;
-            _ok.Location = new Point(732, 526);
-            _ok.Size = new Size(75, 26);
-            _ok.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-
-            Button cancel = new Button
-            {
-                Text = "Cancel",
-                DialogResult = DialogResult.Cancel,
-                Location = new Point(813, 526),
-                Size = new Size(75, 26),
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Right
-            };
-
-            Controls.Add(intro);
-            Controls.Add(filterLabel);
-            Controls.Add(_filterPanel);
-            Controls.Add(clear);
-            Controls.Add(matchCurrent);
-            Controls.Add(_list);
-            Controls.Add(_status);
-            Controls.Add(_ok);
-            Controls.Add(cancel);
-            AcceptButton = _ok;
-            CancelButton = cancel;
-
             Refill();
+        }
+
+        private void _clear_Click(object sender, EventArgs e)
+        {
+            foreach (Tuple<string, int> f in _features) _filter[f.Item2] = Want.Any;
+            RepaintFilters();
+            Refill();
+        }
+
+        private void _matchCurrent_Click(object sender, EventArgs e)
+        {
+            MatchCurrent();
+            RepaintFilters();
+            Refill();
+        }
+
+        private void _list_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            Revalidate();
+        }
+
+        private void _list_DoubleClick(object sender, EventArgs e)
+        {
+            if (_ok.Enabled) { DialogResult = DialogResult.OK; Close(); }
         }
 
         /* Open on exactly what the material already is: the features it has ticked, the ones it hasn't
@@ -191,8 +116,6 @@ namespace OpenCAGE
          * checkboxes they look like: a click ticks or unticks, and that is the permutation being asked
          * for. The third state - don't care - is still worth having when nothing shipped matches, so it
          * is on the right button rather than in a cycle that would make ticking take two clicks. */
-        private readonly ToolTip toolTip = new ToolTip();
-
         private void SetFilter(int bit, CheckBox box, Want want)
         {
             _filter[bit] = want;

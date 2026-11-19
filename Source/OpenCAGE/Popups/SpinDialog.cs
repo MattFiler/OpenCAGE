@@ -18,21 +18,10 @@ namespace OpenCAGE
     /// "Rotate Continuously...": turns a prop, light or composite instance about one of its own axes at a set speed for as long as
     /// the level runs, with no keyframes. Apply is one undo step (Spinners: a looping RotateAtSpeed wired as retail's).
     /// </summary>
-    public class SpinDialog : BaseWindow
+    public partial class SpinDialog : BaseWindow
     {
         private readonly ShortGuid _compositeId, _entityId;
-        private readonly RadioButton _x = new RadioButton() { Text = "X", AutoSize = true };
-        private readonly RadioButton _y = new RadioButton() { Text = "Y", AutoSize = true };
-        private readonly RadioButton _z = new RadioButton() { Text = "Z", AutoSize = true };
-        private readonly NumericUpDown _speed = new NumericUpDown() { Minimum = -3600, Maximum = 3600, DecimalPlaces = 1, Increment = 10, Width = 90, Value = 90 };
-        private readonly Label _title = new Label() { AutoSize = true, Font = new Font(SystemFonts.DefaultFont, FontStyle.Bold) };
-        private readonly Label _suggest = new Label() { AutoSize = true, MaximumSize = new Size(420, 0) };
-        private readonly Label _period = new Label() { AutoSize = true };
-        private readonly Label _status = new Label() { AutoSize = true, MaximumSize = new Size(420, 0), ForeColor = Color.Firebrick };
-        private readonly Panel _preview = new DoubleBufferedPanel() { Width = 420, Height = 220, BorderStyle = BorderStyle.FixedSingle, BackColor = Color.FromArgb(32, 34, 38) };
-        private readonly Button _apply = new Button() { Text = "Apply", AutoSize = true };
-        private readonly Button _remove = new Button() { Text = "Stop Turning", AutoSize = true };
-        private readonly Button _close = new Button() { Text = "Close", AutoSize = true };
+        private readonly Panel _preview = new DoubleBufferedPanel() { Dock = DockStyle.Fill, BorderStyle = BorderStyle.FixedSingle, BackColor = Color.FromArgb(32, 34, 38) };
         private (Vector3 Min, Vector3 Max)? _bounds;
         private bool _light;
 
@@ -43,43 +32,28 @@ namespace OpenCAGE
 
         public SpinDialog(Composite composite, Entity entity) : base(WindowClosesOn.COMMANDS_RELOAD | WindowClosesOn.NEW_COMPOSITE_SELECTION)
         {
+            InitializeComponent();
             _compositeId = composite.shortGUID;
             _entityId = entity.shortGUID;
-            Text = "Rotate Continuously";
             Icon = SharedFormIcon.Icon;
-            FormBorderStyle = FormBorderStyle.FixedToolWindow;
-            StartPosition = FormStartPosition.CenterScreen;
-            AutoSize = true;
-            AutoSizeMode = AutoSizeMode.GrowAndShrink;
             StayAboveEditor = true;
             EnableDocumentation("https://opencage.co.uk/docs/rotate-continuously/");
 
-            FlowLayoutPanel root = new FlowLayoutPanel() { FlowDirection = FlowDirection.TopDown, AutoSize = true, Padding = new Padding(10), WrapContents = false };
-            root.Controls.Add(_title);
-            root.Controls.Add(new Label() { AutoSize = true, MaximumSize = new Size(420, 0), Text = "It turns about one of its OWN axes for as long as the level runs (its rotation in the level sets where those point). Negative speeds turn it the other way." });
-            FlowLayoutPanel axisRow = new FlowLayoutPanel() { AutoSize = true, WrapContents = false };
-            axisRow.Controls.Add(new Label() { Text = "Axis:", AutoSize = true, Padding = new Padding(0, 4, 0, 0) });
-            axisRow.Controls.AddRange(new Control[] { _x, _y, _z });
-            axisRow.Controls.Add(new Label() { Text = "  Degrees per second:", AutoSize = true, Padding = new Padding(0, 4, 0, 0) });
-            axisRow.Controls.Add(_speed);
-            axisRow.Controls.Add(_period);
-            root.Controls.Add(axisRow);
-            root.Controls.Add(_suggest);
-            root.Controls.Add(_preview);
-            root.Controls.Add(_status);
-            FlowLayoutPanel buttons = new FlowLayoutPanel() { AutoSize = true, WrapContents = false };
-            buttons.Controls.AddRange(new Control[] { _apply, _remove, _close });
-            root.Controls.Add(buttons);
-            Controls.Add(root);
-
-            foreach (RadioButton radio in new[] { _x, _y, _z }) radio.CheckedChanged += (s, e) => { UpdatePeriod(); _preview.Invalidate(); };
-            _speed.ValueChanged += (s, e) => { UpdatePeriod(); _preview.Invalidate(); };
+            //The preview is a private control, so it is made here and fills its place in the layout
+            previewHost.Controls.Add(_preview);
             _preview.Paint += PaintPreview;
-            _apply.Click += (s, e) => ApplySpin();
-            _remove.Click += (s, e) => RemoveSpin();
-            _close.Click += (s, e) => Close();
             Load(composite, entity);
         }
+
+        private void Turn_Changed(object sender, EventArgs e)
+        {
+            UpdatePeriod();
+            _preview.Invalidate();
+        }
+
+        private void _apply_Click(object sender, EventArgs e) => ApplySpin();
+        private void _remove_Click(object sender, EventArgs e) => RemoveSpin();
+        private void _close_Click(object sender, EventArgs e) => Close();
 
         private Composite Composite => Singleton.Editor?.CompositeBrowser?.Content?.Level?.Commands?.GetComposite(_compositeId);
         private Entity Entity => Composite?.GetEntityByID(_entityId);

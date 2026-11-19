@@ -14,31 +14,26 @@ namespace OpenCAGE.Popups
     /// </summary>
     public partial class ModManagerForm
     {
-        private Button _launchButton;
-
-        private void AddLaunchButton(FlowLayoutPanel right)
+        /* The button and the list are named for UI automation (launchModButton, modList). The list's own SelectedIndexChanged
+           handler runs first: this one follows it. */
+        private void HookLaunchButton()
         {
-            _launchButton = MakeButton(right, "Launch Mod", (s, e) => LaunchSelectedMod());
-            _launchButton.Enabled = false;
-            //Named for UI automation
-            _launchButton.Name = "launchModButton";
-            if (string.IsNullOrEmpty(_modList.Name))
-                _modList.Name = "modList";
-            ToolTip tips = new ToolTip() { AutoPopDelay = 15000 };
-            tips.SetToolTip(_launchButton, "Start the game for the selected mod: into the level it starts in (as its author set it, or its only level), with that level's own UI " +
-                "(radial menu, HUD... - only while it's played) and the launch options the mod asks for. Your other Launch Game settings apply as usual.");
-            FormClosed += (s, e) => tips.Dispose();
-            _modList.SelectedIndexChanged += (s, e) => UpdateLaunchButton();
-            _modList.EnabledChanged += (s, e) => UpdateLaunchButton();
+            modList.SelectedIndexChanged += (s, e) => UpdateLaunchButton();
+            modList.EnabledChanged += (s, e) => UpdateLaunchButton();
+        }
+
+        private void launchModButton_Click(object sender, EventArgs e)
+        {
+            LaunchSelectedMod();
         }
 
         /* Launchable: the selected mod installed as the list shows it, with nothing left to apply */
         private void UpdateLaunchButton()
         {
-            if (_launchButton == null || IsDisposed)
+            if (launchModButton == null || IsDisposed)
                 return;
             ModState.InstalledMod mod = SelectedMod;
-            _launchButton.Enabled = mod != null && _modList.Enabled && mod.Enabled && mod.Applied.Count != 0 && !_pending;
+            launchModButton.Enabled = mod != null && modList.Enabled && mod.Enabled && mod.Applied.Count != 0 && !_pending;
         }
 
         private void LaunchSelectedMod()

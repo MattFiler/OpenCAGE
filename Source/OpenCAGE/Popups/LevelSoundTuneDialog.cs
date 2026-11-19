@@ -15,32 +15,9 @@ namespace OpenCAGE
     /// of the soundbanks that carry it, never into DATA/SOUND. Only changed settings are written; Put Back restores the base game's.
     /// See <see cref="LevelSoundOverride.Tune"/>.
     /// </summary>
-    public class LevelSoundTuneDialog : BaseWindow
+    public partial class LevelSoundTuneDialog : BaseWindow
     {
         private readonly string _package;
-
-        private readonly TextBox eventName = new TextBox { Dock = DockStyle.Fill, AutoCompleteMode = AutoCompleteMode.SuggestAppend, AutoCompleteSource = AutoCompleteSource.CustomSource };
-        private readonly Button readBtn = new Button { Text = "Read", Width = 70, Height = 24 };
-        private readonly TextBox about = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill };
-
-        private readonly NumericUpDown volume = Number(-96, 24, 1, 0.5m);
-        private readonly NumericUpDown pitch = Number(-2400, 2400, 0, 50);
-        private readonly NumericUpDown delay = Number(0, 600000, 0, 100);
-        private readonly NumericUpDown fadeIn = Number(0, 600000, 0, 100);
-        private readonly NumericUpDown fadeOut = Number(0, 600000, 0, 100);
-        private readonly ComboBox stops = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 260 };
-        private readonly ComboBox loop = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 120 };
-        private readonly NumericUpDown loopCount = Number(2, 32767, 0, 1);
-        private readonly NumericUpDown reach = Number(0.5m, 10000, 1, 1);
-
-        private readonly CheckBox volumeOn = Change(), pitchOn = Change(), delayOn = Change(), fadeInOn = Change(), fadeOutOn = Change(), stopsOn = Change(), loopOn = Change(), reachOn = Change();
-        private readonly Label volumeShip = Shipped(), pitchShip = Shipped(), delayShip = Shipped(), fadeInShip = Shipped(), fadeOutShip = Shipped(), stopsShip = Shipped(), loopShip = Shipped(), reachShip = Shipped();
-        private readonly Label fadeOutLabel = new Label { Text = "Fade out (ms)", AutoSize = true, Anchor = AnchorStyles.Left };
-
-        private readonly Button applyBtn = new Button { Text = "Apply", Width = 90, Height = 26, Enabled = false };
-        private readonly Button revertBtn = new Button { Text = "Put Back", Width = 90, Height = 26, Enabled = false };
-        private readonly Button closeBtn = new Button { Text = "Close", Width = 90, Height = 26 };
-        private readonly ToolTip tips = new ToolTip();
 
         private LevelSoundOverride.Tuning _read;
         private bool _filling;
@@ -48,47 +25,16 @@ namespace OpenCAGE
 
         public LevelSoundTuneDialog(string package, string startEvent)
         {
+            InitializeComponent();
             _package = package;
-            Text = "Tune Sound Event";
             Icon = SharedFormIcon.Icon;
-            ClientSize = new Size(760, 600);
-            MinimumSize = new Size(640, 540);
-            StartPosition = FormStartPosition.CenterParent;
-            ShowInTaskbar = false;
-            MinimizeBox = false;
             BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/sound-events/#tune-event");
 
-            stops.Items.AddRange(new object[] { "Its own sound", "Everything under its actor-mixer", "Everything on its bus" });
-            loop.Items.AddRange(new object[] { "Once", "For ever", "Times:" });
             stops.SelectedIndex = 0;
             loop.SelectedIndex = 0;
-
-            tips.SetToolTip(eventName, "The sound event to tune, as a Sound entity's sound_event names it.");
-            tips.SetToolTip(volume, "The volume of what the event plays, in dB - its own: the containers above it add theirs. Negative is quieter; 6 dB is about half or double.");
-            tips.SetToolTip(pitch, "Pitch in cents: 100 is a semitone, 1200 an octave.");
-            tips.SetToolTip(delay, "How long after the event is played its sound starts, in ms. A random delay range the game gave it is cleared.");
-            tips.SetToolTip(fadeIn, "How long the sound takes to fade in as it starts, in ms.");
-            tips.SetToolTip(fadeOut, "How long the sound takes to fade out when its stop event stops it, in ms (a Play event's goes on its Stop_ event). A Sound entity fades only when it has that stop_event: Sound.stop on its own is instant.");
-            tips.SetToolTip(stops, "What the stop event stops: the sound it was made for, everything under the same actor-mixer (a music system's other tracks, say), or everything playing on the same bus.");
-            tips.SetToolTip(loop, "Whether every sound the event plays repeats: once (no loop), for ever (until stopped), or a number of times.");
-            tips.SetToolTip(reach, "How far away the event can be heard, in metres. Its distance curves are copied for this event alone and stretched to end here - the curve other sounds share is left as it is.");
-            tips.SetToolTip(applyBtn, "Write the ticked settings into the level's sound package (copying in the soundbanks that carry the event the first time).");
-            tips.SetToolTip(revertBtn, "Give the event (and its Stop_ event) the base game's settings again on this level.");
-
-            BuildLayout();
-
-            readBtn.Click += (s, e) => ReadEvent();
-            eventName.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; ReadEvent(); } };
-            applyBtn.Click += (s, e) => Apply();
-            revertBtn.Click += (s, e) => Revert();
-            closeBtn.Click += (s, e) => Close();
-            loop.SelectedIndexChanged += (s, e) => loopCount.Enabled = loop.SelectedIndex == 2;
-            Tick(volume, volumeOn); Tick(pitch, pitchOn); Tick(delay, delayOn); Tick(fadeIn, fadeInOn); Tick(fadeOut, fadeOutOn); Tick(reach, reachOn); Tick(loopCount, loopOn);
-            stops.SelectedIndexChanged += (s, e) => { if (!_filling) stopsOn.Checked = true; };
-            loop.SelectedIndexChanged += (s, e) => { if (!_filling) loopOn.Checked = true; };
-            foreach (CheckBox box in new[] { volumeOn, pitchOn, delayOn, fadeInOn, fadeOutOn, stopsOn, loopOn, reachOn })
-                box.CheckedChanged += (s, e) => UpdateButtons();
-            CancelButton = closeBtn;
+            //Wired after the first picks, which are not edits
+            stops.SelectedIndexChanged += stops_SelectedIndexChanged;
+            loop.SelectedIndexChanged += loop_SelectedIndexChanged;
 
             Load += (s, e) =>
             {
@@ -103,83 +49,45 @@ namespace OpenCAGE
                 else
                     Clear("Name a sound event and press Read. Events in permanent soundbanks (weapons, foley, UI...) can only be changed for every level.");
             };
-            FormClosed += (s, e) => { _generation++; tips.Dispose(); };
         }
 
-        private static NumericUpDown Number(decimal min, decimal max, int decimals, decimal step)
+        private void LevelSoundTuneDialog_FormClosed(object sender, FormClosedEventArgs e)
         {
-            return new NumericUpDown { Minimum = min, Maximum = max, DecimalPlaces = decimals, Increment = step, Width = 110, Anchor = AnchorStyles.Left };
+            _generation++;
+            tips.Dispose();
         }
 
-        private static CheckBox Change()
-        {
-            return new CheckBox { Text = "Change", AutoSize = true, Anchor = AnchorStyles.Left };
-        }
+        private void readBtn_Click(object sender, EventArgs e) => ReadEvent();
+        private void applyBtn_Click(object sender, EventArgs e) => Apply();
+        private void revertBtn_Click(object sender, EventArgs e) => Revert();
+        private void closeBtn_Click(object sender, EventArgs e) => Close();
 
-        private static Label Shipped()
+        private void eventName_KeyDown(object sender, KeyEventArgs e)
         {
-            return new Label { AutoSize = true, Anchor = AnchorStyles.Left, ForeColor = SystemColors.GrayText };
-        }
-
-        /// <summary>Editing a value ticks its Change box.</summary>
-        private void Tick(NumericUpDown box, CheckBox on)
-        {
-            box.ValueChanged += (s, e) => { if (!_filling) on.Checked = true; };
-        }
-
-        private void BuildLayout()
-        {
-            TableLayoutPanel top = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 3, RowCount = 1, Height = 32, Padding = new Padding(6, 6, 6, 0) };
-            top.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            top.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            top.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            top.Controls.Add(new Label { Text = "Sound event:", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 0);
-            top.Controls.Add(eventName, 1, 0);
-            top.Controls.Add(readBtn, 2, 0);
-
-            TableLayoutPanel grid = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 4, AutoSize = true, Padding = new Padding(8, 6, 8, 6) };
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            int row = 0;
-            Action<Control, Control, CheckBox, Label> add = (label, editor, on, shipped) =>
+            if (e.KeyCode == Keys.Enter)
             {
-                grid.Controls.Add(label, 0, row);
-                grid.Controls.Add(editor, 1, row);
-                grid.Controls.Add(on, 2, row);
-                grid.Controls.Add(shipped, 3, row);
-                row++;
-            };
-            add(Text_("Volume (dB)"), volume, volumeOn, volumeShip);
-            add(Text_("Pitch (cents)"), pitch, pitchOn, pitchShip);
-            add(Text_("Start delay (ms)"), delay, delayOn, delayShip);
-            add(Text_("Fade in (ms)"), fadeIn, fadeInOn, fadeInShip);
-            add(fadeOutLabel, fadeOut, fadeOutOn, fadeOutShip);
-            add(Text_("Stop reaches"), stops, stopsOn, stopsShip);
-            FlowLayoutPanel loopRow = new FlowLayoutPanel { AutoSize = true, Margin = new Padding(0), WrapContents = false };
-            loopRow.Controls.Add(loop);
-            loopRow.Controls.Add(loopCount);
-            loopCount.Enabled = false;
-            add(Text_("Loop"), loopRow, loopOn, loopShip);
-            add(Text_("Reach (m)"), reach, reachOn, reachShip);
-
-            FlowLayoutPanel buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 38, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(4) };
-            buttons.Controls.AddRange(new Control[] { closeBtn, revertBtn, applyBtn });
-
-            GroupBox info = new GroupBox { Text = "The event on this level", Dock = DockStyle.Fill, Padding = new Padding(6) };
-            info.Controls.Add(about);
-
-            Controls.Add(info);
-            Controls.Add(buttons);
-            Controls.Add(grid);
-            Controls.Add(top);
+                e.SuppressKeyPress = true;
+                ReadEvent();
+            }
         }
 
-        private static Label Text_(string text)
+        //Editing a value ticks its Change box
+        private void volume_ValueChanged(object sender, EventArgs e) { if (!_filling) volumeOn.Checked = true; }
+        private void pitch_ValueChanged(object sender, EventArgs e) { if (!_filling) pitchOn.Checked = true; }
+        private void delay_ValueChanged(object sender, EventArgs e) { if (!_filling) delayOn.Checked = true; }
+        private void fadeIn_ValueChanged(object sender, EventArgs e) { if (!_filling) fadeInOn.Checked = true; }
+        private void fadeOut_ValueChanged(object sender, EventArgs e) { if (!_filling) fadeOutOn.Checked = true; }
+        private void reach_ValueChanged(object sender, EventArgs e) { if (!_filling) reachOn.Checked = true; }
+        private void loopCount_ValueChanged(object sender, EventArgs e) { if (!_filling) loopOn.Checked = true; }
+        private void stops_SelectedIndexChanged(object sender, EventArgs e) { if (!_filling) stopsOn.Checked = true; }
+
+        private void loop_SelectedIndexChanged(object sender, EventArgs e)
         {
-            return new Label { Text = text, AutoSize = true, Anchor = AnchorStyles.Left };
+            loopCount.Enabled = loop.SelectedIndex == 2;
+            if (!_filling) loopOn.Checked = true;
         }
+
+        private void Change_CheckedChanged(object sender, EventArgs e) => UpdateButtons();
 
         private void Clear(string message)
         {

@@ -14,15 +14,10 @@ namespace OpenCAGE.Popups
     /// File > Record Edits: records undo steps into a recipe, and replays a recipe (dry run first, then Apply as one undo step).
     /// Recording carries on with the window closed.
     /// </summary>
-    public class RecordEditsWindow : BaseWindow
+    public partial class RecordEditsWindow : BaseWindow
     {
         private static RecordEditsWindow _open;
 
-        private readonly Label _state, _planSummary;
-        private readonly Button _record, _stop, _discard, _openRecipe, _apply, _applyAll;
-        private readonly ListBox _steps;
-        private readonly ListView _plan;
-        private readonly ComboBox _ids;
         private Recipe _recipe;
         private string _recipePath;
         private RecipePlan _current;
@@ -30,69 +25,37 @@ namespace OpenCAGE.Popups
 
         public RecordEditsWindow() : base(WindowClosesOn.NONE)
         {
-            Text = "Record Edits";
+            InitializeComponent();
             Icon = SharedFormIcon.Icon;
-            Size = new Size(980, 700);
-            MinimumSize = new Size(700, 480);
-            StartPosition = FormStartPosition.CenterScreen;
-            ShowInTaskbar = false;
             BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/record-edits/");
 
-            SplitContainer split = new SplitContainer() { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal, SplitterDistance = 250 };
-
-            //Recording
-            GroupBox recording = new GroupBox() { Text = "Record", Dock = DockStyle.Fill, Padding = new Padding(8) };
-            Panel row = new Panel() { Dock = DockStyle.Top, Height = 34 };
-            _record = new Button() { Text = "Record", AutoSize = true, Location = new Point(0, 4) };
-            _record.Click += (s, e) => StartRecording();
-            _stop = new Button() { Text = "Stop && Save Recipe...", AutoSize = true, Location = new Point(90, 4) };
-            _stop.Click += (s, e) => StopRecording();
-            _discard = new Button() { Text = "Discard", AutoSize = true, Location = new Point(250, 4) };
-            _discard.Click += (s, e) => { RecipeRecorder.Discard(); RefreshState(); };
-            _state = new Label() { AutoSize = false, Location = new Point(340, 9), Size = new Size(580, 20), Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right };
-            row.Controls.Add(_record); row.Controls.Add(_stop); row.Controls.Add(_discard); row.Controls.Add(_state);
-            _steps = new ListBox() { Dock = DockStyle.Fill, IntegralHeight = false };
-            Label hint = new Label() { Dock = DockStyle.Bottom, Height = 34, ForeColor = SystemColors.GrayText, Text = "Every edit counts - the editor's windows, the viewport, AI tools - and what you undo while recording is left out. The recipe holds the net change, with what each thing was before, so a replay can tell when the target differs." };
-            recording.Controls.Add(_steps);
-            recording.Controls.Add(hint);
-            recording.Controls.Add(row);
-            split.Panel1.Controls.Add(recording);
-            split.Panel1.Padding = new Padding(8, 8, 8, 4);
-
-            //Replaying
-            GroupBox replay = new GroupBox() { Text = "Replay", Dock = DockStyle.Fill, Padding = new Padding(8) };
-            Panel replayRow = new Panel() { Dock = DockStyle.Top, Height = 34 };
-            _openRecipe = new Button() { Text = "Open Recipe...", AutoSize = true, Location = new Point(0, 4) };
-            _openRecipe.Click += (s, e) => OpenRecipe();
-            Label idsLabel = new Label() { Text = "Ids:", AutoSize = true, Location = new Point(120, 9) };
-            _ids = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(150, 5), Width = 230 };
-            _ids.Items.AddRange(new object[] { "auto (keep on a copy, else new)", "keep the recorded ids", "new ids (remap)" });
+            //Picked before it is wired, so it does not replan
             _ids.SelectedIndex = 0;
-            _ids.SelectedIndexChanged += (s, e) => Replan();
-            _apply = new Button() { Text = "Apply", AutoSize = true, Location = new Point(400, 4), Enabled = false };
-            _apply.Click += (s, e) => Apply(false);
-            _applyAll = new Button() { Text = "Apply, Overwriting Conflicts", AutoSize = true, Location = new Point(490, 4), Enabled = false };
-            _applyAll.Click += (s, e) => Apply(true);
-            replayRow.Controls.Add(_openRecipe); replayRow.Controls.Add(idsLabel); replayRow.Controls.Add(_ids); replayRow.Controls.Add(_apply); replayRow.Controls.Add(_applyAll);
-            _planSummary = new Label() { Dock = DockStyle.Top, Height = 40, Text = "Open a recipe to see what it would do here (nothing changes until Apply)." };
-            _plan = new ListView() { Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true, HideSelection = false };
-            _plan.Columns.Add("#", 44);
-            _plan.Columns.Add("Status", 100);
-            _plan.Columns.Add("Step", 520);
-            _plan.Columns.Add("Note", 260);
-            replay.Controls.Add(_plan);
-            replay.Controls.Add(_planSummary);
-            replay.Controls.Add(replayRow);
-            split.Panel2.Controls.Add(replay);
-            split.Panel2.Padding = new Padding(8, 4, 8, 8);
+            _ids.SelectedIndexChanged += _ids_SelectedIndexChanged;
 
-            Controls.Add(split);
-            //The splitter can only be placed once the window has its size
-            Load += (s, e) => { try { split.SplitterDistance = Math.Max(160, ClientSize.Height * 2 / 5); } catch { } };
             _onChanged = () => { if (!IsDisposed) BeginInvoke(new Action(RefreshState)); };
             RecipeRecorder.Changed += _onChanged;
             FormClosed += (s, e) => RecipeRecorder.Changed -= _onChanged;
             Theming.ThemeManager.ApplyCurrent(this);
+            RefreshState();
+        }
+
+        //The splitter can only be placed once the window has its size
+        private void RecordEditsWindow_Load(object sender, EventArgs e)
+        {
+            try { _split.SplitterDistance = Math.Max(160, ClientSize.Height * 2 / 5); } catch { }
+        }
+
+        private void _record_Click(object sender, EventArgs e) => StartRecording();
+        private void _stop_Click(object sender, EventArgs e) => StopRecording();
+        private void _openRecipe_Click(object sender, EventArgs e) => OpenRecipe();
+        private void _ids_SelectedIndexChanged(object sender, EventArgs e) => Replan();
+        private void _apply_Click(object sender, EventArgs e) => Apply(false);
+        private void _applyAll_Click(object sender, EventArgs e) => Apply(true);
+
+        private void _discard_Click(object sender, EventArgs e)
+        {
+            RecipeRecorder.Discard();
             RefreshState();
         }
 

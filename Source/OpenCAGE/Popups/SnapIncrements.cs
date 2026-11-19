@@ -16,90 +16,22 @@ namespace OpenCAGE.Popups
     /// </summary>
     public partial class SnapIncrements : Form
     {
-        private ListBox _gridList;
-        private ListBox _rotationList;
-        private NumericUpDown _gridInput;
-        private NumericUpDown _rotationInput;
-
         public SnapIncrements()
         {
-            BuildUi();
+            InitializeComponent();
+            Icon = SharedFormIcon.Icon;
             Theming.ThemeManager.ApplyToForm(this);
             RefreshLists();
         }
 
-        private void BuildUi()
+        private void resetButton_Click(object sender, EventArgs e)
         {
-            Text = "Snap Increments";
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            StartPosition = FormStartPosition.CenterScreen;
-            MaximizeBox = false;
-            MinimizeBox = false;
-            ClientSize = new Size(430, 320);
-
-            GroupBox gridGroup = BuildGroup("Transform (units)", 10, out _gridList, out _gridInput, 3, 0.001m, 10000m,
-                AddGrid, RemoveGrid);
-            GroupBox rotationGroup = BuildGroup("Rotation (degrees)", 220, out _rotationList, out _rotationInput, 2, 0.01m, 360m,
-                AddRotation, RemoveRotation);
-            Controls.Add(gridGroup);
-            Controls.Add(rotationGroup);
-
-            Button reset = new Button()
-            {
-                Text = "Reset to Defaults",
-                Bounds = new Rectangle(10, 285, 130, 26),
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Left,
-            };
-            reset.Click += (s, e) =>
-            {
-                SnapIncrementSettings.ResetToDefaults();
-                NotifyEditor(Settings.TransformSnapIncrements, Settings.RotationSnapIncrements);
-                RefreshLists();
-            };
-            Controls.Add(reset);
-
-            Button close = new Button()
-            {
-                Text = "Close",
-                Bounds = new Rectangle(340, 285, 80, 26),
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
-                DialogResult = DialogResult.OK,
-            };
-            close.Click += (s, e) => Close();
-            Controls.Add(close);
-            AcceptButton = close;
+            SnapIncrementSettings.ResetToDefaults();
+            NotifyEditor(Settings.TransformSnapIncrements, Settings.RotationSnapIncrements);
+            RefreshLists();
         }
 
-        private GroupBox BuildGroup(
-            string title, int x, out ListBox list, out NumericUpDown input, int decimals, decimal min, decimal max,
-            EventHandler onAdd, EventHandler onRemove)
-        {
-            GroupBox group = new GroupBox() { Text = title, Bounds = new Rectangle(x, 10, 200, 265) };
-
-            list = new ListBox() { Bounds = new Rectangle(12, 24, 176, 165), IntegralHeight = false };
-            group.Controls.Add(list);
-
-            input = new NumericUpDown()
-            {
-                Bounds = new Rectangle(12, 200, 90, 24),
-                DecimalPlaces = decimals,
-                Minimum = min,
-                Maximum = max,
-                Increment = decimals >= 3 ? 0.05m : 1m,
-                Value = decimals >= 3 ? 0.25m : 5m,
-            };
-            group.Controls.Add(input);
-
-            Button add = new Button() { Text = "Add", Bounds = new Rectangle(108, 200, 80, 24) };
-            add.Click += onAdd;
-            group.Controls.Add(add);
-
-            Button remove = new Button() { Text = "Remove Selected", Bounds = new Rectangle(12, 230, 176, 26) };
-            remove.Click += onRemove;
-            group.Controls.Add(remove);
-
-            return group;
-        }
+        private void closeButton_Click(object sender, EventArgs e) => Close();
 
         private void RefreshLists()
         {

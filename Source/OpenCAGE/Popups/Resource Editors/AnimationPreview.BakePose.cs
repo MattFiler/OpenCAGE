@@ -47,7 +47,7 @@ namespace OpenCAGE
             Stop();
             int frame = timeline.Frame;
             string leaf = Path.GetFileNameWithoutExtension((_model.Name ?? "MODEL").Replace('/', '\\').Split('\\').Last());
-            CAGEAnimationEditor.PathToolDialog d = new CAGEAnimationEditor.PathToolDialog("Bake Pose",
+            PathToolDialog d = new PathToolDialog("Bake Pose",
                 "Freezes " + leaf + " at frame " + (frame + 1) + " of " + _clip.Name + " (frame index " + frame + ") into a static model in the level (materials made from its own textures). Marker space lines it up with a character playing this clip at a marker; Preview space is what is shown here.");
             TextBox name = d.TextRow("New model's name", "POSED\\" + leaf + "_" + _clip.Name + "_F" + frame);
             ComboBox space = d.Combo("Space", new[] { "marker", "preview" }, 0);

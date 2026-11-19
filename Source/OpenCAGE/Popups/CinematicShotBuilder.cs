@@ -19,7 +19,7 @@ namespace OpenCAGE.Popups
     /// cutscene. Each button runs the MCP tool for the same job (build_cinematic, get_cinematic, preview_cage_animation). Shot lists are
     /// kept per level.
     /// </summary>
-    public class CinematicShotBuilder : BaseWindow
+    public partial class CinematicShotBuilder : BaseWindow
     {
         private static CinematicShotBuilder _open;
 
@@ -203,97 +203,45 @@ namespace OpenCAGE.Popups
         }
         #endregion
 
-        private readonly TextBox _name = new TextBox() { Text = "Cinematic", Width = 160 };
-        private readonly TextBox _composite = new TextBox() { Text = "root", Width = 260 };
-        private readonly ComboBox _start = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDown, Width = 230 };
-        private readonly NumericUpDown _startDelay = new NumericUpDown() { DecimalPlaces = 2, Minimum = 0, Maximum = 600, Value = 1, Width = 60, Increment = 0.25m };
-        private readonly ComboBox _end = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 80 };
-        private readonly NumericUpDown _blendOut = new NumericUpDown() { DecimalPlaces = 2, Minimum = 0, Maximum = 60, Width = 60, Increment = 0.25m };
-        private readonly NumericUpDown _hold = new NumericUpDown() { DecimalPlaces = 2, Minimum = 0, Maximum = 600, Width = 60, Increment = 0.25m };
-        private readonly CheckBox _hideHud = new CheckBox() { Text = "Hide HUD", Checked = true, AutoSize = true };
-        private readonly CheckBox _noBlur = new CheckBox() { Text = "Motion blur off", Checked = true, AutoSize = true };
-        private readonly CheckBox _dof = new CheckBox() { Text = "Depth of field", Checked = true, AutoSize = true };
-        private readonly TextBox _cues = new TextBox() { Width = 300 };
-        private readonly TextBox _clips = new TextBox() { Width = 300 };
-        private readonly ListBox _shots = new ListBox() { Dock = DockStyle.Fill, IntegralHeight = false };
-        private readonly PropertyGrid _grid = new PropertyGrid() { Dock = DockStyle.Fill, ToolbarVisible = false, PropertySort = PropertySort.Categorized };
-        private readonly TextBox _report = new TextBox() { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Both, WordWrap = false, Dock = DockStyle.Fill, Font = new Font(FontFamily.GenericMonospace, 8.25f) };
-        private readonly PictureBox _picture = new PictureBox() { Dock = DockStyle.Fill, SizeMode = PictureBoxSizeMode.Zoom, BackColor = Color.Black };
-        private readonly Label _status = new Label() { Dock = DockStyle.Bottom, Height = 22, Padding = new Padding(6, 4, 0, 0) };
         private readonly List<Button> _buttons = new List<Button>();
         private readonly List<ShotRow> _rows = new List<ShotRow>();
         private bool _busy;
 
         public CinematicShotBuilder() : base(WindowClosesOn.COMMANDS_RELOAD)
         {
-            Text = "Cinematic Shot Builder";
+            InitializeComponent();
             Icon = SharedFormIcon.Icon;
-            Size = new Size(1180, 880);
-            MinimumSize = new Size(900, 640);
-            StartPosition = FormStartPosition.CenterScreen;
             EnableDocumentation("https://opencage.co.uk/docs/cinematic-shot-builder/");
 
-            _start.Items.AddRange(new object[] { "level_start", "none" });
-            _start.Text = "level_start";
-            _end.Items.AddRange(new object[] { "return", "hold", "loop" });
             _end.SelectedIndex = 0;
-            ToolTip tip = new ToolTip();
-            tip.SetToolTip(_start, "level_start: after the level has loaded (and the delay). none: link something to <name>_Begin.trigger yourself. Or type 'Entity.pin', e.g. PlayerTriggerBox_1.on_entered.");
-            tip.SetToolTip(_cues, "Things to call at times, as JSON: [{\"time\": 2.5, \"call\": \"Door_1.open\"}]");
-            tip.SetToolTip(_clips, "Character clips locked to the timeline, as JSON: [{\"entity\": \"Anim_1\", \"at\": 1.0, \"start\": \"Bind_1.trigger\"}] (a CMD_PlayAnimation; clip time 0 at 'at').");
+            _buttons.AddRange(new Button[] { addShotButton, copyShotButton, removeShotButton, upButton, downButton, fromViewportButton, planButton, buildButton, previewShotButton, readBackButton, openButton, saveAsButton });
 
-            FlowLayoutPanel top = new FlowLayoutPanel() { Dock = DockStyle.Top, AutoSize = true, Padding = new Padding(6) };
-            top.Controls.AddRange(new Control[] { Caption("Name"), _name, Caption("In composite"), _composite, Caption("Starts"), _start, Caption("after (s)"), _startDelay, Caption("End"), _end, Caption("blend out (s)"), _blendOut, Caption("hold (s)"), _hold });
-            FlowLayoutPanel options = new FlowLayoutPanel() { Dock = DockStyle.Top, AutoSize = true, Padding = new Padding(6, 0, 6, 4) };
-            options.Controls.AddRange(new Control[] { _hideHud, _noBlur, _dof, Caption("Cues"), _cues, Caption("Clip sync"), _clips });
-
-            //Shots: list + buttons | grid
-            Panel listPanel = new Panel() { Dock = DockStyle.Fill };
-            FlowLayoutPanel listButtons = new FlowLayoutPanel() { Dock = DockStyle.Bottom, AutoSize = true, FlowDirection = FlowDirection.LeftToRight };
-            listButtons.Controls.AddRange(new Control[] { Btn("Add", AddShot), Btn("Copy", CopyShot), Btn("Remove", RemoveShot), Btn("Up", () => MoveShot(-1)), Btn("Down", () => MoveShot(1)), Btn("From Viewport", FromViewport, 110) });
-            listPanel.Controls.Add(_shots);
-            listPanel.Controls.Add(listButtons);
-            SplitContainer shotsSplit = new SplitContainer() { Dock = DockStyle.Fill, SplitterDistance = 320 };
-            shotsSplit.Panel1.Controls.Add(listPanel);
-            shotsSplit.Panel2.Controls.Add(_grid);
-
-            //Report | preview picture
-            SplitContainer resultSplit = new SplitContainer() { Dock = DockStyle.Fill };
-            resultSplit.Panel1.Controls.Add(_report);
-            resultSplit.Panel2.Controls.Add(_picture);
-            SplitContainer main = new SplitContainer() { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal };
-            main.Panel1.Controls.Add(shotsSplit);
-            main.Panel2.Controls.Add(resultSplit);
-
-            FlowLayoutPanel actions = new FlowLayoutPanel() { Dock = DockStyle.Bottom, AutoSize = true, Padding = new Padding(6) };
-            actions.Controls.AddRange(new Control[] { Btn("Plan", () => Build(true), 90), Btn("Build", () => Build(false), 90), Btn("Preview Shot", PreviewShot, 110), Btn("Read Back", ReadBack, 100), Btn("Open...", OpenFile, 80), Btn("Save As...", SaveFile, 90) });
-
-            Controls.Add(main);
-            Controls.Add(actions);
-            Controls.Add(options);
-            Controls.Add(top);
-            Controls.Add(_status);
-            Load += (s, e) =>
-            {
-                try { main.SplitterDistance = Math.Max(240, main.Height - 260); shotsSplit.SplitterDistance = 320; resultSplit.SplitterDistance = Math.Max(300, resultSplit.Width - 460); } catch (InvalidOperationException) { }
-            };
-
-            _shots.SelectedIndexChanged += (s, e) => _grid.SelectedObject = _shots.SelectedIndex >= 0 ? _rows[_shots.SelectedIndex] : null;
-            _grid.PropertyValueChanged += (s, e) => RefreshList(_shots.SelectedIndex);
             LoadKept();
             if (_rows.Count == 0) { AddShot(); }
             _status.Text = "Plan only reports; Build changes the level (one undo step - Save and Build to see it in game). Preview Shot needs the viewport on.";
         }
 
-        private static Label Caption(string text) => new Label() { Text = text, AutoSize = true, Padding = new Padding(4, 6, 0, 0) };
-
-        private Button Btn(string text, Action click, int width = 70)
+        private void CinematicShotBuilder_Load(object sender, EventArgs e)
         {
-            Button b = new Button() { Text = text, Width = width, Height = 26, UseVisualStyleBackColor = true };
-            b.Click += (s, e) => { if (!_busy) click(); };
-            _buttons.Add(b);
-            return b;
+            try { mainSplit.SplitterDistance = Math.Max(240, mainSplit.Height - 260); shotsSplit.SplitterDistance = 320; resultSplit.SplitterDistance = Math.Max(300, resultSplit.Width - 460); } catch (InvalidOperationException) { }
         }
+
+        private void _shots_SelectedIndexChanged(object sender, EventArgs e) => _grid.SelectedObject = _shots.SelectedIndex >= 0 ? _rows[_shots.SelectedIndex] : null;
+
+        private void _grid_PropertyValueChanged(object sender, PropertyValueChangedEventArgs e) => RefreshList(_shots.SelectedIndex);
+
+        private void addShotButton_Click(object sender, EventArgs e) { if (!_busy) AddShot(); }
+        private void copyShotButton_Click(object sender, EventArgs e) { if (!_busy) CopyShot(); }
+        private void removeShotButton_Click(object sender, EventArgs e) { if (!_busy) RemoveShot(); }
+        private void upButton_Click(object sender, EventArgs e) { if (!_busy) MoveShot(-1); }
+        private void downButton_Click(object sender, EventArgs e) { if (!_busy) MoveShot(1); }
+        private void fromViewportButton_Click(object sender, EventArgs e) { if (!_busy) FromViewport(); }
+        private void planButton_Click(object sender, EventArgs e) { if (!_busy) Build(true); }
+        private void buildButton_Click(object sender, EventArgs e) { if (!_busy) Build(false); }
+        private void previewShotButton_Click(object sender, EventArgs e) { if (!_busy) PreviewShot(); }
+        private void readBackButton_Click(object sender, EventArgs e) { if (!_busy) ReadBack(); }
+        private void openButton_Click(object sender, EventArgs e) { if (!_busy) OpenFile(); }
+        private void saveAsButton_Click(object sender, EventArgs e) { if (!_busy) SaveFile(); }
 
         #region The list
         private void RefreshList(int select)

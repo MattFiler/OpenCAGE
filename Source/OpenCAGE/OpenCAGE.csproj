@@ -348,8 +348,14 @@
     <Compile Include="Popups\Resource Editors\BlendSetUserPicker.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\Resource Editors\BlendSetUserPicker.Designer.cs">
+      <DependentUpon>BlendSetUserPicker.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\Resource Editors\EditAnimationMetadata.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\EditAnimationMetadata.Designer.cs">
+      <DependentUpon>EditAnimationMetadata.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\Resource Editors\EditBlendSets.cs">
       <SubType>Form</SubType>
@@ -767,6 +773,9 @@
     <Compile Include="Popups\SnapIncrements.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\SnapIncrements.Designer.cs">
+      <DependentUpon>SnapIncrements.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\ControlsWindow.Designer.cs">
       <DependentUpon>ControlsWindow.cs</DependentUpon>
     </Compile>
@@ -788,14 +797,26 @@
     <Compile Include="Popups\LevelSoundOverrideEditor.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\LevelSoundOverrideEditor.Designer.cs">
+      <DependentUpon>LevelSoundOverrideEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\LevelSoundImportDialog.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\LevelSoundImportDialog.Designer.cs">
+      <DependentUpon>LevelSoundImportDialog.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\LevelSoundBankDialog.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\LevelSoundBankDialog.Designer.cs">
+      <DependentUpon>LevelSoundBankDialog.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\LevelSoundTuneDialog.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\LevelSoundTuneDialog.Designer.cs">
+      <DependentUpon>LevelSoundTuneDialog.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\LaunchGame.cs">
       <SubType>Form</SubType>
@@ -834,8 +855,14 @@
     <Compile Include="Popups\Resource Editors\PhysicsImportSettings.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\Resource Editors\PhysicsImportSettings.Designer.cs">
+      <DependentUpon>PhysicsImportSettings.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\Resource Editors\PhysicsBodyProperties.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\PhysicsBodyProperties.Designer.cs">
+      <DependentUpon>PhysicsBodyProperties.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\Resource Editors\EditPhysicsSystem.cs">
       <SubType>Form</SubType>
@@ -924,11 +951,20 @@
     <Compile Include="Popups\Resource Editors\TextureImportOptions.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\Resource Editors\TextureImportOptions.Designer.cs">
+      <DependentUpon>TextureImportOptions.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\Resource Editors\NewMaterialPicker.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\Resource Editors\NewMaterialPicker.Designer.cs">
+      <DependentUpon>NewMaterialPicker.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\Resource Editors\SelectShaderPermutation.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\SelectShaderPermutation.Designer.cs">
+      <DependentUpon>SelectShaderPermutation.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\Resource Editors\EditTexture.cs">
       <SubType>Form</SubType>
@@ -1031,9 +1067,15 @@
     <Compile Include="Popups\MapAssetsWindow.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\MapAssetsWindow.Designer.cs">
+      <DependentUpon>MapAssetsWindow.cs</DependentUpon>
+    </Compile>
     <Compile Include="Scripts\MCP\McpUiOverrideTools.cs" />
     <Compile Include="Popups\LevelUiOverridesEditor.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\LevelUiOverridesEditor.Designer.cs">
+      <DependentUpon>LevelUiOverridesEditor.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\LaunchGame.LevelUi.cs">
       <DependentUpon>LaunchGame.cs</DependentUpon>
@@ -1051,6 +1093,9 @@
     <Compile Include="Scripts\MCP\McpLevelLaunchTools.cs" />
     <Compile Include="Popups\LevelLaunchSettingsEditor.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\LevelLaunchSettingsEditor.Designer.cs">
+      <DependentUpon>LevelLaunchSettingsEditor.cs</DependentUpon>
     </Compile>
     <Compile Include="CommandsEditor.LevelLaunch.cs">
       <DependentUpon>CommandsEditor.cs</DependentUpon>
@@ -1078,6 +1123,9 @@
     <Compile Include="Popups\HudOverlayBuilder.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\HudOverlayBuilder.Designer.cs">
+      <DependentUpon>HudOverlayBuilder.cs</DependentUpon>
+    </Compile>
     <Compile Include="CommandsEditor.Hud.cs">
       <DependentUpon>CommandsEditor.cs</DependentUpon>
       <SubType>Form</SubType>
@@ -1097,6 +1145,9 @@
     <Compile Include="Scripts\MCP\McpTextureStreamingTools.cs" />
     <Compile Include="Popups\TextureStreamingWindow.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\TextureStreamingWindow.Designer.cs">
+      <DependentUpon>TextureStreamingWindow.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\Resource Editors\EditTexture.Streaming.cs">
       <DependentUpon>EditTexture.cs</DependentUpon>
@@ -1173,11 +1224,32 @@
     <Compile Include="Popups\ModManagerForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\ModManagerForm.Designer.cs">
+      <DependentUpon>ModManagerForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\BusyDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\BusyDialog.Designer.cs">
+      <DependentUpon>BusyDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\ModReportDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\ModReportDialog.Designer.cs">
+      <DependentUpon>ModReportDialog.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\ModExporterForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\ModExporterForm.Designer.cs">
+      <DependentUpon>ModExporterForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\PristineCaptureWizard.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\PristineCaptureWizard.Designer.cs">
+      <DependentUpon>PristineCaptureWizard.cs</DependentUpon>
     </Compile>
     <Compile Include="Scripts\AlienBackstageCheck.cs" />
     <Compile Include="Scripts\Weapons\WeaponGeometry.cs" />
@@ -1185,6 +1257,9 @@
     <Compile Include="Scripts\MCP\McpWeaponTools.cs" />
     <Compile Include="Popups\ReplaceWeaponModel.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\ReplaceWeaponModel.Designer.cs">
+      <DependentUpon>ReplaceWeaponModel.cs</DependentUpon>
     </Compile>
     <Compile Include="Scripts\CrashTriage\CrashAnalysis.cs" />
     <Compile Include="Scripts\CrashTriage\CrashTable.cs" />
@@ -1207,6 +1282,9 @@
     <Compile Include="Scripts\MCP\McpLevelCheckTools.cs" />
     <Compile Include="Popups\LevelCheckWindow.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\LevelCheckWindow.Designer.cs">
+      <DependentUpon>LevelCheckWindow.cs</DependentUpon>
     </Compile>
     <Compile Include="Scripts\CompositePath.cs" />
     <Compile Include="Scripts\CloseReasons.cs" />
@@ -1231,8 +1309,14 @@
     <Compile Include="Popups\CompareLevelsWindow.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\CompareLevelsWindow.Designer.cs">
+      <DependentUpon>CompareLevelsWindow.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\RecordEditsWindow.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\RecordEditsWindow.Designer.cs">
+      <DependentUpon>RecordEditsWindow.cs</DependentUpon>
     </Compile>
     <Compile Include="Scripts\EnumStringListViewItems.cs" />
     <Compile Include="Scripts\FlowgraphLayoutManager.cs" />
@@ -1286,14 +1370,26 @@
     <Compile Include="Popups\BrushEditor.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\BrushEditor.Designer.cs">
+      <DependentUpon>BrushEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\CinematicShotBuilder.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\CinematicShotBuilder.Designer.cs">
+      <DependentUpon>CinematicShotBuilder.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\ClipSyncMenu.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\ClipSyncMenu.Designer.cs">
+      <DependentUpon>ClipSyncMenu.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\Resource Editors\ClipSplicerWindow.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Resource Editors\ClipSplicerWindow.Designer.cs">
+      <DependentUpon>ClipSplicerWindow.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\EditSpline.cs">
       <SubType>Form</SubType>
@@ -1304,8 +1400,14 @@
     <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_AddStringEvent.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_AddStringEvent.Designer.cs">
+      <DependentUpon>CAGEAnimation_AddStringEvent.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_AddKeyframeAtTime.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_AddKeyframeAtTime.Designer.cs">
+      <DependentUpon>CAGEAnimation_AddKeyframeAtTime.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\Function Editors\CharacterEditor.cs">
       <SubType>Form</SubType>
@@ -1335,6 +1437,12 @@
     <Compile Include="Popups\Function Editors\CAGEAnimationEditor.PathTools.cs">
       <DependentUpon>CAGEAnimationEditor.cs</DependentUpon>
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Function Editors\PathToolDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Function Editors\PathToolDialog.Designer.cs">
+      <DependentUpon>PathToolDialog.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\SelectLevel.cs">
       <SubType>Form</SubType>
@@ -1395,17 +1503,36 @@
     <Compile Include="Scripts\Characters\DisplayModelFixEdit.cs" />
     <Compile Include="Scripts\Characters\HeldPart.cs" />
     <Compile Include="Scripts\MCP\McpDisplayModelTools.cs" />
-    <Compile Include="Popups\Characters\CharacterLookDialogs.cs">
+    <Compile Include="Popups\Characters\CharacterLookDialogs.cs" />
+    <Compile Include="Popups\Characters\DisplayVariantDialog.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Characters\DisplayVariantDialog.Designer.cs">
+      <DependentUpon>DisplayVariantDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Popups\Characters\FirstPersonBodyDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Characters\FirstPersonBodyDialog.Designer.cs">
+      <DependentUpon>FirstPersonBodyDialog.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\Rigging\RebindDialog.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\Rigging\RebindDialog.Designer.cs">
+      <DependentUpon>RebindDialog.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\Rigging\DisplayRigDialog.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\Rigging\DisplayRigDialog.Designer.cs">
+      <DependentUpon>DisplayRigDialog.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\Rigging\PropImportDialog.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\Rigging\PropImportDialog.Designer.cs">
+      <DependentUpon>PropImportDialog.cs</DependentUpon>
     </Compile>
     <Compile Include="Popups\Rigging\RigToolMenus.cs" />
     <Compile Include="Scripts\CompositeInstanceParameters.cs" />
@@ -1422,8 +1549,14 @@
     <Compile Include="Popups\ConfigRecordsWindow.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\ConfigRecordsWindow.Designer.cs">
+      <DependentUpon>ConfigRecordsWindow.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\SpinDialog.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\SpinDialog.Designer.cs">
+      <DependentUpon>SpinDialog.cs</DependentUpon>
     </Compile>
     <Compile Include="Scripts\Building\Panorama.cs" />
     <Compile Include="Scripts\Building\OutdoorPlanner.cs" />
@@ -1436,8 +1569,14 @@
     <Compile Include="Popups\FractureWindow.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\FractureWindow.Designer.cs">
+      <DependentUpon>FractureWindow.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\SkyAndSunWindow.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\SkyAndSunWindow.Designer.cs">
+      <DependentUpon>SkyAndSunWindow.cs</DependentUpon>
     </Compile>
     <Compile Include="Scripts\SceneImport\ScenePlan.cs" />
     <Compile Include="Scripts\SceneImport\SceneImporter.cs" />
@@ -1450,8 +1589,14 @@
     <Compile Include="Popups\ZFightWindow.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\ZFightWindow.Designer.cs">
+      <DependentUpon>ZFightWindow.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\SceneImportWindow.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\SceneImportWindow.Designer.cs">
+      <DependentUpon>SceneImportWindow.cs</DependentUpon>
     </Compile>
     <Compile Include="Scripts\ColourParameters.cs" />
     <Compile Include="Scripts\ComboBoxExtensions.cs" />
@@ -1464,17 +1609,26 @@
     <Compile Include="Popups\InsertPrefabWindow.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\InsertPrefabWindow.Designer.cs">
+      <DependentUpon>InsertPrefabWindow.cs</DependentUpon>
+    </Compile>
     <Compile Include="Scripts\AlienVents\AlienVents.cs" />
     <Compile Include="Scripts\AlienVents\AlienVentsCheck.cs" />
     <Compile Include="Scripts\MCP\McpAlienVentTools.cs" />
     <Compile Include="Popups\AlienVentsWindow.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\AlienVentsWindow.Designer.cs">
+      <DependentUpon>AlienVentsWindow.cs</DependentUpon>
+    </Compile>
     <Compile Include="Scripts\AIMarkup\AIMarkup.cs" />
     <Compile Include="Scripts\AIMarkup\AIMarkupCheck.cs" />
     <Compile Include="Scripts\MCP\McpAIMarkupTools.cs" />
     <Compile Include="Popups\AIMarkupWindow.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\AIMarkupWindow.Designer.cs">
+      <DependentUpon>AIMarkupWindow.cs</DependentUpon>
     </Compile>
     <Compile Include="Scripts\ModelCompositeBuilder.cs" />
     <Compile Include="Scripts\Undo\CompositeEdits.cs" />
@@ -1856,6 +2010,147 @@
     </Compile>
     <EmbeddedResource Include="CommandsEditor.resx">
       <DependentUpon>CommandsEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\ModManagerForm.resx">
+      <DependentUpon>ModManagerForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\BusyDialog.resx">
+      <DependentUpon>BusyDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\ModReportDialog.resx">
+      <DependentUpon>ModReportDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Characters\DisplayVariantDialog.resx">
+      <DependentUpon>DisplayVariantDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Characters\FirstPersonBodyDialog.resx">
+      <DependentUpon>FirstPersonBodyDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Function Editors\PathToolDialog.resx">
+      <DependentUpon>PathToolDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\AIMarkupWindow.resx">
+      <DependentUpon>AIMarkupWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\AlienVentsWindow.resx">
+      <DependentUpon>AlienVentsWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\BrushEditor.resx">
+      <DependentUpon>BrushEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\CinematicShotBuilder.resx">
+      <DependentUpon>CinematicShotBuilder.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\ClipSyncMenu.resx">
+      <DependentUpon>ClipSyncMenu.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\CompareLevelsWindow.resx">
+      <DependentUpon>CompareLevelsWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\ConfigRecordsWindow.resx">
+      <DependentUpon>ConfigRecordsWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\FractureWindow.resx">
+      <DependentUpon>FractureWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\HudOverlayBuilder.resx">
+      <DependentUpon>HudOverlayBuilder.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\InsertPrefabWindow.resx">
+      <DependentUpon>InsertPrefabWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\LevelCheckWindow.resx">
+      <DependentUpon>LevelCheckWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\LevelLaunchSettingsEditor.resx">
+      <DependentUpon>LevelLaunchSettingsEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\LevelSoundBankDialog.resx">
+      <DependentUpon>LevelSoundBankDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\LevelSoundImportDialog.resx">
+      <DependentUpon>LevelSoundImportDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\LevelSoundOverrideEditor.resx">
+      <DependentUpon>LevelSoundOverrideEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\LevelSoundTuneDialog.resx">
+      <DependentUpon>LevelSoundTuneDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\LevelUiOverridesEditor.resx">
+      <DependentUpon>LevelUiOverridesEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\MapAssetsWindow.resx">
+      <DependentUpon>MapAssetsWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\ModExporterForm.resx">
+      <DependentUpon>ModExporterForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\PristineCaptureWizard.resx">
+      <DependentUpon>PristineCaptureWizard.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\RecordEditsWindow.resx">
+      <DependentUpon>RecordEditsWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\ReplaceWeaponModel.resx">
+      <DependentUpon>ReplaceWeaponModel.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\SceneImportWindow.resx">
+      <DependentUpon>SceneImportWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\SkyAndSunWindow.resx">
+      <DependentUpon>SkyAndSunWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\SnapIncrements.resx">
+      <DependentUpon>SnapIncrements.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\SpinDialog.resx">
+      <DependentUpon>SpinDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\TextureStreamingWindow.resx">
+      <DependentUpon>TextureStreamingWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\ZFightWindow.resx">
+      <DependentUpon>ZFightWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_AddKeyframeAtTime.resx">
+      <DependentUpon>CAGEAnimation_AddKeyframeAtTime.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Function Editors\CAGEAnimation\CAGEAnimation_AddStringEvent.resx">
+      <DependentUpon>CAGEAnimation_AddStringEvent.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Resource Editors\BlendSetUserPicker.resx">
+      <DependentUpon>BlendSetUserPicker.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Resource Editors\ClipSplicerWindow.resx">
+      <DependentUpon>ClipSplicerWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Resource Editors\EditAnimationMetadata.resx">
+      <DependentUpon>EditAnimationMetadata.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Resource Editors\NewMaterialPicker.resx">
+      <DependentUpon>NewMaterialPicker.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Resource Editors\PhysicsBodyProperties.resx">
+      <DependentUpon>PhysicsBodyProperties.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Resource Editors\PhysicsImportSettings.resx">
+      <DependentUpon>PhysicsImportSettings.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Resource Editors\SelectShaderPermutation.resx">
+      <DependentUpon>SelectShaderPermutation.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Resource Editors\TextureImportOptions.resx">
+      <DependentUpon>TextureImportOptions.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Rigging\DisplayRigDialog.resx">
+      <DependentUpon>DisplayRigDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Rigging\PropImportDialog.resx">
+      <DependentUpon>PropImportDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\Rigging\RebindDialog.resx">
+      <DependentUpon>RebindDialog.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="DockPanels\Composite Panels\EntityList.resx">
       <DependentUpon>EntityList.cs</DependentUpon>

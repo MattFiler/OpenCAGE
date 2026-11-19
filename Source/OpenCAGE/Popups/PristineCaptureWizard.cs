@@ -19,7 +19,7 @@ namespace OpenCAGE.Popups
      *
      * After this the install looks exactly as it did, but OpenCAGE holds the original of every changed file - so the
      * user's changes can be combined with mods, exported as small patches, and always cleanly put back. */
-    public class PristineCaptureWizard : Form
+    public partial class PristineCaptureWizard : Form
     {
         private readonly ScanResult _scan;
         /* Files without an original: what this is for */
@@ -27,13 +27,6 @@ namespace OpenCAGE.Popups
         /* Everything a store's file check would undo, so all of it goes back afterwards */
         private readonly List<string> _keep;
         private string _snapshotId;
-
-        private Label _headline;
-        private TextBox _body;
-        private ListView _fileList;
-        private Button _actionButton;
-        private Button _secondaryButton;
-        private Button _closeButton;
 
         private int _step = 0;
 
@@ -45,38 +38,27 @@ namespace OpenCAGE.Popups
             _paths = changed.Where(o => !ModToolkit.IsRegenerated(o) && (installer == null || !installer.HasOriginal(o))).OrderBy(o => o).ToList();
             _keep = changed.Concat(scan.WithStatus(FileStatus.Managed)).Distinct().OrderBy(o => o).ToList();
 
-            Text = "Keep Your Changes Safe";
+            InitializeComponent();
             Icon = SharedFormIcon.Icon;
-            Size = new Size(760, 560);
-            MinimumSize = new Size(620, 420);
-            StartPosition = FormStartPosition.CenterParent;
-
-            _headline = new Label() { Dock = DockStyle.Top, Height = 30, Font = new Font(Font, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(10, 0, 10, 0) };
-            _body = new TextBox() { Dock = DockStyle.Top, Height = 150, Multiline = true, ReadOnly = true, BorderStyle = BorderStyle.None };
-            _fileList = new ListView() { Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true, HeaderStyle = ColumnHeaderStyle.Nonclickable };
-            _fileList.Columns.Add("File", 480);
-            _fileList.Columns.Add("", 140);
-
-            FlowLayoutPanel buttons = new FlowLayoutPanel() { Dock = DockStyle.Bottom, Height = 42, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(6) };
-            _closeButton = new Button() { Text = "Cancel", AutoSize = true, Height = 28 };
-            _secondaryButton = new Button() { Text = "", AutoSize = true, Height = 28, Visible = false };
-            _actionButton = new Button() { Text = "", AutoSize = true, Height = 28 };
-            _closeButton.Click += (s, e) => Close();
-            _actionButton.Click += (s, e) => Advance(false);
-            _secondaryButton.Click += (s, e) => Advance(true);
-            buttons.Controls.Add(_closeButton);
-            buttons.Controls.Add(_secondaryButton);
-            buttons.Controls.Add(_actionButton);
-
-            Padding = new Padding(10);
-            Controls.Add(_fileList);
-            Controls.Add(_body);
-            Controls.Add(_headline);
-            Controls.Add(buttons);
             Theming.ThemeManager.ApplyToForm(this);
             OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/installing-mods/");
 
             ShowStep();
+        }
+
+        private void _closeButton_Click(object sender, EventArgs e)
+        {
+            Close();
+        }
+
+        private void _actionButton_Click(object sender, EventArgs e)
+        {
+            Advance(false);
+        }
+
+        private void _secondaryButton_Click(object sender, EventArgs e)
+        {
+            Advance(true);
         }
 
         private void FillFileList(Func<string, string> stateOf)

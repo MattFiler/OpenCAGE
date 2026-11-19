@@ -15,28 +15,12 @@ namespace OpenCAGE.Popups.Rigging
     /// (<see cref="SkinRebind"/>), with the joint mapping editable. Rebind writes into the import window's scene, which then
     /// imports it as a mesh on that rig.
     /// </summary>
-    public class RebindDialog : Form
+    public partial class RebindDialog : Form
     {
         private readonly Scene _scene;
         private readonly float _unitScale;
         private readonly SourceRig _source;
         private readonly Dictionary<string, string> _overrides = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        private readonly ComboBox _rig = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 180 };
-        private readonly CheckBox _fitSize = new CheckBox() { Text = "Size it to the rig", Checked = true, AutoSize = true };
-        private readonly NumericUpDown _scale = new NumericUpDown() { Minimum = 0.05m, Maximum = 20m, DecimalPlaces = 3, Increment = 0.05m, Value = 1m, Width = 70 };
-        private readonly CheckBox _keepHead = new CheckBox() { Text = "Keep the head's shape", Checked = true, AutoSize = true };
-        private readonly CheckBox _headHeight = new CheckBox() { Text = "Keep the head's own height over the shoulders", Checked = true, AutoSize = true };
-        private readonly CheckBox _stretchTail = new CheckBox() { Text = "Stretch a tail to the rig's length", Checked = false, AutoSize = true };
-        private readonly DataGridView _grid = new DataGridView();
-        private readonly PictureBox _picture = new PictureBox() { SizeMode = PictureBoxSizeMode.Zoom, BackColor = Color.FromArgb(40, 40, 40) };
-        private readonly TextBox _report = new TextBox() { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, WordWrap = true };
-        private readonly Button _ok = new Button() { Text = "Rebind", AutoSize = true };
-        private readonly Button _cancel = new Button() { Text = "Cancel", AutoSize = true, DialogResult = DialogResult.Cancel };
-        private readonly Button _load = new Button() { Text = "Load mapping...", AutoSize = true };
-        private readonly Button _save = new Button() { Text = "Save mapping...", AutoSize = true };
-        private readonly Button _reset = new Button() { Text = "Reset mapping", AutoSize = true };
-        private readonly Timer _debounce = new Timer() { Interval = 250 };
 
         private List<Skeleton> _rigs;
         private SkinRebind.Result _result;
@@ -51,33 +35,17 @@ namespace OpenCAGE.Popups.Rigging
             _scene = scene;
             _unitScale = unitScale > 0 ? unitScale : 1;
             _source = SourceRig.Read(scene, _unitScale);
+            InitializeComponent();
             Text = "Rebind onto a game skeleton: " + fileName;
             Icon = SharedFormIcon.Icon;
-            StartPosition = FormStartPosition.CenterParent;
-            Size = new Size(1280, 860);
-            MinimumSize = new Size(980, 640);
-            AcceptButton = _ok;
-            CancelButton = _cancel;
-            BuildLayout();
 
             _rigs = RebindImport.CharacterRigs(Singleton.Animations);
             foreach (Skeleton s in _rigs) _rig.Items.Add(s.Name);
             int pick = _rigs.FindIndex(o => string.Equals(o.Name, preferredRig ?? "", StringComparison.OrdinalIgnoreCase));
             if (pick < 0) pick = _rigs.FindIndex(o => string.Equals(o.Name, "MALE", StringComparison.OrdinalIgnoreCase));
             if (_rigs.Count != 0) _rig.SelectedIndex = Math.Max(0, pick);
-
-            _rig.SelectedIndexChanged += (s, e) => Changed();
-            _fitSize.CheckedChanged += (s, e) => Changed();
-            _scale.ValueChanged += (s, e) => Changed();
-            _keepHead.CheckedChanged += (s, e) => Changed();
-            _headHeight.CheckedChanged += (s, e) => Changed();
-            _stretchTail.CheckedChanged += (s, e) => Changed();
-            _debounce.Tick += (s, e) => { _debounce.Stop(); Rebuild(); };
-            _ok.Click += (s, e) => Commit();
-            _load.Click += (s, e) => LoadMapping();
-            _save.Click += (s, e) => SaveMapping();
-            _reset.Click += (s, e) => { _overrides.Clear(); Rebuild(); };
-            FormClosed += (s, e) => { _debounce.Dispose(); _picture.Image?.Dispose(); };
+            //attached once the rig is picked, so picking it doesn't queue a second rebuild
+            _rig.SelectedIndexChanged += Option_Changed;
 
             OpenCAGE.Theming.ThemeManager.ApplyToForm(this);
             if (_source == null)
@@ -88,62 +56,58 @@ namespace OpenCAGE.Popups.Rigging
             else Rebuild();
         }
 
-        private void BuildLayout()
+        private void RebindDialog_Shown(object sender, EventArgs e)
         {
-            FlowLayoutPanel top = new FlowLayoutPanel() { Dock = DockStyle.Top, Height = 64, Padding = new Padding(8, 8, 8, 0), WrapContents = true };
-            top.Controls.Add(new Label() { Text = "Rig:", AutoSize = true, Margin = new Padding(0, 6, 2, 0) });
-            top.Controls.Add(_rig);
-            top.Controls.Add(new Label() { Text = "   ", AutoSize = true });
-            top.Controls.Add(_fitSize);
-            top.Controls.Add(new Label() { Text = "then x", AutoSize = true, Margin = new Padding(0, 6, 2, 0) });
-            top.Controls.Add(_scale);
-            top.Controls.Add(_keepHead);
-            top.Controls.Add(_headHeight);
-            top.Controls.Add(_stretchTail);
-            Label hint = new Label()
-            {
-                AutoSize = true,
-                ForeColor = SystemColors.GrayText,
-                Text = "Each part of the body is a joint of the file, found from its name and the hierarchy: pick another in the right-hand column to fix one, or (none) to leave it out. The spine, neck and tail follow the joints between the parts.",
-                MaximumSize = new Size(1200, 0),
-            };
-            top.Controls.Add(hint);
+            _split.SplitterDistance = Math.Max(420, ClientSize.Width * 2 / 5);
+            _right.SplitterDistance = Math.Max(200, _right.Height * 3 / 5);
+        }
 
-            _grid.Dock = DockStyle.Fill;
-            _grid.AllowUserToAddRows = false;
-            _grid.AllowUserToDeleteRows = false;
-            _grid.RowHeadersVisible = false;
-            _grid.SelectionMode = DataGridViewSelectionMode.CellSelect;
-            _grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            _grid.EditMode = DataGridViewEditMode.EditOnEnter;
-            _grid.Columns.Add(new DataGridViewTextBoxColumn() { HeaderText = "Part", ReadOnly = true, FillWeight = 34 });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn() { HeaderText = "Rig bone", ReadOnly = true, FillWeight = 22 });
-            _grid.Columns.Add(new DataGridViewComboBoxColumn() { HeaderText = "Joint in the file", FillWeight = 30, FlatStyle = FlatStyle.Flat, DisplayStyle = DataGridViewComboBoxDisplayStyle.DropDownButton });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn() { HeaderText = "Found by", ReadOnly = true, FillWeight = 14 });
-            _grid.CurrentCellDirtyStateChanged += (s, e) => { if (_grid.IsCurrentCellDirty) _grid.CommitEdit(DataGridViewDataErrorContexts.Commit); };
-            _grid.CellValueChanged += GridValueChanged;
-            _grid.DataError += (s, e) => e.ThrowException = false;
+        private void RebindDialog_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            _debounce.Dispose();
+            _picture.Image?.Dispose();
+        }
 
-            SplitContainer split = new SplitContainer() { Dock = DockStyle.Fill, Orientation = Orientation.Vertical, SplitterDistance = 520 };
-            split.Panel1.Controls.Add(_grid);
-            SplitContainer right = new SplitContainer() { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal };
-            _picture.Dock = DockStyle.Fill;
-            _report.Dock = DockStyle.Fill;
-            right.Panel1.Controls.Add(_picture);
-            right.Panel2.Controls.Add(_report);
-            split.Panel2.Controls.Add(right);
+        private void Option_Changed(object sender, EventArgs e)
+        {
+            Changed();
+        }
 
-            FlowLayoutPanel buttons = new FlowLayoutPanel() { Dock = DockStyle.Bottom, Height = 40, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(8, 4, 8, 4) };
-            buttons.Controls.Add(_cancel);
-            buttons.Controls.Add(_ok);
-            buttons.Controls.Add(_reset);
-            buttons.Controls.Add(_save);
-            buttons.Controls.Add(_load);
+        private void Debounce_Tick(object sender, EventArgs e)
+        {
+            _debounce.Stop();
+            Rebuild();
+        }
 
-            Controls.Add(split);
-            Controls.Add(buttons);
-            Controls.Add(top);
-            Shown += (s, e) => { split.SplitterDistance = Math.Max(420, ClientSize.Width * 2 / 5); right.SplitterDistance = Math.Max(200, right.Height * 3 / 5); };
+        private void Ok_Click(object sender, EventArgs e)
+        {
+            Commit();
+        }
+
+        private void Load_Click(object sender, EventArgs e)
+        {
+            LoadMapping();
+        }
+
+        private void Save_Click(object sender, EventArgs e)
+        {
+            SaveMapping();
+        }
+
+        private void Reset_Click(object sender, EventArgs e)
+        {
+            _overrides.Clear();
+            Rebuild();
+        }
+
+        private void Grid_CurrentCellDirtyStateChanged(object sender, EventArgs e)
+        {
+            if (_grid.IsCurrentCellDirty) _grid.CommitEdit(DataGridViewDataErrorContexts.Commit);
+        }
+
+        private void Grid_DataError(object sender, DataGridViewDataErrorEventArgs e)
+        {
+            e.ThrowException = false;
         }
 
         private Skeleton CurrentRig => _rig.SelectedIndex >= 0 && _rig.SelectedIndex < _rigs.Count ? _rigs[_rig.SelectedIndex] : null;

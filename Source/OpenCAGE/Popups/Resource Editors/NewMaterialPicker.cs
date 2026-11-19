@@ -18,19 +18,13 @@ namespace OpenCAGE
     /// Nothing else is asked here. The permutation starts at the family's typical one and everything
     /// after that - features, samplers, parameters - is set in the editor the material opens in.
     /// </summary>
-    public class NewMaterialPicker : Form
+    public partial class NewMaterialPicker : Form
     {
         /// <summary>The family the user settled on.</summary>
         public SHADER_LIST Family { get; private set; }
 
         /// <summary>The name to store the material under.</summary>
         public string MaterialName { get { return _name.Text.Trim(); } }
-
-        private readonly ComboBox _family = new ComboBox();
-        private readonly TextBox _name = new TextBox();
-        private readonly Label _detail = new Label();
-        private readonly Label _note = new Label();
-        private readonly Button _ok = new Button();
 
         private const string NoteText = "The material starts with no textures. Pick its features and samplers once it opens.";
 
@@ -40,69 +34,31 @@ namespace OpenCAGE
         /// <param name="takenBy">The name of the material already called this, or null when the name is free.</param>
         public NewMaterialPicker(List<ShaderPermutationService.Creatable> options, Func<string, string> takenBy = null)
         {
+            InitializeComponent();
+
             _options = options ?? new List<ShaderPermutationService.Creatable>();
             _takenBy = takenBy;
 
-            Text = "New material";
             Icon = SharedFormIcon.Icon;
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            MaximizeBox = false;
-            MinimizeBox = false;
-            ShowInTaskbar = false;
-            StartPosition = FormStartPosition.CenterParent;
+            //The system's message font, which the designer's Segoe UI 9 stands in for
             Font = SystemFonts.MessageBoxFont;
-            ClientSize = new Size(460, 222);
 
-            Label familyLabel = new Label { Text = "Shader type", Location = new Point(12, 12), Size = new Size(436, 18) };
-            _family.DropDownStyle = ComboBoxStyle.DropDownList;
-            _family.Location = new Point(12, 32);
-            _family.Size = new Size(436, 21);
-            _family.SelectedIndexChanged += (s, e) => Revalidate();
             foreach (ShaderPermutationService.Creatable option in _options)
                 _family.Items.Add(Describe(option));
 
-            _detail.Location = new Point(12, 58);
-            _detail.Size = new Size(436, 48);   //three lines: the read-only-features note wraps onto a second
-            _detail.ForeColor = SystemColors.GrayText;
-
-            Label nameLabel = new Label { Text = "Material name", Location = new Point(12, 112), Size = new Size(436, 18) };
-            _name.Location = new Point(12, 132);
-            _name.Size = new Size(436, 20);
-            _name.TextChanged += (s, e) => Revalidate();
-
-            _note.Text = NoteText;
-            _note.Location = new Point(12, 158);
-            _note.Size = new Size(436, 18);
-            _note.ForeColor = SystemColors.GrayText;
-
-            _ok.Text = "Create";
-            _ok.DialogResult = DialogResult.OK;
-            _ok.Location = new Point(292, 184);
-            _ok.Size = new Size(75, 26);
-
-            Button cancel = new Button
-            {
-                Text = "Cancel",
-                DialogResult = DialogResult.Cancel,
-                Location = new Point(373, 184),
-                Size = new Size(75, 26)
-            };
-
-            Controls.Add(familyLabel);
-            Controls.Add(_family);
-            Controls.Add(_detail);
-            Controls.Add(nameLabel);
-            Controls.Add(_name);
-            Controls.Add(_note);
-            Controls.Add(_ok);
-            Controls.Add(cancel);
-            AcceptButton = _ok;
-            CancelButton = cancel;
-
             if (_family.Items.Count != 0)
                 _family.SelectedIndex = DefaultIndex();
-            _name.Text = "new material";
             _name.SelectAll();
+            Revalidate();
+        }
+
+        private void _family_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            Revalidate();
+        }
+
+        private void _name_TextChanged(object sender, EventArgs e)
+        {
             Revalidate();
         }
 

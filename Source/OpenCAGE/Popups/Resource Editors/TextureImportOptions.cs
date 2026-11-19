@@ -19,7 +19,7 @@ namespace OpenCAGE
     /// slot as the game shipped it. A brand new texture has nothing to follow, and defaults to BC7 -
     /// the format seven of every ten textures in the game already use.
     /// </summary>
-    public class TextureImportOptions : Form
+    public partial class TextureImportOptions : Form
     {
         /// <summary>The format the user settled on.</summary>
         public TextureFormat Format { get; private set; }
@@ -36,28 +36,20 @@ namespace OpenCAGE
         /// <summary>The name to store it under, folders and all. Empty when replacing.</summary>
         public string AssetName { get { return _name == null ? "" : _name.Value; } }
 
-        private readonly ComboBox _format = new ComboBox();
-        private readonly TrackBar _mips = new TrackBar();
-        private readonly Label _mipLabel = new Label();
-        private readonly CheckBox _persistent = new CheckBox();
-        private readonly TrackBar _drop = new TrackBar();
-        private readonly Label _dropLabel = new Label();
-        private readonly CheckBox _keepLoaded = new CheckBox();
         private bool _volume;
-        private AssetNameBox _name;
 
         private readonly int _width, _height, _sourceMips;
 
+        /* The designer holds an import's layout, name box included. A replace, or an import with no names in use to check
+         * against, drops the name box */
         public TextureImportOptions(string file, TextureFormat? replacing, TEX4 slot,
                                     Func<IEnumerable<string>> takenNames = null)
         {
-            Text = replacing == null ? "Import texture" : "Replace texture";
+            InitializeComponent();
+
+            if (replacing != null) Text = "Replace texture";
             Icon = SharedFormIcon.Icon;
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            MaximizeBox = false;
-            MinimizeBox = false;
-            ShowInTaskbar = false;
-            StartPosition = FormStartPosition.CenterParent;
+            //The system's message font, which the designer's Segoe UI 9 stands in for
             Font = SystemFonts.MessageBoxFont;
 
             Shape(file, slot, out _width, out _height, out _sourceMips, out bool cube, out bool volume);
@@ -66,58 +58,53 @@ namespace OpenCAGE
             /* Only an import gets a name - a replace is aimed at a slot that already has one, and
              * renaming it is a different job from putting a new image in it. */
             bool naming = replacing == null && takenNames != null;
-            int shift = naming ? 62 : 0;
-            ClientSize = new Size(540, 290 + shift);
 
-            Label source = new Label { AutoEllipsis = true, Location = new Point(12, 12), Size = new Size(516, 20) };
-            source.Text = Path.GetFileName(file) + (_width > 0 ? "   —   " + _width + " x " + _height : "");
-            source.Font = new Font(source.Font, FontStyle.Bold);
-            Controls.Add(source);
+            _source.Text = Path.GetFileName(file) + (_width > 0 ? "   —   " + _width + " x " + _height : "");
 
-            if (naming) BuildNameBox(file, takenNames);
+            if (naming) BindNameBox(file, takenNames);
+            else DropNameBox();
 
-            Controls.Add(new Label { AutoSize = true, Location = new Point(12, 42 + shift), Text = "Store as:" });
+            BuildFormatPicker(replacing);
+            BuildMipSlider();
+            BuildPersistentSlider(replacing, slot, cube, volume);
+            BuildKeepLoaded(replacing, slot, cube, volume);
 
-            BuildFormatPicker(replacing, shift);
-            BuildMipSlider(shift);
-            BuildPersistentSlider(replacing, slot, cube, volume, shift);
-            BuildKeepLoaded(replacing, slot, cube, volume, shift);
-
-            //just below the keep loaded box, which sits under the persistent slider (it ends at 219)
-            Button ok = new Button { Text = replacing == null ? "Import" : "Replace", DialogResult = DialogResult.OK, Location = new Point(372, 255 + shift), Size = new Size(75, 23) };
-            Button cancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, Location = new Point(453, 255 + shift), Size = new Size(75, 23) };
-
-            Controls.Add(ok);
-            Controls.Add(cancel);
-            AcceptButton = ok;
-            CancelButton = cancel;
+            if (replacing != null) _ok.Text = "Replace";
 
             if (naming)
             {
-                _name.ValidityChanged += (s, e) => ok.Enabled = _name.IsValid;
-                ok.Enabled = _name.IsValid;
+                _name.ValidityChanged += (s, e) => _ok.Enabled = _name.IsValid;
+                _ok.Enabled = _name.IsValid;
                 Shown += (s, e) => _name.FocusName();
             }
         }
 
         /* Folders are made by typing them into the name, so this is the whole of "new folder". */
-        private void BuildNameBox(string file, Func<IEnumerable<string>> takenNames)
+        private void BindNameBox(string file, Func<IEnumerable<string>> takenNames)
         {
-            Controls.Add(new Label { AutoSize = true, Location = new Point(12, 42), Text = "Name (use \\ for folders):" });
-
-            _name = new AssetNameBox { Location = new Point(12, 62), Size = new Size(516, 44) };
             _name.Bind(OpenCAGE.AssetName.FromFile(file), takenNames);
-            Controls.Add(_name);
+        }
+
+        /* Without a name to ask for, everything under the name box moves up into its place */
+        private void DropNameBox()
+        {
+            int gap = _storeAsLabel.Top - _nameLabel.Top;
+            Controls.Remove(_nameLabel);
+            Controls.Remove(_name);
+            _nameLabel.Dispose();
+            _name.Dispose();
+            _nameLabel = null;
+            _name = null;
+
+            foreach (Control control in Controls)
+                if (control != _source) control.Top -= gap;
+            ClientSize = new Size(ClientSize.Width, ClientSize.Height - gap);
         }
 
         #region CONTROLS
 
-        private void BuildFormatPicker(TextureFormat? replacing, int shift)
+        private void BuildFormatPicker(TextureFormat? replacing)
         {
-            _format.DropDownStyle = ComboBoxStyle.DropDownList;
-            _format.Location = new Point(12, 62 + shift);
-            _format.Size = new Size(516, 21);
-
             TextureFormat[] formats = TextureConverter.ImportFormats(Singleton.Platform).ToArray();
             foreach (TextureFormat format in formats) _format.Items.Add(TextureConverter.Describe(format));
 
@@ -130,10 +117,9 @@ namespace OpenCAGE
             Format = formats[_format.SelectedIndex];
 
             _format.SelectedIndexChanged += (s, e) => { Format = formats[_format.SelectedIndex]; };
-            Controls.Add(_format);
         }
 
-        private void BuildMipSlider(int shift)
+        private void BuildMipSlider()
         {
             /* A full chain runs down to a single pixel. Without the image's size to go on - a TGA or
              * an HDR that System.Drawing won't open - allow enough levels for anything up to 8192
@@ -145,30 +131,15 @@ namespace OpenCAGE
             int full = _width > 0 ? TextureConverter.FullChain(_width, _height) : 14;
             if (_sourceMips > 1) full = Math.Min(full, _sourceMips);
 
-            Controls.Add(new Label { AutoSize = true, Location = new Point(12, 96 + shift), Text = "Mipmaps:" });
-
-            _mips.Location = new Point(70, 90 + shift);
-            _mips.Size = new Size(300, 45);
-            _mips.Minimum = 1;
             _mips.Maximum = full;
             _mips.Value = full;
-            _mips.TickFrequency = 1;
-            _mips.TickStyle = TickStyle.BottomRight;
             _mips.ValueChanged += (s, e) => { UpdateMipLabel(); UpdateDropRange(); };
 
-            _mipLabel.Location = new Point(376, 96 + shift);
-            _mipLabel.Size = new Size(152, 32);
-
-            Controls.Add(_mips);
-            Controls.Add(_mipLabel);
             UpdateMipLabel();
         }
 
-        private void BuildPersistentSlider(TextureFormat? replacing, TEX4 slot, bool cube, bool volume, int shift)
+        private void BuildPersistentSlider(TextureFormat? replacing, TEX4 slot, bool cube, bool volume)
         {
-            _persistent.AutoSize = true;
-            _persistent.Location = new Point(14, 150 + shift);
-
             /* Replacing follows the slot: whatever split the game shipped is the one to keep. A new
              * texture follows its own shape - measured over every texture in the game, all 755
              * cubemaps are streamed only and all 76 volume textures are persistent only.
@@ -184,19 +155,13 @@ namespace OpenCAGE
             else
                 wanted = true;
 
-            _persistent.Text = cube ? "Cubemap — the streamed slot only, as cubemaps have no persistent copy"
-                             : volume ? "Volume texture — the persistent slot only, as the game stores these"
-                             : "Keep a smaller copy in the persistent slot";
+            if (cube) _persistent.Text = "Cubemap — the streamed slot only, as cubemaps have no persistent copy";
+            else if (volume) _persistent.Text = "Volume texture — the persistent slot only, as the game stores these";
             _persistent.Checked = wanted;
             _persistent.Enabled = !forced;
             _persistent.CheckedChanged += (s, e) => { _drop.Enabled = _persistent.Checked && !forced; UpdateDropLabel(); };
 
-            _drop.Location = new Point(70, 174 + shift);
-            _drop.Size = new Size(300, 45);
-            _drop.Minimum = 1;
             _drop.Maximum = Math.Max(1, _mips.Maximum - 1);
-            _drop.TickFrequency = 1;
-            _drop.TickStyle = TickStyle.BottomRight;
             _drop.Enabled = _persistent.Checked && !forced;
 
             /* Half size, as one level down. The game itself is usually smaller than that - 61% of its
@@ -210,25 +175,16 @@ namespace OpenCAGE
             }
             _drop.ValueChanged += (s, e) => UpdateDropLabel();
 
-            _dropLabel.Location = new Point(376, 180 + shift);
-            _dropLabel.Size = new Size(152, 32);
-
-            Controls.Add(_persistent);
-            Controls.Add(_drop);
-            Controls.Add(_dropLabel);
             UpdateDropLabel();
         }
 
         /* Kept loaded (TextureStreaming): the whole chain in the persistent slot and nothing streamed, as the game stores its effect
          * textures - it never streams, so it is never drawn blurry and takes none of the game's ~1,020 streaming slots, but its memory
          * stays taken. Replacing a texture that is kept loaded keeps it so; a cubemap can't be (the game streams every one). */
-        private void BuildKeepLoaded(TextureFormat? replacing, TEX4 slot, bool cube, bool volume, int shift)
+        private void BuildKeepLoaded(TextureFormat? replacing, TEX4 slot, bool cube, bool volume)
         {
-            _keepLoaded.AutoSize = true;
-            _keepLoaded.Location = new Point(14, 226 + shift);
-            _keepLoaded.Text = volume ? "Kept loaded (never streamed), as the game keeps every volume texture"
-                             : cube ? "Keep loaded (never streamed) — not for a cubemap: the game streams every one"
-                             : "Keep loaded at full size (never streamed: always sharp, memory kept for the level)";
+            if (volume) _keepLoaded.Text = "Kept loaded (never streamed), as the game keeps every volume texture";
+            else if (cube) _keepLoaded.Text = "Keep loaded (never streamed) — not for a cubemap: the game streams every one";
             _keepLoaded.Checked = volume || (!cube && replacing != null && slot != null && TextureStreaming.IsKeptLoaded(slot));
             _keepLoaded.Enabled = !volume && !cube;
             _keepLoaded.CheckedChanged += (s, e) =>
@@ -238,7 +194,6 @@ namespace OpenCAGE
                 UpdateDropLabel();
             };
             if (_keepLoaded.Checked && _keepLoaded.Enabled) { _persistent.Enabled = false; _drop.Enabled = false; UpdateDropLabel(); }
-            Controls.Add(_keepLoaded);
         }
 
         #endregion

@@ -19,28 +19,6 @@ namespace OpenCAGE.Popups
      * one are all the same safe operation, and turning everything off gives back the original game. */
     public partial class ModManagerForm : Form
     {
-        private Panel _header;
-        private Label _headline;
-        private Label _installState;
-        private LinkLabel _installAction;
-        private LinkLabel _recheck;
-        private Label _copiesNote;
-        private readonly ToolTip _copiesNoteTip = new ToolTip() { AutoPopDelay = 30000 };
-        private ListView _modList;
-        private PictureBox _preview;
-        private Label _detailTitle;
-        private Label _detailByline;
-        private TextBox _details;
-        private Button _addButton;
-        private Button _removeButton;
-        private Button _upButton;
-        private Button _downButton;
-        private Button _createButton;
-        private Button _repairButton;
-        private Button _applyButton;
-        private Label _statusLabel;
-        private SplitContainer _split;
-
         private ScanResult _scan;
         private bool _scanning;
         private bool _scanAgain;
@@ -64,151 +42,87 @@ namespace OpenCAGE.Popups
 
         public ModManagerForm()
         {
-            Text = "Mod Manager";
+            InitializeComponent();
             Icon = SharedFormIcon.Icon;
-            Size = new Size(1040, 660);
-            MinimumSize = new Size(820, 500);
-            StartPosition = FormStartPosition.CenterScreen;
-            AllowDrop = true;
+            //Launch Mod follows the selected mod (ModManagerForm.LaunchMod.cs)
+            HookLaunchButton();
 
-            BuildLayout();
             Theming.ThemeManager.ApplyToForm(this);
             OpenCAGE.Popups.Base.BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/installing-mods/");
-
-            DragEnter += OnDragEnter;
-            DragDrop += OnDragDrop;
-            Shown += OnFirstShown;
-            //A check still running when the window closes stops at its next step, and its answer goes nowhere
-            FormClosed += (s, e) => PauseChecks();
         }
 
-        private void BuildLayout()
+        /* A check still running when the window closes stops at its next step, and its answer goes nowhere */
+        private void ModManagerForm_FormClosed(object sender, FormClosedEventArgs e)
         {
-            //Top: what this is, and the state of the game files
-            Panel header = _header = new Panel() { Dock = DockStyle.Top, Height = 64, Padding = new Padding(12, 8, 12, 6) };
-            _headline = new Label()
-            {
-                Dock = DockStyle.Top,
-                Height = 24,
-                Text = "Tick the mods you want to play with, put them in order, then click Apply.",
-                Font = new Font(Font.FontFamily, 10f, FontStyle.Bold),
-            };
-            FlowLayoutPanel stateRow = new FlowLayoutPanel() { Dock = DockStyle.Top, Height = 24, FlowDirection = FlowDirection.LeftToRight, WrapContents = false };
-            _installState = new Label() { AutoSize = true, Text = "Checking your game files...", Margin = new Padding(0, 4, 6, 0) };
-            _installAction = new LinkLabel() { AutoSize = true, Visible = false, Margin = new Padding(0, 4, 0, 0) };
-            _installAction.LinkClicked += (s, e) =>
-            {
-                if (ModServices.State?.Unreadable != null) StartAfresh();
-                else RunPristineWizard();
-            };
-            //Every file read again, whatever its size and time say (a tool can change a file and put both back)
-            _recheck = new LinkLabel() { AutoSize = true, Visible = false, Text = "Check every file again", Margin = new Padding(6, 4, 0, 0) };
-            _recheck.LinkClicked += (s, e) => CheckEveryFileAgain();
-            stateRow.Controls.Add(_installState);
-            stateRow.Controls.Add(_installAction);
-            stateRow.Controls.Add(_recheck);
-            //Copies of the game's own files (a folder renamed and put back, a backup) aren't changes: said apart, so the space
-            //they take isn't a mystery (shown when there are any)
-            _copiesNote = new Label() { Dock = DockStyle.Top, Height = 20, AutoEllipsis = true, Visible = false, Padding = new Padding(0, 2, 0, 0) };
-            header.Controls.Add(_copiesNote);
-            header.Controls.Add(stateRow);
-            header.Controls.Add(_headline);
-
-            //The list on the left
-            _modList = new ListView()
-            {
-                Dock = DockStyle.Fill,
-                View = View.Details,
-                CheckBoxes = true,
-                FullRowSelect = true,
-                HideSelection = false,
-                MultiSelect = false,
-                AllowDrop = true,
-            };
-            _modList.Columns.Add("Mod", 230);
-            _modList.Columns.Add("Version", 64);
-            _modList.Columns.Add("Author", 110);
-            _modList.Columns.Add("Type", 90);
-            _modList.Columns.Add("Status", 140);
-            //Once for a run of changes: moving the selection deselects the old row first, and one action can tick many rows
-            _modList.SelectedIndexChanged += (s, e) => ShowListChanges(false);
-            _modList.ItemChecked += (s, e) => { if (!_refreshingList) ShowListChanges(true); };
-            _modList.ItemDrag += (s, e) => _modList.DoDragDrop(e.Item, DragDropEffects.Move);
-            _modList.DragEnter += OnListDragEnter;
-            _modList.DragOver += OnListDragOver;
-            _modList.DragDrop += OnListDragDrop;
-
-            Label orderTip = new Label()
-            {
-                Dock = DockStyle.Bottom,
-                Height = 34,
-                Text = "Mods lower in the list win when two of them change the very same thing. Drag a mod, or use Move Up / Move Down, to change the order.",
-                Padding = new Padding(2, 4, 2, 0),
-            };
-            Panel listPanel = new Panel() { Dock = DockStyle.Fill };
-            listPanel.Controls.Add(_modList);
-            listPanel.Controls.Add(orderTip);
-
-            //The selected mod on the right
-            _preview = new PictureBox() { Dock = DockStyle.Top, Height = 170, SizeMode = PictureBoxSizeMode.Zoom, Visible = false };
-            _detailTitle = new Label() { Dock = DockStyle.Top, Height = 28, Font = new Font(Font.FontFamily, 12f, FontStyle.Bold), AutoEllipsis = true };
-            _detailByline = new Label() { Dock = DockStyle.Top, Height = 20, AutoEllipsis = true };
-            _details = new TextBox()
-            {
-                Dock = DockStyle.Fill,
-                Multiline = true,
-                ReadOnly = true,
-                ScrollBars = ScrollBars.Vertical,
-                BorderStyle = BorderStyle.None,
-            };
-            Panel detailPanel = new Panel() { Dock = DockStyle.Fill, Padding = new Padding(10, 4, 6, 4) };
-            detailPanel.Controls.Add(_details);
-            detailPanel.Controls.Add(_detailByline);
-            detailPanel.Controls.Add(_detailTitle);
-            detailPanel.Controls.Add(_preview);
-
-            //The details keep their width as the window grows: the list takes the rest
-            _split = new SplitContainer() { Dock = DockStyle.Fill, Orientation = Orientation.Vertical, FixedPanel = FixedPanel.Panel2 };
-            _split.Panel1.Controls.Add(listPanel);
-            _split.Panel2.Controls.Add(detailPanel);
-
-            //Buttons
-            FlowLayoutPanel left = new FlowLayoutPanel() { Dock = DockStyle.Left, AutoSize = true, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Padding = new Padding(6, 6, 0, 6) };
-            _addButton = MakeButton(left, "Add Mod...", (s, e) => AddMods());
-            _removeButton = MakeButton(left, "Remove", (s, e) => RemoveSelected());
-            _upButton = MakeButton(left, "Move Up", (s, e) => MoveSelected(-1));
-            _downButton = MakeButton(left, "Move Down", (s, e) => MoveSelected(1));
-            FlowLayoutPanel right = new FlowLayoutPanel() { Dock = DockStyle.Right, AutoSize = true, FlowDirection = FlowDirection.RightToLeft, WrapContents = false, Padding = new Padding(0, 6, 6, 6) };
-            _applyButton = MakeButton(right, "Apply", (s, e) => ApplyChanges());
-            _applyButton.Font = new Font(Font, FontStyle.Bold);
-            _applyButton.MinimumSize = new Size(110, 30);
-            //Launch Mod, beside Apply (ModManagerForm.LaunchMod.cs)
-            AddLaunchButton(right);
-            _repairButton = MakeButton(right, "Repair", (s, e) => Repair());
-            _createButton = MakeButton(right, "Create a Mod...", (s, e) => OpenExporter());
-            Panel buttons = new Panel() { Dock = DockStyle.Bottom, Height = 46 };
-            buttons.Controls.Add(left);
-            buttons.Controls.Add(right);
-
-            _statusLabel = new Label() { Dock = DockStyle.Bottom, Height = 22, TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(10, 0, 0, 0) };
-
-            Controls.Add(_split);
-            Controls.Add(_statusLabel);
-            Controls.Add(buttons);
-            Controls.Add(header);
+            PauseChecks();
         }
 
-        private Button MakeButton(FlowLayoutPanel parent, string text, EventHandler onClick)
+        private void _installAction_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            Button button = new Button() { Text = text, AutoSize = true, MinimumSize = new Size(0, 30), Margin = new Padding(3) };
-            button.Click += onClick;
-            parent.Controls.Add(button);
-            return button;
+            if (ModServices.State?.Unreadable != null) StartAfresh();
+            else RunPristineWizard();
+        }
+
+        private void _recheck_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            CheckEveryFileAgain();
+        }
+
+        /* Once for a run of changes: moving the selection deselects the old row first, and one action can tick many rows */
+        private void modList_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            ShowListChanges(false);
+        }
+
+        private void modList_ItemChecked(object sender, ItemCheckedEventArgs e)
+        {
+            if (!_refreshingList) ShowListChanges(true);
+        }
+
+        private void modList_ItemDrag(object sender, ItemDragEventArgs e)
+        {
+            modList.DoDragDrop(e.Item, DragDropEffects.Move);
+        }
+
+        private void _addButton_Click(object sender, EventArgs e)
+        {
+            AddMods();
+        }
+
+        private void _removeButton_Click(object sender, EventArgs e)
+        {
+            RemoveSelected();
+        }
+
+        private void _upButton_Click(object sender, EventArgs e)
+        {
+            MoveSelected(-1);
+        }
+
+        private void _downButton_Click(object sender, EventArgs e)
+        {
+            MoveSelected(1);
+        }
+
+        private void _applyButton_Click(object sender, EventArgs e)
+        {
+            ApplyChanges();
+        }
+
+        private void _repairButton_Click(object sender, EventArgs e)
+        {
+            Repair();
+        }
+
+        private void _createButton_Click(object sender, EventArgs e)
+        {
+            OpenExporter();
         }
 
         private void OnFirstShown(object sender, EventArgs e)
         {
             Shown -= OnFirstShown;
+            //The details keep their width as the window grows (their panel is the fixed one): the list takes the rest
             try { _split.SplitterDistance = Math.Max(_split.Panel1MinSize, _split.Width - 420); } catch { }
 
             ModInstaller installer = ModServices.Installer;
@@ -258,7 +172,7 @@ namespace OpenCAGE.Popups
             {
                 _headline.Text = "Mods can't be used with this version of the game yet.";
                 _installState.Text = unsupported;
-                foreach (Control control in new Control[] { _modList, _addButton, _removeButton, _upButton, _downButton, _applyButton, _repairButton, _createButton })
+                foreach (Control control in new Control[] { modList, _addButton, _removeButton, _upButton, _downButton, _applyButton, _repairButton, _createButton })
                     control.Enabled = false;
                 return;
             }
@@ -273,7 +187,7 @@ namespace OpenCAGE.Popups
                 _detailTitle.Text = "";
                 _detailByline.Text = "";
                 _details.Text = ModServices.State.Unreadable;
-                foreach (Control control in new Control[] { _modList, _addButton, _removeButton, _upButton, _downButton, _applyButton, _repairButton, _createButton })
+                foreach (Control control in new Control[] { modList, _addButton, _removeButton, _upButton, _downButton, _applyButton, _repairButton, _createButton })
                     control.Enabled = false;
                 return;
             }
@@ -308,7 +222,7 @@ namespace OpenCAGE.Popups
             }
             _headline.Text = "Tick the mods you want to play with, put them in order, then click Apply.";
             _installAction.Visible = false;
-            foreach (Control control in new Control[] { _modList, _addButton, _removeButton, _upButton, _downButton, _applyButton, _repairButton, _createButton })
+            foreach (Control control in new Control[] { modList, _addButton, _removeButton, _upButton, _downButton, _applyButton, _repairButton, _createButton })
                 control.Enabled = true;
             RefreshModList();
             StartScan();
@@ -490,8 +404,8 @@ namespace OpenCAGE.Popups
             //Which of the mods' files need repairing is the check of the game files' to say (StartScan): it may have to read them
 
             string selectedId = SelectedMod?.Id;
-            _modList.BeginUpdate();
-            _modList.Items.Clear();
+            modList.BeginUpdate();
+            modList.Items.Clear();
             if (state != null)
             {
                 foreach (ModState.InstalledMod mod in state.ModsInPriorityOrder())
@@ -501,11 +415,11 @@ namespace OpenCAGE.Popups
                     item.SubItems.Add(mod.Author ?? "");
                     item.SubItems.Add(mod.Replaces ? "Replacement" : "Combinable");
                     item.SubItems.Add("");
-                    _modList.Items.Add(item);
+                    modList.Items.Add(item);
                     if (mod.Id == selectedId) item.Selected = true;
                 }
             }
-            _modList.EndUpdate();
+            modList.EndUpdate();
             _refreshingList = false;
             UpdatePending();
             ShowDetails();
@@ -513,13 +427,13 @@ namespace OpenCAGE.Popups
 
         private ModState.InstalledMod SelectedMod
         {
-            get { return _modList.SelectedItems.Count == 0 ? null : (ModState.InstalledMod)_modList.SelectedItems[0].Tag; }
+            get { return modList.SelectedItems.Count == 0 ? null : (ModState.InstalledMod)modList.SelectedItems[0].Tag; }
         }
 
         private List<string> DesiredEnabledIds()
         {
             List<string> ids = new List<string>();
-            foreach (ListViewItem item in _modList.Items)
+            foreach (ListViewItem item in modList.Items)
                 if (item.Checked)
                     ids.Add(((ModState.InstalledMod)item.Tag).Id);
             return ids;
@@ -534,7 +448,7 @@ namespace OpenCAGE.Popups
                 _applyButton.Enabled = false;
                 return;
             }
-            foreach (ListViewItem item in _modList.Items)
+            foreach (ListViewItem item in modList.Items)
             {
                 ModState.InstalledMod mod = (ModState.InstalledMod)item.Tag;
                 string status;
@@ -588,9 +502,9 @@ namespace OpenCAGE.Popups
             {
                 CancelCheck();
                 ShowPreview(null);
-                _detailTitle.Text = _modList.Items.Count == 0 ? "No mods yet" : "";
+                _detailTitle.Text = modList.Items.Count == 0 ? "No mods yet" : "";
                 _detailByline.Text = "";
-                _details.Text = _modList.Items.Count == 0
+                _details.Text = modList.Items.Count == 0
                     ? "Drag a mod file (.omp) onto this window, or click Add Mod..., to add it to your list. Then tick it and click Apply to install it.\r\n\r\n"
                       + "Want to make your own? Make your changes in OpenCAGE, then click Create a Mod..."
                     : "Select a mod to see what it changes.";
@@ -911,27 +825,27 @@ namespace OpenCAGE.Popups
 
         private void MoveSelected(int direction)
         {
-            if (_modList.SelectedIndices.Count == 0)
+            if (modList.SelectedIndices.Count == 0)
                 return;
-            int index = _modList.SelectedIndices[0];
+            int index = modList.SelectedIndices[0];
             MoveItem(index, index + direction);
         }
 
         private void MoveItem(int from, int to)
         {
-            if (from < 0 || to < 0 || from >= _modList.Items.Count || to >= _modList.Items.Count || from == to)
+            if (from < 0 || to < 0 || from >= modList.Items.Count || to >= modList.Items.Count || from == to)
                 return;
             _refreshingList = true;
-            ListViewItem item = _modList.Items[from];
-            _modList.Items.RemoveAt(from);
-            _modList.Items.Insert(to, item);
+            ListViewItem item = modList.Items[from];
+            modList.Items.RemoveAt(from);
+            modList.Items.Insert(to, item);
             item.Selected = true;
             item.EnsureVisible();
             _refreshingList = false;
 
             //The order is kept now; it takes effect at the next Apply
-            for (int i = 0; i < _modList.Items.Count; i++)
-                ((ModState.InstalledMod)_modList.Items[i].Tag).Priority = i;
+            for (int i = 0; i < modList.Items.Count; i++)
+                ((ModState.InstalledMod)modList.Items[i].Tag).Priority = i;
             ModServices.Installer.SaveState();
             UpdatePending();
             ShowDetails();
@@ -956,9 +870,9 @@ namespace OpenCAGE.Popups
                 return;
             }
             ListViewItem dragged = (ListViewItem)e.Data.GetData(typeof(ListViewItem));
-            Point point = _modList.PointToClient(new Point(e.X, e.Y));
-            ListViewItem over = _modList.GetItemAt(point.X, point.Y);
-            int to = over == null ? _modList.Items.Count - 1 : over.Index;
+            Point point = modList.PointToClient(new Point(e.X, e.Y));
+            ListViewItem over = modList.GetItemAt(point.X, point.Y);
+            int to = over == null ? modList.Items.Count - 1 : over.Index;
             MoveItem(dragged.Index, to);
         }
         #endregion
@@ -987,7 +901,7 @@ namespace OpenCAGE.Popups
                 try { existing = ModServices.State.FindMod(ModPackage.Read(path).Info.Id); } catch { }
                 ModState.InstalledMod mod = ModServices.Installer.ImportPackage(path);
                 RefreshModList();
-                foreach (ListViewItem item in _modList.Items)
+                foreach (ListViewItem item in modList.Items)
                     if (item.Tag == mod)
                     {
                         item.Selected = true;
@@ -1394,115 +1308,6 @@ namespace OpenCAGE.Popups
                     ImportPackageFile(file);
         }
         #endregion
-    }
-
-    /* A modal "working..." window: runs Work on a thread, shows each step it reports, closes itself when done */
-    public class BusyDialog : Form
-    {
-        /// <summary>The work. It's handed a way to report what it's doing now.</summary>
-        public Action<Action<string>> Work;
-
-        private readonly Label _label;
-        private bool _finished;
-
-        public BusyDialog(string message)
-        {
-            Text = "OpenCAGE";
-            Icon = SharedFormIcon.Icon;
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            //The control box stays (the title bar only shows the icon with it), with its close button greyed out: the work can't be stopped part way
-            MinimizeBox = false;
-            MaximizeBox = false;
-            FormClosing += (s, e) =>
-            {
-                if (!_finished && e.CloseReason == CloseReason.UserClosing)
-                    e.Cancel = true;
-            };
-            StartPosition = FormStartPosition.CenterParent;
-            Size = new Size(460, 130);
-
-            _label = new Label() { Text = message, Dock = DockStyle.Top, Height = 44, TextAlign = ContentAlignment.MiddleCenter, Padding = new Padding(8), AutoEllipsis = true };
-            ProgressBar bar = new ProgressBar() { Style = ProgressBarStyle.Marquee, Dock = DockStyle.Top, Height = 20, MarqueeAnimationSpeed = 30 };
-            Padding = new Padding(12);
-            Controls.Add(bar);
-            Controls.Add(_label);
-
-            Theming.ThemeManager.ApplyToForm(this);
-
-            Shown += (s, e) =>
-            {
-                Thread thread = new Thread(() =>
-                {
-                    try { Work?.Invoke(Report); }
-                    finally { BeginInvoke((Action)(() => { _finished = true; Close(); })); }
-                });
-                thread.IsBackground = true;
-                thread.Start();
-            };
-        }
-
-        /* The close button greyed out, and Close taken off the window menu (CS_NOCLOSE) */
-        protected override CreateParams CreateParams
-        {
-            get
-            {
-                CreateParams parameters = base.CreateParams;
-                parameters.ClassStyle |= 0x200;
-                return parameters;
-            }
-        }
-
-        private void Report(string step)
-        {
-            try
-            {
-                if (!IsDisposed && IsHandleCreated)
-                    BeginInvoke((Action)(() => _label.Text = step));
-            }
-            catch { }
-        }
-    }
-
-    /* A message too long for a message box: a scrolling text with one or two buttons */
-    public class ModReportDialog : Form
-    {
-        /// <summary>OK for the first button, Cancel for the cancel one, No for the other one (shown between them) if there is one.</summary>
-        public static DialogResult Show(IWin32Window owner, string title, string text, string okText, string cancelText, string otherText = null)
-        {
-            using (ModReportDialog dialog = new ModReportDialog(title, text, okText, cancelText, otherText))
-                return dialog.ShowDialog(owner);
-        }
-
-        private ModReportDialog(string title, string text, string okText, string cancelText, string otherText)
-        {
-            Text = title;
-            Icon = SharedFormIcon.Icon;
-            Size = new Size(720, 460);
-            MinimumSize = new Size(480, 300);
-            StartPosition = FormStartPosition.CenterParent;
-            ShowInTaskbar = false;
-
-            TextBox body = new TextBox() { Dock = DockStyle.Fill, Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Text = text, BorderStyle = BorderStyle.None };
-            FlowLayoutPanel buttons = new FlowLayoutPanel() { Dock = DockStyle.Bottom, Height = 44, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(6) };
-            if (cancelText != null)
-            {
-                Button cancel = new Button() { Text = cancelText, AutoSize = true, MinimumSize = new Size(90, 30), DialogResult = DialogResult.Cancel };
-                buttons.Controls.Add(cancel);
-                CancelButton = cancel;
-            }
-            if (otherText != null)
-                buttons.Controls.Add(new Button() { Text = otherText, AutoSize = true, MinimumSize = new Size(90, 30), DialogResult = DialogResult.No });
-            Button ok = new Button() { Text = okText, AutoSize = true, MinimumSize = new Size(90, 30), DialogResult = DialogResult.OK };
-            buttons.Controls.Add(ok);
-            AcceptButton = ok;
-            if (cancelText == null) CancelButton = ok;
-
-            Padding = new Padding(12, 12, 12, 0);
-            Controls.Add(body);
-            Controls.Add(buttons);
-            Theming.ThemeManager.ApplyToForm(this);
-            Shown += (s, e) => { body.SelectionStart = 0; body.SelectionLength = 0; ok.Focus(); };
-        }
     }
 }
 #endif

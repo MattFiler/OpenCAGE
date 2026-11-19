@@ -18,29 +18,12 @@ namespace OpenCAGE
     /// (a VariableString naming it, linked to its sound_bank pin) and a Sound entity plays an event by name. Opened on a bank made
     /// here before, it lists that bank's events, to add to or take out of it.
     /// </summary>
-    public class LevelSoundBankDialog : BaseWindow
+    public partial class LevelSoundBankDialog : BaseWindow
     {
         private readonly string _package;
         private readonly uint? _existing;
         private byte[] _existingBytes;
         private Dictionary<uint, string> _existingNames = new Dictionary<uint, string>();
-
-        private readonly TextBox bankName = new TextBox { Dock = DockStyle.Fill };
-        private readonly ListView events = new ListView { Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true, HideSelection = false, MultiSelect = true };
-        private readonly Button removeEventBtn = new Button { Text = "Remove Event", Width = 110, Height = 26, Enabled = false };
-        private readonly TextBox eventName = new TextBox { Dock = DockStyle.Fill };
-        private readonly TextBox wavPath = new TextBox { ReadOnly = true, Dock = DockStyle.Fill };
-        private readonly Button browseBtn = new Button { Text = "Browse...", Width = 90, Height = 24 };
-        private readonly TextBox search = new TextBox { Dock = DockStyle.Fill };
-        private readonly ListView sounds = new ListView { Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true, HideSelection = false, MultiSelect = false };
-        private readonly CheckBox loop = new CheckBox { Text = "Loop until stopped", AutoSize = true };
-        private readonly Button playBtn = new Button { Text = "Play Sound", Width = 90, Height = 26, Enabled = false };
-        private readonly Button stopBtn = new Button { Text = "Stop", Width = 60, Height = 26, Enabled = false };
-        private readonly Button addEventBtn = new Button { Text = "Add Event", Width = 100, Height = 26 };
-        private readonly TextBox summary = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill };
-        private readonly Button saveBtn = new Button { Text = "Create", Width = 90, Height = 26, Enabled = false };
-        private readonly Button cancelBtn = new Button { Text = "Cancel", Width = 90, Height = 26 };
-        private readonly ToolTip tips = new ToolTip();
 
         private WwiseSoundLibrary _library;
         private List<LevelSoundImportDialog.Candidate> _candidates = new List<LevelSoundImportDialog.Candidate>();
@@ -68,126 +51,44 @@ namespace OpenCAGE
         /// <param name="existingName">That soundbank's name.</param>
         public LevelSoundBankDialog(string package, uint? existing, string existingName)
         {
+            InitializeComponent();
             _package = package;
             _existing = existing;
 
-            Text = existing == null ? "New Soundbank" : "Soundbank " + existingName;
             Icon = SharedFormIcon.Icon;
-            ClientSize = new Size(880, 720);
-            MinimumSize = new Size(680, 600);
-            StartPosition = FormStartPosition.CenterParent;
-            ShowInTaskbar = false;
-            MinimizeBox = false;
             BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/sound-events/#new-soundbank");
 
             if (existing != null)
             {
+                Text = "Soundbank " + existingName;
                 bankName.Text = existingName;
                 bankName.ReadOnly = true;
                 saveBtn.Text = "Save";
             }
 
-            events.Columns.Add("Event", 260);
-            events.Columns.Add(".wav", 200);
-            events.Columns.Add("Sounds like", 300);
-            events.Columns.Add("Loops", 60);
-            sounds.Columns.Add("Sound", 330);
-            sounds.Columns.Add("Id", 85);
-            sounds.Columns.Add("Kept in", 220);
-
-            tips.SetToolTip(bankName, "The soundbank's name: letters, digits and underscores. A SoundLoadBank loads it by this name (a VariableString holding it, linked to the loader's sound_bank pin).");
-            tips.SetToolTip(eventName, "The sound event's name, as a Sound entity's sound_event names it: letters, digits and underscores, and not a name the game already uses.");
-            tips.SetToolTip(sounds, "The sound of the game's this one is made to sound like: its actor-mixer, output bus, 3D positioning and distance attenuation, reverb sends and volume are borrowed. The .wav is laid out like it (channels and sample rate).");
-            tips.SetToolTip(loop, "Repeat the sound until something stops it - the whole .wav, or its own loop region if it has one (a smpl chunk, as audio editors write).");
-            tips.SetToolTip(playBtn, "Play the selected sound of the game's.");
-
-            BuildLayout();
-
-            browseBtn.Click += (s, e) => Browse();
-            search.TextChanged += (s, e) => FillSounds();
-            sounds.SelectedIndexChanged += (s, e) => playBtn.Enabled = SelectedSound() != null;
-            events.SelectedIndexChanged += (s, e) => removeEventBtn.Enabled = events.SelectedItems.Count != 0 && !_working;
-            addEventBtn.Click += (s, e) => AddEvent();
-            removeEventBtn.Click += (s, e) => RemoveEvents();
-            playBtn.Click += (s, e) => PlaySound();
-            stopBtn.Click += (s, e) => StopPlaying();
-            saveBtn.Click += (s, e) => Save();
-            cancelBtn.Click += (s, e) => Close();
-            bankName.TextChanged += (s, e) => Describe();
-
-            CancelButton = cancelBtn;
-            Load += (s, e) => LoadSounds();
-            FormClosed += (s, e) =>
-            {
-                StopPlaying();
-                tips.Dispose();
-            };
+            //Wired after the name above is filled in, which is not an edit
+            bankName.TextChanged += bankName_TextChanged;
         }
 
-        #region LAYOUT
+        private void LevelSoundBankDialog_Load(object sender, EventArgs e) => LoadSounds();
 
-        private void BuildLayout()
+        private void LevelSoundBankDialog_FormClosed(object sender, FormClosedEventArgs e)
         {
-            TableLayoutPanel nameRow = Row3(new Label { Text = "Soundbank name:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(3, 6, 3, 3) }, bankName, null);
-
-            FlowLayoutPanel eventButtons = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, FlowDirection = FlowDirection.RightToLeft, WrapContents = false, Margin = new Padding(0) };
-            eventButtons.Controls.Add(removeEventBtn);
-
-            TableLayoutPanel newEvent = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 5, Margin = new Padding(0, 6, 0, 0) };
-            newEvent.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            newEvent.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            newEvent.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            newEvent.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            newEvent.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            newEvent.Controls.Add(Row3(new Label { Text = "New event's name:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(3, 6, 3, 3) }, eventName, null), 0, 0);
-            newEvent.Controls.Add(Row3(new Label { Text = "Its audio (.wav):", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(3, 7, 3, 3) }, wavPath, browseBtn), 0, 1);
-            newEvent.Controls.Add(Row3(new Label { Text = "Sounds like (search):", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(3, 6, 3, 3) }, search, null), 0, 2);
-            sounds.Margin = new Padding(3, 3, 3, 3);
-            newEvent.Controls.Add(sounds, 0, 3);
-            FlowLayoutPanel addRow = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Margin = new Padding(0) };
-            loop.Margin = new Padding(3, 7, 12, 3);
-            addRow.Controls.AddRange(new Control[] { loop, playBtn, stopBtn, addEventBtn });
-            newEvent.Controls.Add(addRow, 0, 4);
-
-            GroupBox group = new GroupBox { Text = "Add an event", Dock = DockStyle.Fill, Padding = new Padding(6) };
-            group.Controls.Add(newEvent);
-
-            FlowLayoutPanel buttonRow = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, FlowDirection = FlowDirection.RightToLeft, WrapContents = false, Margin = new Padding(0, 4, 0, 0) };
-            buttonRow.Controls.AddRange(new Control[] { cancelBtn, saveBtn });
-
-            TableLayoutPanel root = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 7, Padding = new Padding(8) };
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            root.RowStyles.Add(new RowStyle(SizeType.Percent, 30));
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            root.RowStyles.Add(new RowStyle(SizeType.Percent, 70));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 110));
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            root.Controls.Add(nameRow, 0, 0);
-            root.Controls.Add(new Label { Text = "Its events:", AutoSize = true, Margin = new Padding(3, 8, 3, 0) }, 0, 1);
-            root.Controls.Add(events, 0, 2);
-            root.Controls.Add(eventButtons, 0, 3);
-            root.Controls.Add(group, 0, 4);
-            summary.Margin = new Padding(3, 6, 3, 3);
-            root.Controls.Add(summary, 0, 5);
-            root.Controls.Add(buttonRow, 0, 6);
-            Controls.Add(root);
+            StopPlaying();
+            tips.Dispose();
         }
 
-        private static TableLayoutPanel Row3(Control label, Control field, Control button)
-        {
-            TableLayoutPanel row = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 1, AutoSize = true, Margin = new Padding(0) };
-            row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
-            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            row.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            row.Controls.Add(label, 0, 0);
-            row.Controls.Add(field, 1, 0);
-            if (button != null)
-                row.Controls.Add(button, 2, 0);
-            return row;
-        }
-
-        #endregion
+        private void browseBtn_Click(object sender, EventArgs e) => Browse();
+        private void search_TextChanged(object sender, EventArgs e) => FillSounds();
+        private void sounds_SelectedIndexChanged(object sender, EventArgs e) => playBtn.Enabled = SelectedSound() != null;
+        private void events_SelectedIndexChanged(object sender, EventArgs e) => removeEventBtn.Enabled = events.SelectedItems.Count != 0 && !_working;
+        private void addEventBtn_Click(object sender, EventArgs e) => AddEvent();
+        private void removeEventBtn_Click(object sender, EventArgs e) => RemoveEvents();
+        private void playBtn_Click(object sender, EventArgs e) => PlaySound();
+        private void stopBtn_Click(object sender, EventArgs e) => StopPlaying();
+        private void saveBtn_Click(object sender, EventArgs e) => Save();
+        private void cancelBtn_Click(object sender, EventArgs e) => Close();
+        private void bankName_TextChanged(object sender, EventArgs e) => Describe();
 
         #region LOADING
 

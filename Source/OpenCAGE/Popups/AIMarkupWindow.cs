@@ -16,98 +16,47 @@ namespace OpenCAGE.Popups
     /// File > Place AI Markup: finds spots on the navmesh for retail's search and area sweep jobs and melee high cover (<see cref="AIMarkup.Propose"/>),
     /// places the ticked ones as one undo step, and compares the tool with a level's own markup. Importing the composites is not undoable.
     /// </summary>
-    internal class AIMarkupWindow : BaseWindow
+    internal partial class AIMarkupWindow : BaseWindow
     {
         private static AIMarkupWindow _open;
 
-        private readonly TextBox _summary;
-        private readonly CheckBox _search, _sweep, _highCover, _keepClear, _indoors;
-        private readonly NumericUpDown _searchSpacing, _sweepSpacing, _highCoverSpacing;
-        private readonly Label _intoLabel, _status;
-        private readonly ListView _spots;
-        private readonly Button _find, _compare, _place, _useShown, _useRoot;
         private Composite _into;
 
         public AIMarkupWindow() : base(WindowClosesOn.COMMANDS_RELOAD)
         {
-            Text = "AI Markup";
+            InitializeComponent();
             Icon = SharedFormIcon.Icon;
-            Size = new Size(860, 640);
-            MinimumSize = new Size(720, 520);
-            StartPosition = FormStartPosition.CenterScreen;
-            ShowInTaskbar = false;
             StayAboveEditor = true;
             BaseWindow.EnableDocumentation(this, "https://opencage.co.uk/docs/ai-markup/");
 
-            _summary = new TextBox() { Dock = DockStyle.Top, Height = 84, Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, WordWrap = true };
+            _searchSpacing.Value = (decimal)AIMarkup.SearchJob.Spacing;
+            _sweepSpacing.Value = (decimal)AIMarkup.AreaSweepJob.Spacing;
+            _highCoverSpacing.Value = (decimal)AIMarkup.HighCover.Spacing;
 
-            Panel options = new Panel() { Dock = DockStyle.Top, Height = 142, Padding = new Padding(8, 6, 8, 0) };
-            ToolTip tips = new ToolTip();
-            NumericUpDown Spacing(int y, float value)
-            {
-                options.Controls.Add(new Label() { Text = "Spacing (m):", AutoSize = true, Location = new Point(330, y + 4) });
-                NumericUpDown n = new NumericUpDown() { Location = new Point(420, y), Width = 60, Minimum = 1, Maximum = 50, DecimalPlaces = 1, Increment = 0.5m, Value = (decimal)value };
-                options.Controls.Add(n);
-                return n;
-            }
-            _search = new CheckBox() { Text = "Search jobs (SearchJob)", AutoSize = true, Location = new Point(8, 10), Checked = true };
-            tips.SetToolTip(_search, "Spots an NPC that has lost its target searches at (the alien's systematic search).");
-            _searchSpacing = Spacing(8, AIMarkup.SearchJob.Spacing);
-            _sweep = new CheckBox() { Text = "Area sweep jobs (AreaSweepJob)", AutoSize = true, Location = new Point(8, 38), Checked = true };
-            tips.SetToolTip(_sweep, "Spots an NPC sweeps over while it hunts (the alien stalking).");
-            _sweepSpacing = Spacing(36, AIMarkup.AreaSweepJob.Spacing);
-            _highCover = new CheckBox() { Text = "Melee high cover (MeleeContext_HighCover)", AutoSize = true, Location = new Point(8, 66), Checked = false };
-            tips.SetToolTip(_highCover, "Where an android grabs the player and throws them against a wall: only levels with androids need it.");
-            _highCoverSpacing = Spacing(64, AIMarkup.HighCover.Spacing);
-            _keepClear = new CheckBox() { Text = "Keep clear of the level's own markup", AutoSize = true, Location = new Point(520, 10), Checked = true };
-            _indoors = new CheckBox() { Text = "Indoors only (a ceiling over the spot)", AutoSize = true, Location = new Point(520, 38), Checked = false };
-            tips.SetToolTip(_indoors, "Leave out floor with no ceiling over it in the collision: for a level whose alien or androids hunt indoors.");
-            options.Controls.AddRange(new Control[] { _search, _sweep, _highCover, _keepClear, _indoors });
-            options.Controls.Add(new Label() { Text = "Put them in:", AutoSize = true, Location = new Point(8, 104) });
-            _intoLabel = new Label() { AutoSize = false, Location = new Point(110, 104), Width = 360, Height = 18, AutoEllipsis = true };
-            options.Controls.Add(_intoLabel);
-            _useShown = new Button() { Text = "Composite on Display", AutoSize = true, Location = new Point(476, 98) };
-            _useShown.Click += (s, e) => { Composite shown = Singleton.Editor?.CompositeDisplay?.Composite; if (shown != null) SetInto(shown); };
-            _useRoot = new Button() { Text = "Root", AutoSize = true, Location = new Point(620, 98) };
-            _useRoot.Click += (s, e) => SetInto(null);
-            options.Controls.AddRange(new Control[] { _useShown, _useRoot });
-
-            _spots = new ListView() { Dock = DockStyle.Fill, View = View.Details, CheckBoxes = true, FullRowSelect = true, HideSelection = false };
-            _spots.Columns.Add("#", 50);
-            _spots.Columns.Add("Kind", 190);
-            _spots.Columns.Add("Position (x, y, z)", 220);
-            _spots.Columns.Add("Clearance", 80);
-            _spots.Columns.Add("Facing", 70);
-            _spots.Columns.Add("Wall", 70);
-            _spots.ItemChecked += (s, e) => UpdateButtons();
-
-            Panel bottom = new Panel() { Dock = DockStyle.Bottom, Height = 92, Padding = new Padding(8) };
-            _status = new Label() { AutoSize = false, Location = new Point(8, 4), Height = 48, Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right };
-            _find = new Button() { Text = "Find Spots", Width = 110, Height = 28, Anchor = AnchorStyles.Left | AnchorStyles.Bottom };
-            _find.Click += (s, e) => FindSpots();
-            _compare = new Button() { Text = "Compare With Level's Own", Width = 190, Height = 28, Anchor = AnchorStyles.Left | AnchorStyles.Bottom };
-            _compare.Click += (s, e) => CompareWithLevel();
-            _place = new Button() { Text = "Place Ticked Markup", Width = 160, Height = 28, Anchor = AnchorStyles.Right | AnchorStyles.Bottom, Enabled = false };
-            _place.Click += (s, e) => PlaceTicked();
-            bottom.Controls.AddRange(new Control[] { _status, _find, _compare, _place });
-            bottom.Resize += (s, e) =>
-            {
-                int w = bottom.ClientSize.Width, y = bottom.ClientSize.Height - 34;
-                _status.Width = w - 16;
-                _find.Location = new Point(8, y);
-                _compare.Location = new Point(_find.Right + 8, y);
-                _place.Location = new Point(w - _place.Width - 8, y);
-            };
-
-            Controls.Add(_spots);
-            Controls.Add(options);
-            Controls.Add(_summary);
-            Controls.Add(bottom);
-            AcceptButton = _find;
             Theming.ThemeManager.ApplyCurrent(this);
             SetInto(null);
             Summarise();
-            _status.Text = "Find Spots looks over the navmesh (as last built) for spots like retail's; tick the ones to keep, then Place Ticked Markup.";
+        }
+
+        private void _useShown_Click(object sender, EventArgs e)
+        {
+            Composite shown = Singleton.Editor?.CompositeDisplay?.Composite;
+            if (shown != null) SetInto(shown);
+        }
+
+        private void _useRoot_Click(object sender, EventArgs e) => SetInto(null);
+        private void _find_Click(object sender, EventArgs e) => FindSpots();
+        private void _compare_Click(object sender, EventArgs e) => CompareWithLevel();
+        private void _place_Click(object sender, EventArgs e) => PlaceTicked();
+        private void _spots_ItemChecked(object sender, ItemCheckedEventArgs e) => UpdateButtons();
+
+        private void _bottomPanel_Resize(object sender, EventArgs e)
+        {
+            int w = _bottomPanel.ClientSize.Width, y = _bottomPanel.ClientSize.Height - 34;
+            _status.Width = w - 16;
+            _find.Location = new Point(8, y);
+            _compare.Location = new Point(_find.Right + 8, y);
+            _place.Location = new Point(w - _place.Width - 8, y);
         }
 
         #region Opening it

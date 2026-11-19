@@ -18,7 +18,7 @@ namespace OpenCAGE
     /// each carrying on from the last and crossfading in. Save adds it to a set and writes ANIMATION.PAK. The work is
     /// <see cref="ClipSplice"/>, shared with the MCP tool splice_clips.
     /// </summary>
-    public class ClipSplicerWindow : BaseWindow
+    public partial class ClipSplicerWindow : BaseWindow
     {
         private static ClipSplicerWindow _open;
 
@@ -71,122 +71,86 @@ namespace OpenCAGE
         private AnimationPreview _preview;
         private bool _filling;
 
-        private readonly ComboBox _setBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
-        private readonly TextBox _nameBox = new TextBox();
-        private readonly ComboBox _contextBox = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
-        private readonly CheckBox _travel = new CheckBox { Text = "Keep the travel", Checked = true, AutoSize = true };
-        private readonly CheckBox _fromStart = new CheckBox { Text = "Start on the marker", Checked = true, AutoSize = true };
-        private readonly CheckBox _lockFeet = new CheckBox { Text = "Lock planted feet", Checked = true, AutoSize = true };
-        private readonly DataGridView _grid = new DataGridView();
-        private readonly TextBox _report = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical };
+        //Made here rather than in the designer, which can't make this class: it fills the designer's _timelineHost
         private readonly Panel _timeline = new DoubleBufferedPanel();
 
         private sealed class DoubleBufferedPanel : Panel { public DoubleBufferedPanel() { DoubleBuffered = true; ResizeRedraw = true; } }
-        private readonly Button _addBtn = new Button { Text = "Add Clip...", AutoSize = true };
-        private readonly Button _upBtn = new Button { Text = "Up", AutoSize = true };
-        private readonly Button _downBtn = new Button { Text = "Down", AutoSize = true };
-        private readonly Button _removeBtn = new Button { Text = "Remove", AutoSize = true };
-        private readonly Button _checkBtn = new Button { Text = "Check", AutoSize = true };
-        private readonly Button _previewBtn = new Button { Text = "Preview", AutoSize = true };
-        private readonly Button _saveBtn = new Button { Text = "Save", AutoSize = true };
 
         private ClipSplicerWindow(CathodeLib.Animation animations, CathodeLib.Animation.AnimationSet set) : base(WindowClosesOn.NONE)
         {
+            InitializeComponent();
+
             _animations = animations;
-            Text = "Clip Splicer";
             Icon = SharedFormIcon.Icon;
-            ClientSize = new Size(940, 600);
-            MinimumSize = new Size(760, 480);
-            StartPosition = FormStartPosition.CenterScreen;
 
-            //top: where it goes
-            TableLayoutPanel top = new TableLayoutPanel { Dock = DockStyle.Top, Height = 64, ColumnCount = 6, RowCount = 2, Padding = new Padding(6) };
-            top.Controls.Add(new Label { Text = "Into set", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 0);
-            top.Controls.Add(_setBox, 1, 0);
-            top.Controls.Add(new Label { Text = "Name", AutoSize = true, Anchor = AnchorStyles.Left }, 2, 0);
-            top.Controls.Add(_nameBox, 3, 0);
-            top.Controls.Add(new Label { Text = "Context", AutoSize = true, Anchor = AnchorStyles.Left }, 4, 0);
-            top.Controls.Add(_contextBox, 5, 0);
-            top.Controls.Add(_travel, 1, 1);
-            top.Controls.Add(_fromStart, 3, 1);
-            top.Controls.Add(_lockFeet, 5, 1);
-            _setBox.Width = 200; _nameBox.Width = 220; _contextBox.Width = 200;
-
-            //the segments
-            _grid.Dock = DockStyle.Fill;
-            _grid.AllowUserToAddRows = false;
-            _grid.AllowUserToDeleteRows = false;
-            _grid.RowHeadersVisible = false;
-            _grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            _grid.MultiSelect = false;
-            _grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            Column("Clip", true, 220, "The clip and its set");
-            Column("Frames", true, 80, "Frames the clip has");
-            Column("From", false, 50, "First frame to use (from 0)");
-            Column("To", false, 50, "Last frame to use, inclusive (-1 = its last)");
-            Column("Speed", false, 50, "Playback speed: 0.5 is half speed (twice as long)");
-            Column("Blend (s)", false, 60, "Seconds to crossfade in from the previous piece: the end of that one overlaps the start of this. 0 = a hard cut, right for clips made to follow one another");
-            Column("Hold (s)", false, 55, "Seconds to hold this piece's last frame");
-            _grid.Columns.Add(new DataGridViewCheckBoxColumn { HeaderText = "Carry on", FillWeight = 55, ToolTipText = "Carry on from where the previous piece got to (off: keep this clip's own placement, for pieces of one scene)" });
-            Column("Turn (deg)", false, 60, "An extra turn at the join (degrees; positive turns +Z towards +X)");
-            Column("Carry fwd (m)", false, 75, "Extra travel forward over this piece: shipped leaps jump on the spot (the traversal code moves them), so a leap over a gap says how far");
-
-            FlowLayoutPanel rowButtons = new FlowLayoutPanel { Dock = DockStyle.Right, Width = 110, FlowDirection = FlowDirection.TopDown, Padding = new Padding(4) };
-            rowButtons.Controls.AddRange(new Control[] { _addBtn, _upBtn, _downBtn, _removeBtn });
-            Panel middle = new Panel { Dock = DockStyle.Fill };
-            middle.Controls.Add(_grid);
-            middle.Controls.Add(rowButtons);
-
-            //bottom: the report and the actions
-            _report.Dock = DockStyle.Fill;
-            _report.Font = new Font(FontFamily.GenericMonospace, 8.5f);
-            FlowLayoutPanel actions = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 36, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(4) };
-            actions.Controls.AddRange(new Control[] { _saveBtn, _previewBtn, _checkBtn });
-            Panel bottom = new Panel { Dock = DockStyle.Bottom, Height = 250 };
-            _timeline.Dock = DockStyle.Top;
-            _timeline.Height = 50;
+            _timeline.Dock = DockStyle.Fill;
             _timeline.Paint += PaintTimeline;
             _timeline.Resize += (s, e) => _timeline.Invalidate();
-            bottom.Controls.Add(_report);
-            bottom.Controls.Add(_timeline);
-            bottom.Controls.Add(actions);
-
-            Controls.Add(middle);
-            Controls.Add(bottom);
-            Controls.Add(top);
-
-            ToolTip tips = new ToolTip();
-            tips.SetToolTip(_travel, "Keep the pieces' travel: REFERENCE_ROOT carries it and the capsule follows the body (off: it all plays on the spot)");
-            tips.SetToolTip(_lockFeet, "A foot planted on both sides of a join is put down on the same spot and held there through the crossfade until it lifts (two-bone IK), so a blend between two stances does not slide it");
-            tips.SetToolTip(_fromStart, "Start where the character stands / on the marker, facing along it (off: the first piece's own placement is the origin)");
-            tips.SetToolTip(_checkBtn, "Build it and report the joins, without saving");
-            tips.SetToolTip(_previewBtn, "Build it and play it in the Animation Preview (tick root motion to see it travel; the ring is the capsule)");
-            tips.SetToolTip(_saveBtn, "Add it to the set and write ANIMATION.PAK (shared by every level)");
+            _timelineHost.Controls.Add(_timeline);
 
             foreach (CathodeLib.Animation.AnimationSet s in _animations.Sets.Where(o => o.Kind != CathodeLib.Animation.AnimationKind.Environment).OrderBy(o => o.Name))
                 _setBox.Items.Add(s.Name);
             _setBox.SelectedItem = set != null && set.Kind != CathodeLib.Animation.AnimationKind.Environment ? set.Name : (_setBox.Items.Contains("MALE") ? "MALE" : null);
             if (_setBox.SelectedIndex < 0 && _setBox.Items.Count != 0) _setBox.SelectedIndex = 0;
             FillContexts();
-            _nameBox.Text = "spliced_clip";
 
-            _setBox.SelectedIndexChanged += (s, e) => FillContexts();
-            _addBtn.Click += (s, e) => PickClip();
-            _upBtn.Click += (s, e) => MoveRow(-1);
-            _downBtn.Click += (s, e) => MoveRow(1);
-            _removeBtn.Click += (s, e) => { int at = Row; if (at < 0) return; ReadGrid(); _segments.RemoveAt(at); _segmentSets.RemoveAt(at); FillGrid(Math.Min(at, _segments.Count - 1)); };
-            _checkBtn.Click += (s, e) => Build(true);
-            _previewBtn.Click += (s, e) => Preview();
-            _saveBtn.Click += (s, e) => Save();
-            _grid.CellValueChanged += (s, e) => { if (!_filling) _result = null; };
-            FormClosed += (s, e) => { if (_preview != null && !_preview.IsDisposed) _preview.Close(); };
             Report("Add pieces with Add Clip... (or right-click a clip in the Animation Editor: Add to the Clip Splicer), then Check, Preview and Save.\r\n"
                 + "All pieces must be authored on one rig (MALE's own clips, say). Clips made to follow one another (leap_in_2_5m, leap_2_5m, leap_2_5m_out) meet exactly: give those a blend of 0.");
         }
 
-        private void Column(string header, bool readOnly, int weight, string tip)
+        private void _setBox_SelectedIndexChanged(object sender, EventArgs e)
         {
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = header, ReadOnly = readOnly, FillWeight = weight, ToolTipText = tip, SortMode = DataGridViewColumnSortMode.NotSortable });
+            FillContexts();
+        }
+
+        private void _addBtn_Click(object sender, EventArgs e)
+        {
+            PickClip();
+        }
+
+        private void _upBtn_Click(object sender, EventArgs e)
+        {
+            MoveRow(-1);
+        }
+
+        private void _downBtn_Click(object sender, EventArgs e)
+        {
+            MoveRow(1);
+        }
+
+        private void _removeBtn_Click(object sender, EventArgs e)
+        {
+            int at = Row;
+            if (at < 0) return;
+            ReadGrid();
+            _segments.RemoveAt(at);
+            _segmentSets.RemoveAt(at);
+            FillGrid(Math.Min(at, _segments.Count - 1));
+        }
+
+        private void _checkBtn_Click(object sender, EventArgs e)
+        {
+            Build(true);
+        }
+
+        private void _previewBtn_Click(object sender, EventArgs e)
+        {
+            Preview();
+        }
+
+        private void _saveBtn_Click(object sender, EventArgs e)
+        {
+            Save();
+        }
+
+        private void _grid_CellValueChanged(object sender, DataGridViewCellEventArgs e)
+        {
+            if (!_filling) _result = null;
+        }
+
+        private void ClipSplicerWindow_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            if (_preview != null && !_preview.IsDisposed) _preview.Close();
         }
 
         private int Row { get { return _grid.CurrentRow?.Index ?? -1; } }

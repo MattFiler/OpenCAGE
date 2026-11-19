@@ -17,30 +17,12 @@ namespace OpenCAGE
     /// A brush's settings: its size, how each face is textured (material, scale, offset, rotation) and its collision. Edits go to a
     /// working copy; Apply commits them as one undo step that rebuilds the brush's model and collision.
     /// </summary>
-    public class BrushEditor : BaseWindow
+    public partial class BrushEditor : BaseWindow
     {
         private readonly ShortGuid _compositeId, _entityId;
         private BrushDefinition _working;
         private bool _loading;
         private bool _dirty;
-
-        private readonly Label _title = new Label() { AutoSize = true, Font = new Font(SystemFonts.DefaultFont, FontStyle.Bold) };
-        private readonly Label _bounds = new Label() { AutoSize = true };
-        private readonly NumericUpDown _sizeX = Number((decimal)BrushDefinition.MinimumSize, 4096, 3);
-        private readonly NumericUpDown _sizeY = Number((decimal)BrushDefinition.MinimumSize, 4096, 3);
-        private readonly NumericUpDown _sizeZ = Number((decimal)BrushDefinition.MinimumSize, 4096, 3);
-        private readonly ComboBox _collision = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 110 };
-        private readonly CheckBox _doubleSided = new CheckBox() { Text = "Double sided", AutoSize = true };
-        private readonly ListBox _faces = new ListBox() { Width = 150, Height = 150, IntegralHeight = false };
-        private readonly ComboBox _material = new ComboBox() { DropDownStyle = ComboBoxStyle.DropDown, Width = 260, AutoCompleteMode = AutoCompleteMode.SuggestAppend, AutoCompleteSource = AutoCompleteSource.ListItems };
-        private readonly NumericUpDown _scaleU = Number(-1000, 1000, 3), _scaleV = Number(-1000, 1000, 3);
-        private readonly NumericUpDown _offsetU = Number(-1000, 1000, 3), _offsetV = Number(-1000, 1000, 3);
-        private readonly NumericUpDown _rotation = Number(-360, 360, 1);
-        private readonly Button _allFaces = new Button() { Text = "Texture All Faces Like This", AutoSize = true };
-        private readonly Button _align = new Button() { Text = "Align Texture to World", AutoSize = true };
-        private readonly Button _apply = new Button() { Text = "Apply", AutoSize = true };
-        private readonly Button _close = new Button() { Text = "Close", AutoSize = true };
-        private readonly Label _status = new Label() { AutoSize = true, ForeColor = Color.Firebrick, MaximumSize = new Size(520, 0) };
 
         private const string GridItem = "(grey grid - the brush default)";
 
@@ -48,98 +30,39 @@ namespace OpenCAGE
         {
             _compositeId = composite.shortGUID;
             _entityId = entity.shortGUID;
-            Text = "Brush";
+            InitializeComponent();
             Icon = SharedFormIcon.Icon;
-            FormBorderStyle = FormBorderStyle.FixedToolWindow;
-            StartPosition = FormStartPosition.CenterScreen;
-            AutoSize = true;
-            AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            KeyPreview = true;
             StayAboveEditor = true;
-            BuildLayout();
+            _collision.Items.AddRange(BrushCollision.Modes);
             LoadBrush();
             BrushService.Changed += OnBrushChanged;
             FormClosed += (o, e) => BrushService.Changed -= OnBrushChanged;
-            KeyDown += (o, e) =>
-            {
-                if (e.KeyCode == Keys.Enter && !(ActiveControl is ComboBox combo && combo.DroppedDown)) { e.SuppressKeyPress = true; ApplyChanges(); }
-                else if (e.KeyCode == Keys.Escape) { e.SuppressKeyPress = true; Close(); }
-            };
             Theming.ThemeManager.ApplyToForm(this);
         }
 
-        private static NumericUpDown Number(decimal min, decimal max, int decimals) => new NumericUpDown()
+        private void BrushEditor_KeyDown(object sender, KeyEventArgs e)
         {
-            Minimum = min, Maximum = max, DecimalPlaces = decimals, Increment = decimals >= 3 ? 0.25m : 5m, Width = 80,
-        };
-
-        private void BuildLayout()
-        {
-            _collision.Items.AddRange(BrushCollision.Modes);
-            FlowLayoutPanel root = new FlowLayoutPanel() { FlowDirection = FlowDirection.TopDown, AutoSize = true, Padding = new Padding(8), WrapContents = false };
-
-            root.Controls.Add(_title);
-            root.Controls.Add(_bounds);
-
-            FlowLayoutPanel size = Row();
-            size.Controls.Add(Caption("Size  X"));
-            size.Controls.Add(_sizeX);
-            size.Controls.Add(Caption("Y"));
-            size.Controls.Add(_sizeY);
-            size.Controls.Add(Caption("Z"));
-            size.Controls.Add(_sizeZ);
-            root.Controls.Add(size);
-
-            FlowLayoutPanel collision = Row();
-            collision.Controls.Add(Caption("Collision"));
-            collision.Controls.Add(_collision);
-            collision.Controls.Add(_doubleSided);
-            root.Controls.Add(collision);
-
-            FlowLayoutPanel faces = Row();
-            faces.Controls.Add(_faces);
-            TableLayoutPanel face = new TableLayoutPanel() { ColumnCount = 4, AutoSize = true };
-            face.Controls.Add(Caption("Material"), 0, 0);
-            face.Controls.Add(_material, 1, 0);
-            face.SetColumnSpan(_material, 3);
-            face.Controls.Add(Caption("Scale U"), 0, 1);
-            face.Controls.Add(_scaleU, 1, 1);
-            face.Controls.Add(Caption("V"), 2, 1);
-            face.Controls.Add(_scaleV, 3, 1);
-            face.Controls.Add(Caption("Offset U"), 0, 2);
-            face.Controls.Add(_offsetU, 1, 2);
-            face.Controls.Add(Caption("V"), 2, 2);
-            face.Controls.Add(_offsetV, 3, 2);
-            face.Controls.Add(Caption("Rotation"), 0, 3);
-            face.Controls.Add(_rotation, 1, 3);
-            face.Controls.Add(_allFaces, 1, 4);
-            face.SetColumnSpan(_allFaces, 3);
-            faces.Controls.Add(face);
-            root.Controls.Add(faces);
-
-            FlowLayoutPanel buttons = Row();
-            buttons.Controls.Add(_align);
-            buttons.Controls.Add(_apply);
-            buttons.Controls.Add(_close);
-            root.Controls.Add(buttons);
-            root.Controls.Add(_status);
-            Controls.Add(root);
-
-            foreach (NumericUpDown size1 in new[] { _sizeX, _sizeY, _sizeZ }) size1.ValueChanged += (o, e) => SizeChanged();
-            foreach (NumericUpDown value in new[] { _scaleU, _scaleV, _offsetU, _offsetV, _rotation }) value.ValueChanged += (o, e) => FaceChanged();
-            _material.TextChanged += (o, e) => FaceChanged();
-            _collision.SelectedIndexChanged += (o, e) => { if (!_loading && _working != null) { _working.Collision = (string)_collision.SelectedItem; Dirty(); } };
-            _doubleSided.CheckedChanged += (o, e) => { if (!_loading && _working != null) { _working.DoubleSided = _doubleSided.Checked; Dirty(); } };
-            _faces.SelectedIndexChanged += (o, e) => ShowFace();
-            _allFaces.Click += (o, e) => CopyFaceToAll();
-            _align.Click += (o, e) => AlignToWorld();
-            _apply.Click += (o, e) => ApplyChanges();
-            _close.Click += (o, e) => Close();
-            AcceptButton = null;
+            if (e.KeyCode == Keys.Enter && !(ActiveControl is ComboBox combo && combo.DroppedDown)) { e.SuppressKeyPress = true; ApplyChanges(); }
+            else if (e.KeyCode == Keys.Escape) { e.SuppressKeyPress = true; Close(); }
         }
 
-        private static FlowLayoutPanel Row() => new FlowLayoutPanel() { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false, Margin = new Padding(0, 4, 0, 0) };
-        private static Label Caption(string text) => new Label() { Text = text, AutoSize = true, Anchor = AnchorStyles.Left, Padding = new Padding(0, 6, 0, 0) };
+        private void _size_ValueChanged(object sender, EventArgs e) => SizeChanged();
+        private void _faceSetting_Changed(object sender, EventArgs e) => FaceChanged();
+        private void _faces_SelectedIndexChanged(object sender, EventArgs e) => ShowFace();
+        private void _allFaces_Click(object sender, EventArgs e) => CopyFaceToAll();
+        private void _align_Click(object sender, EventArgs e) => AlignToWorld();
+        private void _apply_Click(object sender, EventArgs e) => ApplyChanges();
+        private void _close_Click(object sender, EventArgs e) => Close();
+
+        private void _collision_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (!_loading && _working != null) { _working.Collision = (string)_collision.SelectedItem; Dirty(); }
+        }
+
+        private void _doubleSided_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!_loading && _working != null) { _working.DoubleSided = _doubleSided.Checked; Dirty(); }
+        }
 
         private bool TryGetTarget(out Level level, out Composite composite, out FunctionEntity entity)
         {
