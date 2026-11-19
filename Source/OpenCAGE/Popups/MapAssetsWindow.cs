@@ -23,6 +23,7 @@ namespace OpenCAGE.Popups
         private readonly DataGridView _floors;
         private readonly NumericUpDown _scale;
         private readonly TextBox _mapName;
+        private readonly TextBox _labels;
         private readonly ComboBox _previewFloor;
         private readonly PictureBox _preview;
         private readonly Label _status;
@@ -67,7 +68,7 @@ namespace OpenCAGE.Popups
             _remove = new Button() { Text = "Remove Floor", Width = 100, Height = 28, Location = new Point(202, 4) };
             _remove.Click += (s, e) => { if (_floors.SelectedRows.Count != 0) { _floors.Rows.Remove(_floors.SelectedRows[0]); _plan = null; Renumber(); } };
             floorButtons.Controls.AddRange(new Control[] { _find, _add, _remove });
-            Panel options = new Panel() { Dock = DockStyle.Bottom, Height = 66 };
+            Panel options = new Panel() { Dock = DockStyle.Bottom, Height = 156 };
             options.Controls.Add(new Label() { Text = "Map scale:", AutoSize = true, Location = new Point(0, 8) });
             _scale = new NumericUpDown() { Location = new Point(90, 4), Width = 70, Minimum = 0, Maximum = 10, DecimalPlaces = 2, Increment = 0.05m, Value = 0 };
             options.Controls.Add(_scale);
@@ -75,8 +76,13 @@ namespace OpenCAGE.Popups
             options.Controls.Add(new Label() { Text = "Map name:", AutoSize = true, Location = new Point(0, 40) });
             _mapName = new TextBox() { Location = new Point(90, 36), Width = 300 };
             options.Controls.Add(_mapName);
+            options.Controls.Add(new Label() { Text = "Labels:", AutoSize = true, Location = new Point(0, 70) });
+            _labels = new TextBox() { Location = new Point(90, 66), Width = 300, Height = 84, Multiline = true, ScrollBars = ScrollBars.Vertical, AcceptsReturn = true };
+            options.Controls.Add(_labels);
+            new ToolTip().SetToolTip(_labels, "Room names, one per line: name, x, z (world), and the floor's name when it isn't the lowest floor walkable there. Drawn in capitals.");
             _scale.ValueChanged += (s, e) => _plan = null;
             _mapName.TextChanged += (s, e) => _plan = null;
+            _labels.TextChanged += (s, e) => _plan = null;
             left.Controls.Add(_floors);
             left.Controls.Add(floorButtons);
             left.Controls.Add(options);
@@ -168,7 +174,15 @@ namespace OpenCAGE.Popups
         /* The floors as the grid has them (heights left blank: the floor takes everything below / above) */
         private MapAssetsOptions Options()
         {
-            MapAssetsOptions options = new MapAssetsOptions() { Scale = (float)_scale.Value, MapName = _mapName.Text, Floors = new List<MapFloor>() };
+            MapAssetsOptions options = new MapAssetsOptions() { Scale = (float)_scale.Value, MapName = _mapName.Text, Floors = new List<MapFloor>(), Labels = new List<MapLabel>() };
+            foreach (string line in _labels.Lines)
+            {
+                string[] parts = line.Split(',').Select(o => o.Trim()).ToArray();
+                if (parts.Length < 3 || parts[0].Length == 0) continue;
+                float x = Parse(parts[1], float.NaN), z = Parse(parts[2], float.NaN);
+                if (float.IsNaN(x) || float.IsNaN(z)) continue;
+                options.Labels.Add(new MapLabel(parts[0].ToUpperInvariant(), x, z, parts.Length > 3 ? parts[3] : null));
+            }
             foreach (DataGridViewRow row in _floors.Rows)
             {
                 float from = Parse(row.Cells["from"].Value, float.NegativeInfinity), to = Parse(row.Cells["to"].Value, float.PositiveInfinity);
@@ -239,6 +253,14 @@ namespace OpenCAGE.Popups
                         foreach (MapOutline o in layer) path.AddPolygon(o.Points.Select(p => P(MapTransform.ToMovie(_plan.Anchor, p.X, p.Y))).ToArray());
                         using (SolidBrush b = new SolidBrush(Color.FromArgb(layer.Key.FillAlpha, MapMovie.Tint))) g.FillPath(b, path);
                         using (Pen p = new Pen(Color.FromArgb(layer.Key.LineAlpha, MapMovie.Tint), 1f)) g.DrawPath(p, path);
+                    }
+                using (Font font = new Font("Arial", Math.Max(6f, 7f * k)))
+                using (SolidBrush text = new SolidBrush(Color.FromArgb(220, MapMovie.Tint)))
+                    foreach (MapLabel label in floor.Labels)
+                    {
+                        PointF at = P(MapTransform.ToMovie(_plan.Anchor, label.X, label.Z));
+                        SizeF size = g.MeasureString(label.Text, font);
+                        g.DrawString(label.Text, font, text, at.X - size.Width / 2, at.Y - size.Height / 2);
                     }
             }
             Image old = _preview.Image;

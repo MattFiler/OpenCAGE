@@ -15,19 +15,28 @@ namespace OpenCAGE.MCP
             {
                 Name = "generate_map_assets",
                 Title = "Generate map assets",
-                Description = "Give the open level a Tab map, as File > Generate Map Assets does: the floors are found from the walk mesh as last built (the biggest walkable area, so roofs " +
-                    "and the tops of furniture are left out; a floor per height most of the floor area is at) or given, each drawn in the game's map style, and written to the level's UI " +
+                Description = "Give the open level a Tab map, as File > Generate Map Assets does: the floors are found from the walk mesh as last built (the biggest walkable area the player " +
+                    "can use, so roofs, the tops of furniture and the alien's vent network are left out; floor heights where most of the floor area is) or given. The heights split the walkable " +
+                    "area into regions: a level region goes on its heights' floor, or one floor above a region it lies a storey or more over; a sloping region (ground, ramps) goes on the lowest " +
+                    "floor beside it: so outdoor ground stays on the ground floor at any height, and a mezzanine goes above what it covers; floors nothing ends up on are dropped. Each is drawn " +
+                    "in the game's map style (outlines squared to the walls), with any labels, and written to the level's UI " +
                     "folder: UI\\HUB.GFX (the game's hub, loading the map page from the level's files) and UI\\FILES\\HUB_MAP.GFX + one movie per floor (Launch Game puts them in UI.PAK). " +
                     "The game only opens a map for a keyframe on its own list, so the level BORROWS the game's: RnD_HzdLab_1 for the first floor, RnD_HzdLab_2, And_Lab_0... for the next. " +
                     "In the root composite, as one undo step, it places MapAssets_Anchor (MapAnchor + PositionMarker, set by a ThinkOnce) and per floor PlayerTriggerBoxes (20 m squares over its area: a bigger box doesn't fire everywhere in it) firing its " +
                     "Map_Floor_Change, and sets map_keyframe on every map item (doors, terminals, pickups...) to the floor it stands on (per placement, by an alias, for one inside a composite placed on several floors); a second run replaces the first. " +
                     "Save the level and launch it through OpenCAGE to see the map. dry_run returns the floors, anchor and items, changing nothing.",
                 InputSchema = McpSchema.Object(
-                    McpSchema.Array("floors", "The floors, lowest first (default: found). Each {name, from, to}: the walkable heights (m) it takes, above 'from' up to 'to'; the lowest floor takes everything below, the highest everything above. 6 at most.",
+                    McpSchema.Array("floors", "The floors, lowest first (default: found). Each {name, from, to}: the walkable heights (m) its regions are split at, above 'from' up to 'to'; the lowest floor takes everything below, the highest everything above. 6 at most.",
                         new JObject()
                         {
                             ["type"] = "object",
                             ["properties"] = new JObject() { ["name"] = new JObject() { ["type"] = "string" }, ["from"] = new JObject() { ["type"] = "number" }, ["to"] = new JObject() { ["type"] = "number" } },
+                        }),
+                    McpSchema.Array("labels", "Room names drawn on the map, in capitals as the game's maps have them. Each {text, x, z, floor}: world x / z; floor (a floor's name or keyframe, or its number from 1) when it isn't the lowest floor walkable there.",
+                        new JObject()
+                        {
+                            ["type"] = "object",
+                            ["properties"] = new JObject() { ["text"] = new JObject() { ["type"] = "string" }, ["x"] = new JObject() { ["type"] = "number" }, ["z"] = new JObject() { ["type"] = "number" }, ["floor"] = new JObject() { ["type"] = "string" } },
                         }),
                     McpSchema.Number("scale", "map_scale (default: chosen so most of the walkable area fits the map screen). Bigger draws the level bigger."),
                     McpSchema.String("map_name", "The map's name on the map page (default: the level's)."),
@@ -69,6 +78,16 @@ namespace OpenCAGE.MCP
                     options.Floors.Add(new MapFloor() { Name = (string)f["name"], From = from, To = to, Level = float.IsInfinity(from) ? (float.IsInfinity(to) ? 0 : to - 1) : (float.IsInfinity(to) ? from + 1 : (from + to) / 2) });
                 }
             }
+            if (call.Has("labels"))
+            {
+                options.Labels = new List<MapLabel>();
+                foreach (JToken l in call.Array("labels"))
+                {
+                    string text = ((string)l["text"] ?? "").Trim();
+                    if (text.Length == 0 || l["x"] == null || l["z"] == null) throw McpError.Invalid("Each label needs 'text', 'x' and 'z'.");
+                    options.Labels.Add(new MapLabel(text.ToUpperInvariant(), (float)l["x"], (float)l["z"], (string)l["floor"]));
+                }
+            }
             LevelContent content = null;
             MapAssetsPlan plan = null;
             using (McpEditorTools.Heartbeat(call, "Working out the map"))
@@ -108,6 +127,8 @@ namespace OpenCAGE.MCP
                     ["level_m"] = Math.Round(f.Level, 2),
                     ["area_m2"] = Math.Round(f.Area),
                     ["outlines"] = plan.Drawn.Count > i ? plan.Drawn[i].Outlines.Count : 0,
+                    ["labels"] = plan.Drawn.Count > i ? new JArray(plan.Drawn[i].Labels.Select(o => o.Text)) : new JArray(),
+                    ["floor_boxes"] = plan.Drawn.Count > i ? plan.Drawn[i].Boxes.Count : 0,
                 })),
                 ["anchor"] = new JObject() { ["world_pos"] = new JArray(plan.Anchor.WorldX, plan.Anchor.WorldY, plan.Anchor.WorldZ), ["map_north"] = new JArray(plan.Anchor.NorthX, 0, plan.Anchor.NorthZ), ["map_scale"] = plan.Anchor.Scale },
                 ["files"] = new JArray(plan.Files.Select(o => "UI\\" + o.Key.Replace('/', '\\') + " (" + o.Value.Length + " bytes)")),
@@ -127,7 +148,7 @@ namespace OpenCAGE.MCP
             {
                 LevelContent content = McpEditor.RequireLevel(forEditing: false);
                 List<MapFloor> floors = MapItemCheck.FloorsOf(content.Level.Commands);
-                List<MapItemFloor> items = MapAssetGenerator.MapItems(content.Level.Commands, floors);
+                List<MapItemFloor> items = MapAssetGenerator.MapItems(content.Level.Commands, MapItemCheck.FloorAt(content.Level.Commands));
                 List<MapItemFloor> wrong = items.Where(o => o.Wrong).ToList();
                 return new JObject()
                 {

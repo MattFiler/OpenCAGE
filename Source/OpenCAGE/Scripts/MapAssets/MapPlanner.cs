@@ -64,50 +64,86 @@ namespace OpenCAGE.MapAssets
         /// </summary>
         public const float BoxCell = 20;
 
+        /// <summary>The smallest a floor box square is split down to where two floors' heights meet in it (m).</summary>
+        public const float BoxCellMin = 5;
+
         /// <summary>
-        /// Each floor's drawing: its own walkable area as rooms, and the floor above it as a faint ghost (where the next level is);
-        /// trigger boxes over its area (one per BoxCell square that has some), each from its lowest height to its highest.
+        /// Each floor's drawing: its own walkable area as rooms (floorOf: each polygon's floor), and the floor above it as a faint ghost
+        /// (where the next level is); trigger boxes over its area, one per BoxCell square that has some, from its lowest height to its
+        /// highest. Where floors share a square they split its height between them, the square split in four (down to BoxCellMin)
+        /// where their heights there overlap, so no box holds another floor's walkable area.
         /// </summary>
-        public static List<MapPlanFloor> Plan(IList<MapPolygon> polygons, IList<MapFloor> floors)
+        public static List<MapPlanFloor> Plan(IList<MapPolygon> polygons, IList<MapFloor> floors, IList<int> floorOf)
         {
             MapLayerStyle rooms = new MapLayerStyle() { Name = "rooms" };
-            MapLayerStyle above = new MapLayerStyle() { Name = "above", Simplify = 0.4f, MinArea = 6f, FillAlpha = 6, LineAlpha = 70 };
+            MapLayerStyle above = new MapLayerStyle() { Name = "above", Simplify = 0.5f, MinArea = 6f, FillAlpha = 6, LineAlpha = 70 };
             List<MapPlanFloor> plan = new List<MapPlanFloor>();
             for (int i = 0; i < floors.Count; i++)
             {
-                MapFloor f = floors[i];
-                List<MapPolygon> mine = polygons.Where(p => FloorOf(floors, p.Height) == i).ToList();
-                MapPlanFloor pf = new MapPlanFloor() { Floor = f };
-                pf.Outlines.AddRange(MapFloorPlan.Trace(mine, rooms));
+                MapPlanFloor pf = new MapPlanFloor() { Floor = floors[i] };
+                pf.Outlines.AddRange(MapFloorPlan.Trace(polygons.Where((p, k) => floorOf[k] == i).ToList(), rooms));
                 if (i + 1 < floors.Count)
-                    pf.Outlines.AddRange(MapFloorPlan.Trace(polygons.Where(p => FloorOf(floors, p.Height) == i + 1).ToList(), above));
-                if (mine.Count != 0)
-                {
-                    float x0 = mine.Min(p => p.Outline.Min(q => q.X)) - 2, z0 = mine.Min(p => p.Outline.Min(q => q.Y)) - 2;
-                    //Each polygon in every cell its bounds reach, so a big one leaves no gap
-                    IEnumerable<KeyValuePair<Point, MapPolygon>> inCells = mine.SelectMany(p =>
-                    {
-                        int ix0 = (int)Math.Floor((p.Outline.Min(q => q.X) - x0) / BoxCell), ix1 = (int)Math.Floor((p.Outline.Max(q => q.X) - x0) / BoxCell);
-                        int iz0 = (int)Math.Floor((p.Outline.Min(q => q.Y) - z0) / BoxCell), iz1 = (int)Math.Floor((p.Outline.Max(q => q.Y) - z0) / BoxCell);
-                        List<KeyValuePair<Point, MapPolygon>> l = new List<KeyValuePair<Point, MapPolygon>>();
-                        for (int ix = ix0; ix <= ix1; ix++) for (int iz = iz0; iz <= iz1; iz++) l.Add(new KeyValuePair<Point, MapPolygon>(new Point(ix, iz), p));
-                        return l;
-                    });
-                    foreach (IGrouping<Point, MapPolygon> cell in inCells.GroupBy(o => o.Key, o => o.Value))
-                    {
-                        float cx0 = x0 + cell.Key.X * BoxCell, cz0 = z0 + cell.Key.Y * BoxCell;
-                        float minX = Math.Max(cx0, cell.Min(p => p.Outline.Min(q => q.X)) - 2), maxX = Math.Min(cx0 + BoxCell, cell.Max(p => p.Outline.Max(q => q.X)) + 2);
-                        float minZ = Math.Max(cz0, cell.Min(p => p.Outline.Min(q => q.Y)) - 2), maxZ = Math.Min(cz0 + BoxCell, cell.Max(p => p.Outline.Max(q => q.Y)) + 2);
-                        float minY = cell.Min(p => p.Height) - 2, maxY = cell.Max(p => p.Height) + 3;
-                        if (!float.IsInfinity(f.From)) minY = Math.Max(minY, f.From);
-                        if (!float.IsInfinity(f.To)) maxY = Math.Min(maxY, f.To);
-                        if (maxX - minX < 0.5f || maxZ - minZ < 0.5f || maxY - minY < 0.5f) continue;
-                        pf.Boxes.Add(new MapBox() { X = (minX + maxX) / 2, Y = (minY + maxY) / 2, Z = (minZ + maxZ) / 2, HalfX = (maxX - minX) / 2, HalfY = (maxY - minY) / 2, HalfZ = (maxZ - minZ) / 2 });
-                    }
-                }
+                    pf.Outlines.AddRange(MapFloorPlan.Trace(polygons.Where((p, k) => floorOf[k] == i + 1).ToList(), above));
                 plan.Add(pf);
             }
+            if (polygons.Count == 0) return plan;
+
+            //Each polygon in every square its bounds reach, so a big one leaves no gap
+            List<KeyValuePair<MapPolygon, int>> all = polygons.Select((p, k) => new KeyValuePair<MapPolygon, int>(p, floorOf[k])).ToList();
+            float x0 = polygons.Min(p => p.Outline.Min(q => q.X)) - 2, z0 = polygons.Min(p => p.Outline.Min(q => q.Y)) - 2;
+            IEnumerable<KeyValuePair<Point, KeyValuePair<MapPolygon, int>>> inCells = all.SelectMany(o =>
+            {
+                int ix0 = (int)Math.Floor((o.Key.Outline.Min(q => q.X) - x0) / BoxCell), ix1 = (int)Math.Floor((o.Key.Outline.Max(q => q.X) - x0) / BoxCell);
+                int iz0 = (int)Math.Floor((o.Key.Outline.Min(q => q.Y) - z0) / BoxCell), iz1 = (int)Math.Floor((o.Key.Outline.Max(q => q.Y) - z0) / BoxCell);
+                List<KeyValuePair<Point, KeyValuePair<MapPolygon, int>>> l = new List<KeyValuePair<Point, KeyValuePair<MapPolygon, int>>>();
+                for (int ix = ix0; ix <= ix1; ix++) for (int iz = iz0; iz <= iz1; iz++) l.Add(new KeyValuePair<Point, KeyValuePair<MapPolygon, int>>(new Point(ix, iz), o));
+                return l;
+            });
+            foreach (IGrouping<Point, KeyValuePair<MapPolygon, int>> cell in inCells.GroupBy(o => o.Key, o => o.Value))
+                Boxes(x0 + cell.Key.X * BoxCell, z0 + cell.Key.Y * BoxCell, BoxCell, cell.ToList(), plan);
             return plan;
         }
+
+        /* A square's floor boxes, from the polygons (and their floors) reaching it */
+        private static void Boxes(float x0, float z0, float size, List<KeyValuePair<MapPolygon, int>> items, List<MapPlanFloor> plan)
+        {
+            var floors = items.GroupBy(o => o.Value).OrderBy(g => g.Key).Select(g => new
+            {
+                Floor = g.Key,
+                Low = g.Min(o => o.Key.Lowest),
+                High = g.Max(o => o.Key.Highest),
+                MinX = g.Min(o => o.Key.Outline.Min(q => q.X)), MaxX = g.Max(o => o.Key.Outline.Max(q => q.X)),
+                MinZ = g.Min(o => o.Key.Outline.Min(q => q.Y)), MaxZ = g.Max(o => o.Key.Outline.Max(q => q.Y)),
+            }).ToList();
+            bool overlap = false;
+            for (int k = 0; k + 1 < floors.Count; k++) if (floors[k].High + 1 > floors[k + 1].Low) overlap = true;
+            if (overlap && size / 2 >= BoxCellMin)
+            {
+                float h = size / 2;
+                for (int a = 0; a < 2; a++)
+                    for (int b = 0; b < 2; b++)
+                    {
+                        float sx = x0 + a * h, sz = z0 + b * h;
+                        List<KeyValuePair<MapPolygon, int>> part = items.Where(o => o.Key.Outline.Max(q => q.X) >= sx && o.Key.Outline.Min(q => q.X) <= sx + h &&
+                                                                                     o.Key.Outline.Max(q => q.Y) >= sz && o.Key.Outline.Min(q => q.Y) <= sz + h).ToList();
+                        if (part.Count != 0) Boxes(sx, sz, h, part, plan);
+                    }
+                return;
+            }
+            for (int k = 0; k < floors.Count; k++)
+            {
+                var f = floors[k];
+                float minX = Math.Max(x0, f.MinX - 2), maxX = Math.Min(x0 + size, f.MaxX + 2);
+                float minZ = Math.Max(z0, f.MinZ - 2), maxZ = Math.Min(z0 + size, f.MaxZ + 2);
+                float minY = f.Low - 2, maxY = f.High + 3;
+                if (k > 0) minY = Split(floors[k - 1].High, f.Low);
+                if (k + 1 < floors.Count) maxY = Split(f.High, floors[k + 1].Low);
+                if (maxX - minX < 0.5f || maxZ - minZ < 0.5f || maxY - minY < 0.5f) continue;
+                plan[f.Floor].Boxes.Add(new MapBox() { X = (minX + maxX) / 2, Y = (minY + maxY) / 2, Z = (minZ + maxZ) / 2, HalfX = (maxX - minX) / 2, HalfY = (maxY - minY) / 2, HalfZ = (maxZ - minZ) / 2 });
+            }
+        }
+
+        /* The height between a floor's highest walkable surface and the next floor's lowest (or just under that, where they overlap) */
+        private static float Split(float lowerHigh, float upperLow) => lowerHigh < upperLow ? (lowerHigh + upperLow) / 2 : upperLow - 0.25f;
     }
 }

@@ -13,7 +13,9 @@ namespace OpenCAGE.MapAssets
     {
         public string Text;
         public float X, Z;
-        public MapLabel(string text, float x, float z) { Text = text; X = x; Z = z; }
+        /// <summary>The floor it is drawn on (a floor's name or keyframe), when it isn't the floor walkable there.</summary>
+        public string Floor;
+        public MapLabel(string text, float x, float z, string floor = null) { Text = text; X = x; Z = z; Floor = floor; }
     }
 
     /// <summary>

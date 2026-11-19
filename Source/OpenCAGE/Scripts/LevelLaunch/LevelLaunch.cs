@@ -39,9 +39,11 @@ namespace OpenCAGE
             {
                 _generation++;
                 LevelLaunchSettings settings = string.IsNullOrWhiteSpace(level) || EditorUtils.IsFrontend(level) ? new LevelLaunchSettings() : LevelLaunchSettings.Of(pathToAI, level);
+                //The level's own permanent soundbanks in (an earlier launch's out): files, so any build of the game takes them
+                string banksProblem = LevelPermanentSoundBanks.Apply(pathToAI, string.IsNullOrWhiteSpace(level) || EditorUtils.IsFrontend(level) ? null : level, applied);
                 //A build without them: only worth a word when the level has some
                 if (!LevelLaunchPatches.Supports(Singleton.Platform))
-                    return settings.IsEmpty ? null : "this version of the game (" + Singleton.Platform + ") can't take a level's launch settings";
+                    return settings.IsEmpty ? banksProblem : "this version of the game (" + Singleton.Platform + ") can't take a level's launch settings";
                 //The level's own loading movies in (an earlier launch's out): their playlist is the one the launch plays
                 string ownPlaylist = LevelLoadingMovies.Apply(pathToAI, level, settings, out string moviesProblem);
                 LevelLaunchSettings written = settings;
@@ -58,14 +60,16 @@ namespace OpenCAGE
                 bool anim = settings.LargerAnimationMemory == true && !AnimationHeapBudget.Enabled;
                 if (anim && !PatchManager.PatchAnimHeapBudget(Singleton.Platform, pathToAI, true))
                     problem = (problem != null ? problem + "; " : "") + "the larger animation memory could not be written";
-                bool any = LevelLaunchPatches.Read(Singleton.Platform, pathToAI).AnyLevelSetting || anim || LevelLoadingMovies.InUse(pathToAI);
+                bool any = LevelLaunchPatches.Read(Singleton.Platform, pathToAI).AnyLevelSetting || anim || LevelLoadingMovies.InUse(pathToAI) || LevelPermanentSoundBanks.InUse(pathToAI);
                 if (any)
                     applied.AddRange(settings.Describe());
                 Record(pathToAI, any ? level : null, anim);
                 if (problem != null)
                     Console.WriteLine("LevelLaunch: " + problem);
                 //Only the level's own settings are reported: a binary the guard can't go into launches as it is
-                return settings.IsEmpty ? null : problem;
+                if (banksProblem != null)
+                    Console.WriteLine("LevelLaunch: " + banksProblem);
+                return settings.IsEmpty ? banksProblem : banksProblem != null ? (problem != null ? problem + "; " : "") + banksProblem : problem;
             }
         }
 
@@ -87,6 +91,9 @@ namespace OpenCAGE
             string movies = LevelLoadingMovies.PutBack(pathToAI);
             if (movies != null)
                 problem = (problem != null ? problem + "; " : "") + movies;
+            string banks = LevelPermanentSoundBanks.PutBack(pathToAI);
+            if (banks != null)
+                problem = (problem != null ? problem + "; " : "") + banks;
             Record(pathToAI, null, false);
             return problem;
         }
@@ -94,7 +101,7 @@ namespace OpenCAGE
         /* Whether AI.exe holds a level's settings: one of its own, or the larger animation memory a level's launch turned on */
         private static bool InUse(string pathToAI)
         {
-            return LevelLaunchPatches.Read(Singleton.Platform, pathToAI).AnyLevelSetting || LevelLoadingMovies.InUse(pathToAI) ||
+            return LevelLaunchPatches.Read(Singleton.Platform, pathToAI).AnyLevelSetting || LevelLoadingMovies.InUse(pathToAI) || LevelPermanentSoundBanks.InUse(pathToAI) ||
                    (RecordedAnim(pathToAI) && PatchManager.IsAnimHeapBudgetPatched(Singleton.Platform, pathToAI) == true);
         }
 

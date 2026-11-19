@@ -57,6 +57,9 @@ namespace OpenCAGE.MCP
             //The Tab map helper (Scripts\MapAssets): generate_map_assets, check_map_items
             foreach (McpTool tool in McpMapAssetTools.Tools())
                 yield return tool;
+            //The AI markup tool (Scripts\AIMarkup): place_ai_markup, check_ai_markup
+            foreach (McpTool tool in McpAIMarkupTools.Tools())
+                yield return tool;
         }
 
         #region Cache

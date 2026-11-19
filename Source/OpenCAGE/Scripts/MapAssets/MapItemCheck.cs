@@ -6,6 +6,7 @@ using OpenCAGE.MCP;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 
 namespace OpenCAGE.MapAssets
 {
@@ -45,6 +46,43 @@ namespace OpenCAGE.MapAssets
             }
             return floors;
         }
+
+        /// <summary>
+        /// A world point's floor (keyframe) by the root composite's floor boxes (PlayerTriggerBoxes whose on_entered sets one of the
+        /// MapAnchor's floors): the floor of the smallest box holding it, else of the nearest box. Null when there are no such boxes.
+        /// </summary>
+        public static Func<Vector3, string> FloorAt(Commands commands)
+        {
+            Composite root = commands?.EntryPoints?[0];
+            if (root == null || FloorsOf(commands).Count == 0) return null;
+            ShortGuid floorName = ShortGuidUtils.Generate("floor_name"), entered = ShortGuidUtils.Generate("on_entered"), setTrue = ShortGuidUtils.Generate("set_true");
+            ShortGuid half = ShortGuidUtils.Generate("half_dimensions");
+            List<KeyValuePair<string, Vector3[]>> boxes = new List<KeyValuePair<string, Vector3[]>>();
+            foreach (FunctionEntity change in root.functions.Where(o => o.function.IsFunctionType && o.function.AsFunctionType == FunctionType.Map_Floor_Change))
+            {
+                string key = (change.GetParameter(floorName)?.content as cString)?.value;
+                if (string.IsNullOrEmpty(key)) continue;
+                foreach (FunctionEntity box in root.functions.Where(o => o.function.IsFunctionType && o.function.AsFunctionType == FunctionType.PlayerTriggerBox
+                    && o.childLinks.Any(l => l.thisParamID == entered && l.linkedEntityID == change.shortGUID && l.linkedParamID == setTrue)))
+                {
+                    Vector3 c = (box.GetParameter(ShortGuids.position)?.content as cTransform)?.position ?? Vector3.Zero;
+                    Vector3 h = (box.GetParameter(half)?.content as cVector3)?.value ?? Vector3.Zero;
+                    boxes.Add(new KeyValuePair<string, Vector3[]>(key, new[] { c, Vector3.Abs(h) }));
+                }
+            }
+            if (boxes.Count == 0) return null;
+            return p =>
+            {
+                string best = null; float bestSize = float.MaxValue, bestGap = float.MaxValue;
+                foreach (KeyValuePair<string, Vector3[]> b in boxes)
+                {
+                    Vector3 d = Vector3.Max(Vector3.Zero, Vector3.Abs(p - b.Value[0]) - b.Value[1]);
+                    float gap = d.Length(), size = b.Value[1].X * b.Value[1].Y * b.Value[1].Z;
+                    if (gap < bestGap - 1e-4f || (gap <= bestGap + 1e-4f && size < bestSize)) { best = b.Key; bestGap = gap; bestSize = size; }
+                }
+                return best;
+            };
+        }
     }
 }
 
@@ -64,7 +102,7 @@ namespace OpenCAGE
             List<MapFloor> floors = MapItemCheck.FloorsOf(context.Commands);
             if (floors.Count == 0) return;
             Composite root = context.Commands.EntryPoints[0];
-            List<MapItemFloor> wrong = MapAssetGenerator.MapItems(context.Commands, floors).Where(o => o.Wrong).ToList();
+            List<MapItemFloor> wrong = MapAssetGenerator.MapItems(context.Commands, MapItemCheck.FloorAt(context.Commands)).Where(o => o.Wrong).ToList();
             foreach (MapItemFloor item in wrong)
             {
                 MapItemFloor fixing = item;

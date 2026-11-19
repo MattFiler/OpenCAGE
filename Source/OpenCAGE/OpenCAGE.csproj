@@ -1047,6 +1047,7 @@
     <Compile Include="Scripts\LevelLaunch\LevelLaunchPatches.cs" />
     <Compile Include="Scripts\LevelLaunch\LevelLaunchSettings.cs" />
     <Compile Include="Scripts\LevelLaunch\LevelLoadingMovies.cs" />
+    <Compile Include="Scripts\LevelLaunch\LevelPermanentSoundBanks.cs" />
     <Compile Include="Scripts\MCP\McpLevelLaunchTools.cs" />
     <Compile Include="Popups\LevelLaunchSettingsEditor.cs">
       <SubType>Form</SubType>
@@ -1467,6 +1468,12 @@
     <Compile Include="Scripts\AlienVents\AlienVentsCheck.cs" />
     <Compile Include="Scripts\MCP\McpAlienVentTools.cs" />
     <Compile Include="Popups\AlienVentsWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Scripts\AIMarkup\AIMarkup.cs" />
+    <Compile Include="Scripts\AIMarkup\AIMarkupCheck.cs" />
+    <Compile Include="Scripts\MCP\McpAIMarkupTools.cs" />
+    <Compile Include="Popups\AIMarkupWindow.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Scripts\ModelCompositeBuilder.cs" />

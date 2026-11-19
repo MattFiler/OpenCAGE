@@ -12,14 +12,64 @@ namespace OpenCAGE.MapAssets
     {
         public PointF[] Outline;
         public float Height;
+        /// <summary>Each corner's height, when known (else the whole polygon is at Height).</summary>
+        public float[] Heights;
         public float CentreX, CentreZ;
 
-        public MapPolygon(PointF[] outline, float height)
+        public MapPolygon(PointF[] outline, float height, float[] heights = null)
         {
             Outline = outline;
             Height = height;
+            Heights = heights != null && heights.Length == outline.Length ? heights : null;
             CentreX = outline.Average(o => o.X);
             CentreZ = outline.Average(o => o.Y);
+        }
+
+        public float Lowest => Heights != null ? Heights.Min() : Height;
+        public float Highest => Heights != null ? Heights.Max() : Height;
+
+        /// <summary>
+        /// The surface's height at (x, z): within the fan of triangles from its centre (at Height) to each pair of corners, so every
+        /// corner's height holds even where the polygon isn't flat.
+        /// </summary>
+        public float HeightAt(float x, float z)
+        {
+            if (Heights == null || Outline.Length < 3) return Height;
+            float bestMin = float.MinValue, y = Height;
+            for (int i = 0; i < Outline.Length; i++)
+            {
+                int j = (i + 1) % Outline.Length;
+                float ax = Outline[i].X - CentreX, az = Outline[i].Y - CentreZ, bx = Outline[j].X - CentreX, bz = Outline[j].Y - CentreZ;
+                float den = ax * bz - az * bx;
+                if (Math.Abs(den) < 1e-9f) continue;
+                float px = x - CentreX, pz = z - CentreZ;
+                float u = (px * bz - pz * bx) / den, v = (ax * pz - az * px) / den, w = 1 - u - v;
+                float worst = Math.Min(w, Math.Min(u, v));
+                if (worst <= bestMin) continue;
+                bestMin = worst;
+                u = Math.Max(0, u); v = Math.Max(0, v); w = Math.Max(0, w);
+                float sum = u + v + w;
+                y = (w * Height + u * Heights[i] + v * Heights[j]) / sum;
+                if (worst >= 0) break;
+            }
+            return Math.Max(Lowest, Math.Min(Highest, y));
+        }
+
+        /// <summary>Whether it is level: its corners within the rise maxDegrees makes across it (or 0.25 m on a small one).</summary>
+        public bool IsLevel(float maxDegrees)
+        {
+            if (Heights == null) return true;
+            float w = Outline.Max(o => o.X) - Outline.Min(o => o.X), d = Outline.Max(o => o.Y) - Outline.Min(o => o.Y);
+            return Highest - Lowest <= Math.Max(0.25, Math.Tan(maxDegrees * Math.PI / 180) * Math.Sqrt(w * w + d * d));
+        }
+
+        public bool Contains(float x, float z)
+        {
+            bool c = false;
+            for (int i = 0, j = Outline.Length - 1; i < Outline.Length; j = i++)
+                if ((Outline[i].Y > z) != (Outline[j].Y > z) && x < (Outline[j].X - Outline[i].X) * (z - Outline[i].Y) / (Outline[j].Y - Outline[i].Y) + Outline[i].X)
+                    c = !c;
+            return c;
         }
     }
 
@@ -32,13 +82,19 @@ namespace OpenCAGE.MapAssets
         /// <summary>How far the walkable area is grown out (metres): about the walk mesh's distance from the walls.</summary>
         public float Grow = 0.3f;
         /// <summary>Outline simplification tolerance (metres).</summary>
-        public float Simplify = 0.3f;
+        public float Simplify = 0.4f;
         /// <summary>Outlines smaller than this (square metres) are dropped.</summary>
         public float MinArea = 3f;
         /// <summary>Enclosed holes up to this size (square metres: furniture, pillars) are filled.</summary>
         public float FillHoles = 30f;
-        /// <summary>Edges near the world axes made exactly axis-aligned.</summary>
+        /// <summary>Outlines squared to their walls' axes: edges near them made exactly parallel, small steps and cut corners removed.</summary>
         public bool Square = true;
+        /// <summary>Edges within this many degrees of the axes are made parallel to them.</summary>
+        public float SquareDegrees = 14f;
+        /// <summary>Steps between parallel edges up to this deep (metres) are straightened into one edge.</summary>
+        public float Jog = 0.6f;
+        /// <summary>Slanted edges up to this long (metres) between edges at right angles are a cut corner, made square.</summary>
+        public float Corner = 2f;
         public int FillAlpha = 25, LineAlpha = 255;
     }
 
@@ -52,7 +108,7 @@ namespace OpenCAGE.MapAssets
 
     /// <summary>
     /// Floor plans from a navmesh: the chosen polygons are rasterised, small gaps closed, enclosed holes filled, the area grown to the
-    /// walls, then traced (marching squares), simplified and squared to the axes.
+    /// walls, then traced (marching squares), simplified and squared to the walls' axes (the plan's main axes, or an outline's own).
     /// </summary>
     public static class MapFloorPlan
     {
@@ -68,14 +124,20 @@ namespace OpenCAGE.MapAssets
             if (style.Close > 0) { Dilate(g, style.Close); Erode(g, style.Close); }
             FillHoles(g, style.FillHoles);
             if (style.Grow > 0) Dilate(g, style.Grow);
+            List<KeyValuePair<List<PointF>, float>> loops = new List<KeyValuePair<List<PointF>, float>>();
             foreach (List<PointF> loop in Contours(g))
             {
                 float area = Area(loop);
                 if (Math.Abs(area) < style.MinArea) continue;
-                List<PointF> simple = Simplify(loop, style.Simplify);
-                if (style.Square) simple = Square(simple, 14f);
-                if (simple.Count < 3) continue;
-                outlines.Add(new MapOutline() { Points = simple, Hole = area > 0, Style = style });
+                loops.Add(new KeyValuePair<List<PointF>, float>(Simplify(loop, style.Simplify), area));
+            }
+            float main = style.Square ? Axis(loops.SelectMany(o => Edges(o.Key)), 0, 0) : 0;
+            foreach (KeyValuePair<List<PointF>, float> loop in loops)
+            {
+                List<PointF> simple = loop.Key;
+                if (style.Square) simple = Rectify(simple, Axis(Edges(simple), main, 0.5f), style);
+                if (simple.Count < 3 || Math.Abs(Area(simple)) < style.MinArea / 2) continue;
+                outlines.Add(new MapOutline() { Points = simple, Hole = loop.Value > 0, Style = style });
             }
             return outlines;
         }
@@ -269,31 +331,199 @@ namespace OpenCAGE.MapAssets
             return pts.Where((p, i) => keep[i]).ToList();
         }
 
-        /* Edges within maxDeg of the world axes made exactly axis-aligned (both ends to their mean), then repeated and collinear
-           points dropped: rooms are built square to the axes, the tracer's steps are not */
-        private static List<PointF> Square(List<PointF> pts, float maxDeg)
+        private static IEnumerable<KeyValuePair<PointF, PointF>> Edges(List<PointF> loop)
         {
-            List<PointF> p = pts.ToList();
-            double tan = Math.Tan(maxDeg * Math.PI / 180);
-            for (int pass = 0; pass < 3; pass++)
-                for (int i = 0; i < p.Count; i++)
-                {
-                    int j = (i + 1) % p.Count;
-                    float dx = p[j].X - p[i].X, dz = p[j].Y - p[i].Y;
-                    if (Math.Abs(dx) < 1e-4 && Math.Abs(dz) < 1e-4) continue;
-                    if (Math.Abs(dz) <= Math.Abs(dx) * tan) { float m = (p[i].Y + p[j].Y) / 2; p[i] = new PointF(p[i].X, m); p[j] = new PointF(p[j].X, m); }
-                    else if (Math.Abs(dx) <= Math.Abs(dz) * tan) { float m = (p[i].X + p[j].X) / 2; p[i] = new PointF(m, p[i].Y); p[j] = new PointF(m, p[j].Y); }
-                }
-            List<PointF> r = new List<PointF>();
-            foreach (PointF q in p) if (r.Count == 0 || Sq(r[r.Count - 1], q) > 1e-4f) r.Add(q);
-            if (r.Count > 1 && Sq(r[0], r[r.Count - 1]) < 1e-4f) r.RemoveAt(r.Count - 1);
-            for (int i = 0; i < r.Count && r.Count > 3;)
+            for (int i = 0; i < loop.Count; i++) yield return new KeyValuePair<PointF, PointF>(loop[i], loop[(i + 1) % loop.Count]);
+        }
+
+        /* The axes most of the edges' length runs along or across (radians, 0 up to 90 degrees), from 1 degree bins smoothed over 5.
+           'fallback' when those edges hold less than 'share' of the length, or lie within 2 degrees of it */
+        private static float Axis(IEnumerable<KeyValuePair<PointF, PointF>> edges, float fallback, float share)
+        {
+            double[] bins = new double[90];
+            double total = 0;
+            foreach (KeyValuePair<PointF, PointF> e in edges)
             {
-                PointF a = r[(i + r.Count - 1) % r.Count], b = r[i], c = r[(i + 1) % r.Count];
-                float cross = (b.X - a.X) * (c.Y - b.Y) - (b.Y - a.Y) * (c.X - b.X);
-                if (Math.Abs(cross) < 1e-3f) r.RemoveAt(i); else i++;
+                double dx = e.Value.X - e.Key.X, dz = e.Value.Y - e.Key.Y, len = Math.Sqrt(dx * dx + dz * dz);
+                if (len < 0.5) continue;
+                double deg = Math.Atan2(dz, dx) * 180 / Math.PI;
+                deg = ((deg % 90) + 90) % 90;
+                bins[(int)deg % 90] += len;
+                total += len;
             }
-            return r;
+            if (total <= 0) return fallback;
+            int best = 0; double bestSum = -1;
+            for (int b = 0; b < 90; b++)
+            {
+                double s = 0;
+                for (int k = -2; k <= 2; k++) s += bins[(b + k + 90) % 90];
+                if (s > bestSum) { bestSum = s; best = b; }
+            }
+            if (bestSum < total * share) return fallback;
+            double wx = 0, ww = 0;
+            for (int k = -2; k <= 2; k++) { wx += bins[(best + k + 90) % 90] * (best + k + 0.5); ww += bins[(best + k + 90) % 90]; }
+            double axis = ((wx / ww) % 90 + 90) % 90;
+            double fb = fallback * 180 / Math.PI, d = Math.Abs(axis - fb) % 90;
+            if (Math.Min(d, 90 - d) <= 2) return fallback;
+            return (float)(axis * Math.PI / 180);
+        }
+
+        private enum RunAxis { Across, Along, Slanted }
+
+        /* A stretch of outline: along one axis at an offset (x for Along, z for Across), or slanted from A to B */
+        private class Run
+        {
+            public RunAxis Axis;
+            public float Offset, Length;
+            public PointF A, B;
+        }
+
+        /*
+         * An outline squared to its axes: in their frame, each edge within SquareDegrees of an axis becomes a run exactly along it (at
+         * its mean offset); neighbouring runs on one axis a small step apart join (length-weighted offset); a short slanted edge between
+         * runs at right angles (a rounded or cut corner) goes, as does a short notch between two runs on one axis; a short slanted step
+         * between them is made square. The corners are then where neighbouring runs meet, so every edge is a straight line.
+         */
+        private static List<PointF> Rectify(List<PointF> loop, float axis, MapLayerStyle style)
+        {
+            if (loop.Count < 4) return loop;
+            float c = (float)Math.Cos(axis), s = (float)Math.Sin(axis);
+            List<PointF> p = loop.Select(q => new PointF(q.X * c + q.Y * s, -q.X * s + q.Y * c)).ToList();
+            double tan = Math.Tan(style.SquareDegrees * Math.PI / 180);
+            List<Run> runs = new List<Run>();
+            for (int i = 0; i < p.Count; i++)
+            {
+                PointF a = p[i], b = p[(i + 1) % p.Count];
+                float dx = b.X - a.X, dz = b.Y - a.Y, len = (float)Math.Sqrt(dx * dx + dz * dz);
+                if (len < 1e-4f) continue;
+                Run r = new Run() { A = a, B = b, Length = len, Axis = RunAxis.Slanted };
+                if (Math.Abs(dz) <= Math.Abs(dx) * tan) { r.Axis = RunAxis.Across; r.Offset = (a.Y + b.Y) / 2; }
+                else if (Math.Abs(dx) <= Math.Abs(dz) * tan) { r.Axis = RunAxis.Along; r.Offset = (a.X + b.X) / 2; }
+                else if (Math.Abs(Math.Abs(dx) - Math.Abs(dz)) <= (Math.Abs(dx) + Math.Abs(dz)) * tan / 2)
+                {
+                    //Near the diagonal: exactly 45 degrees, through its middle
+                    float mx = (a.X + b.X) / 2, mz = (a.Y + b.Y) / 2, h = (Math.Abs(dx) + Math.Abs(dz)) / 4;
+                    r.A = new PointF(mx - Math.Sign(dx) * h, mz - Math.Sign(dz) * h);
+                    r.B = new PointF(mx + Math.Sign(dx) * h, mz + Math.Sign(dz) * h);
+                }
+                runs.Add(r);
+            }
+
+            for (int guard = 0; guard < 4 * p.Count && runs.Count > 4; guard++)
+            {
+                bool changed = false;
+                for (int i = 0; i < runs.Count && !changed; i++)
+                {
+                    int ni = (i + 1) % runs.Count, mi = (i + 2) % runs.Count;
+                    Run r = runs[i], n = runs[ni], m = runs[mi];
+                    if (r.Axis == RunAxis.Slanted) continue;
+                    if (n.Axis == r.Axis && Math.Abs(r.Offset - n.Offset) <= style.Jog)
+                    {
+                        Join(r, n);
+                        runs.RemoveAt(ni);
+                        changed = true;
+                        continue;
+                    }
+                    //Up to three short runs between r and a run on r's axis (a notch or bump): gone when the two are a small step apart
+                    //(one run), else a lone slanted one is made a square step; between r and a run across it, slanted ones are a cut corner
+                    float between = 0;
+                    bool slanted = true;
+                    for (int k = 2; k <= 4 && k < runs.Count - 1 && !changed; k++)
+                    {
+                        Run b = runs[(i + k - 1) % runs.Count];
+                        between += b.Length;
+                        slanted &= b.Axis == RunAxis.Slanted;
+                        if (b.Length > style.Corner || between > 2 * style.Corner) break;
+                        Run e = runs[(i + k) % runs.Count];
+                        if (e.Axis == r.Axis && Math.Abs(r.Offset - e.Offset) <= style.Jog)
+                        {
+                            Join(r, e);
+                            Remove(runs, i, k);
+                            changed = true;
+                        }
+                        else if (e.Axis == r.Axis && k == 2 && slanted)
+                        {
+                            b.Axis = r.Axis == RunAxis.Across ? RunAxis.Along : RunAxis.Across;
+                            b.Offset = b.Axis == RunAxis.Along ? (b.A.X + b.B.X) / 2 : (b.A.Y + b.B.Y) / 2;
+                            changed = true;
+                        }
+                        else if (e.Axis != r.Axis && e.Axis != RunAxis.Slanted && slanted && between <= style.Corner * 1.5f)
+                        {
+                            Remove(runs, i, k - 1);
+                            changed = true;
+                        }
+                    }
+                }
+                if (!changed) break;
+            }
+            if (runs.Count < 3) return loop;
+
+            List<PointF> o = new List<PointF>();
+            for (int i = 0; i < runs.Count; i++)
+                Meet(runs[i], runs[(i + 1) % runs.Count], o, style.Corner);
+            List<PointF> r2 = new List<PointF>();
+            foreach (PointF q in o) if (r2.Count == 0 || Sq(r2[r2.Count - 1], q) > 1e-4f) r2.Add(q);
+            if (r2.Count > 1 && Sq(r2[0], r2[r2.Count - 1]) < 1e-4f) r2.RemoveAt(r2.Count - 1);
+            for (int i = 0; i < r2.Count && r2.Count > 3;)
+            {
+                PointF a = r2[(i + r2.Count - 1) % r2.Count], b = r2[i], d = r2[(i + 1) % r2.Count];
+                float cross = (b.X - a.X) * (d.Y - b.Y) - (b.Y - a.Y) * (d.X - b.X);
+                if (Math.Abs(cross) < 1e-3f) r2.RemoveAt(i); else i++;
+            }
+            if (r2.Count < 3) return loop;
+            return r2.Select(q => new PointF(q.X * c - q.Y * s, q.X * s + q.Y * c)).ToList();
+        }
+
+        /* The 'count' runs after run i dropped */
+        private static void Remove(List<Run> runs, int i, int count)
+        {
+            foreach (int k in Enumerable.Range(1, count).Select(j => (i + j) % runs.Count).OrderByDescending(o => o).ToList())
+                runs.RemoveAt(k);
+        }
+
+        /* n added onto the end of r (one run along r's axis, at the length-weighted offset) */
+        private static void Join(Run r, Run n)
+        {
+            if (n.Axis == r.Axis) r.Offset = (r.Offset * r.Length + n.Offset * n.Length) / (r.Length + n.Length);
+            r.Length += n.Length;
+            r.B = n.B;
+        }
+
+        /* Where run r meets the next run n: the corners added to o */
+        private static void Meet(Run r, Run n, List<PointF> o, float reach)
+        {
+            PointF at = n.A;
+            if (r.Axis == RunAxis.Across && n.Axis == RunAxis.Along) { o.Add(new PointF(n.Offset, r.Offset)); return; }
+            if (r.Axis == RunAxis.Along && n.Axis == RunAxis.Across) { o.Add(new PointF(r.Offset, n.Offset)); return; }
+            if (r.Axis == RunAxis.Across && n.Axis == RunAxis.Across) { o.Add(new PointF(at.X, r.Offset)); o.Add(new PointF(at.X, n.Offset)); return; }
+            if (r.Axis == RunAxis.Along && n.Axis == RunAxis.Along) { o.Add(new PointF(r.Offset, at.Y)); o.Add(new PointF(n.Offset, at.Y)); return; }
+            PointF hit;
+            if (Cross(Line(r), Line(n), out hit) && Sq(hit, at) <= reach * reach * 4) { o.Add(hit); return; }
+            if (r.Axis != RunAxis.Slanted) o.Add(OnRun(r, at));
+            o.Add(at);
+            if (n.Axis != RunAxis.Slanted) o.Add(OnRun(n, at));
+        }
+
+        private static PointF OnRun(Run r, PointF p) => r.Axis == RunAxis.Across ? new PointF(p.X, r.Offset) : new PointF(r.Offset, p.Y);
+
+        /* A run as a point and a unit direction */
+        private static KeyValuePair<PointF, PointF> Line(Run r)
+        {
+            if (r.Axis == RunAxis.Across) return new KeyValuePair<PointF, PointF>(new PointF(r.A.X, r.Offset), new PointF(1, 0));
+            if (r.Axis == RunAxis.Along) return new KeyValuePair<PointF, PointF>(new PointF(r.Offset, r.A.Y), new PointF(0, 1));
+            float dx = r.B.X - r.A.X, dz = r.B.Y - r.A.Y, len = (float)Math.Sqrt(dx * dx + dz * dz);
+            return new KeyValuePair<PointF, PointF>(r.A, new PointF(dx / len, dz / len));
+        }
+
+        /* Two lines' crossing, unless they run within 10 degrees of each other */
+        private static bool Cross(KeyValuePair<PointF, PointF> a, KeyValuePair<PointF, PointF> b, out PointF hit)
+        {
+            hit = PointF.Empty;
+            float den = a.Value.X * b.Value.Y - a.Value.Y * b.Value.X;
+            if (Math.Abs(den) < 0.17f) return false;
+            float t = ((b.Key.X - a.Key.X) * b.Value.Y - (b.Key.Y - a.Key.Y) * b.Value.X) / den;
+            hit = new PointF(a.Key.X + a.Value.X * t, a.Key.Y + a.Value.Y * t);
+            return true;
         }
         #endregion
     }

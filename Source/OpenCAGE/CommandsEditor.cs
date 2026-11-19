@@ -124,6 +124,8 @@ namespace OpenCAGE
             OpenCAGE.Popups.AlienVentsWindow.AttachMenu(recaptureAllCubemapsToolStripMenuItem);
             //File > Generate Map Assets, after Calculate Alien Vents
             OpenCAGE.Popups.MapAssetsWindow.AttachMenu(recaptureAllCubemapsToolStripMenuItem);
+            //File > Place AI Markup, after Generate Map Assets
+            OpenCAGE.Popups.AIMarkupWindow.AttachMenu(recaptureAllCubemapsToolStripMenuItem);
             //File > Import Scene..., after Import Composites
             OpenCAGE.Popups.SceneImportWindow.AttachMenu(importCompositesMenu);
             //Options > Save/Build > Walk On Downward-Facing Floors, at the end

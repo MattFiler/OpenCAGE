@@ -19,6 +19,8 @@ namespace OpenCAGE.MapAssets
         public List<MapFloor> Floors;
         public float Scale;
         public string MapName;
+        /// <summary>Room names drawn on the map: each on its Floor (a floor's name or keyframe), or else on the floor walkable there.</summary>
+        public List<MapLabel> Labels;
     }
 
     /// <summary>A map item's floor: the entity whose map_keyframe says which floor the icon shows on, and where the item is.</summary>
@@ -52,6 +54,8 @@ namespace OpenCAGE.MapAssets
     {
         public string Level;
         public List<MapPolygon> Walkable = new List<MapPolygon>();
+        /// <summary>The floor each walkable polygon is drawn on.</summary>
+        public int[] FloorOf;
         public int NavPolygons;
         public List<MapFloor> Floors = new List<MapFloor>();
         public MapAnchorSettings Anchor;
@@ -93,19 +97,25 @@ namespace OpenCAGE.MapAssets
                 throw new McpError("The level has no walk mesh yet: Save & Build it with the navmesh baker first (the map is drawn from where you can walk).");
             MapAssetsPlan plan = new MapAssetsPlan() { Level = level.Name, NavPolygons = nav.Polygons.Length };
 
-            //Every polygon, its links (the polygon references' low bits are the index), the walkable area = the biggest connected part
+            //Every polygon, its links (the polygon references' low bits are the index), the walkable area = the biggest connected part.
+            //Left out: what the player can't use (the alien's backstage vent sheet, and off-mesh links the player isn't admitted to).
             int count = nav.Polygons.Length, bits = 1;
             while ((1 << bits) < count) bits++;
             uint mask = (1u << bits) - 1;
             MapPolygon[] all = new MapPolygon[count];
+            bool[] usable = new bool[count];
             List<int>[] links = new List<int>[count];
             for (int i = 0; i < count; i++)
             {
                 NavigationMesh.dtPoly p = nav.Polygons[i];
                 PointF[] outline = new PointF[p.vertCount];
+                float[] heights = new float[p.vertCount];
                 float y = 0;
-                for (int k = 0; k < p.vertCount; k++) { Vector3 v = nav.Vertices[p.verts[k]]; outline[k] = new PointF(v.X, v.Z); y += v.Y; }
-                all[i] = p.vertCount > 0 ? new MapPolygon(outline, y / p.vertCount) : null;
+                for (int k = 0; k < p.vertCount; k++) { Vector3 v = nav.Vertices[p.verts[k]]; outline[k] = new PointF(v.X, v.Z); heights[k] = v.Y; y += v.Y; }
+                all[i] = p.vertCount > 0 ? new MapPolygon(outline, y / p.vertCount, heights) : null;
+                bool backstage = ((int)p.area.GetMarkupFlags() & (1 << (int)NavigationMesh.NavMeshAreaType.Backstage)) != 0;
+                bool offMesh = p.area.GetPolyType() == NavigationMesh.dtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION;
+                usable[i] = !backstage && (!offMesh || (p.area.GetAdmittanceFlags() & CATHODE.Enums.NAVIGATION_CHARACTER_CLASS_COMBINATION.PLAYER) != 0);
                 links[i] = new List<int>();
                 for (int l = p.firstLink, guard = 0; l >= 0 && nav.Links != null && l < nav.Links.Length && guard < 64; l = nav.Links[l].next, guard++)
                     links[i].Add((int)(nav.Links[l].polygonRef & mask));
@@ -114,35 +124,77 @@ namespace OpenCAGE.MapAssets
             bool[] done = new bool[count];
             for (int i = 0; i < count; i++)
             {
-                if (done[i] || all[i] == null || all[i].Outline.Length < 3) continue;
-                bool[] part = MapFloors.Reachable(count, k => links[k], new[] { i });
+                if (done[i] || !usable[i] || all[i] == null || all[i].Outline.Length < 3) continue;
+                bool[] part = MapFloors.Reachable(count, k => links[k].Where(o => o >= 0 && o < count && usable[o]), new[] { i });
                 float area = 0;
                 for (int k = 0; k < count; k++) if (part[k]) { done[k] = true; if (all[k] != null && all[k].Outline.Length >= 3) area += MapFloors.AreaOf(all[k]); }
                 if (area > bestArea) { bestArea = area; best = part; }
             }
-            for (int i = 0; i < count; i++) if (best != null && best[i] && all[i] != null && all[i].Outline.Length >= 3) plan.Walkable.Add(all[i]);
+            int[] walkIndex = Enumerable.Repeat(-1, count).ToArray();
+            for (int i = 0; i < count; i++)
+                if (best != null && best[i] && all[i] != null && all[i].Outline.Length >= 3) { walkIndex[i] = plan.Walkable.Count; plan.Walkable.Add(all[i]); }
             if (plan.Walkable.Count == 0)
                 throw new McpError("The walk mesh has no walkable area.");
+            //Walk links between walkable polygons (through an off-mesh link: to the polygons at its far end)
+            List<List<int>> walkLinks = plan.Walkable.Select(o => new List<int>()).ToList();
+            for (int i = 0; i < count; i++)
+            {
+                if (walkIndex[i] < 0) continue;
+                foreach (int k in links[i].Where(o => o >= 0 && o < count && best[o]))
+                {
+                    if (walkIndex[k] >= 0) walkLinks[walkIndex[i]].Add(walkIndex[k]);
+                    else foreach (int j in links[k].Where(o => o >= 0 && o < count && walkIndex[o] >= 0 && o != i)) walkLinks[walkIndex[i]].Add(walkIndex[j]);
+                }
+            }
 
-            //Floors: as given, or found; the game takes six at most
+            //Floors: as given, or found; the game takes six at most. Their heights split the walkable area into regions, and each region
+            //goes on the floor above what it covers (MapFloors.Assign); floors nothing is on are dropped
             plan.Floors = options.Floors != null && options.Floors.Count != 0 ? options.Floors.OrderBy(o => o.Level).ToList() : MapFloors.Find(plan.Walkable);
             if (plan.Floors.Count > MapPlanner.MaxFloors)
                 throw new McpError("The map has " + plan.Floors.Count + " floors; the game's map takes " + MapPlanner.MaxFloors + " at most. Join some (raise their heights to meet).");
             for (int i = 0; i < plan.Floors.Count; i++)
             {
+                plan.Floors[i].From = i == 0 ? float.NegativeInfinity : plan.Floors[i].From;
+                plan.Floors[i].To = i == plan.Floors.Count - 1 ? float.PositiveInfinity : plan.Floors[i].To;
+            }
+            plan.FloorOf = MapFloors.Assign(plan.Walkable, walkLinks, plan.Floors);
+            List<int> used = plan.FloorOf.Distinct().OrderBy(o => o).ToList();
+            if (used.Count < plan.Floors.Count)
+            {
+                plan.Notes.Add("Nothing ends up on " + string.Join(", ", Enumerable.Range(0, plan.Floors.Count).Where(i => !used.Contains(i)).Select(i => string.IsNullOrWhiteSpace(plan.Floors[i].Name) ? "the floor from " + plan.Floors[i].From.ToString("0.#") + " m" : plan.Floors[i].Name)) +
+                    ", so it is left out: a floor keeps the level areas at its heights and the decks over the floor below, and slopes join the floor beside them.");
+                int[] remap = new int[plan.Floors.Count];
+                for (int k = 0; k < used.Count; k++) remap[used[k]] = k;
+                plan.FloorOf = plan.FloorOf.Select(o => remap[o]).ToArray();
+                plan.Floors = used.Select(o => plan.Floors[o]).ToList();
+                for (int k = 0; k < plan.Floors.Count; k++)
+                {
+                    plan.Floors[k].From = k == 0 ? float.NegativeInfinity : plan.Floors[k].From;
+                    plan.Floors[k].To = k == plan.Floors.Count - 1 ? float.PositiveInfinity : plan.Floors[k + 1].From;
+                }
+            }
+            bool found = options.Floors == null || options.Floors.Count == 0;
+            for (int i = 0; i < plan.Floors.Count; i++)
+            {
                 MapFloor f = plan.Floors[i];
                 f.Keyframe = MapPlanner.BorrowedKeyframes[i];
-                if (string.IsNullOrWhiteSpace(f.Name)) f.Name = plan.Floors.Count == 1 ? "MAP" : "LEVEL " + (i + 1);
-                f.From = i == 0 ? float.NegativeInfinity : f.From;
-                f.To = i == plan.Floors.Count - 1 ? float.PositiveInfinity : f.To;
-                f.Area = plan.Walkable.Where(p => MapPlanner.FloorOf(plan.Floors, p.Height) == i).Sum(p => MapFloors.AreaOf(p));
+                if (found || string.IsNullOrWhiteSpace(f.Name)) f.Name = plan.Floors.Count == 1 ? "MAP" : "LEVEL " + (i + 1);
+                List<MapPolygon> on = plan.Walkable.Where((p, k) => plan.FloorOf[k] == i).ToList();
+                f.Area = on.Sum(p => MapFloors.AreaOf(p));
+                if (f.Area > 0) f.Level = on.Sum(p => MapFloors.AreaOf(p) * p.Height) / f.Area;
             }
             plan.Notes.Add("Borrows the game's map keyframe" + (plan.Floors.Count == 1 ? " " : "s ") + string.Join(", ", plan.Floors.Select(o => o.Keyframe)) +
                 ": the game only opens a map for keyframes on its own list, so the level reuses some of the game's. Only this level shows its map under them; the game's own levels are untouched.");
 
             plan.Anchor = MapPlanner.Anchor(plan.Walkable);
             if (options.Scale > 0) plan.Anchor.Scale = options.Scale;
-            plan.Drawn = MapPlanner.Plan(plan.Walkable, plan.Floors);
+            plan.Drawn = MapPlanner.Plan(plan.Walkable, plan.Floors, plan.FloorOf);
+            foreach (MapLabel label in options.Labels ?? new List<MapLabel>())
+            {
+                int floor = LabelFloor(plan, label);
+                if (floor < 0) plan.Notes.Add("The label '" + label.Text + "' names no floor of the map (" + label.Floor + "): left out.");
+                else plan.Drawn[floor].Labels.Add(label);
+            }
 
             //The movies, from this install's own
             string uiPak = Path.Combine(Singleton.PathToAI ?? "", "DATA", "UI.PAK");
@@ -157,11 +209,32 @@ namespace OpenCAGE.MapAssets
             foreach (MapPlanFloor floor in plan.Drawn)
                 plan.Files[LevelUiOverrides.FilesFolderName + "/" + floor.Floor.Keyframe.ToUpperInvariant() + ".GFX"] = MapMovie.Build(template, floor.Floor.Keyframe, floor.Outlines, floor.Labels, plan.Anchor, FontLibrary);
 
-            plan.Items = MapItems(level.Commands, plan.Floors);
+            plan.Items = MapItems(level.Commands, w =>
+            {
+                int on = MapFloors.StandsOn(plan.Walkable, w.X, w.Y, w.Z);
+                return plan.Floors[on >= 0 ? plan.FloorOf[on] : MapPlanner.FloorOf(plan.Floors, w.Y)].Keyframe;
+            });
             int mixed = plan.Items.Count(o => o.Mixed);
             if (mixed != 0)
                 plan.Notes.Add(mixed + " map item setting" + (mixed == 1 ? " is" : "s are") + " shared by instances on different floors (inside a composite placed more than once): each placement gets its floor through an alias in the root composite.");
             return plan;
+        }
+
+        /* The floor a label goes on: the one it names (name, keyframe or number from 1), else the lowest walkable there (or nearest) */
+        private static int LabelFloor(MapAssetsPlan plan, MapLabel label)
+        {
+            if (!string.IsNullOrWhiteSpace(label.Floor))
+            {
+                string name = label.Floor.Trim();
+                int i = plan.Floors.FindIndex(o => string.Equals(o.Name, name, StringComparison.OrdinalIgnoreCase) || string.Equals(o.Keyframe, name, StringComparison.OrdinalIgnoreCase));
+                if (i < 0 && int.TryParse(name, out int n) && n >= 1 && n <= plan.Floors.Count) i = n - 1;
+                return i;
+            }
+            int lowest = int.MaxValue;
+            for (int k = 0; k < plan.Walkable.Count; k++) if (plan.Walkable[k].Contains(label.X, label.Z)) lowest = Math.Min(lowest, plan.FloorOf[k]);
+            if (lowest != int.MaxValue) return lowest;
+            int near = MapFloors.StandsOn(plan.Walkable, label.X, plan.Anchor.WorldY, label.Z, 1000);
+            return near >= 0 ? plan.FloorOf[near] : 0;
         }
 
         private static byte[] Entry(PAK2 pak, string name)
@@ -173,10 +246,10 @@ namespace OpenCAGE.MapAssets
 
         /// <summary>
         /// Every map item instance (a MapItem inside whatever composites hold it) by the entity its map_keyframe is set on: the
-        /// outermost instance its composite's map_keyframe variable is fed through, or the MapItem itself. With floors, the floor
-        /// each should be on (by where it is); an entity whose instances are on different floors is marked mixed.
+        /// outermost instance its composite's map_keyframe variable is fed through, or the MapItem itself. With floorAt (a world
+        /// point's floor keyframe), the floor each should be on; an entity whose instances are on different floors is marked mixed.
         /// </summary>
-        public static List<MapItemFloor> MapItems(Commands commands, IList<MapFloor> floors)
+        public static List<MapItemFloor> MapItems(Commands commands, Func<Vector3, string> floorAt)
         {
             Composite root = commands.EntryPoints[0];
             ShortGuid mk = ShortGuidUtils.Generate("map_keyframe");
@@ -228,9 +301,9 @@ namespace OpenCAGE.MapAssets
                             placement.Alias = McpScriptEdit.AliasesOn(root, ids.Concat(new[] { ShortGuid.Invalid }).ToArray()).FirstOrDefault(o => o.GetParameter(mk) != null);
                             if (placement.Alias != null) placement.Was = (placement.Alias.GetParameter(mk).content as cString)?.value ?? "";
                         }
-                        if (floors != null && floors.Count != 0)
+                        string key = floorAt?.Invoke(world.position);
+                        if (key != null)
                         {
-                            string key = floors[MapPlanner.FloorOf(floors, world.position.Y)].Keyframe;
                             floorsSeen[setOn].Add(key);
                             f.Keyframe = placement.Keyframe = key;
                         }
