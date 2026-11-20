@@ -13,7 +13,7 @@ using System.Windows.Forms;
 namespace OpenCAGE.Popups
 {
     /// <summary>
-    /// File > Check Level: what the Level Check (Scripts\LevelCheck) finds in the open level, crashes first, with Fix where the fix is
+    /// Utilities > Check Level: what the Level Check (Scripts\LevelCheck) finds in the open level, crashes first, with Fix where the fix is
     /// mechanical and Dismiss (kept per level on this PC). Modeless, because the script editor's tools refuse to run under a modal window.
     /// </summary>
     public partial class LevelCheckWindow : BaseWindow
@@ -68,7 +68,7 @@ namespace OpenCAGE.Popups
         }
 
         /// <summary>
-        /// File > Check Level, put in after <paramref name="after"/> (Recapture All Cubemaps) in its menu: enabled while a level is open.
+        /// Utilities > Check Level, put in after <paramref name="after"/> (Recapture All Cubemaps) in its menu: enabled while a level is open.
         /// Called once from the editor's constructor.
         /// </summary>
         public static void AttachMenu(ToolStripMenuItem after)

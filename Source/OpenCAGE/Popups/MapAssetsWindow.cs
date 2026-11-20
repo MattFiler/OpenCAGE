@@ -11,7 +11,7 @@ using System.Windows.Forms;
 namespace OpenCAGE.Popups
 {
     /// <summary>
-    /// File > Generate Map Assets: the level's Tab map from its walk mesh (<see cref="MapAssetGenerator"/>). Find Floors proposes the
+    /// Utilities > Generate Map Assets: the level's Tab map from its walk mesh (<see cref="MapAssetGenerator"/>). Find Floors proposes the
     /// floors; the user names them and moves their heights; Preview draws each as the game will; Generate writes the map's movies into
     /// the level's UI folder and sets the anchor, floor boxes and map items' floors as one undo step.
     /// </summary>
@@ -72,7 +72,7 @@ namespace OpenCAGE.Popups
             return _open;
         }
 
-        /// <summary>File > Generate Map Assets, after the Calculate Alien Vents item (or after <paramref name="after"/>).</summary>
+        /// <summary>Utilities > Generate Map Assets, after the Calculate Alien Vents item (or after <paramref name="after"/>).</summary>
         public static void AttachMenu(ToolStripMenuItem after)
         {
             ToolStrip owner = after?.Owner;

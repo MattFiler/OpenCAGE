@@ -773,6 +773,12 @@
     <Compile Include="Popups\SnapIncrements.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Popups\RenderFilterOrderWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\RenderFilterOrderWindow.Designer.cs">
+      <DependentUpon>RenderFilterOrderWindow.cs</DependentUpon>
+    </Compile>
     <Compile Include="Popups\SnapIncrements.Designer.cs">
       <DependentUpon>SnapIncrements.cs</DependentUpon>
     </Compile>
@@ -1630,6 +1636,16 @@
     <Compile Include="Popups\AIMarkupWindow.Designer.cs">
       <DependentUpon>AIMarkupWindow.cs</DependentUpon>
     </Compile>
+    <Compile Include="Scripts\Markup\MarkupMesh.cs" />
+    <Compile Include="Scripts\Markup\BuiltInMarkup.cs" />
+    <Compile Include="Scripts\Markup\MarkupText.cs" />
+    <Compile Include="Scripts\Markup\CompositeMarkup.cs" />
+    <Compile Include="Popups\CompositeMarkupEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Popups\CompositeMarkupEditor.Designer.cs">
+      <DependentUpon>CompositeMarkupEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="Scripts\ModelCompositeBuilder.cs" />
     <Compile Include="Scripts\Undo\CompositeEdits.cs" />
     <Compile Include="Scripts\Undo\RefactorEdit.cs" />
@@ -1877,6 +1893,9 @@
     <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\SyncedZone.cs">
       <Link>Scripts\Unity Connection\SyncedZone.cs</Link>
     </Compile>
+    <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\SyncedCompositeMarkup.cs">
+      <Link>Scripts\Unity Connection\SyncedCompositeMarkup.cs</Link>
+    </Compile>
     <Compile Include="..\Dependencies\LevelViewer\CathodeEditorGodot\Scripts\OpenCAGE\EntityInstancePath.cs">
       <Link>Scripts\EntityInstancePath.cs</Link>
     </Compile>
@@ -1898,6 +1917,7 @@
     <Compile Include="Scripts\Unity Connection\ViewerBusy.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerPopulateSync.cs" />
     <Compile Include="Scripts\Unity Connection\ViewerZoneSync.cs" />
+    <Compile Include="Scripts\Unity Connection\ViewerMarkupSync.cs" />
     <Compile Include="Scripts\Unity Connection\WebSocketPacketLog.cs" />
     <Compile Include="Scripts\Unity Connection\Send.cs" />
     <Compile Include="Scripts\Unity Connection\Client.cs" />
@@ -1917,6 +1937,7 @@
     <Compile Include="Scripts\CompositeRefactoring.cs" />
     <Compile Include="Scripts\MCP\McpAssetTools.cs" />
     <Compile Include="Scripts\MCP\McpBrushTools.cs" />
+    <Compile Include="Scripts\MCP\McpMarkupTools.cs" />
     <Compile Include="Scripts\MCP\McpAnimationAssetTools.cs" />
     <Compile Include="Scripts\MCP\McpCageAnimationTools.cs" />
     <Compile Include="Scripts\MCP\McpEditingTools.cs" />
@@ -2011,6 +2032,9 @@
     <EmbeddedResource Include="CommandsEditor.resx">
       <DependentUpon>CommandsEditor.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Popups\RenderFilterOrderWindow.resx">
+      <DependentUpon>RenderFilterOrderWindow.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Popups\ModManagerForm.resx">
       <DependentUpon>ModManagerForm.cs</DependentUpon>
     </EmbeddedResource>
@@ -2031,6 +2055,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\AIMarkupWindow.resx">
       <DependentUpon>AIMarkupWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Popups\CompositeMarkupEditor.resx">
+      <DependentUpon>CompositeMarkupEditor.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Popups\AlienVentsWindow.resx">
       <DependentUpon>AlienVentsWindow.cs</DependentUpon>

@@ -9,10 +9,10 @@ using System.Numerics;
 
 namespace OpenCAGE.MCP
 {
-    /// <summary>The AI markup tool (Scripts\AIMarkup): place search / area sweep jobs and melee high cover, check them against a level's own. 'world' toolset.</summary>
+    /// <summary>The AI markup tool (Scripts\AIMarkup): place search / area sweep jobs, melee cover and corpse traps, check them against a level's own. 'world' toolset.</summary>
     internal static class McpAIMarkupTools
     {
-        private static readonly string[] KindKeys = { "search", "sweep", "highcover" };
+        private static readonly string[] KindKeys = { "search", "sweep", "highcover", "lowcover", "corpsetrap" };
 
         public static IEnumerable<McpTool> Tools()
         {
@@ -20,22 +20,26 @@ namespace OpenCAGE.MCP
             {
                 Name = "place_ai_markup",
                 Title = "Place AI markup",
-                Description = "Place the AI markup NPCs find by position, as File > Place AI Markup does: retail's Archetypes\\Jobs\\SearchJob (spots an NPC hunting for a lost target searches at; the alien's systematic search), " +
-                    "Archetypes\\Jobs\\AreaSweepJob (spots it sweeps over while stalking) and Archetypes\\Jobs\\MeleeContext\\MeleeContext_HighCover (where an android throws the player against a wall; only levels with androids need it). " +
+                Description = "Place the AI markup NPCs find by position, as Utilities > Place AI Markup does: retail's Archetypes\\Jobs\\SearchJob (spots an NPC hunting for a lost target searches at; the alien's systematic search), " +
+                    "Archetypes\\Jobs\\AreaSweepJob (spots it sweeps over while stalking), and for androids Archetypes\\Jobs\\MeleeContext\\MeleeContext_HighCover (where one throws the player against a wall), MeleeContext (low cover: where one throws the player onto a desk or counter) " +
+                    "and MeleeContext_CorpseTrap (round an android set to play dead: is_corpse_trap_on_start; the level needs them). " +
                     "Spots come from the navmesh as last built, spaced as retail spaces them: search and sweep jobs on standing-height floor NPCs walk, 0.35 m or more from its edge (the more open first), 5.5 m apart per kind; " +
-                    "high cover 2.15 m back from a flat wall that is high in the collision, facing it, 4.5 m apart. New spots keep their kind's spacing from the level's own markup unless keep_clear_of_existing is false. " +
-                    "Brings the composites the level lacks in from a retail level of this install (as port_composites: NOT undoable), then places every spot as ONE undo step ('AI: Place AI Markup'): instances SearchJob_N / AreaSweepJob_N / MeleeContext_HighCover_N. " +
-                    "No bake is needed. dry_run lists the spots, changing nothing; compare scores the tool against the level's own markup instead (the retail check).",
+                    "high cover 2.5 m back from the face of a flat wall that is high in the collision (as its markup's T shows), facing it, 4.5 m apart; low cover 1.25 m back from the face of a surface whose top is 0.6-1.4 m up with room over it, facing it, in the middle of the face, 5 m apart; " +
+                    "corpse traps up to 3 round each android playing dead that has none within 2 m in its own composite, 0.9 m out, 120 degrees apart, facing away from it, on the navmesh with nothing in between (fewer where it is tight). " +
+                    "New spots keep their kind's spacing from the level's own markup unless keep_clear_of_existing is false. " +
+                    "Brings the composites the level lacks in from a retail level of this install (as port_composites: NOT undoable), then places every spot as ONE undo step ('AI: Place AI Markup'): instances SearchJob_N / AreaSweepJob_N / MeleeContext_HighCover_N / MeleeContext_N, " +
+                    "and MeleeContext_CorpseTrap_N in each android's composite. No bake is needed. dry_run lists the spots, changing nothing; compare scores the tool against the level's own markup instead (the retail check).",
                 InputSchema = McpSchema.Object(
-                    McpSchema.Array("kinds", "Which markup (default [\"search\",\"sweep\"]): search, sweep, highcover.", new JObject() { ["type"] = "string", ["enum"] = new JArray(KindKeys) }),
+                    McpSchema.Array("kinds", "Which markup (default [\"search\",\"sweep\",\"corpsetrap\"]): search, sweep, highcover, lowcover, corpsetrap.", new JObject() { ["type"] = "string", ["enum"] = new JArray(KindKeys) }),
                     McpSchema.Number("search_spacing", "Least distance between two search jobs (m, default 5.5)."),
                     McpSchema.Number("sweep_spacing", "Least distance between two area sweep jobs (m, default 5.5)."),
                     McpSchema.Number("highcover_spacing", "Least distance between two high cover contexts (m, default 4.5)."),
+                    McpSchema.Number("lowcover_spacing", "Least distance between two low cover contexts (m, default 5)."),
                     McpSchema.Boolean("keep_clear_of_existing", "Keep each kind's spacing from the markup the level already has (default true)."),
                     McpSchema.String("composite", "The composite to put the markup in (path or id; placed once, or the root). " + McpSchema.CompositeDefaultRoot),
                     McpSchema.Nested("region", "Only find spots here (default: the whole navmesh). " + McpRegion.Help, McpRegion.Schema),
                     McpSchema.Boolean("indoors_only", "Only spots with a ceiling over them in the collision (default false): leaves out the outdoor floor of a level an alien hunts indoors."),
-                    McpSchema.Nested("spots", "Instead of finding spots: place these, [{kind, position:[x,y,z], yaw}, ...] (world; yaw only matters for highcover).", new JObject()
+                    McpSchema.Nested("spots", "Instead of finding spots: place these, [{kind, position:[x,y,z], yaw}, ...] (world; yaw matters for the melee kinds). A corpsetrap spot goes in the composite of the android playing dead within 2.5 m of it, or in 'composite' when given.", new JObject()
                     {
                         ["type"] = "array",
                         ["items"] = new JObject() { ["type"] = "object", ["properties"] = new JObject() { ["kind"] = new JObject() { ["type"] = "string" }, ["position"] = new JObject() { ["type"] = "array", ["items"] = new JObject() { ["type"] = "number" } }, ["yaw"] = new JObject() { ["type"] = "number" } } },
@@ -43,6 +47,8 @@ namespace OpenCAGE.MCP
                     McpSchema.String("search_prefix", "Instance names for search jobs: prefix_N (default SearchJob)."),
                     McpSchema.String("sweep_prefix", "Instance names for area sweep jobs: prefix_N (default AreaSweepJob)."),
                     McpSchema.String("highcover_prefix", "Instance names for high cover: prefix_N (default MeleeContext_HighCover)."),
+                    McpSchema.String("lowcover_prefix", "Instance names for low cover: prefix_N (default MeleeContext)."),
+                    McpSchema.String("corpsetrap_prefix", "Instance names for corpse traps: prefix_N (default MeleeContext_CorpseTrap)."),
                     McpSchema.String("page", "The flowgraph page their nodes go on (default AIMarkup)."),
                     McpSchema.Integer("seed", "Sampling seed (default 1: the same level gives the same spots)."),
                     McpSchema.Integer("max_listed", "List at most this many spots (default 2000)."),
@@ -58,9 +64,9 @@ namespace OpenCAGE.MCP
             {
                 Name = "check_ai_markup",
                 Title = "Check AI markup",
-                Description = "The open level's AI markup as the game's NPCs use it: every search job, area sweep job and melee high cover context the level places (position, facing, whether the user's), " +
+                Description = "The open level's AI markup as the game's NPCs use it: every search job, area sweep job and melee context (high cover, low cover, corpse trap) the level places (position, facing, whether the user's), " +
                     "counts and spacing per kind, and whether each stands on the NPCs' navmesh (as last built). Markup off the navmesh, or none at all where an alien or android hunts, leaves NPCs nowhere to search or sweep. " +
-                    "place_ai_markup adds it.",
+                    "Also every android set to play dead (is_corpse_trap_on_start) and how many corpse traps it has in its composite: one with none is missing markup the level needs. place_ai_markup adds it.",
                 InputSchema = McpSchema.Object(
                     McpSchema.Integer("max_listed", "List at most this many (default 100).")),
                 ReadOnly = true,
@@ -79,10 +85,12 @@ namespace OpenCAGE.MCP
                 options.Search = kinds.Contains(AIMarkup.SearchJob);
                 options.Sweep = kinds.Contains(AIMarkup.AreaSweepJob);
                 options.HighCover = kinds.Contains(AIMarkup.HighCover);
+                options.LowCover = kinds.Contains(AIMarkup.LowCover);
+                options.CorpseTraps = kinds.Contains(AIMarkup.CorpseTrap);
             }
             foreach (MarkupKind kind in AIMarkup.Kinds)
             {
-                if (call.Has(kind.Key + "_spacing"))
+                if (kind != AIMarkup.CorpseTrap && call.Has(kind.Key + "_spacing"))
                 {
                     float s = (float)call.Num(kind.Key + "_spacing", kind.Spacing);
                     if (s < 1 || s > 50) throw McpError.Invalid("'" + kind.Key + "_spacing' is 1 to 50 m.");
@@ -107,6 +115,13 @@ namespace OpenCAGE.MCP
         {
             JObject o = new JObject() { ["kind"] = spot.Kind.Key, ["position"] = McpCollision.V(spot.Position), ["clearance_m"] = spot.Clearance };
             if (spot.Kind == AIMarkup.HighCover) { o["yaw"] = spot.Yaw; o["wall_m"] = spot.Wall; }
+            if (spot.Kind == AIMarkup.LowCover) { o["yaw"] = spot.Yaw; o["surface_m"] = spot.Wall; o["surface_top_m"] = spot.Top; }
+            if (spot.Kind == AIMarkup.CorpseTrap)
+            {
+                o["yaw"] = spot.Yaw;
+                if (spot.Guards != null) { o["android"] = spot.Guards; o["from_android_m"] = spot.Wall; }
+                if (spot.Into != null) o["composite"] = spot.Into.name;
+            }
             return o;
         }
 
@@ -130,22 +145,37 @@ namespace OpenCAGE.MCP
                 using (McpEditorTools.Heartbeat(call, "Comparing with the level's own markup"))
                     results = AIMarkup.Compare(call, content, options);
                 if (results.Count == 0) call.Note("The level places none of the kinds asked for, so there is nothing to compare with.");
-                result["compared"] = new JArray(results.Select(c => new JObject()
+                result["compared"] = new JArray(results.Select(c =>
                 {
-                    ["kind"] = c.Kind.Key,
-                    ["level_has"] = c.Level,
-                    ["tool_finds"] = c.Ours,
-                    ["area_m2"] = Math.Round(c.Area),
-                    ["match_within_m"] = c.Within,
-                    ["recall"] = Math.Round(c.Recall, 3),
-                    ["precision"] = Math.Round(c.Precision, 3),
-                    ["f1"] = Math.Round(c.F1, 3),
-                    ["chance_recall"] = Math.Round(c.Chance, 3),
-                    ["level_spacing_m"] = Math.Round(c.LevelSpacing, 2),
-                    ["tool_spacing_m"] = Math.Round(c.OurSpacing, 2),
-                    ["level_clearance_m"] = Math.Round(c.LevelClearance, 2),
-                    ["tool_clearance_m"] = Math.Round(c.OurClearance, 2),
-                    ["summary"] = c.Summary(),
+                    JObject o = new JObject()
+                    {
+                        ["kind"] = c.Kind.Key,
+                        ["level_has"] = c.Level,
+                        ["tool_finds"] = c.Ours,
+                        ["match_within_m"] = c.Within,
+                        ["recall"] = Math.Round(c.Recall, 3),
+                        ["precision"] = Math.Round(c.Precision, 3),
+                        ["f1"] = Math.Round(c.F1, 3),
+                        ["chance_recall"] = Math.Round(c.Chance, 3),
+                    };
+                    if (c.Kind == AIMarkup.CorpseTrap)
+                    {
+                        o["androids"] = c.Androids;
+                        if (!double.IsNaN(c.MeanNearest)) o["mean_nearest_m"] = Math.Round(c.MeanNearest, 2);
+                    }
+                    else
+                    {
+                        o["area_m2"] = Math.Round(c.Area);
+                        o["level_spacing_m"] = Math.Round(c.LevelSpacing, 2);
+                        o["tool_spacing_m"] = Math.Round(c.OurSpacing, 2);
+                        if (!c.Faces)
+                        {
+                            o["level_clearance_m"] = Math.Round(c.LevelClearance, 2);
+                            o["tool_clearance_m"] = Math.Round(c.OurClearance, 2);
+                        }
+                    }
+                    o["summary"] = c.Summary();
+                    return o;
                 }));
                 return result;
             }
@@ -167,6 +197,21 @@ namespace OpenCAGE.MCP
                             Position = McpValues.ReadVector(g["position"], "spots[" + i + "].position", null),
                             Yaw = g["yaw"] == null ? 0f : (float)g["yaw"],
                         });
+                    }
+                    //A corpse trap goes beside its android, in the android's composite
+                    if (!call.Has("composite") && spots.Any(o => o.Kind == AIMarkup.CorpseTrap))
+                    {
+                        List<AIMarkup.PlacedAndroid> dead = McpEditor.UI(() => AIMarkup.Androids(content.Level.Commands)).Where(o => o.PlaysDead).ToList();
+                        for (int i = 0; i < spots.Count; i++)
+                        {
+                            if (spots[i].Kind != AIMarkup.CorpseTrap) continue;
+                            AIMarkup.PlacedAndroid near = dead.OrderBy(o => Vector3.Distance(o.World.position, spots[i].Position)).FirstOrDefault();
+                            if (near == null || Vector3.Distance(near.World.position, spots[i].Position) > AIMarkup.CorpseTrapReach + 0.5f)
+                                throw McpError.Invalid("spots[" + i + "] is a corpse trap, which goes in the composite of the android it guards: no android playing dead stands within " + (AIMarkup.CorpseTrapReach + 0.5f) + " m of it. Give 'composite' to put it somewhere else.");
+                            spots[i].Into = near.Holder;
+                            spots[i].Frame = near.Frame;
+                            spots[i].Guards = near.Where;
+                        }
                     }
                 }
                 else
@@ -239,11 +284,20 @@ namespace OpenCAGE.MCP
                     kinds.Add(k);
                 }
                 result["kinds"] = kinds;
+                List<AIMarkup.PlacedAndroid> dead = AIMarkup.Androids(level.Commands).Where(o => o.PlaysDead).ToList();
+                if (dead.Count != 0)
+                {
+                    result["playing_dead"] = new JArray(dead.Take(max).Select(o => new JObject() { ["android"] = o.Where, ["position"] = McpCollision.V(o.World.position), ["corpse_traps"] = o.Traps }));
+                    int missing = dead.Count(o => o.Traps == 0);
+                    result["missing_corpse_traps"] = missing;
+                    if (missing != 0)
+                        call.Note(missing + " android(s) set to play dead (is_corpse_trap_on_start) have no corpse trap within " + AIMarkup.CorpseTrapReach + " m in their composite: the level needs them. place_ai_markup kinds [\"corpsetrap\"] adds them.");
+                }
                 if (standing.Count == 0 && markup.Count != 0) result["navmesh"] = "none (Save & Build bakes one)";
                 result["list"] = new JArray(markup.Take(max).Select(o =>
                 {
                     JObject v = new JObject() { ["kind"] = o.Kind.Key, ["where"] = o.Where, ["position"] = McpCollision.V(o.Position), ["users"] = o.User };
-                    if (o.Kind == AIMarkup.HighCover) v["yaw"] = o.Yaw;
+                    if (o.Kind == AIMarkup.HighCover || o.Kind == AIMarkup.LowCover || o.Kind == AIMarkup.CorpseTrap) v["yaw"] = o.Yaw;
                     MarkupStanding s = standing.FirstOrDefault(q => q.Markup == o);
                     if (s?.OnNavmesh != null) v["on_navmesh"] = s.OnNavmesh;
                     return v;

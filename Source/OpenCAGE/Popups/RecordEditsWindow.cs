@@ -11,7 +11,7 @@ using System.Windows.Forms;
 namespace OpenCAGE.Popups
 {
     /// <summary>
-    /// File > Record Edits: records undo steps into a recipe, and replays a recipe (dry run first, then Apply as one undo step).
+    /// Utilities > Record Edits: records undo steps into a recipe, and replays a recipe (dry run first, then Apply as one undo step).
     /// Recording carries on with the window closed.
     /// </summary>
     public partial class RecordEditsWindow : BaseWindow

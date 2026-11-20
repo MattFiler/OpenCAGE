@@ -97,7 +97,7 @@ namespace OpenCAGE
                 string text = "Adds about " + Mb(adds) + " of streamed textures" + (bc7 != compact ? " (" + Mb(bc7) + " as BC7, " + Mb(compact) + " compact)" : "") +
                               (unknown != 0 ? ", plus " + unknown + " image" + (unknown == 1 ? "" : "s") + " of unknown size" : "") +
                               ". The level would need about " + after.ToString("0") + " of the game's " + heap + " MB texture heap at once" +
-                              (after > heap ? " - over it: textures will draw blocky (File > Check Level)." : after > heap * 0.85 ? " - close to full." : ".");
+                              (after > heap ? " - over it: textures will draw blocky (Utilities > Check Level)." : after > heap * 0.85 ? " - close to full." : ".");
                 _estimate.Text = text;
                 _estimate.ForeColor = after > heap ? (Theming.ThemeManager.IsDark ? Color.FromArgb(255, 120, 110) : Color.Firebrick) : SystemColors.ControlText;
                 if (Theming.ThemeManager.IsDark && after <= heap) _estimate.ForeColor = ForeColor;

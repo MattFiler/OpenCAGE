@@ -18,7 +18,7 @@ using System.Windows.Forms;
 namespace OpenCAGE.Popups
 {
     /// <summary>
-    /// File > Compare Levels: compares two copies of a level (as saved or now, a backup, another level, any level folder) beyond the
+    /// Utilities > Compare Levels: compares two copies of a level (as saved or now, a backup, another level, any level folder) beyond the
     /// script - models, materials, placements, lights, collision, navigation, sound, configs and more. The compare runs in the background.
     /// </summary>
     public partial class CompareLevelsWindow : BaseWindow
@@ -80,7 +80,7 @@ namespace OpenCAGE.Popups
         }
 
         /// <summary>
-        /// File > Compare Levels, put in after Check Level (or <paramref name="after"/>), and File > Record Edits in its own section at the
+        /// Utilities > Compare Levels, put in after Check Level (or <paramref name="after"/>), and Utilities > Record Edits in its own section at the
         /// end of the menu: Record Edits is enabled while a level is open. Called once from the editor's constructor.
         /// </summary>
         public static void AttachMenu(ToolStripMenuItem after)

@@ -94,7 +94,7 @@ namespace OpenCAGE.MCP
                     McpSchema.String("live_link_camera", "The viewport's Live Link Camera menu: 'viewport_to_game' has the running game's camera follow the viewport's (the game streams in the zones around it; set_viewport_camera moves the viewport's), 'game_to_viewport' has the viewport's camera follow the game's (position, direction, field of view; the viewport cannot be moved meanwhile), 'disabled' neither. Needs Live Link connected to the game (runtime_utils), the game running this level and the viewport showing its root composite. Goes back to 'disabled' whenever Live Link connects, so set it after connecting.", options: LiveLinkCameraModes),
                     McpSchema.Deprecated(McpSchema.Boolean("sync_game_camera", "Older name for live_link_camera: true is 'viewport_to_game', false is 'disabled'.")),
                     McpSchema.Map("render_filters", "Entity previews to show/hide: {FunctionType name: true|false}, e.g. {\"PlayerTriggerBox\": true}; key 'all' sets every one first."),
-                    McpSchema.Map("scene_filters", "Scene geometry to show: {\"collision_meshes\": true|false, \"occlusion_meshes\": true|false}."),
+                    McpSchema.Map("scene_filters", "Scene geometry to show: {\"collision_meshes\": true|false, \"occlusion_meshes\": true|false, \"markup\": true|false} (markup: the editor-only composite markup, on by default)."),
                     McpSchema.Boolean("highlight_aliases", "Mark entities overridden by aliases."),
                     McpSchema.Boolean("highlight_proxies", "Mark entities reached by proxies."),
                     McpSchema.Boolean("focus_on_selected", "Move the camera to whatever gets selected (off also turns fix_camera_to_selected off)."),

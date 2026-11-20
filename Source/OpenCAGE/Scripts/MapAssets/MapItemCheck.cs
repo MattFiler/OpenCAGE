@@ -116,7 +116,7 @@ namespace OpenCAGE
                     Title = context.Where(item.Composite, item.Entity) + " shows on the wrong map floor",
                     Text = simple
                         ? "Its map_keyframe is '" + first.Was + "' but it stands on the floor '" + first.Keyframe + "' (" + Math.Round(first.World.Y, 1) + " m up), so its icon shows on another floor of the Tab map, or none. " +
-                          "Set map_keyframe to " + first.Keyframe + " (File > Generate Map Assets sets every map item's floor)."
+                          "Set map_keyframe to " + first.Keyframe + " (Utilities > Generate Map Assets sets every map item's floor)."
                         : off.Count + " of its " + item.Placements.Count + " placements show on another floor of the Tab map than the one they stand on (" +
                           string.Join(", ", off.Take(4).Select(o => "'" + o.Was + "' at " + Math.Round(o.World.Y, 1) + " m up, on '" + o.Keyframe + "'")) + (off.Count > 4 ? "..." : "") +
                           "). Its composite is placed on more than one floor (or overridden per placement), so each needs its own map_keyframe: an alias in the root composite.",

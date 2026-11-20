@@ -64,7 +64,7 @@ namespace OpenCAGE
                 Label = "Add vents...",
                 Detail = "Finds spots on the navmesh under ceilings retail's vent composites fit (VentTraversalMarker 4.25 m, 6M, 9m) and places " +
                     (count > 0 ? count + " more vent(s)" : "3 or more vents, spread out,") + " in network " + network + " as one undo step, bringing the vent composites in from a retail level of this install first " +
-                    "(not undoable, as any import). From the Level Check window it opens File > Calculate Alien Vents to pick the spots. Then Save & Build with the navmesh baker to bake the alien's backstage.",
+                    "(not undoable, as any import). From the Level Check window it opens Utilities > Calculate Alien Vents to pick the spots. Then Save & Build with the navmesh baker to bake the alien's backstage.",
                 Apply = fromTool =>
                 {
                     if (!fromTool)

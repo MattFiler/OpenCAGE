@@ -220,7 +220,7 @@ site: epic  3E1470 3F0 3E1546
 [alien_no_backstage]
 title: The alien has no vents to retreat into
 cause: The alien tried to go backstage into the vents (it was flamed, sent away by the script, or finished an ambush), but the level has no PathfindingAlienBackstageNode, so there was nowhere to go.
-fix: Give the alien vents to go backstage through: File > Calculate Alien Vents (MCP add_alien_vents) finds spots under ceilings and places the game's own vent composites, 3 or more spread out - then Save & Build with the navmesh baker on, to bake the backstage navmesh. Save & Build warns about this.
+fix: Give the alien vents to go backstage through: Utilities > Calculate Alien Vents (MCP add_alien_vents) finds spots under ceilings and places the game's own vent composites, 3 or more spread out - then Save & Build with the navmesh baker on, to bake the backstage navmesh. Save & Build warns about this.
 docs: https://opencage.co.uk/docs/alien-vents/
 site: steam 1EA270 B0 1EA27E
 site: gog   1EA770 B0 1EA77E

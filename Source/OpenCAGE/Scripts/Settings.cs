@@ -59,6 +59,7 @@ namespace OpenCAGE
         public const string TransformSnapIncrements = "TransformSnapIncrements";
         public const string RotationSnapIncrements = "RotationSnapIncrements";
         public const string BoxRenderFilters = "BoxRenderFilters";
+        public const string RenderFilterOrder = "RenderFilterOrder";
         public const string RuntimeUtilsOpt = "ConnectToRuntimeUtils";
         //The viewport's Live Link Camera menu: 0 off, 1 the game's camera follows the viewport's, 2 the viewport's follows the game's
         public const string LiveLinkCameraMode = "LiveLinkCameraMode";

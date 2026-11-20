@@ -56,6 +56,7 @@ namespace OpenCAGE.UnityConnection
 
             ViewerResourceSync.Initialise();
             ViewerZoneSync.Initialise();
+            ViewerMarkupSync.Initialise();
             ViewerScriptResync.Initialise();
             Brushwork.BrushHandleSync.Initialise();
         }
@@ -128,6 +129,15 @@ namespace OpenCAGE.UnityConnection
             Packet packet = new Packet(PacketEvent.ZONES_CHANGED);
             packet.zones = zones ?? new List<SyncedZone>();
             packet.show_zones = SettingsManager.GetBool(Settings.ShowZones);
+            SendData(packet);
+        }
+
+        /* Send the level's composite markup, the whole set. Only ViewerMarkupSync calls this. Built like the other packets, with the
+           selection on it, so a viewer from before this takes it as a re-sync. */
+        internal static void SendCompositeMarkupPacket(List<SyncedCompositeMarkup> markup)
+        {
+            Packet packet = GeneratePacket(PacketEvent.COMPOSITE_MARKUP);
+            packet.composite_markup = markup ?? new List<SyncedCompositeMarkup>();
             SendData(packet);
         }
 
@@ -463,6 +473,7 @@ namespace OpenCAGE.UnityConnection
         private static void SendLevelLoadedPacket(string levelNameOverride = null, bool forceReload = true, uint sceneRoot = 0)
         {
             ViewerResourceSync.NotifyViewerReloading();
+            ViewerMarkupSync.NotifyViewerReloading();
             SendLevelLoadedPacketCore(levelNameOverride, forceReload, sceneRoot);
         }
 

@@ -44,7 +44,7 @@ namespace OpenCAGE
             this.exportCompositesMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.portCompositesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exportCompositesToDiskToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.cubemapsToolStripSeparator = new System.Windows.Forms.ToolStripSeparator();
+            this.utilitiesMenu = new System.Windows.Forms.ToolStripDropDownButton();
             this.recaptureAllCubemapsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripButton3 = new System.Windows.Forms.ToolStripDropDownButton();
             this.modelsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -213,6 +213,7 @@ namespace OpenCAGE
             this.toolStripButton1,
             this.toolStripButton5,
             this.toolStripButton3,
+            this.utilitiesMenu,
             this.toolStripButton2,
             this.helpBtn,
             this.toolStripButton4,
@@ -236,15 +237,12 @@ namespace OpenCAGE
             this.saveAndBuildLevelToolStripMenuItem,
             this.toolStripSeparator1,
             this.importCompositesMenu,
-            this.exportCompositesMenu,
-            this.cubemapsToolStripSeparator,
-            this.recaptureAllCubemapsToolStripMenuItem});
+            this.exportCompositesMenu});
             this.toolStripButton1.Image = ((System.Drawing.Image)(resources.GetObject("toolStripButton1.Image")));
             this.toolStripButton1.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.toolStripButton1.Name = "toolStripButton1";
             this.toolStripButton1.Size = new System.Drawing.Size(38, 22);
             this.toolStripButton1.Text = "File";
-            this.toolStripButton1.DropDownOpening += new System.EventHandler(this.fileMenu_DropDownOpening);
             // 
             // createLevelToolStripMenuItem
             // 
@@ -333,11 +331,16 @@ namespace OpenCAGE
             this.exportCompositesToDiskToolStripMenuItem.Text = "To Disk";
             this.exportCompositesToDiskToolStripMenuItem.Click += new System.EventHandler(this.exportCompositesToDiskToolStripMenuItem_Click);
             // 
-            // cubemapsToolStripSeparator
-            // 
-            this.cubemapsToolStripSeparator.Name = "cubemapsToolStripSeparator";
-            this.cubemapsToolStripSeparator.Size = new System.Drawing.Size(178, 6);
-            // 
+            // utilitiesMenu
+            //
+            this.utilitiesMenu.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.utilitiesMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.recaptureAllCubemapsToolStripMenuItem});
+            this.utilitiesMenu.Name = "utilitiesMenu";
+            this.utilitiesMenu.Size = new System.Drawing.Size(59, 22);
+            this.utilitiesMenu.Text = "Utilities";
+            this.utilitiesMenu.DropDownOpening += new System.EventHandler(this.utilitiesMenu_DropDownOpening);
+            //
             // recaptureAllCubemapsToolStripMenuItem
             // 
             this.recaptureAllCubemapsToolStripMenuItem.Name = "recaptureAllCubemapsToolStripMenuItem";
@@ -1409,8 +1412,8 @@ namespace OpenCAGE
             this.cubemapCaptureSizeToolStripMenuItem.Name = "cubemapCaptureSizeToolStripMenuItem";
             this.cubemapCaptureSizeToolStripMenuItem.Size = new System.Drawing.Size(254, 22);
             this.cubemapCaptureSizeToolStripMenuItem.Text = "Cubemap Capture Size";
-            this.cubemapCaptureSizeToolStripMenuItem.ToolTipText = "The size of each face of the cubemaps captured in the game over Live Link (Capture on an EnvironmentMap, File > Re" +
-    "capture All Cubemaps). Bigger is sharper on mirror-like surfaces; it needs the game\'s window at least as tall.";
+            this.cubemapCaptureSizeToolStripMenuItem.ToolTipText = "The size of each face of the cubemaps captured in the game over Live Link (Capture on an EnvironmentMap, Utilitie" +
+    "s > Recapture All Cubemaps). Bigger is sharper on mirror-like surfaces; it needs the game\'s window at least as tall.";
             //
             // hideLiveLinkLabelToolStripMenuItem
             //
@@ -1690,7 +1693,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripMenuItem exportCompositesToDiskToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem importCompositesMenu;
         private System.Windows.Forms.ToolStripMenuItem exportCompositesMenu;
-        private System.Windows.Forms.ToolStripSeparator cubemapsToolStripSeparator;
+        private System.Windows.Forms.ToolStripDropDownButton utilitiesMenu;
         private System.Windows.Forms.ToolStripMenuItem recaptureAllCubemapsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem saveLevel;
         private System.Windows.Forms.ToolStripStatusLabel statusText;

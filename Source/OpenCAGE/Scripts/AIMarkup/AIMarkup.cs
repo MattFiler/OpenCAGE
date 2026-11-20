@@ -58,15 +58,25 @@ namespace OpenCAGE
         public float Yaw;
         /// <summary>How far the nearest edge of the walkable floor is (m).</summary>
         public float Clearance;
-        /// <summary>High cover: the wall it faces, measured from the spot (m).</summary>
+        /// <summary>Melee cover: the wall or surface it faces, measured from the spot (m).</summary>
         public float Wall;
+        /// <summary>Low cover: how high the surface's top stands over the spot (m).</summary>
+        public float Top;
+        /// <summary>A corpse trap: the composite it goes in (the android's), that composite's world frame, and the android it guards.</summary>
+        public Composite Into;
+        public cTransform Frame;
+        public string Guards;
         public bool Use = true;
     }
 
     /// <summary>The tool's settings.</summary>
     internal sealed class MarkupOptions
     {
-        public bool Search = true, Sweep = true, HighCover = false;
+        public bool Search = true, Sweep = true, HighCover = false, LowCover = false;
+        /// <summary>Corpse traps round every android set to play dead that has none (the level needs them).</summary>
+        public bool CorpseTraps = true;
+        /// <summary>Find corpse traps for androids that already have them too (the retail check).</summary>
+        public bool IgnoreExistingCorpseTraps;
         /// <summary>Spacing per kind key (m); a kind not listed takes its retail spacing.</summary>
         public Dictionary<string, float> Spacing = new Dictionary<string, float>();
         /// <summary>Only spots inside this box (world), or anywhere on the navmesh.</summary>
@@ -86,7 +96,8 @@ namespace OpenCAGE
         public Func<MarkupKind, Vector3, bool> Within;
 
         public float SpacingOf(MarkupKind kind) => Spacing.TryGetValue(kind.Key, out float s) && s > 0 ? s : kind.Spacing;
-        public bool Wants(MarkupKind kind) => kind == AIMarkup.SearchJob ? Search : kind == AIMarkup.AreaSweepJob ? Sweep : kind == AIMarkup.HighCover && HighCover;
+        public bool Wants(MarkupKind kind) =>
+            kind == AIMarkup.SearchJob ? Search : kind == AIMarkup.AreaSweepJob ? Sweep : kind == AIMarkup.HighCover ? HighCover : kind == AIMarkup.LowCover ? LowCover : kind == AIMarkup.CorpseTrap && CorpseTraps;
     }
 
     /// <summary>What <see cref="AIMarkup.Propose"/> found.</summary>
@@ -116,8 +127,9 @@ namespace OpenCAGE
 
     /// <summary>
     /// Finds and places AI markup over a level's navmesh: retail's Archetypes\Jobs\SearchJob (the spots NPCs search at),
-    /// Archetypes\Jobs\AreaSweepJob (the spots they sweep over) and Archetypes\Jobs\MeleeContext\MeleeContext_HighCover (where an
-    /// android throws the player against a wall). The game gathers them by position; nothing links to them. UI thread unless said.
+    /// Archetypes\Jobs\AreaSweepJob (the spots they sweep over), Archetypes\Jobs\MeleeContext\MeleeContext_HighCover and MeleeContext
+    /// (where an android throws the player against a wall, or onto a desk) and MeleeContext_CorpseTrap (round an android playing dead).
+    /// The game gathers them by position; nothing links to them. UI thread unless said.
     /// </summary>
     internal static partial class AIMarkup
     {
@@ -139,22 +151,50 @@ namespace OpenCAGE
             Key = "highcover", Label = "Melee high cover (MeleeContext_HighCover)", Path = @"Archetypes\Jobs\MeleeContext\MeleeContext_HighCover", Id = new ShortGuid("43-AC-1D-C5"),
             NamePrefix = "MeleeContext_HighCover", Spacing = 4.5f, Classes = AndroidClass,
         };
-        public static readonly MarkupKind[] Kinds = { SearchJob, AreaSweepJob, HighCover };
+        public static readonly MarkupKind LowCover = new MarkupKind()
+        {
+            Key = "lowcover", Label = "Melee low cover (MeleeContext)", Path = @"Archetypes\Jobs\MeleeContext\MeleeContext", Id = new ShortGuid("1A-7A-E2-07"),
+            NamePrefix = "MeleeContext", Spacing = 5f, Classes = AndroidClass,
+        };
+        public static readonly MarkupKind CorpseTrap = new MarkupKind()
+        {
+            Key = "corpsetrap", Label = "Corpse traps (MeleeContext_CorpseTrap)", Path = @"Archetypes\Jobs\MeleeContext\MeleeContext_CorpseTrap", Id = new ShortGuid("9C-23-CD-C9"),
+            NamePrefix = "MeleeContext_CorpseTrap", Spacing = 0f, Classes = AndroidClass,
+        };
+        public static readonly MarkupKind[] Kinds = { SearchJob, AreaSweepJob, HighCover, LowCover, CorpseTrap };
 
         /* Retail placement, measured over the shipped levels: jobs stand on standing-height floor 0.3 m or more from its edge (median
-           0.85 m), as many of each kind as a 5.5 m spacing gives; a high cover context stands 2.15 m (on the navmesh) back from a flat, high
-           wall and faces it. */
+           0.85 m), as many of each kind as a 5.5 m spacing gives; a high cover context faces a flat, high wall 2.5 m in front of it, measured
+           to the wall's face (its markup's T). The navmesh stops about its walkable radius short of a wall, so on the navmesh that is
+           about 2.15 m back from the floor's edge. A low cover context faces a desk, bed or counter 1.25 m in front (to its face, median
+           1.3 m), in the middle of the face: its top 0.65-1.4 m up, running on 0.25 m or more, with a metre or more of room over it. */
         public const float MinClearance = 0.35f;
         public const float PreferredClearance = 1.2f;
-        public const float HighCoverWallDistance = 2.15f;
+        public const float HighCoverWallDistance = Markup.BuiltInMarkup.HighCoverWallDistance;
+        /// <summary>How far off the wall a placed high cover context may end up (m).</summary>
+        public const float HighCoverWallTolerance = 0.1f;
+        public const float LowCoverDistance = Markup.BuiltInMarkup.LowCoverDistance;
+        /// <summary>How far off the surface a placed low cover context may end up (m).</summary>
+        public const float LowCoverTolerance = 0.1f;
+        /// <summary>The height range of a low cover surface's top over the floor (m).</summary>
+        public const float LowCoverMinTop = 0.6f, LowCoverMaxTop = 1.4f;
+        /// <summary>Corpse traps: how far from the android, how many, and how near an existing one counts as its own (m).</summary>
+        public const float CorpseTrapDistance = 0.9f;
+        public const int CorpseTrapCount = 3;
+        public const float CorpseTrapReach = 2f;
         public const float MinIslandArea = 25f;
         /// <summary>How far round its own markup the retail check looks for spots (m).</summary>
         public const float ArenaRadius = 6f;
         /// <summary>About the most search and sweep jobs a shipped level places.</summary>
         public const int MaxRetailJobs = 330;
 
-        /* Retail levels that place all three kinds (one load brings any of them) */
-        private static readonly string[] Sources = { "PRODUCTION/TECH_HUB", "PRODUCTION/TECH_RND", "PRODUCTION/HAB_SHOPPINGCENTRE", "PRODUCTION/SCI_HOSPITALUPPER" };
+        /* Retail levels that place the kinds (the first places all five, so one load brings any of them) */
+        private static readonly string[] Sources = { "PRODUCTION/TECH_COMMS", "PRODUCTION/TECH_HUB", "PRODUCTION/TECH_RND", "PRODUCTION/HAB_SHOPPINGCENTRE", "PRODUCTION/SCI_HOSPITALUPPER" };
+
+        /* The android composites, and the instance parameter that has one play dead until the player comes close */
+        private static readonly ShortGuid[] AndroidIds = { new ShortGuid("3C-D3-BF-A1"), new ShortGuid("2D-C9-79-2F") };
+        private static readonly string[] AndroidPaths = { @"Archetypes\NPCs\Android\Android_NPC", @"Archetypes\NPCs\Android\Android_Heavy_NPC" };
+        private static readonly ShortGuid CorpseTrapFlag = ShortGuidUtils.Generate("is_corpse_trap_on_start");
 
         private static readonly ShortGuid ContextType = ShortGuidUtils.Generate("Context_Type");
 
@@ -169,7 +209,9 @@ namespace OpenCAGE
             if (t == "searchjobs") return SearchJob;
             if (t == "areasweep" || t == "sweepjob" || t == "sweepjobs") return AreaSweepJob;
             if (t == "meleecontexthighcover" || t == "highcovermelee" || t == "melee") return HighCover;
-            throw new McpError("'" + text + "' is not a kind of AI markup: search, sweep or highcover.");
+            if (t == "lowcovermelee" || t == "meleelowcover") return LowCover;
+            if (t == "corpsetraps" || t == "corpse" || t == "meleecontextcorpsetrap") return CorpseTrap;
+            throw new McpError("'" + text + "' is not a kind of AI markup: search, sweep, highcover, lowcover or corpsetrap.");
         }
 
         public static MarkupKind KindOf(Composite composite) => composite == null ? null : Kinds.FirstOrDefault(o => o.Id == composite.shortGUID);
@@ -177,7 +219,7 @@ namespace OpenCAGE
         #region Survey
         /// <summary>
         /// The markup the level places, from the entry points down: every search and area sweep job (JOB_SystematicSearch, JOB_AreaSweep)
-        /// and every high cover melee context (NPC_MeleeContext of type ANDROID_HIGH_COVER_GRAPPLE), however it is wrapped. Any thread.
+        /// and every melee context (NPC_MeleeContext: high cover, low cover, corpse trap), however it is wrapped. Any thread.
         /// </summary>
         public static List<PlacedMarkup> Survey(Commands commands, Func<Composite, bool> users = null)
         {
@@ -272,7 +314,15 @@ namespace OpenCAGE
                 case FunctionType.JOB_SystematicSearch: return SearchJob;
                 case FunctionType.JOB_AreaSweep: return AreaSweepJob;
                 case FunctionType.NPC_MeleeContext:
-                    return function.GetParameter(ContextType)?.content is cEnum type && type.enumIndex == (int)MELEE_CONTEXT_TYPE.ANDROID_HIGH_COVER_GRAPPLE ? HighCover : null;
+                    //Unset is the type's default, low cover
+                    int type = function.GetParameter(ContextType)?.content is cEnum given ? given.enumIndex : (int)MELEE_CONTEXT_TYPE.ANDROID_LOW_COVER_GRAPPLE;
+                    switch ((MELEE_CONTEXT_TYPE)type)
+                    {
+                        case MELEE_CONTEXT_TYPE.ANDROID_HIGH_COVER_GRAPPLE: return HighCover;
+                        case MELEE_CONTEXT_TYPE.ANDROID_LOW_COVER_GRAPPLE: return LowCover;
+                        case MELEE_CONTEXT_TYPE.ANDROID_CORPSE_TRAP_GRAPPLE: return CorpseTrap;
+                    }
+                    return null;
             }
             return null;
         }
@@ -506,8 +556,9 @@ namespace OpenCAGE
         /// <summary>
         /// Spots for the kinds the options ask for, over the saved navmesh (as last built). Search and area sweep jobs go on standing-height
         /// floor the NPCs walk, <see cref="MinClearance"/> or more from its edge and their kind's spacing apart, the more open spots first;
-        /// high cover contexts stand <see cref="HighCoverWallDistance"/> back from a flat wall (high enough in the collision) and face it.
-        /// UI thread or a tool's thread.
+        /// high cover contexts stand <see cref="HighCoverWallDistance"/> back from the face of a flat wall (high enough in the collision) and face it,
+        /// low cover contexts <see cref="LowCoverDistance"/> back from a waist-high surface; corpse traps go round each android set to play dead
+        /// that has none. UI thread or a tool's thread.
         /// </summary>
         public static MarkupProposal Propose(McpCall call, LevelContent content, MarkupOptions options)
         {
@@ -582,10 +633,15 @@ namespace OpenCAGE
                 }
             }
             if (options.HighCover)
-                ProposeHighCover(call, proposal, mesh, query, options, min, max, Reject, Soup, indoors);
+                ProposeCover(call, proposal, HighCover, mesh, query, options, min, max, Reject, Soup, indoors);
+            if (options.LowCover)
+                ProposeCover(call, proposal, LowCover, mesh, query, options, min, max, Reject, Soup, indoors);
+            if (options.CorpseTraps)
+                ProposeCorpseTraps(call, proposal, level.Commands, mesh, query, options, min, max, Reject, Soup);
 
             foreach (MarkupKind kind in Kinds.Where(options.Wants))
             {
+                if (kind == CorpseTrap) continue;
                 int n = proposal.Spots.Count(o => o.Kind == kind);
                 if (n != 0) continue;
                 if (options.KeepClearOfExisting && proposal.Existing.Any(o => o.Kind == kind))
@@ -594,7 +650,7 @@ namespace OpenCAGE
                     proposal.Notes.Add("No spot for " + kind.NamePrefix + " passed: " + Describe(proposal.Rejected) + ".");
             }
             //The game's own levels hold at most about 330 search and sweep jobs between them
-            int jobs = proposal.Spots.Count(o => o.Kind != HighCover) + (options.KeepClearOfExisting ? proposal.Existing.Count(o => o.Kind != HighCover) : 0);
+            int jobs = proposal.Spots.Count(o => o.Kind == SearchJob || o.Kind == AreaSweepJob) + (options.KeepClearOfExisting ? proposal.Existing.Count(o => o.Kind == SearchJob || o.Kind == AreaSweepJob) : 0);
             if (jobs > MaxRetailJobs)
                 proposal.Notes.Add("That makes " + jobs + " search and sweep jobs; no level of the game has more than about " + MaxRetailJobs + ". Place them only where NPCs hunt (a region, or untick the rest).");
             return proposal;
@@ -635,22 +691,32 @@ namespace OpenCAGE
 
         private static Vector3 Round(Vector3 v) => new Vector3((float)Math.Round(v.X, 2), (float)Math.Round(v.Y, 2), (float)Math.Round(v.Z, 2));
 
-        /* High cover: walk the androids' floor edges every 0.5 m; a spot stands HighCoverWallDistance back from the edge, facing it, where
-           the floor runs straight up to the edge across 1.2 m and the collision has a wall just past it at waist and head height */
-        private static void ProposeHighCover(McpCall call, MarkupProposal proposal, NavigationMesh mesh, NavigationMeshQuery query, MarkupOptions options, Vector3? min, Vector3? max, Action<string> reject,
+        /* Melee cover: walk the androids' floor edges every 0.5 m. High cover: where the collision has a flat wall just past the edge at
+           waist and head height, a spot stands HighCoverWallDistance from that wall's face, facing it, on standing floor that runs straight
+           up to the wall across 1.2 m. Low cover: where it has a waist-high surface (SurfaceAhead), a spot stands LowCoverDistance from its
+           face. The distance is to the face, not the edge: how far short of it the navmesh stops varies */
+        private static void ProposeCover(McpCall call, MarkupProposal proposal, MarkupKind kind, NavigationMesh mesh, NavigationMeshQuery query, MarkupOptions options, Vector3? min, Vector3? max, Action<string> reject,
             Func<McpCollision.Soup> soupOf, Func<Vector3, bool> indoors)
         {
+            bool high = kind == HighCover;
+            float distance = high ? HighCoverWallDistance : LowCoverDistance, tolerance = high ? HighCoverWallTolerance : LowCoverTolerance;
+            string what = high ? "wall" : "surface";
             Floor floor = FloorFor(mesh, query, AndroidClass);
             if (!floor.Allowed.Any(o => o))
             {
-                proposal.Notes.Add("No navmesh admits androids, so there is nowhere for melee high cover.");
+                proposal.Notes.Add("No navmesh admits androids, so there is nowhere for melee " + (high ? "high" : "low") + " cover.");
                 return;
             }
             McpCollision.Soup soup = soupOf();
+            bool Ahead(Vector3 from, Vector3 n, float reach, out float face, out float top)
+            {
+                top = 0;
+                if (high) return WallAhead(soup, from, n, reach, out face);
+                return SurfaceAhead(soup, from, n, reach, out face, out top, reject);
+            }
             NavigationMeshQuery.Options androids = new NavigationMeshQuery.Options() { Classes = AndroidClass, Extents = new Vector3(0.3f, 1.0f, 0.3f) };
-            Vector3 up = Vector3.UnitY;
-            Random random = new Random(options.Seed * 7919 + 3);
-            List<(Vector3 Point, float Clearance, double Score, float Yaw, float Wall)> candidates = new List<(Vector3, float, double, float, float)>();
+            Random random = new Random(options.Seed * 7919 + (high ? 3 : 4));
+            List<(Vector3 Point, float Clearance, double Score, float Yaw, float Wall, float Top)> candidates = new List<(Vector3, float, double, float, float, float)>();
             foreach (Rim.Edge edge in floor.Edges.Edges)
             {
                 call?.ThrowIfCancelled();
@@ -662,47 +728,275 @@ namespace OpenCAGE
                     Vector3 rim = Vector3.Lerp(edge.A, edge.B, along / length);
                     if (min != null && (rim.X < min.Value.X || rim.Y < min.Value.Y || rim.Z < min.Value.Z || rim.X > max.Value.X || rim.Y > max.Value.Y || rim.Z > max.Value.Z)) continue;
                     Vector3 n = edge.Out;
-                    NavigationMeshQuery.Nearest at = query.FindNearest(rim - n * HighCoverWallDistance, androids);
-                    if (!at.Found || at.Height != NavigationMesh.AreaHeight.Standing || !floor.Allowed[at.Polygon] || Flat(at.Point - (rim - n * HighCoverWallDistance)) > 0.15f || Math.Abs(at.Point.Y - rim.Y) > 0.6f)
-                    { reject("no standing floor 2.15 m back from the edge"); continue; }
+                    //The face just past the edge
+                    if (!Ahead(rim, n, 1.2f, out float gap, out float _)) { if (high) reject("no high wall in the collision past the edge"); continue; }
+                    Vector3 target = rim - n * (distance - gap);
+                    NavigationMeshQuery.Nearest at = query.FindNearest(target, androids);
+                    if (!at.Found || at.Height != NavigationMesh.AreaHeight.Standing || !floor.Allowed[at.Polygon] || Flat(at.Point - target) > 0.15f || Math.Abs(at.Point.Y - rim.Y) > 0.6f)
+                    { reject("no standing floor " + distance + " m back from the " + what); continue; }
                     Vector3 p = at.Point;
-                    if (options.Within != null && !options.Within(HighCover, p)) continue;
-                    //The floor runs straight up to this edge, across the width of the throw
-                    float front = floor.Edges.Ray(p, n, HighCoverWallDistance + 1.5f);
-                    if (Math.Abs(front - HighCoverWallDistance) > 0.3f) { reject("the floor in front is not clear up to the wall"); continue; }
-                    Vector3 side = new Vector3(n.Z, 0, -n.X);
+                    if (options.Within != null && !options.Within(kind, p)) continue;
+                    //Measured again from the spot: nothing in between, and the face where the throw ends
+                    if (!Ahead(p, n, distance + 1.2f, out float wall, out float top) || Math.Abs(wall - distance) > tolerance)
+                    { reject("the " + what + " is not " + distance + " m in front"); continue; }
+                    //The floor runs straight up to it
+                    float front = floor.Edges.Ray(p, n, distance + 1.5f);
+                    if (front < wall - 0.6f || front > wall + 0.05f) { reject("the floor in front is not clear up to the " + what); continue; }
                     float spread = 0;
-                    bool flat = true;
-                    foreach (float l in new[] { -0.6f, 0.6f })
+                    if (high)
                     {
-                        float d = floor.Edges.Ray(p + side * l, n, HighCoverWallDistance + 1.5f);
-                        spread = Math.Max(spread, Math.Abs(d - front));
-                        if (Math.Abs(d - front) > 0.35f) flat = false;
+                        //Across the width of the throw
+                        Vector3 side = new Vector3(n.Z, 0, -n.X);
+                        bool flat = true;
+                        foreach (float l in new[] { -0.6f, 0.6f })
+                        {
+                            float d = floor.Edges.Ray(p + side * l, n, distance + 1.5f);
+                            spread = Math.Max(spread, Math.Abs(d - front));
+                            if (Math.Abs(d - front) > 0.35f) flat = false;
+                        }
+                        if (!flat) { reject("the wall is not flat across the throw"); continue; }
                     }
-                    if (!flat) { reject("the wall is not flat across the throw"); continue; }
+                    else
+                    {
+                        //In the middle of the surface's face, where the game puts its own
+                        FaceSpan(soup, p, n, wall, top, out float left, out float right);
+                        if (Math.Abs(right - left) > 0.01f)
+                        {
+                            Vector3 shift = new Vector3(n.Z, 0, -n.X) * ((right - left) * 0.5f);
+                            NavigationMeshQuery.Nearest middle = query.FindNearest(p + shift, androids);
+                            if (middle.Found && middle.Height == NavigationMesh.AreaHeight.Standing && floor.Allowed[middle.Polygon] && Flat(middle.Point - (p + shift)) <= 0.15f &&
+                                Ahead(middle.Point, n, distance + 1.2f, out float wall2, out float top2) && Math.Abs(wall2 - distance) <= tolerance)
+                            {
+                                p = middle.Point;
+                                wall = wall2;
+                                top = top2;
+                                left = right = (left + right) * 0.5f;
+                            }
+                        }
+                        spread = Math.Abs(wall - distance) * 2 + Math.Abs(right - left) - (left + right) * 0.25f;
+                    }
                     float clearance = floor.Edges.Nearest(p, 1.5f);
-                    if (clearance < 0.3f) { reject("hemmed in at the sides"); continue; }
-                    //A wall in the collision just past the edge, at waist and head height, facing the spot
-                    float wall = 0;
-                    bool solid = true;
-                    foreach (float h in new[] { 1.0f, 1.8f })
-                    {
-                        if (!soup.Cast(p + up * h, n, front + 1.2f, out McpCollision.Hit hit) || hit.Distance < front - 0.2f || Vector3.Dot(hit.Normal, -n) < 0.7f) { solid = false; break; }
-                        wall = Math.Max(wall, hit.Distance);
-                    }
-                    if (!solid) { reject("no high wall in the collision past the edge"); continue; }
+                    if (clearance < (high ? 0.3f : 0.2f)) { reject("hemmed in at the sides"); continue; }
                     float yaw = (float)(Math.Atan2(n.X, n.Z) * 180.0 / Math.PI);
                     float snapped = (float)(Math.Round(yaw / 45.0) * 45.0);
                     if (Math.Abs(yaw - snapped) < 4f) yaw = snapped;
                     if (yaw <= -180f) yaw += 360f;
-                    candidates.Add((p, clearance, 1.0 - spread + random.NextDouble() * 0.5, (float)Math.Round(yaw, 1), wall));
+                    candidates.Add((p, clearance, 1.0 - spread + random.NextDouble() * 0.5, (float)Math.Round(yaw, 1), wall, top));
                 }
             }
-            List<Vector3> keepClear = options.KeepClearOfExisting ? proposal.Existing.Where(o => o.Kind == HighCover).Select(o => o.Position).ToList() : new List<Vector3>();
-            Dictionary<Vector3, (float Yaw, float Wall)> facing = new Dictionary<Vector3, (float, float)>();
-            foreach (var c in candidates) facing[c.Point] = (c.Yaw, c.Wall);
-            foreach (var pick in Spread(candidates.OrderByDescending(o => o.Score).Select(o => (o.Point, o.Clearance)), keepClear, options.SpacingOf(HighCover), indoors))
-                proposal.Spots.Add(new MarkupSpot() { Kind = HighCover, Position = Round(pick.Point), Clearance = (float)Math.Round(pick.Clearance, 2), Yaw = facing[pick.Point].Yaw, Wall = (float)Math.Round(facing[pick.Point].Wall, 2) });
+            List<Vector3> keepClear = options.KeepClearOfExisting ? proposal.Existing.Where(o => o.Kind == kind).Select(o => o.Position).ToList() : new List<Vector3>();
+            Dictionary<Vector3, (float Yaw, float Wall, float Top)> facing = new Dictionary<Vector3, (float, float, float)>();
+            foreach (var c in candidates) facing[c.Point] = (c.Yaw, c.Wall, c.Top);
+            foreach (var pick in Spread(candidates.OrderByDescending(o => o.Score).Select(o => (o.Point, o.Clearance)), keepClear, options.SpacingOf(kind), indoors))
+                proposal.Spots.Add(new MarkupSpot()
+                {
+                    Kind = kind, Position = Round(pick.Point), Clearance = (float)Math.Round(pick.Clearance, 2), Yaw = facing[pick.Point].Yaw,
+                    Wall = (float)Math.Round(facing[pick.Point].Wall, 2), Top = (float)Math.Round(facing[pick.Point].Top, 2),
+                });
+        }
+
+        /* How far a low surface's face runs to each side of the throw, just under its top (up to a metre each way, in quarter metres):
+           the game centres its low cover on the surface */
+        private static void FaceSpan(McpCollision.Soup soup, Vector3 from, Vector3 n, float face, float top, out float left, out float right)
+        {
+            Vector3 side = new Vector3(n.Z, 0, -n.X);
+            float[] reach = new float[2];
+            for (int s = 0; s < 2; s++)
+                for (float l = 0.25f; l <= 1.001f; l += 0.25f)
+                {
+                    if (!soup.Cast(from + side * (s == 0 ? -l : l) + Vector3.UnitY * (top - 0.08f), n, face + 0.3f, out McpCollision.Hit hit) || Math.Abs(hit.Distance - face) > 0.1f) break;
+                    reach[s] = l;
+                }
+            left = reach[0];
+            right = reach[1];
+        }
+
+        /* A low cover surface in the collision along n from a floor point: solid at knee height within reach, its top (a ray down just past
+           the face) LowCoverMinTop-LowCoverMaxTop up and running on 0.25 m, upright up to the top (the face is measured just under it), open
+           over the top (nothing at chest height for half a metre past the face, a metre of room above it) */
+        private static bool SurfaceAhead(McpCollision.Soup soup, Vector3 from, Vector3 n, float reach, out float face, out float top, Action<string> reject)
+        {
+            face = top = 0;
+            Vector3 up = Vector3.UnitY;
+            if (!soup.Cast(from + up * 0.4f, n, reach, out McpCollision.Hit low)) { reject("no low surface in the collision past the edge"); return false; }
+            Vector3 over = from + n * (low.Distance + 0.15f);
+            if (!soup.Cast(over + up * (LowCoverMaxTop + 0.3f), -up, LowCoverMaxTop + 0.3f, out McpCollision.Hit lid) || lid.Normal.Y < 0.7f)
+            { reject("the surface has no flat top"); return false; }
+            top = lid.Point.Y - from.Y;
+            if (top < LowCoverMinTop || top > LowCoverMaxTop) { reject("the surface's top is not " + LowCoverMinTop + "-" + LowCoverMaxTop + " m up"); return false; }
+            //The face, just under the top
+            if (!soup.Cast(from + up * (top - 0.08f), n, reach, out McpCollision.Hit lip) || Vector3.Dot(lip.Normal, -n) < 0.7f || lip.Distance > low.Distance + 0.05f || lip.Distance < low.Distance - 0.4f)
+            { reject("the surface is not upright up to its top"); return false; }
+            face = lip.Distance;
+            if (!soup.Cast(from + n * (face + 0.35f) + up * (top + 0.3f), -up, 0.6f, out McpCollision.Hit on) || Math.Abs(on.Point.Y - lid.Point.Y) > 0.1f)
+            { reject("the surface's top is too shallow"); return false; }
+            if (soup.Cast(from + up * (top + 0.25f), n, face + 0.5f, out McpCollision.Hit _))
+            { reject("something stands on or just past the surface"); return false; }
+            if (soup.Cast(from + n * (face + 0.15f) + up * (top + 0.05f), up, 1.0f, out McpCollision.Hit _))
+            { reject("no room over the surface"); return false; }
+            return true;
+        }
+
+        #region Corpse traps
+        /// <summary>An android the level places, with the corpse traps beside it in its own composite.</summary>
+        internal sealed class PlacedAndroid
+        {
+            public FunctionEntity Instance;
+            /// <summary>The composite holding the instance, and where that composite stands in the world (the first placement of it).</summary>
+            public Composite Holder;
+            public cTransform Frame, World;
+            /// <summary>Set to play dead (is_corpse_trap_on_start).</summary>
+            public bool PlaysDead;
+            /// <summary>Corpse traps in its composite within <see cref="CorpseTrapReach"/> of it.</summary>
+            public int Traps;
+            public string Name, Where;
+        }
+
+        /// <summary>Every android instance the level places (once per composite it is in), whether it plays dead and its corpse traps. UI thread.</summary>
+        public static List<PlacedAndroid> Androids(Commands commands)
+        {
+            List<PlacedAndroid> found = new List<PlacedAndroid>();
+            if (commands?.Entries == null || commands.EntryPoints == null || commands.EntryPoints.Length == 0 || commands.EntryPoints[0] == null)
+                return found;
+            HashSet<ShortGuid> androidIds = new HashSet<ShortGuid>(AndroidIds);
+            foreach (Composite c in commands.Entries)
+                if (AndroidPaths.Any(o => string.Equals(c.name, o, StringComparison.OrdinalIgnoreCase))) androidIds.Add(c.shortGUID);
+            bool IsAndroid(FunctionEntity f) => !f.function.IsFunctionType && androidIds.Contains(f.function);
+
+            Dictionary<Composite, bool> holds = new Dictionary<Composite, bool>();
+            bool Holds(Composite composite)
+            {
+                if (composite == null) return false;
+                if (holds.TryGetValue(composite, out bool known)) return known;
+                holds[composite] = false;
+                bool result = composite.functions.Any(IsAndroid);
+                if (!result)
+                    foreach (FunctionEntity function in composite.functions)
+                        if (!function.function.IsFunctionType && !androidIds.Contains(function.function) && Holds(commands.GetComposite(function.function))) { result = true; break; }
+                holds[composite] = result;
+                return result;
+            }
+
+            Composite root = commands.EntryPoints[0];
+            HashSet<(Composite, FunctionEntity)> seen = new HashSet<(Composite, FunctionEntity)>();
+            List<(McpPlacements.Placement Placement, cTransform Local)> placements = new List<(McpPlacements.Placement, cTransform)>();
+            McpPlacements walker = McpRegion.Walker(commands);
+            walker.Walk(root, step =>
+            {
+                if (step.Entity is FunctionEntity function && IsAndroid(function))
+                    placements.Add((McpPlacements.Placement.Of(step), step.Local == null ? null : new cTransform(step.Local.position, step.Local.rotation)));
+                return true;
+            }, o => !androidIds.Contains(o.shortGUID) && Holds(o));
+            foreach ((McpPlacements.Placement placement, cTransform local) in placements)
+            {
+                if (!placement.Real || placement.World == null) continue;
+                FunctionEntity instance = (FunctionEntity)placement.Chain[placement.Chain.Count - 1];
+                List<Composite> along = McpScript.CompositesAlong(commands, root, placement.Chain);
+                Composite holder = along[placement.Chain.Count - 1];
+                if (holder == null || !seen.Add((holder, instance))) continue;
+                PlacedAndroid android = new PlacedAndroid()
+                {
+                    Instance = instance,
+                    Holder = holder,
+                    World = placement.World,
+                    Frame = InstanceTransform.Compose(placement.World, InstanceTransform.Inverse(local ?? new cTransform(Vector3.Zero, Vector3.Zero))),
+                    PlaysDead = instance.GetParameter(CorpseTrapFlag)?.content is cBool flag && flag.value,
+                };
+                cTransform at = InstanceTransform.TransformOf(instance) ?? new cTransform(Vector3.Zero, Vector3.Zero);
+                android.Traps = holder.functions.Count(o => !o.function.IsFunctionType && o.function == CorpseTrap.Id && o != instance &&
+                    Vector3.Distance((InstanceTransform.TransformOf(o) ?? new cTransform(Vector3.Zero, Vector3.Zero)).position, at.position) <= CorpseTrapReach);
+                try { android.Name = McpScript.EntityName(commands, holder, instance); } catch { android.Name = instance.shortGUID.ToByteString(); }
+                android.Where = EditorUtils.GetCompositeName(holder) + " / " + android.Name;
+                found.Add(android);
+            }
+            return found;
+        }
+
+        /* Corpse traps: round each android set to play dead with none of its own, up to CorpseTrapCount of them CorpseTrapDistance out, 120
+           degrees apart (the first in front of it), each facing away from it, at its floor height. A spot must be on the androids' navmesh with
+           nothing in the collision between it and the android; a blocked one turns up to 45 degrees or moves in or out, or is left out */
+        private static void ProposeCorpseTraps(McpCall call, MarkupProposal proposal, Commands commands, NavigationMesh mesh, NavigationMeshQuery query, MarkupOptions options, Vector3? min, Vector3? max,
+            Action<string> reject, Func<McpCollision.Soup> soupOf)
+        {
+            List<PlacedAndroid> dead = McpEditor.UI(() => Androids(commands)).Where(o => o.PlaysDead).ToList();
+            if (dead.Count == 0)
+            {
+                proposal.Notes.Add("No android is set to play dead (is_corpse_trap_on_start), so no corpse traps are needed.");
+                return;
+            }
+            List<PlacedAndroid> need = dead.Where(o => options.IgnoreExistingCorpseTraps || o.Traps == 0).ToList();
+            if (need.Count == 0) return;
+            McpCollision.Soup soup = soupOf();
+            Floor floor = FloorFor(mesh, query, AndroidClass);
+            NavigationMeshQuery.Options androids = new NavigationMeshQuery.Options() { Classes = AndroidClass, Extents = new Vector3(0.3f, 0.6f, 0.3f) };
+            int tight = 0;
+            foreach (PlacedAndroid android in need)
+            {
+                call?.ThrowIfCancelled();
+                Vector3 a = android.World.position;
+                if (min != null && (a.X < min.Value.X || a.Y < min.Value.Y || a.Z < min.Value.Z || a.X > max.Value.X || a.Y > max.Value.Y || a.Z > max.Value.Z)) continue;
+                if (options.Within != null && !options.Within(CorpseTrap, a)) continue;
+                float facing = YawOf(android.World);
+                List<float> taken = new List<float>();
+                for (int slot = 0; slot < CorpseTrapCount; slot++)
+                {
+                    bool placed = false;
+                    foreach (float turn in new[] { 0f, 15f, -15f, 30f, -30f, 45f, -45f })
+                    {
+                        float angle = Wrap(facing + slot * 360f / CorpseTrapCount + turn);
+                        if (taken.Any(o => AngleBetween(o, angle) < 75f)) continue;
+                        Vector3 dir = new Vector3((float)Math.Sin(angle * Math.PI / 180.0), 0, (float)Math.Cos(angle * Math.PI / 180.0));
+                        foreach (float reach in new[] { CorpseTrapDistance, CorpseTrapDistance - 0.15f, CorpseTrapDistance + 0.2f })
+                        {
+                            Vector3 p = a + dir * reach;
+                            NavigationMeshQuery.Nearest at = query.FindNearest(p, androids);
+                            if (!at.Found || !floor.Allowed[at.Polygon] || Flat(at.Point - p) > 0.2f || Math.Abs(at.Point.Y - p.Y) > 0.35f) { reject("off the androids' navmesh"); continue; }
+                            if (soup.Cast(a + Vector3.UnitY * 0.3f, dir, reach, out McpCollision.Hit _) || soup.Cast(a + Vector3.UnitY * 0.9f, dir, reach, out McpCollision.Hit _))
+                            { reject("collision between it and the android"); continue; }
+                            taken.Add(angle);
+                            proposal.Spots.Add(new MarkupSpot()
+                            {
+                                Kind = CorpseTrap, Position = Round(p), Yaw = (float)Math.Round(angle, 1), Clearance = (float)Math.Round(floor.Edges.Nearest(p, 1.5f), 2),
+                                Wall = (float)Math.Round(reach, 2), Into = android.Holder, Frame = android.Frame, Guards = android.Where,
+                            });
+                            placed = true;
+                            break;
+                        }
+                        if (placed) break;
+                    }
+                }
+                if (taken.Count < CorpseTrapCount) tight++;
+            }
+            int skipped = dead.Count - need.Count;
+            proposal.Notes.Add(dead.Count + " android(s) play dead" + (skipped != 0 ? ", " + skipped + " with corpse traps already" : "") + ": " + proposal.Spots.Count(o => o.Kind == CorpseTrap) + " corpse trap(s) for " + (need.Count) + "." +
+                (tight != 0 ? " " + tight + " had room for fewer than " + CorpseTrapCount + "." : ""));
+        }
+
+        private static float Wrap(float angle)
+        {
+            angle %= 360f;
+            if (angle > 180f) angle -= 360f;
+            if (angle <= -180f) angle += 360f;
+            return angle;
+        }
+        #endregion
+
+        /* A wall in the collision along n from a floor point, at waist and head height: facing back the way it was looked for, upright (the
+           two heights agree) and within reach. Its distance is the nearer of the two */
+        private static bool WallAhead(McpCollision.Soup soup, Vector3 from, Vector3 n, float reach, out float distance)
+        {
+            distance = float.MaxValue;
+            float first = -1;
+            foreach (float h in new[] { 1.0f, 1.8f })
+            {
+                if (!soup.Cast(from + Vector3.UnitY * h, n, reach, out McpCollision.Hit hit) || Vector3.Dot(hit.Normal, -n) < 0.7f)
+                    return false;
+                if (first >= 0 && Math.Abs(hit.Distance - first) > 0.2f)
+                    return false;
+                first = hit.Distance;
+                distance = Math.Min(distance, hit.Distance);
+            }
+            return true;
         }
 
         private static float Flat(Vector3 d) => (float)Math.Sqrt(d.X * d.X + d.Z * d.Z);
@@ -784,7 +1078,7 @@ namespace OpenCAGE
 
         /// <summary>
         /// Place markup at spots as one undo step ("Place AI Markup"), after bringing in the kinds the level lacks (not undoable). Each
-        /// instance stands at its spot, high cover facing its wall. UI thread or a tool's.
+        /// instance stands at its spot, melee cover facing its wall or surface; a corpse trap goes in its android's composite. UI thread or a tool's.
         /// </summary>
         public static MarkupPlaced Place(LevelContent content, IList<MarkupSpot> spots, MarkupOptions options, string labelPrefix, bool show)
         {
@@ -796,37 +1090,49 @@ namespace OpenCAGE
             Composite into = options.Into ?? root;
             if (!commands.Entries.Contains(into))
                 throw new McpError("The composite to put the markup in is not in the level.");
-            cTransform frame = into == root ? new cTransform(Vector3.Zero, Vector3.Zero) : McpSpatialTools.FrameOf(commands, into, null, "a composite placed once (or the root)", out JObject _);
+            if (use.Any(o => o.Into != null && !commands.Entries.Contains(o.Into)))
+                throw new McpError("An android's composite the corpse traps go in is no longer in the level: find the spots again.");
+            cTransform frame = into == root || use.All(o => o.Into != null) ? new cTransform(Vector3.Zero, Vector3.Zero) : McpSpatialTools.FrameOf(commands, into, null, "a composite placed once (or the root)", out JObject _);
+            Composite focus = use.Any(o => o.Into == null) ? into : use[0].Into;
+            List<Composite> touched = use.Select(o => o.Into ?? into).Distinct().ToList();
 
-            MarkupPlaced placed = new MarkupPlaced() { Into = into };
+            MarkupPlaced placed = new MarkupPlaced() { Into = focus };
             placed.Ported = EnsureKinds(content, use.Select(o => o.Kind), placed.Notes, placed.PortedFrom);
 
-            HashSet<string> names = new HashSet<string>(into.functions.Select(o => SafeName(commands, into, o)), StringComparer.OrdinalIgnoreCase);
-            Dictionary<MarkupKind, int> next = Kinds.ToDictionary(o => o, o => 1);
-            McpScriptEdit.Outcome outcome = McpScriptEdit.Run("Place AI Markup (" + use.Count + ")", into, edit =>
+            Dictionary<Composite, HashSet<string>> names = new Dictionary<Composite, HashSet<string>>();
+            Dictionary<(Composite, MarkupKind), int> next = new Dictionary<(Composite, MarkupKind), int>();
+            McpScriptEdit.Outcome outcome = McpScriptEdit.Run("Place AI Markup (" + use.Count + ")", focus, edit =>
             {
                 foreach (MarkupSpot spot in use)
                 {
                     Composite kind = commands.GetComposite(spot.Kind.Id) ?? throw new McpError(spot.Kind.Path + " is not in the level.");
+                    Composite target = spot.Into ?? into;
+                    if (!names.TryGetValue(target, out HashSet<string> taken))
+                        names[target] = taken = new HashSet<string>(target.functions.Select(o => SafeName(commands, target, o)), StringComparer.OrdinalIgnoreCase);
                     string prefix = options.NamePrefix.TryGetValue(spot.Kind.Key, out string p) && !string.IsNullOrWhiteSpace(p) ? p.Trim() : spot.Kind.NamePrefix;
-                    while (names.Contains(prefix + "_" + next[spot.Kind])) next[spot.Kind]++;
-                    string name = prefix + "_" + next[spot.Kind];
-                    names.Add(name);
-                    FunctionEntity instance = edit.AddInstance(into, kind, name);
-                    cTransform local = InstanceTransform.ToLocal(frame, new cTransform(spot.Position, new Vector3(0, spot.Yaw, 0)));
-                    edit.SetParameter(into, instance, "position", new JObject()
+                    int number = next.TryGetValue((target, spot.Kind), out int n) ? n : 1;
+                    while (taken.Contains(prefix + "_" + number)) number++;
+                    next[(target, spot.Kind)] = number + 1;
+                    string name = prefix + "_" + number;
+                    taken.Add(name);
+                    FunctionEntity instance = edit.AddInstance(target, kind, name);
+                    cTransform local = InstanceTransform.ToLocal(spot.Into != null ? spot.Frame : frame, new cTransform(spot.Position, new Vector3(0, spot.Yaw, 0)));
+                    edit.SetParameter(target, instance, "position", new JObject()
                     {
                         ["position"] = new JArray(Math.Round(local.position.X, 4), Math.Round(local.position.Y, 4), Math.Round(local.position.Z, 4)),
                         ["rotation"] = new JArray(Math.Round(local.rotation.X, 3), Math.Round(local.rotation.Y, 3), Math.Round(local.rotation.Z, 3)),
                     });
                     edit.PlaceNode(instance, options.Page, null);
                     placed.Instances.Add(instance);
-                    placed.Names.Add(name);
+                    placed.Names.Add(target == into ? name : EditorUtils.GetCompositeName(target) + " / " + name);
+                    if (target == focus) edit.Select.Add(instance);
                 }
-                edit.Select.Clear();
-                edit.Select.AddRange(placed.Instances.Take(500));
-            }, new McpScriptEdit.RunOptions() { Show = show, LabelPrefix = labelPrefix ?? "" });
+                if (edit.Select.Count > 500) edit.Select.RemoveRange(500, edit.Select.Count - 500);
+            }, new McpScriptEdit.RunOptions() { Show = show, LabelPrefix = labelPrefix ?? "", AlsoTouches = touched.Where(o => o != focus).ToList() });
             placed.Notes.AddRange(outcome.Notes);
+            int traps = use.Count(o => o.Kind == CorpseTrap);
+            if (traps != 0)
+                placed.Notes.Add(traps + " corpse trap(s) went in their androids' composites: " + string.Join(", ", use.Where(o => o.Kind == CorpseTrap && o.Into != null).Select(o => EditorUtils.GetCompositeName(o.Into)).Distinct()) + ".");
             return placed;
         }
 

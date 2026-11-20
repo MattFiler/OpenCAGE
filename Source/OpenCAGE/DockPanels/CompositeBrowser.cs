@@ -1668,6 +1668,7 @@ namespace OpenCAGE.DockPanels
                 //"Replace Weapon Model..." on a weapon's composite (Popups\ReplaceWeaponModel.cs)
                 OpenCAGE.Popups.ReplaceWeaponModel.PrepareMenu(FileBrowserContextMenu, comp);
                 OpenCAGE.Popups.Characters.DisplayModelMenu.PrepareMenu(FileBrowserContextMenu, comp);
+                OpenCAGE.Popups.CompositeMarkupEditor.PrepareMenu(FileBrowserContextMenu, comp);
 
                 if (item != null)
                     lv.FocusedItem = item;
@@ -1707,6 +1708,7 @@ namespace OpenCAGE.DockPanels
                 ApplyFindReferencesIcon(findReferencesViaTreeView);
                 OpenCAGE.Popups.ReplaceWeaponModel.PrepareMenu(FileTreeContextMenuNew, comp);
                 OpenCAGE.Popups.Characters.DisplayModelMenu.PrepareMenu(FileTreeContextMenuNew, comp);
+                OpenCAGE.Popups.CompositeMarkupEditor.PrepareMenu(FileTreeContextMenuNew, comp);
 
                 if (_rightClickedNode == null)
                 {

@@ -27,7 +27,7 @@ namespace OpenCAGE
         public LevelBackupManager()
         {
             InitializeComponent();
-            //Compare the selected backup with the level as saved now (File > Compare Levels)
+            //Compare the selected backup with the level as saved now (Utilities > Compare Levels)
             Button compareBackup = new Button() { Text = "Compare With Level", Location = new System.Drawing.Point(384, 482), Size = new System.Drawing.Size(134, 23), Anchor = removeSelectedBackup.Anchor, UseVisualStyleBackColor = true };
             compareBackup.Click += (s, e) =>
             {

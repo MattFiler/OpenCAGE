@@ -2,6 +2,7 @@ using CATHODE.Scripting;
 using OpenCAGE;
 using OpenCAGE.Properties;
 using System.Collections.Generic;
+using System.Linq;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
@@ -65,7 +66,8 @@ namespace OpenCAGE.UnityConnection
 
         public static bool IsSceneFilterEnabled(SceneFilterKind kind)
         {
-            return SettingsManager.GetBool(SceneFilterSettingKey(kind));
+            bool fallback = RenderFilterDefinitions.TryGetSceneFilter(kind, out SceneFilterDefinition definition) && definition.DefaultEnabled;
+            return SettingsManager.GetBool(SceneFilterSettingKey(kind), fallback);
         }
 
         public static void SetSceneFilterEnabled(SceneFilterKind kind, bool enabled)
@@ -79,6 +81,73 @@ namespace OpenCAGE.UnityConnection
             foreach (SceneFilterDefinition definition in RenderFilterDefinitions.SceneFilters)
                 filters[definition.Key] = IsSceneFilterEnabled(definition.Kind);
             return filters;
+        }
+
+        /* The Render Filters panel's row order, top to bottom: "scene:<kind>", "type:<function type>" and "divider" entries */
+        public const string DividerEntry = "divider";
+
+        public static string SceneEntry(SceneFilterKind kind) => "scene:" + kind;
+        public static string TypeEntry(uint functionType) => "type:" + functionType;
+
+        public static bool TryParseSceneEntry(string entry, out SceneFilterKind kind)
+        {
+            kind = default;
+            return entry != null && entry.StartsWith("scene:") && System.Enum.TryParse(entry.Substring(6), out kind)
+                && RenderFilterDefinitions.TryGetSceneFilter(kind, out _);
+        }
+
+        public static bool TryParseTypeEntry(string entry, out uint functionType)
+        {
+            functionType = 0;
+            return entry != null && entry.StartsWith("type:") && uint.TryParse(entry.Substring(5), out functionType)
+                && RenderFilterDefinitions.TryGetDefinition((FunctionType)functionType, out _);
+        }
+
+        /* Scene geometry first, a divider, then the entity previews by name */
+        public static List<string> DefaultOrder()
+        {
+            List<string> order = new List<string>();
+            foreach (SceneFilterDefinition definition in RenderFilterDefinitions.SceneFilters)
+                order.Add(SceneEntry(definition.Kind));
+            if (order.Count > 0 && RenderFilterDefinitions.All.Length > 0)
+                order.Add(DividerEntry);
+            foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All.OrderBy(d => d.FunctionType.ToString(), System.StringComparer.OrdinalIgnoreCase))
+                order.Add(TypeEntry(definition.FunctionTypeUInt));
+            return order;
+        }
+
+        /* The saved order, without entries this build doesn't know; filters the order doesn't have yet go at the end */
+        public static List<string> LoadOrder()
+        {
+            string saved = SettingsManager.GetString(Settings.RenderFilterOrder, "");
+            if (string.IsNullOrWhiteSpace(saved))
+                return DefaultOrder();
+
+            List<string> order = new List<string>();
+            HashSet<string> seen = new HashSet<string>();
+            foreach (string raw in saved.Split(','))
+            {
+                string entry = raw.Trim();
+                if (entry == DividerEntry)
+                {
+                    order.Add(entry);
+                    continue;
+                }
+                if ((TryParseSceneEntry(entry, out _) || TryParseTypeEntry(entry, out _)) && seen.Add(entry))
+                    order.Add(entry);
+            }
+            foreach (string entry in DefaultOrder())
+            {
+                if (entry != DividerEntry && seen.Add(entry))
+                    order.Add(entry);
+            }
+            return order;
+        }
+
+        public static void SaveOrder(IEnumerable<string> order)
+        {
+            List<string> entries = order.ToList();
+            SettingsManager.SetString(Settings.RenderFilterOrder, entries.SequenceEqual(DefaultOrder()) ? "" : string.Join(",", entries));
         }
 
         public static Color ToMenuColor(SceneFilterDefinition definition)

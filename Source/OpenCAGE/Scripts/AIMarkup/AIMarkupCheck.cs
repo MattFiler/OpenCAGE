@@ -25,13 +25,20 @@ namespace OpenCAGE
         public double F1 => Recall + Precision <= 0 ? 0 : 2 * Recall * Precision / (Recall + Precision);
         /// <summary>Median distance from each to the nearest of its own kind, and median clearance from the floor's edge (m).</summary>
         public double LevelSpacing, OurSpacing, LevelClearance, OurClearance;
+        /// <summary>Corpse traps: the androids compared round, and the mean distance from each of the level's to the nearest of ours (m).</summary>
+        public int Androids;
+        public double MeanNearest = double.NaN;
+        public bool Faces => Kind == AIMarkup.HighCover || Kind == AIMarkup.LowCover || Kind == AIMarkup.CorpseTrap;
         public string Summary()
         {
-            string s = Kind.NamePrefix + ": the level has " + Level + ", the tool finds " + Ours + " in the same " + Math.Round(Area) + " m² (" + Ratio() + "). " +
-                "Within " + Within + " m" + (Kind == AIMarkup.HighCover ? " facing the same way" : "") + ": " + Pct(Recall) + " of the level's have one of ours, " + Pct(Precision) + " of ours have one of the level's" +
-                " (F1 " + Pct(F1) + "; spread at random: " + Pct(Chance) + ").";
+            string match = "Within " + Within + " m" + (Faces ? " facing the same way" : "") + ": " + Pct(Recall) + " of the level's have one of ours, " + Pct(Precision) + " of ours have one of the level's" +
+                " (F1 " + Pct(F1) + "; " + (Kind == AIMarkup.CorpseTrap ? "placed at random round the android: " : "spread at random: ") + Pct(Chance) + ").";
+            if (Kind == AIMarkup.CorpseTrap)
+                return Kind.NamePrefix + ": the level has " + Level + " round " + Androids + " android(s) playing dead, the tool finds " + Ours + " (" + Ratio() + "). " + match +
+                    (double.IsNaN(MeanNearest) ? "" : " The nearest of ours to each of the level's: " + Math.Round(MeanNearest, 2) + " m on average.");
+            string s = Kind.NamePrefix + ": the level has " + Level + ", the tool finds " + Ours + " in the same " + Math.Round(Area) + " m² (" + Ratio() + "). " + match;
             s += " Spacing " + Math.Round(LevelSpacing, 1) + " m against " + Math.Round(OurSpacing, 1) + " m";
-            if (Kind != AIMarkup.HighCover) s += ", clearance " + Math.Round(LevelClearance, 2) + " m against " + Math.Round(OurClearance, 2) + " m";
+            if (!Faces) s += ", clearance " + Math.Round(LevelClearance, 2) + " m against " + Math.Round(OurClearance, 2) + " m";
             return s + ".";
         }
         private string Ratio() => Level == 0 ? "-" : "x" + Math.Round((double)Ours / Level, 2);
@@ -79,24 +86,35 @@ namespace OpenCAGE
                 List<Vector3> theirs = existing.Where(o => o.Kind == kind).Select(o => o.Position).ToList();
                 if (theirs.Count == 0) continue;
                 List<float> theirYaw = existing.Where(o => o.Kind == kind).Select(o => o.Yaw).ToList();
+                bool trap = kind == CorpseTrap;
                 MarkupOptions only = new MarkupOptions()
                 {
-                    Search = kind == SearchJob, Sweep = kind == AreaSweepJob, HighCover = kind == HighCover,
+                    Search = kind == SearchJob, Sweep = kind == AreaSweepJob, HighCover = kind == HighCover, LowCover = kind == LowCover, CorpseTraps = trap, IgnoreExistingCorpseTraps = true,
                     Spacing = options.Spacing, Seed = options.Seed, KeepClearOfExisting = false, IndoorsOnly = options.IndoorsOnly,
                     RegionMin = options.RegionMin, RegionMax = options.RegionMax,
-                    Within = (k, p) => theirs.Any(o => Near(o, p, ArenaRadius)),
+                    Within = (k, p) => theirs.Any(o => Near(o, p, trap ? CorpseTrapReach : ArenaRadius)),
                 };
                 MarkupProposal proposal = Propose(call, content, only);
                 List<MarkupSpot> ours = proposal.Spots.Where(o => o.Kind == kind).ToList();
-                MarkupComparison c = new MarkupComparison() { Kind = kind, Level = theirs.Count, Ours = ours.Count, Within = kind == HighCover ? 1.0f : 2.5f };
-                c.Area = Math.Max(1, AreaRound(content, theirs));
-                bool Matches(Vector3 a, float ya, Vector3 b, float yb) => Near(a, b, c.Within) && (kind != HighCover || AngleBetween(ya, yb) <= 30f);
+                MarkupComparison c = new MarkupComparison() { Kind = kind, Level = theirs.Count, Ours = ours.Count, Within = trap ? 0.5f : kind == HighCover || kind == LowCover ? 1.0f : 2.5f };
+                bool Matches(Vector3 a, float ya, Vector3 b, float yb) => Near(a, b, c.Within) && (!c.Faces || AngleBetween(ya, yb) <= 30f);
                 c.Recall = theirs.Count == 0 ? 0 : (double)Enumerable.Range(0, theirs.Count).Count(i => ours.Any(o => Matches(theirs[i], theirYaw[i], o.Position, o.Yaw))) / theirs.Count;
                 c.Precision = ours.Count == 0 ? 0 : (double)ours.Count(o => Enumerable.Range(0, theirs.Count).Any(i => Matches(theirs[i], theirYaw[i], o.Position, o.Yaw))) / ours.Count;
+                if (trap)
+                {
+                    //A spot on the ring round the android lands within reach of a given one this share of the time
+                    c.Androids = ours.Select(o => o.Guards).Distinct().Count();
+                    double each = 2 * Math.Asin(Math.Min(1, c.Within / (2 * CorpseTrapDistance))) / Math.PI;
+                    c.Chance = 1 - Math.Pow(1 - each, ours.Count / (double)Math.Max(1, c.Androids));
+                    if (ours.Count != 0) c.MeanNearest = theirs.Average(t => ours.Min(o => (double)Flat(o.Position - t)));
+                    results.Add(c);
+                    continue;
+                }
+                c.Area = Math.Max(1, AreaRound(content, theirs));
                 double density = ours.Count / c.Area;
                 c.Chance = 1 - Math.Exp(-density * Math.PI * c.Within * c.Within);
                 //A random facing is within 30 degrees one time in six
-                if (kind == HighCover) c.Chance *= 60.0 / 360.0;
+                if (c.Faces) c.Chance *= 60.0 / 360.0;
                 c.LevelSpacing = MedianSpacing(theirs);
                 c.OurSpacing = MedianSpacing(ours.Select(o => o.Position).ToList());
                 c.OurClearance = Median(ours.Select(o => (double)o.Clearance));

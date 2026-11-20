@@ -15,7 +15,7 @@ namespace OpenCAGE.MCP
             {
                 Name = "generate_map_assets",
                 Title = "Generate map assets",
-                Description = "Give the open level a Tab map, as File > Generate Map Assets does: the floors are found from the walk mesh as last built (the biggest walkable area the player " +
+                Description = "Give the open level a Tab map, as Utilities > Generate Map Assets does: the floors are found from the walk mesh as last built (the biggest walkable area the player " +
                     "can use, so roofs, the tops of furniture and the alien's vent network are left out; floor heights where most of the floor area is) or given. The heights split the walkable " +
                     "area into regions: a level region goes on its heights' floor, or one floor above a region it lies a storey or more over; a sloping region (ground, ramps) goes on the lowest " +
                     "floor beside it: so outdoor ground stays on the ground floor at any height, and a mezzanine goes above what it covers; floors nothing ends up on are dropped. Each is drawn " +

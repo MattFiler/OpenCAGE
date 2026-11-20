@@ -116,15 +116,15 @@ namespace OpenCAGE
 
             InitializeComponent();
             Theming.ThemeManager.ApplyToForm(this);
-            //File > Check Level, under Recapture All Cubemaps
+            //Utilities > Check Level, under Recapture All Cubemaps
             OpenCAGE.Popups.LevelCheckWindow.AttachMenu(recaptureAllCubemapsToolStripMenuItem);
-            //File > Compare Levels after Check Level, and Record Edits in its own section at the end
+            //Utilities > Compare Levels after Check Level, and Record Edits in its own section at the end
             OpenCAGE.Popups.CompareLevelsWindow.AttachMenu(recaptureAllCubemapsToolStripMenuItem);
-            //File > Calculate Alien Vents, after Check Level
+            //Utilities > Calculate Alien Vents, after Check Level
             OpenCAGE.Popups.AlienVentsWindow.AttachMenu(recaptureAllCubemapsToolStripMenuItem);
-            //File > Generate Map Assets, after Calculate Alien Vents
+            //Utilities > Generate Map Assets, after Calculate Alien Vents
             OpenCAGE.Popups.MapAssetsWindow.AttachMenu(recaptureAllCubemapsToolStripMenuItem);
-            //File > Place AI Markup, after Generate Map Assets
+            //Utilities > Place AI Markup, after Generate Map Assets
             OpenCAGE.Popups.AIMarkupWindow.AttachMenu(recaptureAllCubemapsToolStripMenuItem);
             //File > Import Scene..., after Import Composites
             OpenCAGE.Popups.SceneImportWindow.AttachMenu(importCompositesMenu);
@@ -820,7 +820,7 @@ namespace OpenCAGE
             if (!LevelIsOpenForPorting()) return;
             new ExportCompositeArchive(null).Show();
         }
-        private void fileMenu_DropDownOpening(object sender, EventArgs e)
+        private void utilitiesMenu_DropDownOpening(object sender, EventArgs e)
         {
             //Recapturing needs a level open; while a recapture runs, the item stops it
             recaptureAllCubemapsToolStripMenuItem.Enabled = _compositeBrowser?.Content?.Level != null && (!EnvironmentMapCapture.Busy || _recapturingAll);
@@ -868,7 +868,7 @@ namespace OpenCAGE
             string question = "Capture all " + targets.Count + " of " + level.Name + "'s environment map cubemaps again in the running game?\n\n"
                 + "The game's camera goes to each in turn, a few seconds each (about " + minutes + " minute" + (minutes == 1 ? "" : "s") + " in all): keep the game running and unpaused meanwhile. "
                 + "Each new cubemap replaces the one its environment map used, which is deleted if nothing else uses it, and each is its own step on the undo history. "
-                + "Choose Recapture All Cubemaps again from the File menu to stop."
+                + "Choose Recapture All Cubemaps again from the Utilities menu to stop."
                 + (skipped.Count != 0 ? "\n\n" + skipped.Count + " can't be captured, as they're placed in more than one place or not at all." : "");
             if (MessageBox.Show(question, "Recapture All Cubemaps", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;

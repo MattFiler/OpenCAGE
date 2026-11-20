@@ -93,6 +93,8 @@ namespace OpenCAGE.UnityConnection
             /* A zone table sent while it was still loading is gone - the populate resets the scene and
                drops it with everything else - so it goes again now there is something to colour. */
             ViewerZoneSync.SendNow();
+            //And the composite markup, which it keeps across populates of the same level once it has it
+            ViewerMarkupSync.NotifyViewerPopulated();
         }
     }
 }

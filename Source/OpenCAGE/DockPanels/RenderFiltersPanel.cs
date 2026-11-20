@@ -13,8 +13,9 @@ namespace OpenCAGE.DockPanels
     {
         private bool _updating;
 
-        //The row between the scene geometry and the entity previews: drawn as a line, nothing to tick
-        private ListViewItem _divider;
+        //Divider rows carry this as their tag: drawn as a line, nothing to tick
+        private static readonly object DividerTag = new object();
+        private static bool IsDivider(ListViewItem item) => item != null && item.Tag == DividerTag;
         private int _lastSelected = -1;
 
         public RenderFiltersPanel()
@@ -48,7 +49,8 @@ namespace OpenCAGE.DockPanels
             if (!e.ExternalChange || IsDisposed)
                 return;
 
-            bool touchesFilters = SettingsChangedEventArgs.ContainsKey(e.ChangedKeys, Settings.BoxRenderFilters);
+            bool touchesFilters = SettingsChangedEventArgs.ContainsKey(e.ChangedKeys, Settings.BoxRenderFilters)
+                || SettingsChangedEventArgs.ContainsKey(e.ChangedKeys, Settings.RenderFilterOrder);
             foreach (SceneFilterDefinition definition in RenderFilterDefinitions.SceneFilters)
                 touchesFilters |= SettingsChangedEventArgs.ContainsKey(e.ChangedKeys, RenderFilters.SceneFilterSettingKey(definition.Kind));
             if (!touchesFilters)
@@ -71,44 +73,41 @@ namespace OpenCAGE.DockPanels
                 filterList.BeginUpdate();
                 filterList.Items.Clear();
                 filterIcons.Images.Clear();
-                _divider = null;
                 _lastSelected = -1;
 
                 int imageIndex = 0;
 
-                //Scene geometry categories first: they aren't entity previews, so they sit above the list
-                foreach (SceneFilterDefinition definition in RenderFilterDefinitions.SceneFilters)
+                //In the user's order (the cog button), scene geometry and a divider before the entity previews by default
+                foreach (string entry in RenderFilters.LoadOrder())
                 {
-                    filterIcons.Images.Add(RenderFilters.CreateColorSwatch(RenderFilters.ToMenuColor(definition)));
-
-                    ListViewItem sceneItem = new ListViewItem(definition.Label, imageIndex)
+                    if (entry == RenderFilters.DividerEntry)
                     {
-                        Tag = definition.Kind,
-                        Checked = RenderFilters.IsSceneFilterEnabled(definition.Kind),
-                    };
-                    filterList.Items.Add(sceneItem);
-                    imageIndex++;
-                }
+                        filterList.Items.Add(new ListViewItem(string.Empty) { Tag = DividerTag });
+                        continue;
+                    }
 
-                //A line under the scene geometry, before the entity previews start
-                if (filterList.Items.Count > 0 && RenderFilterDefinitions.All.Length > 0)
-                {
-                    _divider = new ListViewItem(string.Empty);
-                    filterList.Items.Add(_divider);
-                }
-
-                foreach (RenderFilterDefinitions.Definition definition in RenderFilterDefinitions.All
-                    .OrderBy(definition => definition.FunctionType.ToString(), StringComparer.OrdinalIgnoreCase))
-                {
-                    filterIcons.Images.Add(RenderFilters.CreateFilterListIcon(definition));
-
-                    ListViewItem item = new ListViewItem(definition.FunctionType.ToString(), imageIndex)
+                    if (RenderFilters.TryParseSceneEntry(entry, out SceneFilterKind kind) && RenderFilterDefinitions.TryGetSceneFilter(kind, out SceneFilterDefinition scene))
                     {
-                        Tag = definition.FunctionTypeUInt,
-                        Checked = RenderFilters.IsEnabled(definition.FunctionTypeUInt),
-                    };
-                    filterList.Items.Add(item);
-                    imageIndex++;
+                        filterIcons.Images.Add(RenderFilters.CreateColorSwatch(RenderFilters.ToMenuColor(scene)));
+                        filterList.Items.Add(new ListViewItem(scene.Label, imageIndex)
+                        {
+                            Tag = scene.Kind,
+                            Checked = RenderFilters.IsSceneFilterEnabled(scene.Kind),
+                        });
+                        imageIndex++;
+                        continue;
+                    }
+
+                    if (RenderFilters.TryParseTypeEntry(entry, out uint functionType) && RenderFilterDefinitions.TryGetDefinition((FunctionType)functionType, out RenderFilterDefinitions.Definition definition))
+                    {
+                        filterIcons.Images.Add(RenderFilters.CreateFilterListIcon(definition));
+                        filterList.Items.Add(new ListViewItem(definition.FunctionType.ToString(), imageIndex)
+                        {
+                            Tag = definition.FunctionTypeUInt,
+                            Checked = RenderFilters.IsEnabled(definition.FunctionTypeUInt),
+                        });
+                        imageIndex++;
+                    }
                 }
             }
             finally
@@ -121,7 +120,7 @@ namespace OpenCAGE.DockPanels
         #region DIVIDER
         private void FilterList_DrawItem(object sender, DrawListViewItemEventArgs e)
         {
-            if (e.Item != _divider)
+            if (!IsDivider(e.Item))
             {
                 e.DrawDefault = true;
                 return;
@@ -139,43 +138,53 @@ namespace OpenCAGE.DockPanels
 
         private void FilterList_DrawSubItem(object sender, DrawListViewSubItemEventArgs e)
         {
-            //Only raised for rows DrawItem did not hand back to commctrl, i.e. the divider
-            e.DrawDefault = e.Item != _divider;
+            //Only raised for rows DrawItem did not hand back to commctrl, i.e. dividers
+            e.DrawDefault = !IsDivider(e.Item);
         }
 
-        /* The divider has a checkbox slot like any row: a click there, a double-click or Space would tick it */
+        /* A divider has a checkbox slot like any row: a click there, a double-click or Space would tick it */
         private void FilterList_ItemCheck(object sender, ItemCheckEventArgs e)
         {
-            if (_divider != null && e.Index == _divider.Index)
+            if (e.Index >= 0 && e.Index < filterList.Items.Count && IsDivider(filterList.Items[e.Index]))
                 e.NewValue = e.CurrentValue;
         }
 
-        /* Arrow keys (or a click) can land on the divider: step over it the way the selection was going */
+        /* Arrow keys (or a click) can land on a divider: step over it (and any next to it) the way the selection was going */
         private void FilterList_ItemSelectionChanged(object sender, ListViewItemSelectionChangedEventArgs e)
         {
             if (!e.IsSelected)
                 return;
-            if (e.Item != _divider)
+            if (!IsDivider(e.Item))
             {
                 _lastSelected = e.ItemIndex;
                 return;
             }
 
             int step = _lastSelected > e.ItemIndex ? -1 : 1;
-            int index = e.ItemIndex + step;
-            if (index < 0 || index >= filterList.Items.Count)
-                index = e.ItemIndex - step;
-            if (index < 0 || index >= filterList.Items.Count)
+            int index = NextFilterRow(e.ItemIndex, step);
+            if (index < 0)
+                index = NextFilterRow(e.ItemIndex, -step);
+            if (index < 0)
                 return;
 
             //After the notification, not inside it
             BeginInvoke(new Action(() =>
             {
-                if (IsDisposed || index >= filterList.Items.Count || filterList.Items[index] == _divider)
+                if (IsDisposed || index >= filterList.Items.Count || IsDivider(filterList.Items[index]))
                     return;
                 filterList.Items[index].Selected = true;
                 filterList.Items[index].Focused = true;
             }));
+        }
+
+        private int NextFilterRow(int from, int step)
+        {
+            for (int index = from + step; index >= 0 && index < filterList.Items.Count; index += step)
+            {
+                if (!IsDivider(filterList.Items[index]))
+                    return index;
+            }
+            return -1;
         }
 
         /* WinForms colours a hovered or selected row from a cache it only fills while OwnerDraw is off, so with it
@@ -251,7 +260,7 @@ namespace OpenCAGE.DockPanels
 
         private void FilterList_ItemChecked(object sender, ItemCheckedEventArgs e)
         {
-            if (_updating || e.Item?.Tag == null)
+            if (_updating || e.Item?.Tag == null || IsDivider(e.Item))
                 return;
 
             /* The list reports every checked row again when its handle is created (or recreated) - after RefreshFilters
@@ -266,8 +275,7 @@ namespace OpenCAGE.DockPanels
                 return;
             }
 
-            uint functionType = (uint)e.Item.Tag;
-            if (RenderFilters.IsEnabled(functionType) == e.Item.Checked)
+            if (!(e.Item.Tag is uint functionType) || RenderFilters.IsEnabled(functionType) == e.Item.Checked)
                 return;
             RenderFilters.SetEnabled(functionType, e.Item.Checked);
             QueueFilterPacket();
@@ -292,6 +300,17 @@ namespace OpenCAGE.DockPanels
                 _filterPacketQueued = false;
                 UnityConnection.Send.SendRenderFilterPacket();
             }));
+        }
+
+        private void orderButton_Click(object sender, EventArgs e)
+        {
+            using (Popups.RenderFilterOrderWindow window = new Popups.RenderFilterOrderWindow(RenderFilters.LoadOrder()))
+            {
+                if (window.ShowDialog((IWin32Window)Singleton.Editor ?? this) != DialogResult.OK)
+                    return;
+                RenderFilters.SaveOrder(window.Order);
+            }
+            RefreshFilters();
         }
 
         private void RenderFiltersPanel_FormClosing(object sender, FormClosingEventArgs e)

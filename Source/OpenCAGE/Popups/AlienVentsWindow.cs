@@ -13,7 +13,7 @@ using System.Windows.Forms;
 namespace OpenCAGE.Popups
 {
     /// <summary>
-    /// File > Calculate Alien Vents: finds spots on the navmesh for retail's vent composites (<see cref="AlienVents.Propose"/>), places the
+    /// Utilities > Calculate Alien Vents: finds spots on the navmesh for retail's vent composites (<see cref="AlienVents.Propose"/>), places the
     /// ticked ones as one undo step and runs Save &amp; Build to bake the backstage. Importing the vent composites is not undoable.
     /// </summary>
     internal partial class AlienVentsWindow : BaseWindow
@@ -101,7 +101,7 @@ namespace OpenCAGE.Popups
             return window;
         }
 
-        /// <summary>File > Calculate Alien Vents, after the Check Level item (or after <paramref name="after"/>).</summary>
+        /// <summary>Utilities > Calculate Alien Vents, after the Check Level item (or after <paramref name="after"/>).</summary>
         public static void AttachMenu(ToolStripMenuItem after)
         {
             ToolStrip owner = after?.Owner;

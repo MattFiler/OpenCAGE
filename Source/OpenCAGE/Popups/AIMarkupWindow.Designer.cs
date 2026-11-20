@@ -40,6 +40,10 @@
             this._search = new System.Windows.Forms.CheckBox();
             this._sweep = new System.Windows.Forms.CheckBox();
             this._highCover = new System.Windows.Forms.CheckBox();
+            this._lowCover = new System.Windows.Forms.CheckBox();
+            this._lowCoverSpacingLabel = new System.Windows.Forms.Label();
+            this._lowCoverSpacing = new System.Windows.Forms.NumericUpDown();
+            this._corpseTraps = new System.Windows.Forms.CheckBox();
             this._keepClear = new System.Windows.Forms.CheckBox();
             this._indoors = new System.Windows.Forms.CheckBox();
             this._intoCaption = new System.Windows.Forms.Label();
@@ -53,6 +57,7 @@
             this._colClearance = new System.Windows.Forms.ColumnHeader();
             this._colFacing = new System.Windows.Forms.ColumnHeader();
             this._colWall = new System.Windows.Forms.ColumnHeader();
+            this._colAndroid = new System.Windows.Forms.ColumnHeader();
             this._bottomPanel = new System.Windows.Forms.Panel();
             this._status = new System.Windows.Forms.Label();
             this._find = new System.Windows.Forms.Button();
@@ -63,6 +68,7 @@
             ((System.ComponentModel.ISupportInitialize)(this._searchSpacing)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this._sweepSpacing)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this._highCoverSpacing)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this._lowCoverSpacing)).BeginInit();
             this._bottomPanel.SuspendLayout();
             this.SuspendLayout();
             //
@@ -88,6 +94,10 @@
             this._optionsPanel.Controls.Add(this._search);
             this._optionsPanel.Controls.Add(this._sweep);
             this._optionsPanel.Controls.Add(this._highCover);
+            this._optionsPanel.Controls.Add(this._lowCover);
+            this._optionsPanel.Controls.Add(this._lowCoverSpacingLabel);
+            this._optionsPanel.Controls.Add(this._lowCoverSpacing);
+            this._optionsPanel.Controls.Add(this._corpseTraps);
             this._optionsPanel.Controls.Add(this._keepClear);
             this._optionsPanel.Controls.Add(this._indoors);
             this._optionsPanel.Controls.Add(this._intoCaption);
@@ -98,7 +108,7 @@
             this._optionsPanel.Location = new System.Drawing.Point(0, 84);
             this._optionsPanel.Name = "_optionsPanel";
             this._optionsPanel.Padding = new System.Windows.Forms.Padding(8, 6, 8, 0);
-            this._optionsPanel.Size = new System.Drawing.Size(844, 142);
+            this._optionsPanel.Size = new System.Drawing.Size(844, 198);
             this._optionsPanel.TabIndex = 1;
             //
             // _searchSpacingLabel
@@ -240,6 +250,62 @@
             this._highCover.Text = "Melee high cover (MeleeContext_HighCover)";
             this._tips.SetToolTip(this._highCover, "Where an android grabs the player and throws them against a wall: only levels with androids need it.");
             //
+            // _lowCover
+            //
+            this._lowCover.AutoSize = true;
+            this._lowCover.Location = new System.Drawing.Point(8, 94);
+            this._lowCover.Name = "_lowCover";
+            this._lowCover.TabIndex = 15;
+            this._lowCover.Text = "Melee low cover (MeleeContext)";
+            this._tips.SetToolTip(this._lowCover, "Where an android grabs the player and throws them onto a desk, bed or counter: only levels with androids need it.");
+            //
+            // _lowCoverSpacingLabel
+            //
+            this._lowCoverSpacingLabel.AutoSize = true;
+            this._lowCoverSpacingLabel.Location = new System.Drawing.Point(330, 96);
+            this._lowCoverSpacingLabel.Name = "_lowCoverSpacingLabel";
+            this._lowCoverSpacingLabel.TabIndex = 16;
+            this._lowCoverSpacingLabel.Text = "Spacing (m):";
+            //
+            // _lowCoverSpacing
+            //
+            this._lowCoverSpacing.DecimalPlaces = 1;
+            this._lowCoverSpacing.Increment = new decimal(new int[] {
+            5,
+            0,
+            0,
+            65536});
+            this._lowCoverSpacing.Location = new System.Drawing.Point(420, 92);
+            this._lowCoverSpacing.Maximum = new decimal(new int[] {
+            50,
+            0,
+            0,
+            0});
+            this._lowCoverSpacing.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this._lowCoverSpacing.Name = "_lowCoverSpacing";
+            this._lowCoverSpacing.Size = new System.Drawing.Size(60, 20);
+            this._lowCoverSpacing.TabIndex = 17;
+            this._lowCoverSpacing.Value = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            //
+            // _corpseTraps
+            //
+            this._corpseTraps.AutoSize = true;
+            this._corpseTraps.Checked = true;
+            this._corpseTraps.CheckState = System.Windows.Forms.CheckState.Checked;
+            this._corpseTraps.Location = new System.Drawing.Point(8, 122);
+            this._corpseTraps.Name = "_corpseTraps";
+            this._corpseTraps.TabIndex = 18;
+            this._corpseTraps.Text = "Corpse traps round androids playing dead (MeleeContext_CorpseTrap)";
+            this._tips.SetToolTip(this._corpseTraps, "Up to three round each android set to play dead (is_corpse_trap_on_start) that has none in its composite: the level needs them.");
+            //
             // _keepClear
             //
             this._keepClear.AutoSize = true;
@@ -262,7 +328,7 @@
             // _intoCaption
             //
             this._intoCaption.AutoSize = true;
-            this._intoCaption.Location = new System.Drawing.Point(8, 104);
+            this._intoCaption.Location = new System.Drawing.Point(8, 160);
             this._intoCaption.Name = "_intoCaption";
             this._intoCaption.TabIndex = 11;
             this._intoCaption.Text = "Put them in:";
@@ -270,7 +336,7 @@
             // _intoLabel
             //
             this._intoLabel.AutoEllipsis = true;
-            this._intoLabel.Location = new System.Drawing.Point(110, 104);
+            this._intoLabel.Location = new System.Drawing.Point(110, 160);
             this._intoLabel.Name = "_intoLabel";
             this._intoLabel.Size = new System.Drawing.Size(360, 18);
             this._intoLabel.TabIndex = 12;
@@ -278,7 +344,7 @@
             // _useShown
             //
             this._useShown.AutoSize = true;
-            this._useShown.Location = new System.Drawing.Point(476, 98);
+            this._useShown.Location = new System.Drawing.Point(476, 154);
             this._useShown.Name = "_useShown";
             this._useShown.TabIndex = 13;
             this._useShown.Text = "Composite on Display";
@@ -287,7 +353,7 @@
             // _useRoot
             //
             this._useRoot.AutoSize = true;
-            this._useRoot.Location = new System.Drawing.Point(620, 98);
+            this._useRoot.Location = new System.Drawing.Point(620, 154);
             this._useRoot.Name = "_useRoot";
             this._useRoot.TabIndex = 14;
             this._useRoot.Text = "Root";
@@ -302,11 +368,12 @@
             this._colPosition,
             this._colClearance,
             this._colFacing,
-            this._colWall});
+            this._colWall,
+            this._colAndroid});
             this._spots.Dock = System.Windows.Forms.DockStyle.Fill;
             this._spots.FullRowSelect = true;
             this._spots.HideSelection = false;
-            this._spots.Location = new System.Drawing.Point(0, 226);
+            this._spots.Location = new System.Drawing.Point(0, 282);
             this._spots.Name = "_spots";
             this._spots.Size = new System.Drawing.Size(844, 283);
             this._spots.TabIndex = 0;
@@ -340,8 +407,13 @@
             //
             // _colWall
             //
-            this._colWall.Text = "Wall";
-            this._colWall.Width = 70;
+            this._colWall.Text = "Wall / surface";
+            this._colWall.Width = 90;
+            //
+            // _colAndroid
+            //
+            this._colAndroid.Text = "Android";
+            this._colAndroid.Width = 220;
             //
             // _bottomPanel
             //
@@ -350,7 +422,7 @@
             this._bottomPanel.Controls.Add(this._compare);
             this._bottomPanel.Controls.Add(this._place);
             this._bottomPanel.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this._bottomPanel.Location = new System.Drawing.Point(0, 509);
+            this._bottomPanel.Location = new System.Drawing.Point(0, 565);
             this._bottomPanel.Name = "_bottomPanel";
             this._bottomPanel.Padding = new System.Windows.Forms.Padding(8);
             this._bottomPanel.Size = new System.Drawing.Size(844, 92);
@@ -403,12 +475,12 @@
             this.AcceptButton = this._find;
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(844, 601);
+            this.ClientSize = new System.Drawing.Size(844, 657);
             this.Controls.Add(this._spots);
             this.Controls.Add(this._optionsPanel);
             this.Controls.Add(this._summary);
             this.Controls.Add(this._bottomPanel);
-            this.MinimumSize = new System.Drawing.Size(720, 520);
+            this.MinimumSize = new System.Drawing.Size(720, 576);
             this.Name = "AIMarkupWindow";
             this.ShowInTaskbar = false;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
@@ -418,6 +490,7 @@
             ((System.ComponentModel.ISupportInitialize)(this._searchSpacing)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this._sweepSpacing)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this._highCoverSpacing)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this._lowCoverSpacing)).EndInit();
             this._bottomPanel.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
@@ -437,6 +510,11 @@
         private System.Windows.Forms.CheckBox _search;
         private System.Windows.Forms.CheckBox _sweep;
         private System.Windows.Forms.CheckBox _highCover;
+        private System.Windows.Forms.CheckBox _lowCover;
+        private System.Windows.Forms.Label _lowCoverSpacingLabel;
+        private System.Windows.Forms.NumericUpDown _lowCoverSpacing;
+        private System.Windows.Forms.CheckBox _corpseTraps;
+        private System.Windows.Forms.ColumnHeader _colAndroid;
         private System.Windows.Forms.CheckBox _keepClear;
         private System.Windows.Forms.CheckBox _indoors;
         private System.Windows.Forms.Label _intoCaption;

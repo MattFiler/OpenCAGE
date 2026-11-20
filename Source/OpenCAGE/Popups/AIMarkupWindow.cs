@@ -13,7 +13,7 @@ using System.Windows.Forms;
 namespace OpenCAGE.Popups
 {
     /// <summary>
-    /// File > Place AI Markup: finds spots on the navmesh for retail's search and area sweep jobs and melee high cover (<see cref="AIMarkup.Propose"/>),
+    /// Utilities > Place AI Markup: finds spots on the navmesh for retail's search and area sweep jobs, melee cover and corpse traps (<see cref="AIMarkup.Propose"/>),
     /// places the ticked ones as one undo step, and compares the tool with a level's own markup. Importing the composites is not undoable.
     /// </summary>
     internal partial class AIMarkupWindow : BaseWindow
@@ -32,6 +32,7 @@ namespace OpenCAGE.Popups
             _searchSpacing.Value = (decimal)AIMarkup.SearchJob.Spacing;
             _sweepSpacing.Value = (decimal)AIMarkup.AreaSweepJob.Spacing;
             _highCoverSpacing.Value = (decimal)AIMarkup.HighCover.Spacing;
+            _lowCoverSpacing.Value = (decimal)AIMarkup.LowCover.Spacing;
 
             Theming.ThemeManager.ApplyCurrent(this);
             SetInto(null);
@@ -77,13 +78,13 @@ namespace OpenCAGE.Popups
             return _open;
         }
 
-        /// <summary>File > Place AI Markup, after the Generate Map Assets item (or the nearest level tool before it, or <paramref name="after"/>).</summary>
+        /// <summary>Utilities > Place AI Markup, after the Generate Map Assets item (or the nearest level tool before it, or <paramref name="after"/>).</summary>
         public static void AttachMenu(ToolStripMenuItem after)
         {
             ToolStrip owner = after?.Owner;
             if (owner == null) return;
             ToolStripDropDownItem menu = after.OwnerItem as ToolStripDropDownItem;
-            ToolStripMenuItem item = new ToolStripMenuItem("Place AI Markup") { Name = "aiMarkupToolStripMenuItem", ToolTipText = "Give NPCs spots to search at and sweep over, and androids walls to throw the player against: place retail's search jobs, area sweep jobs and melee high cover over the navmesh" };
+            ToolStripMenuItem item = new ToolStripMenuItem("Place AI Markup") { Name = "aiMarkupToolStripMenuItem", ToolTipText = "Give NPCs spots to search at and sweep over, and androids walls and desks to throw the player against: place retail's search jobs, area sweep jobs, melee cover and corpse traps over the navmesh" };
             item.Click += (s, e) => Open();
             int at = owner.Items.IndexOf(after) + 1;
             ToolStripItem anchor = new[] { "mapAssetsToolStripMenuItem", "alienVentsToolStripMenuItem", "levelCheckToolStripMenuItem" }
@@ -111,6 +112,8 @@ namespace OpenCAGE.Popups
                 Search = _search.Checked,
                 Sweep = _sweep.Checked,
                 HighCover = _highCover.Checked,
+                LowCover = _lowCover.Checked,
+                CorpseTraps = _corpseTraps.Checked,
                 KeepClearOfExisting = _keepClear.Checked,
                 IndoorsOnly = _indoors.Checked,
                 Into = _into,
@@ -118,6 +121,7 @@ namespace OpenCAGE.Popups
             options.Spacing[AIMarkup.SearchJob.Key] = (float)_searchSpacing.Value;
             options.Spacing[AIMarkup.AreaSweepJob.Key] = (float)_sweepSpacing.Value;
             options.Spacing[AIMarkup.HighCover.Key] = (float)_highCoverSpacing.Value;
+            options.Spacing[AIMarkup.LowCover.Key] = (float)_lowCoverSpacing.Value;
             return options;
         }
 
@@ -139,6 +143,12 @@ namespace OpenCAGE.Popups
                         (mine.Count > 1 ? ", median spacing " + Math.Round(AIMarkup.MedianSpacing(mine.Select(o => o.Position).ToList()), 1).ToString(CultureInfo.InvariantCulture) + " m" : "") +
                         (off != 0 ? ", " + off + " OFF the navmesh" : "")) + ".");
                 }
+                List<AIMarkup.PlacedAndroid> dead = AIMarkup.Androids(level.Commands).Where(o => o.PlaysDead).ToList();
+                if (dead.Count != 0)
+                {
+                    int missing = dead.Count(o => o.Traps == 0);
+                    lines.Add(dead.Count + " android(s) play dead" + (missing != 0 ? ": " + missing + " with NO corpse traps, which the level needs (" + string.Join(", ", dead.Where(o => o.Traps == 0).Take(4).Select(o => o.Name)) + (missing > 4 ? ", ..." : "") + ")." : ", each with its corpse traps."));
+                }
                 if (standing.Count == 0 && markup.Count != 0)
                     lines.Add("The level has no navmesh yet: Save & Build with the navmesh baker before finding spots.");
                 if (BuildTracker.NeedsBuild)
@@ -156,7 +166,7 @@ namespace OpenCAGE.Popups
             LevelContent content = Content;
             if (content?.Level == null) return;
             Cursor = Cursors.WaitCursor;
-            _status.Text = "Looking for spots (reading the navmesh" + (_highCover.Checked ? " and the collision" : "") + ")...";
+            _status.Text = "Looking for spots (reading the navmesh" + (_highCover.Checked || _lowCover.Checked || _corpseTraps.Checked ? " and the collision" : "") + ")...";
             _status.Refresh();
             try
             {
@@ -166,11 +176,14 @@ namespace OpenCAGE.Popups
                 int n = 1;
                 foreach (MarkupSpot spot in proposal.Spots)
                 {
-                    bool high = spot.Kind == AIMarkup.HighCover;
+                    bool melee = spot.Kind == AIMarkup.HighCover || spot.Kind == AIMarkup.LowCover || spot.Kind == AIMarkup.CorpseTrap;
+                    bool faces = spot.Kind == AIMarkup.HighCover || spot.Kind == AIMarkup.LowCover;
                     ListViewItem item = new ListViewItem(new[]
                     {
                         (n++).ToString(), spot.Kind.NamePrefix, McpRegion.Format(spot.Position), spot.Clearance.ToString("0.00", CultureInfo.InvariantCulture) + " m",
-                        high ? spot.Yaw.ToString("0", CultureInfo.InvariantCulture) + "°" : "", high ? spot.Wall.ToString("0.00", CultureInfo.InvariantCulture) + " m" : "",
+                        melee ? spot.Yaw.ToString("0", CultureInfo.InvariantCulture) + "°" : "",
+                        faces ? spot.Wall.ToString("0.00", CultureInfo.InvariantCulture) + " m" + (spot.Kind == AIMarkup.LowCover ? " (top " + spot.Top.ToString("0.00", CultureInfo.InvariantCulture) + " m up)" : "") : "",
+                        spot.Guards ?? "",
                     }) { Tag = spot, Checked = true };
                     _spots.Items.Add(item);
                 }
