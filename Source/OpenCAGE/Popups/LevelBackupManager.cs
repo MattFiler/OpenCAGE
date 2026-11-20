@@ -94,7 +94,11 @@ namespace OpenCAGE
             for (int i = 0; i < level.Backups.Count; i++)
             {
                 int changeCount = i == 0 ? level.Backups[i].GUIDs.Count : level.CalculateDiff(level.Backups[i - 1], level.Backups[i]);
-                backupList.Items.Add(new ListViewItem(new string[] { level.Backups[i].Name, level.Backups[i].Date, changeCount + " Files Modified" }));
+                string madeWith = level.Backups[i].MadeWith;
+                backupList.Items.Add(new ListViewItem(new string[] { level.Backups[i].Name, level.Backups[i].Date, changeCount + " Files Modified" })
+                {
+                    ToolTipText = string.IsNullOrEmpty(madeWith) ? "Made with an older OpenCAGE, which didn't record its version" : "Made with OpenCAGE " + madeWith
+                });
             }
         }
 

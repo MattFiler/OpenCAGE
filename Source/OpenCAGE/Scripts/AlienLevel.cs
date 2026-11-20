@@ -24,6 +24,8 @@ namespace OpenCAGE.Backups
            (or written by an older OpenCAGE since) are matched up from their hashes by PathsOf. */
         private Dictionary<long, Dictionary<string, string>> PathMaps = new Dictionary<long, Dictionary<string, string>>();
         private const int PathMapMagic = 0x50414D50; //"PMAP"
+        /* Which OpenCAGE made each backup (AlienBackup.MadeWith), written after the path maps for the same reason */
+        private const int MadeWithMagic = 0x52455642; //"BVER"
 
         /* Backups this object deleted: an archive re-read before writing must not bring them back */
         private HashSet<long> DeletedHere = new HashSet<long>();
@@ -88,7 +90,7 @@ namespace OpenCAGE.Backups
                 long id = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
                 if (Backups.Any(o => o.ID == id))
                     id = Backups.Max(o => o.ID) + 1;
-                AlienBackup Backup = new AlienBackup() { Name = name, Date = DateTime.Now.ToString("dd-MM-yy HH:mm:ss"), ID = id, GUIDs = new List<string>() };
+                AlienBackup Backup = new AlienBackup() { Name = name, Date = DateTime.Now.ToString("dd-MM-yy HH:mm:ss"), ID = id, GUIDs = new List<string>(), MadeWith = MadeWithNow() };
                 Dictionary<string, string> paths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
                 List<KeyValuePair<string, string>> files = LevelFiles();
@@ -802,6 +804,20 @@ namespace OpenCAGE.Backups
                     if (backup != null && backup.GUIDs.Count == paths.Count)
                         pathMaps[id] = paths;
                 }
+
+                //Which OpenCAGE made each backup, when this archive was last written by one that records it
+                if (reader.BaseStream.Length - reader.BaseStream.Position < 8 || reader.ReadInt32() != MadeWithMagic)
+                    return;
+                reader.ReadInt32(); //its version
+                int madeWithCount = reader.ReadInt32();
+                for (int i = 0; i < madeWithCount; i++)
+                {
+                    long id = reader.ReadInt64();
+                    string madeWith = reader.ReadString();
+                    AlienBackup backup = backups.FirstOrDefault(o => o.ID == id);
+                    if (backup != null)
+                        backup.MadeWith = madeWith;
+                }
             }
         }
 
@@ -906,6 +922,17 @@ namespace OpenCAGE.Backups
                     }
                 }
 
+                //Then which OpenCAGE made each backup
+                List<AlienBackup> versioned = Backups.Where(o => !string.IsNullOrEmpty(o.MadeWith)).ToList();
+                writer.Write(MadeWithMagic);
+                writer.Write(1);
+                writer.Write(versioned.Count);
+                foreach (AlienBackup backup in versioned)
+                {
+                    writer.Write(backup.ID);
+                    writer.Write(backup.MadeWith);
+                }
+
                 writer.Flush();
                 ((FileStream)writer.BaseStream).Flush(true);
             }
@@ -929,6 +956,15 @@ namespace OpenCAGE.Backups
             public string Date;
             public Int64 ID;
             public List<string> GUIDs;
+            /// <summary>The OpenCAGE version (and Steam branch) that made it, e.g. "1.0.0.4 (staging)"; null when not recorded.</summary>
+            public string MadeWith;
+        }
+
+        /* This OpenCAGE, as a backup records it */
+        private static string MadeWithNow()
+        {
+            string version = string.IsNullOrEmpty(Singleton.Version) ? System.Windows.Forms.Application.ProductVersion : Singleton.Version;
+            return string.IsNullOrEmpty(Singleton.BetaName) ? version : version + " (" + Singleton.BetaName + ")";
         }
 
         private class AlienFile

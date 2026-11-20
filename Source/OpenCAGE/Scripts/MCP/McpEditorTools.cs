@@ -2262,6 +2262,7 @@ namespace OpenCAGE.MCP
                 ["date_utc"] = utc.ToString("yyyy-MM-ddTHH:mm:ssZ"),
                 ["age_hours"] = Math.Round((DateTime.UtcNow - utc).TotalHours, 1),
                 ["files"] = backup.GUIDs?.Count ?? 0,
+                ["made_with"] = backup.MadeWith,
             };
         }
 

@@ -276,13 +276,7 @@ namespace OpenCAGE
                 {
                     List<Entity> entities = NodeEntities(nodes);
                     RemoveNodesRecorded(nodes);
-                    CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
-                    if (display != null)
-                    {
-                        HashSet<ShortGuid> pointerTargets = display.CollectPointerTargets();
-                        foreach (Entity entity in entities.Where(o => !CompositeDisplay.IsInSceneEntity(o) && !display.IsEntityStillReferenced(o, pointerTargets)).ToList())
-                            display.DeleteEntity(entity, false);
-                    }
+                    DeleteOrphanedEntities(entities);
                 }
             }
             MarkFlowgraphEdit();

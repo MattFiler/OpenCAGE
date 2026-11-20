@@ -24,6 +24,8 @@ namespace OpenCAGE.Recipes
         private static HashSet<string> _models, _textures, _mappings;
         private static object _mark;
         private static bool _hooked;
+        private static ResourceNames _names;
+        private static CompositeSnap _untidied;
 
         public static bool Recording => _level != null;
         public static DateTime Started { get; private set; }
@@ -74,9 +76,53 @@ namespace OpenCAGE.Recipes
             _mappings = new HashSet<string>((level.MaterialMappings?.Entries ?? new List<MaterialMappings.MaterialMapping>()).Where(o => o != null).Select(o => o.Name + " " + Fields.Line(o, null, 3)), StringComparer.Ordinal);
             _mark = UndoStack.Current.Mark();
             _level = level;
+            _names = names;
+            if (level.Commands.Utils != null)
+            {
+                level.Commands.Utils.PurgeStarting += OnPurgeStarting;
+                level.Commands.Utils.PurgeFinished += OnPurgeFinished;
+            }
             Orphan = null;
             Started = DateTime.Now;
             Changed?.Invoke();
+        }
+
+        /* A composite's first open tidies it (CommandsUtils.PurgeDeadLinks): what that takes out was never the user's edit, so the
+           starting point takes the same tidy-up - for each entity the user hasn't changed since recording started */
+        private static void OnPurgeStarting(Composite composite)
+        {
+            _untidied = Recording && _level.Commands.GetComposite(composite.shortGUID) == composite ? CompositeSnap.Take(_level.Commands, composite, _names) : null;
+        }
+
+        private static void OnPurgeFinished(Composite composite)
+        {
+            CompositeSnap untidied = _untidied;
+            _untidied = null;
+            CompositeSnap start = untidied == null || untidied.Id != composite.shortGUID ? null : _before?.Find(composite.shortGUID);
+            if (start == null) return;
+            CompositeSnap tidied = CompositeSnap.Take(_level.Commands, composite, _names);
+            foreach (KeyValuePair<ShortGuid, EntitySnap> entity in untidied.Entities)
+            {
+                if (!start.Entities.TryGetValue(entity.Key, out EntitySnap was) || !Same(was, entity.Value)) continue;
+                if (!tidied.Entities.TryGetValue(entity.Key, out EntitySnap now))
+                {
+                    start.Entities.Remove(entity.Key);
+                    _before.EntityCount--;
+                    _before.ParameterCount -= was.Params.Count;
+                }
+                else if (!Same(now, was))
+                {
+                    start.Entities[entity.Key] = now;
+                    _before.ParameterCount += now.Params.Count - was.Params.Count;
+                }
+            }
+        }
+
+        private static bool Same(EntitySnap a, EntitySnap b)
+        {
+            return a.Spec == b.Spec && a.Kind == b.Kind && a.Name == b.Name && a.Resources == b.Resources && a.Special == b.Special && a.Brush == b.Brush
+                && a.Links.SequenceEqual(b.Links) && a.Params.Count == b.Params.Count
+                && a.Params.All(o => b.Params.TryGetValue(o.Key, out string value) && value == o.Value);
         }
 
         /// <summary>Stop recording: the recipe of what changed since <see cref="Start"/>.</summary>
@@ -124,7 +170,14 @@ namespace OpenCAGE.Recipes
 
         private static void Clear()
         {
+            if (_level?.Commands?.Utils != null)
+            {
+                _level.Commands.Utils.PurgeStarting -= OnPurgeStarting;
+                _level.Commands.Utils.PurgeFinished -= OnPurgeFinished;
+            }
             _level = null;
+            _names = null;
+            _untidied = null;
             _before = null;
             _materials = null;
             _models = _textures = _mappings = null;

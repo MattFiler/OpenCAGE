@@ -1656,22 +1656,42 @@ namespace OpenCAGE
                 RemoveNodesRecorded(nodes);
                 RefreshNodeMarkers();
 
-                CompositeDisplay display = Singleton.Editor.CompositeDisplay;
-                if (display == null)
-                    return;
-
-                /* Whichever of the entities has just lost its last node, isn't in the world in its own
-                   right, and isn't wanted by anything else: a trigger sequence or CAGEAnimation naming
-                   it, or a proxy or alias somewhere in the level. */
-                HashSet<ShortGuid> pointerTargets = display.CollectPointerTargets();
-                List<Entity> orphaned = entities
-                    .Where(o => !CompositeDisplay.IsInSceneEntity(o)
-                        && !display.IsEntityStillReferenced(o, pointerTargets))
-                    .ToList();
-
-                foreach (Entity entity in orphaned)
-                    display.DeleteEntity(entity, false);
+                DeleteOrphanedEntities(entities);
             }
+        }
+
+        /* Deletes whichever of the entities has just lost its last node, isn't in the world in its own right, isn't a composite
+           instance, and isn't wanted by anything else (a trigger sequence or CAGEAnimation naming it, or a proxy or alias somewhere
+           in the level). Off with Delete Entity With Its Last Node; with Show Confirmation When Deleting Node it asks first. */
+        internal void DeleteOrphanedEntities(List<Entity> entities)
+        {
+            CompositeDisplay display = Singleton.Editor?.CompositeDisplay;
+            if (display == null || entities.Count == 0 || !SettingsManager.GetBool(Settings.DeleteEntityWithLastNode))
+                return;
+
+            HashSet<ShortGuid> pointerTargets = display.CollectPointerTargets();
+            List<Entity> orphaned = entities
+                .Where(o => !CompositeDisplay.IsInSceneEntity(o)
+                    && !(o is FunctionEntity function && !function.function.IsFunctionType)
+                    && !display.IsEntityStillReferenced(o, pointerTargets))
+                .ToList();
+            if (orphaned.Count == 0)
+                return;
+
+            if (SettingsManager.GetBool(Settings.AskBeforeDeletingNode))
+            {
+                List<string> names = orphaned.Take(5).Select(o => _commands.Utils.GetEntityName(_composite, o)).ToList();
+                if (orphaned.Count > 5)
+                    names.Add("and " + (orphaned.Count - 5) + " more");
+                string question = orphaned.Count == 1
+                    ? names[0] + " has no node left and nothing else uses it. Delete the entity too?\n\nNo keeps it in the composite."
+                    : "These " + orphaned.Count + " entities have no node left and nothing else uses them:\n" + string.Join("\n", names) + "\n\nDelete the entities too? No keeps them in the composite.";
+                if (MessageBox.Show(question, "Delete Entities Too?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                    return;
+            }
+
+            foreach (Entity entity in orphaned)
+                display.DeleteEntity(entity, false);
         }
 
         //Copy the selected node(s) to the entity clipboard. A right-clicked node outside the

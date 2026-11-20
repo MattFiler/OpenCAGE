@@ -428,8 +428,8 @@ namespace OpenCAGE
 
     /// <summary>
     /// An instance of a composite the level doesn't have (CommandsUtils.IsMissingCompositeInstance): a composite deleted, or a script
-    /// imported without a composite it instances. The game skips it, so its links and what it stood for never happen. Retail's few are
-    /// in its own composites, mostly switched off with 'deleted'.
+    /// imported without a composite it instances. The game skips it, so its links and what it stood for never happen. Retail's own
+    /// (<see cref="RetailShipped"/>) are left out.
     /// </summary>
     internal sealed class MissingCompositeRule : LevelCheckRule
     {
@@ -437,13 +437,28 @@ namespace OpenCAGE
         public override string Name => "Instances of missing composites";
         public override string About => "An entity that instances a composite the level doesn't have - one an import didn't bring, or one that was deleted: the game skips it, so its links and what it stood for never happen. Importing the composite under the same ID makes it an instance again.";
 
+        /* The ones retail ships (entity id, function): stray records the game skips, most naming an entity rather than a composite.
+           Any edit makes the composite holding them the user's, so they are matched by id rather than by composite. */
+        private static readonly HashSet<(ShortGuid, ShortGuid)> RetailShipped = new HashSet<(ShortGuid, ShortGuid)>(new[]
+        {
+            "82-1D-A4-25 81-D6-A0-37", "C2-2B-EA-2B 10-0D-39-A1", "21-D5-8E-C4 92-46-C5-45", "BA-51-5C-DF C6-2A-7B-07",
+            "20-1D-F9-81 27-AA-5B-19", "16-86-E9-69 27-AA-5B-19", "59-1F-93-DC A5-DE-8A-73", "D8-84-87-BC A5-DE-8A-73",
+            "22-D7-9D-75 A5-DE-8A-73", "A0-7A-FC-86 A5-DE-8A-73", "C8-E9-1C-70 7B-02-C0-75", "B4-10-C2-FA 83-CA-CB-ED",
+            "94-B0-02-B7 EE-D0-E6-20", "49-47-5E-3D EE-D0-E6-20", "C5-77-39-9A A8-53-51-19", "B8-F5-68-74 66-80-3F-8A",
+            "36-44-E5-D4 66-80-3F-8A", "9C-0E-18-4E 66-80-3F-8A", "B0-F9-77-14 66-80-3F-8A", "29-05-80-DB 6F-3A-27-2E",
+            "21-6E-A7-45 58-97-1B-E3", "9F-5F-59-2E A1-3A-0A-30", "97-FF-09-50 C5-AB-DD-83", "3C-3E-D5-79 0E-A4-24-78",
+            "73-CB-A3-BB 98-8A-86-C2", "7B-77-9E-6E BC-14-23-19", "42-DF-7C-76 6F-70-09-63", "89-47-A5-6E 4F-C5-A8-6B",
+            "BA-D6-E6-E0 B8-EA-F1-2A", "AC-2C-ED-39 B6-86-A5-FE", "2A-7B-F0-41 C4-12-07-63", "EB-BD-14-03 46-B8-DF-85",
+        }.Select(o => (new ShortGuid(o.Substring(0, 11)), new ShortGuid(o.Substring(12)))));
+
         public override void Run(LevelCheckContext context, List<LevelCheckFinding> found)
         {
             foreach (Composite composite in context.Placed)
             {
                 if (composite == null || !context.IsUsers(composite)) continue;
                 List<FunctionEntity> missing = composite.functions.Where(o => context.Commands.Utils.IsMissingCompositeInstance(o) &&
-                    !(o.GetParameter(ShortGuids.deleted)?.content is cBool deleted && deleted.value)).ToList();
+                    !(o.GetParameter(ShortGuids.deleted)?.content is cBool deleted && deleted.value) &&
+                    !RetailShipped.Contains((o.shortGUID, o.function))).ToList();
                 foreach (IGrouping<ShortGuid, FunctionEntity> group in missing.GroupBy(o => o.function))
                 {
                     List<FunctionEntity> instances = group.ToList();

@@ -113,6 +113,7 @@ namespace OpenCAGE
             this.showNodeIconsWhenZoomedOutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 
             this.showConfirmationWhenDeletingNodeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.deleteEntityWithLastNodeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 
             this.viewportOptionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.enableViewportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -869,7 +870,8 @@ namespace OpenCAGE
             this.focusCanvasOnNewNodeToolStripMenuItem,
             this.showNodeIconsWhenZoomedOutToolStripMenuItem,
 
-            this.showConfirmationWhenDeletingNodeToolStripMenuItem});
+            this.showConfirmationWhenDeletingNodeToolStripMenuItem,
+            this.deleteEntityWithLastNodeToolStripMenuItem});
             this.entityDisplayToolStripMenuItem.Name = "entityDisplayToolStripMenuItem";
             this.entityDisplayToolStripMenuItem.Size = new System.Drawing.Size(210, 22);
             this.entityDisplayToolStripMenuItem.Text = "Entity Display";
@@ -917,7 +919,17 @@ namespace OpenCAGE
             this.showConfirmationWhenDeletingNodeToolStripMenuItem.ToolTipText = "Ask before removing nodes from a flowgraph. Off by default: removing a node is un" +
     "done with Ctrl+Z like any other edit.";
             this.showConfirmationWhenDeletingNodeToolStripMenuItem.Click += new System.EventHandler(this.showConfirmationWhenDeletingNodeToolStripMenuItem_Click);
-            // 
+            //
+            // deleteEntityWithLastNodeToolStripMenuItem
+            //
+            this.deleteEntityWithLastNodeToolStripMenuItem.Name = "deleteEntityWithLastNodeToolStripMenuItem";
+            this.deleteEntityWithLastNodeToolStripMenuItem.Size = new System.Drawing.Size(312, 22);
+            this.deleteEntityWithLastNodeToolStripMenuItem.Text = "Delete Entity With Its Last Node";
+            this.deleteEntityWithLastNodeToolStripMenuItem.ToolTipText = "Removing a node also deletes its entity when that was its last node and nothing e" +
+    "lse uses it. Composite instances and entities placed in the world always stay. O" +
+    "ff: removing nodes never deletes entities.";
+            this.deleteEntityWithLastNodeToolStripMenuItem.Click += new System.EventHandler(this.deleteEntityWithLastNodeToolStripMenuItem_Click);
+            //
 
             // 
             // viewportOptionsToolStripMenuItem
@@ -1808,6 +1820,7 @@ namespace OpenCAGE
         private System.Windows.Forms.ToolStripSeparator optionsToolStripSeparatorAppearance;
 
         private System.Windows.Forms.ToolStripMenuItem showConfirmationWhenDeletingNodeToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem deleteEntityWithLastNodeToolStripMenuItem;
 
         private System.Windows.Forms.ToolStripMenuItem miscToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showConfirmationWhenSavingToolStripMenuItem;

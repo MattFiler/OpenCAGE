@@ -676,6 +676,15 @@ namespace OpenCAGE.DockPanels
                         //editFunction.Text = "Alias Overrides"; //TODO: show count?
                     }
 
+                    //Instance of a composite the level doesn't have (see CommandsUtils.IsMissingCompositeInstance)
+                    else if (!((FunctionEntity)_entity).function.IsFunctionType)
+                    {
+                        jumpToComposite.Visible = false;
+                        description = "Missing composite " + ((FunctionEntity)_entity).function.ToByteString();
+                        editFunction.Enabled = false;
+                        editEntityResources.Enabled = false;
+                    }
+
                     //Function Entity
                     else
                     {

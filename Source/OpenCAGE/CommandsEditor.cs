@@ -3104,6 +3104,8 @@ namespace OpenCAGE
                 darkModeToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.DarkMode);
             if (ShouldApplySetting(Settings.AskBeforeDeletingNode, changedKeys))
                 showConfirmationWhenDeletingNodeToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.AskBeforeDeletingNode);
+            if (ShouldApplySetting(Settings.DeleteEntityWithLastNode, changedKeys))
+                deleteEntityWithLastNodeToolStripMenuItem.Checked = SettingsManager.GetBool(Settings.DeleteEntityWithLastNode);
 
             if (ShouldApplySetting(Settings.LevelViewerHighlightMode, changedKeys))
                 ApplyHighlightModeSelectionFromSettings();
@@ -4259,6 +4261,11 @@ namespace OpenCAGE
         private void showConfirmationWhenDeletingNodeToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ToggleBoolSetting(Settings.AskBeforeDeletingNode);
+        }
+
+        private void deleteEntityWithLastNodeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ToggleBoolSetting(Settings.DeleteEntityWithLastNode);
         }
 
         private void SaveBuildOptionsDropDownOpening(object sender, EventArgs e)

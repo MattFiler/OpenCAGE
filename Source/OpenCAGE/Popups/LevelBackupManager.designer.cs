@@ -122,6 +122,7 @@
             this.backupList.HideSelection = false;
             this.backupList.Location = new System.Drawing.Point(12, 52);
             this.backupList.Name = "backupList";
+            this.backupList.ShowItemToolTips = true;
             this.backupList.Size = new System.Drawing.Size(878, 404);
             this.backupList.TabIndex = 10;
             this.backupList.UseCompatibleStateImageBehavior = false;

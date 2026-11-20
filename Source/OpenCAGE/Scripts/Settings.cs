@@ -91,6 +91,7 @@ namespace OpenCAGE
         public const string LaunchGameWhenSaved = "LaunchGameWhenSaved";
 
         public const string AskBeforeDeletingNode = "AskBeforeDeletingNode";
+        public const string DeleteEntityWithLastNode = "DeleteEntityWithLastNode";
         public const string ShowGamePlatform = "ShowPlatform";
         public const string LastSelectedLevel = "LastSelectedLevel";
         public const string GameDirectories = "GameDirectories";
