@@ -1096,6 +1096,7 @@
     <Compile Include="Scripts\LevelLaunch\LevelLaunchSettings.cs" />
     <Compile Include="Scripts\LevelLaunch\LevelLoadingMovies.cs" />
     <Compile Include="Scripts\LevelLaunch\LevelPermanentSoundBanks.cs" />
+    <Compile Include="Scripts\LevelLaunch\LevelSaveName.cs" />
     <Compile Include="Scripts\MCP\McpLevelLaunchTools.cs" />
     <Compile Include="Popups\LevelLaunchSettingsEditor.cs">
       <SubType>Form</SubType>

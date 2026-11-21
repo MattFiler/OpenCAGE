@@ -9,12 +9,16 @@ namespace OpenCAGE
 {
     /// <summary>
     /// A level's launch settings (LevelLaunchSettings): its texture heap, whether characters collide with each other, and its loading
-    /// playlist. Used from the next launch into the level; everything else keeps the game's own.
+    /// playlist. Used from the next launch into the level; everything else keeps the game's own. Also the name its saves show
+    /// (LevelSaveName), which is the level's own data rather than a launch setting.
     /// </summary>
     public partial class LevelLaunchSettingsEditor : BaseWindow
     {
         private readonly string _level;
         private bool _filling;
+        //What names the level's saves, as last read, and the name the field started from
+        private LevelSaveName.State _save = new LevelSaveName.State();
+        private string _savedName = "";
 
         /// <summary>Show a level's launch settings (one window per level: an open one comes to the front).</summary>
         public static void ShowFor(IWin32Window owner, string level)
@@ -50,11 +54,6 @@ namespace OpenCAGE
             heapMB.Value = 512;
             //Wired after the limits and starting value are set, which are not edits
             heapMB.ValueChanged += Setting_Changed;
-
-            capNote.Text = "The game holds " + CharacterCapRule.Pool + " characters at once, the player and every corpse not yet despawned included. " +
-                           "That can't be raised: the game sizes its character, AI and animation tables to it. OpenCAGE's launches stop the crash that spawning past it causes: " +
-                           "a spawn with no free slot waits (despawning the corpse furthest out of view, as the game does), and characters spawning in the same moment that find none left are left out. " +
-                           "Level Check warns when a level can reach it.";
         }
 
         private void LevelLaunchSettingsEditor_Load(object sender, EventArgs e) => Fill();
@@ -111,6 +110,7 @@ namespace OpenCAGE
                 moviesOn.Checked = settings.HasMovies;
                 moviesToEnd.Checked = settings.LoadingMoviesToEnd == true;
                 playlist.Text = settings.LoadingPlaylist ?? LevelLaunchSettings.GamePlaylist(_level);
+                ReadSaveName();
 
                 (int? def, int? ultra) = TextureBudget.ReadHeap(System.IO.File.Exists(TextureBudget.SettingsPath(pathToAI)) ? System.IO.File.ReadAllText(TextureBudget.SettingsPath(pathToAI)) : "");
                 int own = ultra ?? def ?? TextureBudget.RetailHeapMB;
@@ -161,6 +161,37 @@ namespace OpenCAGE
             }
         }
 
+        /* The field from what names the level's saves now: editable only for the level open, whose script holds it */
+        private void ReadSaveName()
+        {
+            _save = LevelSaveName.Read(Singleton.PathToAI, _level);
+            _savedName = _save.Text ?? "";
+            saveName.Text = _savedName;
+            saveName.Enabled = _save.ScriptRead && !EditorUtils.IsFrontend(_level);
+        }
+
+        /* What the save name does, as the field reads now */
+        private string SaveNote()
+        {
+            if (EditorUtils.IsFrontend(_level))
+                return "The main menu makes no saves.";
+            if (!_save.ScriptRead)
+                return "Open the level to see or change the name its saves show: it is kept in the level's script.";
+            string name = saveName.Text.Trim();
+            string note = name.Length == 0
+                ? "Without one, a save made in this level shows \"Unknown Level\" on the load screen's save list (or, after another level in the same game, that level's name). "
+                : "A save made in this level shows as \"" + LevelSaveName.Shown(name, 1, 1) + "\" on the load screen's save list. ";
+            if (name == _savedName && _save.Id != null && _save.Text == null)
+                note += "The level's script names " + _save.Id + ", a string none of its text databases holds, so its saves show \"Unknown Level\". ";
+            else if (name == _savedName && _save.Id != null && !_save.Own)
+                note += "The level's script names it itself (" + _save.Id + "). ";
+            if (_save.Mixed)
+                note += "Its LevelInfo entities name different strings: saving a name here gives them all the same one. ";
+            note += "The name is kept in the level itself, so it shows however the game is started: a LevelInfo entity in the level's script names a string in the level's own text database " +
+                    LevelSaveName.Database + " (the same text in every language). Saving it here changes the script as one undo step: save the level to keep it. A save keeps the name it was made with.";
+            return note;
+        }
+
         private void Changed(bool dirty = true)
         {
             if (_filling)
@@ -169,8 +200,12 @@ namespace OpenCAGE
             playlist.Enabled = playlistOn.Checked;
             movies.Enabled = removeMovieBtn.Enabled = moviesToEnd.Enabled = moviesOn.Checked;
             saveBtn.Enabled = dirty;
+            saveNote.Text = SaveNote();
             LevelLaunchSettings settings = FromControls();
             List<string> notes = settings.Problems(Singleton.PathToAI);
+            string nameProblem = saveName.Enabled ? LevelSaveName.Problem(saveName.Text) : null;
+            if (nameProblem != null)
+                notes.Add(nameProblem);
             notes.AddRange(settings.Warnings(Singleton.PathToAI, _level));
             string inUse = LevelLaunch.InUseFor(Singleton.PathToAI);
             string now = inUse == null ? "AI.exe holds no level's settings now." : "AI.exe holds " + (inUse == "" ? "a level's" : inUse + "'s") + " settings now (until the game closes).";
@@ -180,11 +215,28 @@ namespace OpenCAGE
         private void Save()
         {
             LevelLaunchSettings settings = FromControls();
-            string problem = LevelLaunchSettings.Save(Singleton.PathToAI, _level, settings);
+            bool nameChanged = saveName.Enabled && saveName.Text.Trim() != _savedName;
+            string problem = (nameChanged ? LevelSaveName.Problem(saveName.Text) : null) ?? LevelLaunchSettings.Save(Singleton.PathToAI, _level, settings);
             if (problem != null)
             {
                 MessageBox.Show("The settings could not be saved: " + problem + ".", "Level Launch Settings", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
+            }
+            //The save name is the level's own data: its text database, and its script as one undo step
+            if (nameChanged)
+            {
+                try
+                {
+                    LevelSaveName.Set(Singleton.PathToAI, _level, saveName.Text, false);
+                }
+                catch (Exception e)
+                {
+                    MessageBox.Show("The save name could not be set: " + e.Message, "Level Launch Settings", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                _filling = true;
+                try { ReadSaveName(); }
+                finally { _filling = false; }
             }
             Changed(dirty: false);
         }

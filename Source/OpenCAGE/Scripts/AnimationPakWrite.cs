@@ -228,7 +228,7 @@ namespace OpenCAGE
             List<string> unsaved = new List<string>();
             if (animations?.PAK == null)
                 return unsaved;
-            if (animations.ContentsLoaded)
+            if (animations.CatalogueLoaded)
             {
                 foreach (AnimTreeDB database in animations.Trees)
                 {

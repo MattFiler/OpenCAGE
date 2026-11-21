@@ -23,7 +23,7 @@ namespace OpenCAGE
                 return;
             ToolStripMenuItem launchSettings = new ToolStripMenuItem("Level Launch Settings")
             {
-                ToolTipText = "Settings the open level needs from the game while it is played: texture memory, whether characters collide with each other, and its loading movies.",
+                ToolTipText = "Settings the open level needs from the game while it is played: texture memory, whether characters collide with each other, its loading movies, and the name its saves show.",
             };
             launchSettings.Click += (s, e) => LevelLaunchSettingsEditor.ShowFor(this, CompositeBrowser?.Content?.Level?.Name);
             levelConfig.DropDownItems.Insert(System.Math.Min(1, levelConfig.DropDownItems.Count), launchSettings);

@@ -83,7 +83,7 @@ namespace OpenCAGE.AnimTrees
         internal static List<AnimTreeDB> ChangedSets(CathodeLib.Animation animations)
         {
             List<AnimTreeDB> changed = new List<AnimTreeDB>();
-            if (animations?.PAK == null || !animations.ContentsLoaded)
+            if (animations?.PAK == null || !animations.CatalogueLoaded)
                 return changed;
             Dictionary<string, PAK2.File> entries = EntriesByName(animations);
             foreach (AnimTreeDB database in animations.Trees)

@@ -10,7 +10,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Xml;
 
 namespace OpenCAGE
 {
@@ -261,9 +260,10 @@ namespace OpenCAGE
             return true;
         }
 
-        /* The lists of what ANIMATION.PAK holds - skeletons, sets and their clips, trees - named from its string tables. All are
-           built first; the action returned puts them in place of the last ones, so nothing reading one ever sees it half-built,
-           and nothing changes when the PAK can't be listed. */
+        /* The lists of what ANIMATION.PAK holds - skeletons, sets and their clips, trees - by name. All are built first; the
+           action returned puts them in place of the last ones, so nothing reading one ever sees it half-built, and nothing
+           changes when the PAK can't be listed. Only the cheap part of the PAK is read for them (clip databases, trees and
+           skeleton definitions): the clip sections wait until something needs them. */
         private static Action ListAnimations(Animation loaded)
         {
             AnimationStrings strings = loaded.Strings, debugStrings = loaded.StringsDebug;
@@ -272,79 +272,32 @@ namespace OpenCAGE
             SortedDictionary<string, HashSet<string>> allAnimations = new SortedDictionary<string, HashSet<string>>();
             List<string> allAnimTrees = new List<string>();
 
-            //Load all male/female skeletons
-            List<PAK2.File> skeletonDefs = loaded.PAK.Entries.FindAll(o => o.Filename.Length > 17 && o.Filename.Substring(0, 17) == "DATA\\SKELETONDEFS");
-            for (int i = 0; i < skeletonDefs.Count; i++)
+            //Male/female skeletons, by the reference rig their definition names
+            foreach (Animation.SkeletonDef def in loaded.SkeletonDefs.Values)
             {
-                string skeleton = Path.GetFileNameWithoutExtension(skeletonDefs[i].Filename);
-                XmlNode skeletonType = new BML(skeletonDefs[i].Content).Content.SelectSingleNode("//SkeletonDef/LoResReferenceSkeleton");
-                if (skeletonType?.InnerText == "MALE" || skeletonType?.InnerText == "FEMALENPC")
-                {
-                    if (!genderedSkeletons.ContainsKey(skeletonType?.InnerText))
-                        genderedSkeletons.Add(skeletonType?.InnerText, new HashSet<string>());
-                    genderedSkeletons[skeletonType?.InnerText].Add(skeleton);
-                }
+                if (def.ReferenceSkeleton != "MALE" && def.ReferenceSkeleton != "FEMALENPC")
+                    continue;
+                if (!genderedSkeletons.TryGetValue(def.ReferenceSkeleton, out HashSet<string> skeletons))
+                    genderedSkeletons.Add(def.ReferenceSkeleton, skeletons = new HashSet<string>());
+                skeletons.Add(def.Name);
             }
 
-            //Load all skeleton names
-            List<PAK2.File> skeletonNames = loaded.PAK.Entries.FindAll(o => o.Filename.Length > 24 && o.Filename.Substring(0, 24) == "DATA\\ANIM_SYS\\SKELE\\DEFS");
-            for (int i = 0; i < skeletonNames.Count; i++)
-                allSkeletons.Add(debugStrings.Entries[Convert.ToUInt32(Path.GetFileNameWithoutExtension(skeletonNames[i].Filename))]);
+            //Every skeleton a character can be given
+            allSkeletons.AddRange(loaded.CompiledSkeletonDefs);
             allSkeletons.Sort();
 
-            //Load all anim sets
-            List<PAK2.File> animClipDbs = loaded.PAK.Entries.FindAll(o => { string path = Path.GetFileName(o.Filename); if (path.Length < ("_ANIM_CLIP_DB.BIN").Length) return false; return path.Substring(path.Length - ("_ANIM_CLIP_DB.BIN").Length) == "_ANIM_CLIP_DB.BIN"; });
-            for (int i = 0; i < animClipDbs.Count; i++)
+            //Every anim set, with the clips it holds itself (not those only its contexts hold)
+            foreach (AnimClipDB database in loaded.ClipDatabases)
             {
-                uint animSetID = Convert.ToUInt32(Path.GetFileName(animClipDbs[i].Filename).Split('_')[0]);
-                string animSet = "";
-                if (!debugStrings.Entries.TryGetValue(animSetID, out animSet))
-                {
-                    if (!strings.Entries.TryGetValue(animSetID, out animSet))
-                    {
-                        Debug.Log("Animations", "WARNING - Failed to look up anim set " + animSetID + " in string db!");
-                        continue;
-                    }
-                }
-                HashSet<string> animations = new HashSet<string>();
-                using (BinaryReader reader = new BinaryReader(new MemoryStream(animClipDbs[i].Content)))
-                {
-                    //This fixes a weird thing where there's an unknown variable offset at the start
-                    int offset = 4;
-                    while (true)
-                    {
-                        reader.BaseStream.Position = offset;
-                        if (reader.ReadUInt32() == animSetID)
-                            break;
-                        offset += 1;
-                    }
-                    reader.BaseStream.Position += 4;
-
-                    int countAnimNames = reader.ReadInt32();
-                    int countAnimFileNames = reader.ReadInt32();
-                    for (int x = 0; x < countAnimNames; x++)
-                    {
-                        animations.Add(debugStrings.Entries[reader.ReadUInt32()]);
-                        reader.BaseStream.Position += 4;
-                    }
-
-                    //TODO: There's more info here. Useful?
-                }
-                allAnimations.Add(animSet, animations);
-            }
-            foreach (KeyValuePair<string, HashSet<string>> anims in allAnimations)
-            {
-                List<string> animList = anims.Value.ToList();
-                animList.Sort();
-                anims.Value.Clear();
-                foreach (string anim in animList)
-                    anims.Value.Add(anim);
+                if (string.IsNullOrEmpty(database.Character) || allAnimations.ContainsKey(database.Character))
+                    continue;
+                List<string> clips = database.Animations.Select(o => o.Name).Distinct().ToList();
+                clips.Sort();
+                allAnimations.Add(database.Character, new HashSet<string>(clips));
             }
 
-            //Load all anim trees
-            List<PAK2.File> animTreeDbs = loaded.PAK.Entries.FindAll(o => { string path = Path.GetFileName(o.Filename); if (path.Length < ("_ANIM_TREE_DB.BIN").Length) return false; return path.Substring(path.Length - ("_ANIM_TREE_DB.BIN").Length) == "_ANIM_TREE_DB.BIN"; });
-            for (int i = 0; i < animTreeDbs.Count; i++)
-                allAnimTrees.Add(debugStrings.Entries[Convert.ToUInt32(Path.GetFileName(animTreeDbs[i].Filename).Split('_')[0])]);
+            //Every anim tree set
+            allAnimTrees.AddRange(loaded.Trees.Select(o => o.Set));
             allAnimTrees.Sort();
 
             /*

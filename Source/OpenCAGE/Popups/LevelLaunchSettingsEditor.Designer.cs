@@ -54,8 +54,11 @@
             this.playlistNote = new System.Windows.Forms.Label();
             this.animHeading = new System.Windows.Forms.Label();
             this.animOn = new System.Windows.Forms.CheckBox();
-            this.capHeading = new System.Windows.Forms.Label();
-            this.capNote = new System.Windows.Forms.Label();
+            this.saveHeading = new System.Windows.Forms.Label();
+            this.saveRow = new System.Windows.Forms.FlowLayoutPanel();
+            this.saveNameLabel = new System.Windows.Forms.Label();
+            this.saveName = new System.Windows.Forms.TextBox();
+            this.saveNote = new System.Windows.Forms.Label();
             this.status = new System.Windows.Forms.Label();
             this.buttons = new System.Windows.Forms.FlowLayoutPanel();
             this.closeBtn = new System.Windows.Forms.Button();
@@ -68,6 +71,7 @@
             this.playlistRow.SuspendLayout();
             this.moviesRow.SuspendLayout();
             this.movieButtons.SuspendLayout();
+            this.saveRow.SuspendLayout();
             this.buttons.SuspendLayout();
             this.SuspendLayout();
             //
@@ -91,13 +95,15 @@
             this.body.Controls.Add(this.playlistNote, 0, 12);
             this.body.Controls.Add(this.animHeading, 0, 13);
             this.body.Controls.Add(this.animOn, 0, 14);
-            this.body.Controls.Add(this.capHeading, 0, 15);
-            this.body.Controls.Add(this.capNote, 0, 16);
+            this.body.Controls.Add(this.saveHeading, 0, 15);
+            this.body.Controls.Add(this.saveRow, 0, 16);
+            this.body.Controls.Add(this.saveNote, 0, 17);
             this.body.Dock = System.Windows.Forms.DockStyle.Fill;
             this.body.Location = new System.Drawing.Point(0, 52);
             this.body.Name = "body";
             this.body.Padding = new System.Windows.Forms.Padding(8, 0, 8, 0);
-            this.body.RowCount = 17;
+            this.body.RowCount = 18;
+            this.body.RowStyles.Add(new System.Windows.Forms.RowStyle());
             this.body.RowStyles.Add(new System.Windows.Forms.RowStyle());
             this.body.RowStyles.Add(new System.Windows.Forms.RowStyle());
             this.body.RowStyles.Add(new System.Windows.Forms.RowStyle());
@@ -385,25 +391,57 @@
             this.animOn.UseVisualStyleBackColor = true;
             this.animOn.CheckedChanged += new System.EventHandler(this.Setting_Changed);
             //
-            // capHeading
+            // saveHeading
             //
-            this.capHeading.AutoSize = true;
-            this.capHeading.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this.capHeading.Location = new System.Drawing.Point(11, 398);
-            this.capHeading.Name = "capHeading";
-            this.capHeading.Padding = new System.Windows.Forms.Padding(0, 10, 0, 2);
-            this.capHeading.Size = new System.Drawing.Size(110, 27);
-            this.capHeading.TabIndex = 15;
-            this.capHeading.Text = "Characters at once";
+            this.saveHeading.AutoSize = true;
+            this.saveHeading.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.saveHeading.Location = new System.Drawing.Point(11, 398);
+            this.saveHeading.Name = "saveHeading";
+            this.saveHeading.Padding = new System.Windows.Forms.Padding(0, 10, 0, 2);
+            this.saveHeading.Size = new System.Drawing.Size(39, 27);
+            this.saveHeading.TabIndex = 15;
+            this.saveHeading.Text = "Saves";
             //
-            // capNote
+            // saveRow
             //
-            this.capNote.AutoSize = true;
-            this.capNote.Location = new System.Drawing.Point(11, 425);
-            this.capNote.MaximumSize = new System.Drawing.Size(620, 0);
-            this.capNote.Name = "capNote";
-            this.capNote.Size = new System.Drawing.Size(0, 13);
-            this.capNote.TabIndex = 16;
+            this.saveRow.AutoSize = true;
+            this.saveRow.Controls.Add(this.saveNameLabel);
+            this.saveRow.Controls.Add(this.saveName);
+            this.saveRow.Location = new System.Drawing.Point(8, 425);
+            this.saveRow.Margin = new System.Windows.Forms.Padding(0);
+            this.saveRow.Name = "saveRow";
+            this.saveRow.Size = new System.Drawing.Size(446, 26);
+            this.saveRow.TabIndex = 16;
+            this.saveRow.WrapContents = false;
+            //
+            // saveNameLabel
+            //
+            this.saveNameLabel.AutoSize = true;
+            this.saveNameLabel.Location = new System.Drawing.Point(3, 0);
+            this.saveNameLabel.Name = "saveNameLabel";
+            this.saveNameLabel.Padding = new System.Windows.Forms.Padding(0, 4, 0, 0);
+            this.saveNameLabel.Size = new System.Drawing.Size(61, 17);
+            this.saveNameLabel.TabIndex = 0;
+            this.saveNameLabel.Text = "Save name:";
+            //
+            // saveName
+            //
+            this.saveName.Location = new System.Drawing.Point(70, 3);
+            this.saveName.MaxLength = 80;
+            this.saveName.Name = "saveName";
+            this.saveName.Size = new System.Drawing.Size(373, 20);
+            this.saveName.TabIndex = 1;
+            this.tips.SetToolTip(this.saveName, "What a save made in this level is called on the load screen's save list. The game's own levels read like \"Save %u M%u - SciMed Tower\": the first %u is the save's number, a second the mission's.");
+            this.saveName.TextChanged += new System.EventHandler(this.Setting_Changed);
+            //
+            // saveNote
+            //
+            this.saveNote.AutoSize = true;
+            this.saveNote.Location = new System.Drawing.Point(11, 451);
+            this.saveNote.MaximumSize = new System.Drawing.Size(620, 0);
+            this.saveNote.Name = "saveNote";
+            this.saveNote.Size = new System.Drawing.Size(0, 13);
+            this.saveNote.TabIndex = 17;
             //
             // status
             //
@@ -490,6 +528,8 @@
             this.moviesRow.ResumeLayout(false);
             this.moviesRow.PerformLayout();
             this.movieButtons.ResumeLayout(false);
+            this.saveRow.ResumeLayout(false);
+            this.saveRow.PerformLayout();
             this.buttons.ResumeLayout(false);
             this.ResumeLayout(false);
 
@@ -522,8 +562,11 @@
         private System.Windows.Forms.Label playlistNote;
         private System.Windows.Forms.Label animHeading;
         private System.Windows.Forms.CheckBox animOn;
-        private System.Windows.Forms.Label capHeading;
-        private System.Windows.Forms.Label capNote;
+        private System.Windows.Forms.Label saveHeading;
+        private System.Windows.Forms.FlowLayoutPanel saveRow;
+        private System.Windows.Forms.Label saveNameLabel;
+        private System.Windows.Forms.TextBox saveName;
+        private System.Windows.Forms.Label saveNote;
         private System.Windows.Forms.Label status;
         private System.Windows.Forms.FlowLayoutPanel buttons;
         private System.Windows.Forms.Button closeBtn;

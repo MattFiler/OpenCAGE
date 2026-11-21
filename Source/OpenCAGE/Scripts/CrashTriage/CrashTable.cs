@@ -212,7 +212,7 @@ title: The 19th character
 cause: A 19th character came into play. The game holds 18 characters at once, the player included, and a dead body keeps its place until it is despawned.
 cause: A spawn does not check that a place is free, so the 19th crashes the game. A launch from OpenCAGE puts a guard against it into the game (the spawn waits, or is left out).
 fix: Keep the characters that can be alive or lying dead at once (the player, allies, aliens and NPCs) to 18 at most: despawn bodies before more spawn, spawn in waves, or lower the spawners' counts.
-docs: https://opencage.co.uk/docs/level-launch-settings/#characters
+docs: https://opencage.co.uk/docs/level-check/#character-cap
 site: steam 3D0470 3F0 3D0546
 site: gog   3D0420 3F0 3D04F6
 site: epic  3E1470 3F0 3E1546
