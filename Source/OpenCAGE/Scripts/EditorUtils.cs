@@ -640,8 +640,11 @@ namespace OpenCAGE
             List<string> found = new List<string>();
             foreach (Process process in Process.GetProcessesByName("AI"))
             {
-                string image = ProcessImagePath(process);
-                if (IsThisInstall(image) == thisInstall)
+                //A game that has exited stays listed while anything still holds it open (its launcher, Windows Error Reporting)
+                bool exited = false;
+                try { exited = process.HasExited; } catch { }
+                string image = exited ? null : ProcessImagePath(process);
+                if (!exited && IsThisInstall(image) == thisInstall)
                     found.Add(image ?? "AI.exe (pid " + process.Id + ")");
                 process.Dispose();
             }

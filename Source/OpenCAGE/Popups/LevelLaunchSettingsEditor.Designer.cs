@@ -59,6 +59,8 @@
             this.saveNameLabel = new System.Windows.Forms.Label();
             this.saveName = new System.Windows.Forms.TextBox();
             this.saveNote = new System.Windows.Forms.Label();
+            this.ownSaves = new System.Windows.Forms.CheckBox();
+            this.ownSavesNote = new System.Windows.Forms.Label();
             this.status = new System.Windows.Forms.Label();
             this.buttons = new System.Windows.Forms.FlowLayoutPanel();
             this.closeBtn = new System.Windows.Forms.Button();
@@ -98,11 +100,15 @@
             this.body.Controls.Add(this.saveHeading, 0, 15);
             this.body.Controls.Add(this.saveRow, 0, 16);
             this.body.Controls.Add(this.saveNote, 0, 17);
+            this.body.Controls.Add(this.ownSaves, 0, 18);
+            this.body.Controls.Add(this.ownSavesNote, 0, 19);
             this.body.Dock = System.Windows.Forms.DockStyle.Fill;
             this.body.Location = new System.Drawing.Point(0, 52);
             this.body.Name = "body";
             this.body.Padding = new System.Windows.Forms.Padding(8, 0, 8, 0);
-            this.body.RowCount = 18;
+            this.body.RowCount = 20;
+            this.body.RowStyles.Add(new System.Windows.Forms.RowStyle());
+            this.body.RowStyles.Add(new System.Windows.Forms.RowStyle());
             this.body.RowStyles.Add(new System.Windows.Forms.RowStyle());
             this.body.RowStyles.Add(new System.Windows.Forms.RowStyle());
             this.body.RowStyles.Add(new System.Windows.Forms.RowStyle());
@@ -443,6 +449,28 @@
             this.saveNote.Size = new System.Drawing.Size(0, 13);
             this.saveNote.TabIndex = 17;
             //
+            // ownSaves
+            //
+            this.ownSaves.AutoSize = true;
+            this.ownSaves.Location = new System.Drawing.Point(11, 470);
+            this.ownSaves.Margin = new System.Windows.Forms.Padding(3, 8, 3, 3);
+            this.ownSaves.Name = "ownSaves";
+            this.ownSaves.Size = new System.Drawing.Size(268, 17);
+            this.ownSaves.TabIndex = 18;
+            this.ownSaves.Text = "Keep this level's saves apart from the campaign";
+            this.tips.SetToolTip(this.ownSaves, "A launch into the level gives it save files of its own (checkpoints, mission saves and progression), so saving in it never takes the place of the campaign's saves, and Continue and Load Game show only the level's own while it is played. On by default for every level the game doesn't ship.");
+            this.ownSaves.UseVisualStyleBackColor = true;
+            this.ownSaves.CheckedChanged += new System.EventHandler(this.Setting_Changed);
+            //
+            // ownSavesNote
+            //
+            this.ownSavesNote.AutoSize = true;
+            this.ownSavesNote.Location = new System.Drawing.Point(11, 490);
+            this.ownSavesNote.MaximumSize = new System.Drawing.Size(620, 0);
+            this.ownSavesNote.Name = "ownSavesNote";
+            this.ownSavesNote.Size = new System.Drawing.Size(0, 13);
+            this.ownSavesNote.TabIndex = 19;
+            //
             // status
             //
             this.status.Dock = System.Windows.Forms.DockStyle.Bottom;
@@ -504,7 +532,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.closeBtn;
-            this.ClientSize = new System.Drawing.Size(680, 700);
+            this.ClientSize = new System.Drawing.Size(680, 780);
             this.Controls.Add(this.body);
             this.Controls.Add(this.status);
             this.Controls.Add(this.buttons);
@@ -567,6 +595,8 @@
         private System.Windows.Forms.Label saveNameLabel;
         private System.Windows.Forms.TextBox saveName;
         private System.Windows.Forms.Label saveNote;
+        private System.Windows.Forms.CheckBox ownSaves;
+        private System.Windows.Forms.Label ownSavesNote;
         private System.Windows.Forms.Label status;
         private System.Windows.Forms.FlowLayoutPanel buttons;
         private System.Windows.Forms.Button closeBtn;

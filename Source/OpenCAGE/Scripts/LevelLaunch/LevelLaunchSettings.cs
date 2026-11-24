@@ -34,8 +34,10 @@ namespace OpenCAGE
         [JsonProperty("loading_movies_to_end", NullValueHandling = NullValueHandling.Ignore)] public bool? LoadingMoviesToEnd;
         /// <summary>true: the game's animation memory is doubled (Launch Game's Allow larger animation memory) for launches into the level.</summary>
         [JsonProperty("larger_animation_memory", NullValueHandling = NullValueHandling.Ignore)] public bool? LargerAnimationMemory;
+        /// <summary>true: launches keep the level's saves apart from the campaign's (LevelSaveSlots); false: they share the campaign's; null: apart unless it is one of the game's levels.</summary>
+        [JsonProperty("own_saves", NullValueHandling = NullValueHandling.Ignore)] public bool? OwnSaves;
 
-        [JsonIgnore] public bool IsEmpty => TextureHeapMB == null && NpcCollisions != false && PlayerNpcCollisions != false && string.IsNullOrWhiteSpace(LoadingPlaylist) && LargerAnimationMemory != true && !HasMovies;
+        [JsonIgnore] public bool IsEmpty => TextureHeapMB == null && NpcCollisions != false && PlayerNpcCollisions != false && string.IsNullOrWhiteSpace(LoadingPlaylist) && LargerAnimationMemory != true && !HasMovies && OwnSaves == null;
         [JsonIgnore] public bool HasMovies => LoadingMovies != null && LoadingMovies.Any(o => !string.IsNullOrWhiteSpace(o));
 
         /// <summary>The settings file of a level: DATA/ENV/&lt;level&gt;/LAUNCH_SETTINGS.JSON.</summary>
@@ -73,6 +75,8 @@ namespace OpenCAGE
                 return string.Join("; ", problems);
             try
             {
+                //The level's own saves as its kind of level has them by default need no line of their own
+                if (settings != null && settings.OwnSaves == LevelSaveSlots.DefaultFor(level)) settings.OwnSaves = null;
                 if (settings == null || settings.IsEmpty)
                 {
                     if (File.Exists(path)) File.Delete(path);
@@ -144,6 +148,10 @@ namespace OpenCAGE
             }
             if (TextureHeapMB > 896)
                 warnings.Add("a texture heap over 896 MB leaves the 32-bit game little memory of its own: test the level in game");
+            //Two levels with the same three character tag would share their own save files
+            string sharer = level != null && LevelSaveSlots.Own(level, this) ? LevelSaveSlots.SharesWith(pathToAI, level) : null;
+            if (sharer != null)
+                warnings.Add("its own save files have the same names as " + sharer + "'s (the same three character tag), so saves made in either show in both");
             return warnings;
         }
 
@@ -174,10 +182,11 @@ namespace OpenCAGE
         /// <summary>The playlist the game plays for a level as it ships (its entry in the game's table).</summary>
         public static string GamePlaylist(string level) => LevelLaunchPatches.Table[LevelLaunchPatches.TableIndexOf(level)].Playlist;
 
-        /// <summary>The settings in words, one line each (none when the level uses the game's own).</summary>
-        public List<string> Describe()
+        /// <summary>The settings in words, one line each (none when the level uses the game's own); with the level, its own saves too.</summary>
+        public List<string> Describe(string level = null)
         {
             List<string> lines = new List<string>();
+            if (level != null && LevelSaveSlots.Own(level, this)) lines.Add("its own saves, apart from the campaign's");
             if (TextureHeapMB != null) lines.Add("texture heap at least " + TextureHeapMB + " MB");
             if (NpcCollisions == false) lines.Add("NPCs pass through each other");
             if (PlayerNpcCollisions == false) lines.Add("the player and NPCs pass through each other");

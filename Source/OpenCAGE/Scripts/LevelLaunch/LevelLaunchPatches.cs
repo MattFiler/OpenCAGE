@@ -9,7 +9,8 @@ namespace OpenCAGE
 {
     /// <summary>
     /// The AI.exe changes behind a level's launch settings: the streaming texture heap's size, whether characters collide with
-    /// each other, which loading playlist plays, and the guard that keeps a spawn from crashing when every character slot is taken.
+    /// each other, which loading playlist plays, the names of the save files (a level's own, LevelSaveSlots), and the guard that keeps
+    /// a spawn from crashing when every character slot is taken.
     /// Each region is only written over its exact original bytes or a form of its own, so another build's code is left alone.
     /// The binary relocates (it has a relocation table), so new code holds no absolute addresses of its own.
     /// </summary>
@@ -31,6 +32,7 @@ namespace OpenCAGE
             public uint FallbackOriginal;
             public int[] Table;                 //the level -> playlist table's playlist pushes (imm32), in order
             public uint[] TableOriginal;
+            public int[] SaveNames;             //the save file names, in LevelSaveSlots.GameNames' order (strings only their own constants point at)
         }
 
         private static Sites For(PatchManager.Platform platform)
@@ -44,6 +46,7 @@ namespace OpenCAGE
                         Slot = 0xEFD698, Fallback = 0x43C130, FallbackOriginal = 0x12FAA5C,
                         Table = new[] { 0x409234, 0x40927A, 0x4092C4, 0x4092EE, 0x409318, 0x409342, 0x40936C, 0x409396, 0x4093C0, 0x4093EA, 0x409414, 0x40943E, 0x409468, 0x409492, 0x4094BC, 0x4094E6, 0x409510, 0x40953A, 0x409564, 0x40958E },
                         TableOriginal = new uint[] { 0x12FB12C, 0x12FB10C, 0x12FB0E8, 0x12FB0C4, 0x12FB0A8, 0x12FB078, 0x12FB048, 0x12FB01C, 0x12FAFEC, 0x12FAFC4, 0x12FAF98, 0x12FAF70, 0x12FAF4C, 0x12FAF28, 0x12FAEF8, 0x12FAECC, 0x12FAEAC, 0x12FAE84, 0x12FAE6C, 0x12FB12C },
+                        SaveNames = new[] { 0xFE76CC, 0xFE76C4, 0xFE76D4, 0xFE76B0, 0xFE76A4 },
                     };
                 case PatchManager.Platform.GOG:
                     return new Sites()
@@ -52,6 +55,7 @@ namespace OpenCAGE
                         Slot = 0xF15248, Fallback = 0x43C300, FallbackOriginal = 0x1311A14,
                         Table = new[] { 0x4093E4, 0x40942A, 0x409474, 0x40949E, 0x4094C8, 0x4094F2, 0x40951C, 0x409546, 0x409570, 0x40959A, 0x4095C4, 0x4095EE, 0x409618, 0x409642, 0x40966C, 0x409696, 0x4096C0, 0x4096EA, 0x409714, 0x40973E },
                         TableOriginal = new uint[] { 0x13120E4, 0x13120C4, 0x13120A0, 0x131207C, 0x1312060, 0x1312030, 0x1312000, 0x1311FD4, 0x1311FA4, 0x1311F7C, 0x1311F50, 0x1311F28, 0x1311F04, 0x1311EE0, 0x1311EB0, 0x1311E84, 0x1311E64, 0x1311E3C, 0x1311E24, 0x13120E4 },
+                        SaveNames = new[] { 0xFFF2B0, 0xFFF2A8, 0xFFF2B8, 0xFFF294, 0xFFF288 },
                     };
                 case PatchManager.Platform.EPIC_GAMES_STORE:
                     return new Sites()
@@ -60,6 +64,7 @@ namespace OpenCAGE
                         Slot = 0xF153F8, Fallback = 0x44D2E0, FallbackOriginal = 0x13121BC,
                         Table = new[] { 0x41A494, 0x41A4DA, 0x41A524, 0x41A54E, 0x41A578, 0x41A5A2, 0x41A5CC, 0x41A5F6, 0x41A620, 0x41A64A, 0x41A674, 0x41A69E, 0x41A6C8, 0x41A6F2, 0x41A71C, 0x41A746, 0x41A770, 0x41A79A, 0x41A7C4, 0x41A7EE },
                         TableOriginal = new uint[] { 0x131288C, 0x131286C, 0x1312848, 0x1312824, 0x1312808, 0x13127D8, 0x13127A8, 0x131277C, 0x131274C, 0x1312724, 0x13126F8, 0x13126D0, 0x13126AC, 0x1312688, 0x1312658, 0x131262C, 0x131260C, 0x13125E4, 0x13125CC, 0x131288C },
+                        SaveNames = new[] { 0xF23214, 0xF2320C, 0xF2321C, 0xF231F8, 0xF231EC },
                     };
                 default:
                     return null;
@@ -242,7 +247,8 @@ namespace OpenCAGE
             public bool NpcCollisions = true, PlayerCollisions = true;
             public bool SpawnGuard;
             public string Playlist;             //the playlist a launch put in, or null
-            public bool AnyLevelSetting => HeapMB != null || !NpcCollisions || !PlayerCollisions || Playlist != null;
+            public string SaveTag;              //the tag of a level's own save file names a launch put in, or null: the game's
+            public bool AnyLevelSetting => HeapMB != null || !NpcCollisions || !PlayerCollisions || Playlist != null || SaveTag != null;
         }
 
         private sealed class Exe
@@ -291,6 +297,51 @@ namespace OpenCAGE
             return text;
         }
 
+        /* The save file names as the binary holds them (each its game name's length, then a terminator), or null when one isn't a name */
+        private static string[] SaveNamesOf(byte[] bytes, Sites sites)
+        {
+            string[] names = new string[LevelSaveSlots.GameNames.Length];
+            for (int i = 0; i < names.Length; i++)
+            {
+                int at = sites.SaveNames[i], length = LevelSaveSlots.GameNames[i].Length;
+                if (at + length >= bytes.Length || bytes[at + length] != 0) return null;
+                names[i] = Encoding.ASCII.GetString(bytes, at, length);
+                if (names[i].Any(o => o < 0x20 || o > 0x7E)) return null;
+            }
+            return names;
+        }
+
+        /// <summary>
+        /// Only the save file names, read straight from AI.exe: the tag of a level's own names a launch left in (null when the game's own),
+        /// and false when this build can't take them or they are neither.
+        /// </summary>
+        public static bool ReadSaveTag(PatchManager.Platform platform, string pathToAI, out string tag)
+        {
+            tag = null;
+            Sites sites = For(platform);
+            if (sites == null) return false;
+            try
+            {
+                int last = sites.SaveNames.Select((o, i) => o + LevelSaveSlots.GameNames[i].Length + 1).Max();
+                byte[] bytes = new byte[last];
+                int first = sites.SaveNames.Min();
+                using (FileStream stream = new FileStream(Path.Combine(pathToAI, "AI.exe"), FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                {
+                    stream.Position = first;
+                    int read = 0;
+                    while (read < last - first) { int n = stream.Read(bytes, first + read, last - first - read); if (n <= 0) return false; read += n; }
+                }
+                string[] names = SaveNamesOf(bytes, sites);
+                if (names == null) return false;
+                tag = LevelSaveSlots.TagOf(names);
+                return tag != null || names.SequenceEqual(LevelSaveSlots.GameNames);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         private static byte[] SlotBytes(string text)
         {
             byte[] bytes = new byte[SlotOriginalText.Length + 1];
@@ -327,6 +378,10 @@ namespace OpenCAGE
                     int table = Array.IndexOf(sites.TableOriginal, fallback);
                     state.Playlist = fallback == slotVa ? slot : table >= 0 ? Table[table].Playlist : null;
                 }
+                string[] names = SaveNamesOf(exe.Bytes, sites);
+                if (names == null) return state;
+                state.SaveTag = LevelSaveSlots.TagOf(names);
+                if (state.SaveTag == null && !names.SequenceEqual(LevelSaveSlots.GameNames)) return state;
                 state.Readable = true;
             }
             catch (Exception e)
@@ -448,6 +503,17 @@ namespace OpenCAGE
                         writes.Add(new KeyValuePair<int, byte[]>(sites.Table[i], BitConverter.GetBytes(redirect ? target : sites.TableOriginal[i])));
                     }
                     writes.Add(new KeyValuePair<int, byte[]>(sites.Fallback, BitConverter.GetBytes(playlist != null ? target : sites.FallbackOriginal)));
+                }
+
+                //The save file names: the game's, or the level's own (each as long as the game's, so nothing else moves)
+                string[] names = SaveNamesOf(exe.Bytes, sites);
+                if (names == null || (LevelSaveSlots.TagOf(names) == null && !names.SequenceEqual(LevelSaveSlots.GameNames)))
+                    problems.Add("the save file names are not as this build ships them");
+                else
+                {
+                    string[] wanted = LevelSaveSlots.Own(level, settings) ? LevelSaveSlots.NamesFor(LevelSaveSlots.TagFor(level)) : LevelSaveSlots.GameNames;
+                    for (int i = 0; i < wanted.Length; i++)
+                        writes.Add(new KeyValuePair<int, byte[]>(sites.SaveNames[i], Encoding.ASCII.GetBytes(wanted[i] + "\0")));
                 }
 
                 WriteToBinary(pathToAI, exe, writes);

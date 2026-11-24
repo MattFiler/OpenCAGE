@@ -19,6 +19,8 @@ namespace OpenCAGE
         //What names the level's saves, as last read, and the name the field started from
         private LevelSaveName.State _save = new LevelSaveName.State();
         private string _savedName = "";
+        //How many save files of its own the level has (read as the window fills)
+        private int _ownSaveFiles;
 
         /// <summary>Show a level's launch settings (one window per level: an open one comes to the front).</summary>
         public static void ShowFor(IWin32Window owner, string level)
@@ -111,6 +113,9 @@ namespace OpenCAGE
                 moviesToEnd.Checked = settings.LoadingMoviesToEnd == true;
                 playlist.Text = settings.LoadingPlaylist ?? LevelLaunchSettings.GamePlaylist(_level);
                 ReadSaveName();
+                ownSaves.Checked = LevelSaveSlots.Own(_level, settings);
+                ownSaves.Enabled = !EditorUtils.IsFrontend(_level);
+                _ownSaveFiles = LevelSaveSlots.Find(Singleton.Platform, _level).Count;
 
                 (int? def, int? ultra) = TextureBudget.ReadHeap(System.IO.File.Exists(TextureBudget.SettingsPath(pathToAI)) ? System.IO.File.ReadAllText(TextureBudget.SettingsPath(pathToAI)) : "");
                 int own = ultra ?? def ?? TextureBudget.RetailHeapMB;
@@ -137,7 +142,24 @@ namespace OpenCAGE
             LargerAnimationMemory = animOn.Checked ? true : (bool?)null,
             LoadingMovies = moviesOn.Checked && movies.Items.Count != 0 ? movies.Items.Cast<string>().ToList() : null,
             LoadingMoviesToEnd = moviesOn.Checked && moviesToEnd.Checked ? true : (bool?)null,
+            //Saved as the level's default when it is (LevelLaunchSettings.Save leaves the default out of the file)
+            OwnSaves = ownSaves.Enabled ? ownSaves.Checked : (bool?)null,
         };
+
+        /* What keeping the level's saves apart does, as the box reads now */
+        private string OwnSavesNote()
+        {
+            if (EditorUtils.IsFrontend(_level))
+                return "The main menu makes no saves.";
+            if (!ownSaves.Checked)
+                return "A save made in this level takes the place of the campaign's older checkpoint and becomes the one Continue loads, as the game does: two saves here leave none of the campaign's checkpoints (its mission saves stay)." +
+                       (LevelSaveSlots.DefaultFor(_level) ? "" : " This is one of the game's own levels: its saves are the campaign's.");
+            string[] names = LevelSaveSlots.NamesFor(LevelSaveSlots.TagFor(_level));
+            return "A launch into this level from OpenCAGE gives it save files of its own - " + names[0] + "00 and " + names[0] + "01 (its checkpoints), " + names[1] + "<mission> and " + names[2] +
+                   " in the game's save folder - so its saves never take the place of the campaign's, and Continue and Load Game show only the level's own while it is played. " +
+                   "The game's options kept with saves (gamma, subtitles, invert, mouse speed) start at their defaults the first time, then stay with the level. The game started any other way uses the campaign's saves. " +
+                   (_ownSaveFiles == 0 ? "The level has no saves of its own yet." : "The level has " + _ownSaveFiles + " save file" + (_ownSaveFiles == 1 ? "" : "s") + " of its own now.");
+        }
 
         /* A .usm copied into the level's MOVIES folder and put on the list */
         private void AddMovie()
@@ -201,6 +223,7 @@ namespace OpenCAGE
             movies.Enabled = removeMovieBtn.Enabled = moviesToEnd.Enabled = moviesOn.Checked;
             saveBtn.Enabled = dirty;
             saveNote.Text = SaveNote();
+            ownSavesNote.Text = OwnSavesNote();
             LevelLaunchSettings settings = FromControls();
             List<string> notes = settings.Problems(Singleton.PathToAI);
             string nameProblem = saveName.Enabled ? LevelSaveName.Problem(saveName.Text) : null;

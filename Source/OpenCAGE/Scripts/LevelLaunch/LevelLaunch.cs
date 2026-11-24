@@ -41,9 +41,11 @@ namespace OpenCAGE
                 LevelLaunchSettings settings = string.IsNullOrWhiteSpace(level) || EditorUtils.IsFrontend(level) ? new LevelLaunchSettings() : LevelLaunchSettings.Of(pathToAI, level);
                 //The level's own permanent soundbanks in (an earlier launch's out): files, so any build of the game takes them
                 string banksProblem = LevelPermanentSoundBanks.Apply(pathToAI, string.IsNullOrWhiteSpace(level) || EditorUtils.IsFrontend(level) ? null : level, applied);
+                //Nothing of the level's to speak of: no settings, and its saves shared with the campaign's
+                bool quiet = settings.IsEmpty && !LevelSaveSlots.Own(level, settings);
                 //A build without them: only worth a word when the level has some
                 if (!LevelLaunchPatches.Supports(Singleton.Platform))
-                    return settings.IsEmpty ? banksProblem : "this version of the game (" + Singleton.Platform + ") can't take a level's launch settings";
+                    return quiet ? banksProblem : "this version of the game (" + Singleton.Platform + ") can't take a level's launch settings" + (LevelSaveSlots.Own(level, settings) ? " - its saves go with the campaign's" : "");
                 //The level's own loading movies in (an earlier launch's out): their playlist is the one the launch plays
                 string ownPlaylist = LevelLoadingMovies.Apply(pathToAI, level, settings, out string moviesProblem);
                 LevelLaunchSettings written = settings;
@@ -62,18 +64,18 @@ namespace OpenCAGE
                     problem = (problem != null ? problem + "; " : "") + "the larger animation memory could not be written";
                 bool any = LevelLaunchPatches.Read(Singleton.Platform, pathToAI).AnyLevelSetting || anim || LevelLoadingMovies.InUse(pathToAI) || LevelPermanentSoundBanks.InUse(pathToAI);
                 if (any)
-                    applied.AddRange(settings.Describe());
+                    applied.AddRange(settings.Describe(level));
                 Record(pathToAI, any ? level : null, anim);
                 if (problem != null)
                     Console.WriteLine("LevelLaunch: " + problem);
                 //Only the level's own settings are reported: a binary the guard can't go into launches as it is
                 if (banksProblem != null)
                     Console.WriteLine("LevelLaunch: " + banksProblem);
-                return settings.IsEmpty ? banksProblem : banksProblem != null ? (problem != null ? problem + "; " : "") + banksProblem : problem;
+                return quiet ? banksProblem : banksProblem != null ? (problem != null ? problem + "; " : "") + banksProblem : problem;
             }
         }
 
-        /// <summary>The game's own heap, collisions and loading playlist back (the spawn guard stays). Returns what went wrong, or null.</summary>
+        /// <summary>The game's own heap, collisions, loading playlist and save file names back (the spawn guard stays). Returns what went wrong, or null.</summary>
         public static string PutBack(string pathToAI)
         {
             lock (_lock)
@@ -197,13 +199,22 @@ namespace OpenCAGE
                         }
                         await Task.Delay(3000);
                     }
-                    lock (_lock)
+                    //AI.exe can still be held for a moment after the game has gone: tried again for a minute while it stays in use
+                    for (int attempt = 1; ; attempt++)
                     {
-                        if (_generation != generation || GameRunning() || !string.Equals(Singleton.PathToAI, pathToAI, StringComparison.OrdinalIgnoreCase))
-                            return;
-                        _generation++;
-                        string problem = PutBackLocked(pathToAI);
-                        Console.WriteLine("LevelLaunch: game closed, the game's own launch settings back" + (problem != null ? " (" + problem + ")" : ""));
+                        lock (_lock)
+                        {
+                            if (_generation != generation || GameRunning() || !string.Equals(Singleton.PathToAI, pathToAI, StringComparison.OrdinalIgnoreCase))
+                                return;
+                            string problem = PutBackLocked(pathToAI);
+                            if (problem == null || attempt >= 12 || !InUse(pathToAI))
+                            {
+                                _generation++;
+                                Console.WriteLine("LevelLaunch: game closed, the game's own launch settings back" + (problem != null ? " (" + problem + ")" : ""));
+                                return;
+                            }
+                        }
+                        await Task.Delay(5000);
                     }
                 }
                 catch (Exception e)

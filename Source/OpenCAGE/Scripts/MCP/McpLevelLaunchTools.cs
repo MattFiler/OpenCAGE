@@ -17,7 +17,8 @@ namespace OpenCAGE.MCP
                 Name = "get_level_launch_settings",
                 Title = "Get a level's launch settings",
                 Description = "What a level needs from the game while it is played, kept with it as DATA/ENV/<level>/LAUNCH_SETTINGS.JSON (a mod carries it as a file of the level): texture_heap_mb (the streaming texture heap is at least this many MB; null: the player's own DATA\\ENGINE_SETTINGS.XML value), npc_collisions and player_npc_collisions (false: those characters walk through each other; shots, melee, the flamethrower, grabs and attacks still hit), loading_playlist (the GBL_ITEM.BML movie or image playlist that plays as the level loads; game_playlist is the one it plays as the game ships), loading_movies (the level's own .usm movies, kept in DATA/ENV/<level>/MOVIES and carried with it; used over loading_playlist: a launch copies them in under OpenCAGE's own names and adds a playlist of them to GBL_ITEM.BML for that launch only; movie_files lists the folder), loading_movies_to_end (true: they play to the end and the level waits for them - the launch changes the game's loading screen to wait, as in_use.loading_screen_changed says - and once it has loaded, holding a button skips; else they loop until the level has loaded), larger_animation_memory (true: the game's animation memory is doubled, as launch_options larger_animation_memory does for every level). launch_game, Launch Game and launch_mod into the level write them into AI.exe for that launch; they come out once the game closes or anything else is launched. in_use says which level's settings AI.exe holds now. Also says how the character limit (18 at once) is handled: in OpenCAGE's launches a spawn past it waits, or is left out, instead of crashing. " +
-                              "save_name is the name a save made in the level shows on the load screen's save list: text (in English; null: none, so its saves show 'Unknown Level', or after another level in the same game that level's name), shown_as (with numbers in), id (the string id the level's LevelInfo entities name in their save_level_name_id), own (it is the level's own string, in its text database " + LevelSaveName.Database + "), entities (those LevelInfo entities) and script_read (false when the level isn't the open one: then only its " + LevelSaveName.Database + " database was read). It is the level's own data, not a launch setting, so it shows however the game is started, in every build; a save keeps the name it was made with.",
+                              "save_name is the name a save made in the level shows on the load screen's save list: text (in English; null: none, so its saves show 'Unknown Level', or after another level in the same game that level's name), shown_as (with numbers in), id (the string id the level's LevelInfo entities name in their save_level_name_id), own (it is the level's own string, in its text database " + LevelSaveName.Database + "), entities (those LevelInfo entities) and script_read (false when the level isn't the open one: then only its " + LevelSaveName.Database + " database was read). It is the level's own data, not a launch setting, so it shows however the game is started, in every build; a save keeps the name it was made with. " +
+                              "own_saves says whether a launch into the level keeps its saves apart from the campaign's: on (default: true for every level the game doesn't ship, false for the game's own), whether it is the default, and the level's own save files - checkpoints, mission saves and progression under names of its own (tag), so the campaign's files are never written while it is played and Continue / Load Game show only the level's - with found, the ones in this game's save folders now (read only). Without it, a save made in the level takes the place of the campaign's older checkpoint and rewrites its progression, as the game does.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("level", "The level, as list_levels names it (defaults to the open one)."),
                     McpSchema.Boolean("list_playlists", "Also list the playlists GBL_ITEM.BML has.")),
@@ -32,7 +33,8 @@ namespace OpenCAGE.MCP
                 Name = "set_level_launch_settings",
                 Title = "Set a level's launch settings",
                 Description = "Change a level's launch settings (get_level_launch_settings says what each does); only the arguments given change. texture_heap_mb " + LevelLaunchSettings.MinHeapMB + "-" + LevelLaunchSettings.MaxHeapMB + " (0 or null: the player's own), npc_collisions / player_npc_collisions true or false, loading_playlist a playlist name ('' or null: the game's own), loading_movies the level's own movies in play order (absolute paths to .usm files are copied into DATA/ENV/<level>/MOVIES; bare names are files already there; [] for none), loading_movies_to_end true or false, larger_animation_memory true or false. Writes DATA/ENV/<level>/LAUNCH_SETTINGS.JSON at once (removed when every setting is the game's own): not undoable. Used from the next launch into the level; not while a game launched before runs. " +
-                              "save_name (the level open only) names the level's saves: its string goes into the level's own text database " + LevelSaveName.Database + " at once, and the level's LevelInfo entities name it (one is added to the root composite when it has none) as one undo step - save the level to keep it.",
+                              "save_name (the level open only) names the level's saves: its string goes into the level's own text database " + LevelSaveName.Database + " at once, and the level's LevelInfo entities name it (one is added to the root composite when it has none) as one undo step - save the level to keep it. " +
+                              "own_saves true or false keeps the level's saves apart from the campaign's (or not) in launches into it; null: the default for its kind of level.",
                 InputSchema = McpSchema.Object(
                     McpSchema.String("level", "The level, as list_levels names it (defaults to the open one)."),
                     McpSchema.Integer("texture_heap_mb", "The streaming texture heap is at least this (MB); 0: the player's own."),
@@ -43,6 +45,7 @@ namespace OpenCAGE.MCP
                     McpSchema.Boolean("loading_movies_to_end", "true: the level's own movies play to the end and the level waits for them (the launch changes the game's loading screen to wait, for that launch only; once the level has loaded, holding a button skips); false: they loop until the level has loaded."),
                     McpSchema.Boolean("larger_animation_memory", "true: the game's animation memory is doubled for launches into the level (custom animation sets, new animation contexts)."),
                     McpSchema.String("save_name", "What a save made in the level shows on the load screen's save list, the same in every language, e.g. \"Save %u - Hadley's Hope\" (the first %u is the save's number, a second the mission's; at most " + LevelSaveName.MaxTextLength + " characters, no { } or line breaks); '' takes it away. The level must be the open one."),
+                    McpSchema.Boolean("own_saves", "true: launches into the level keep its saves apart from the campaign's (its own checkpoints, mission saves and progression); false: they share the campaign's, as the game does; null: the default (apart for levels the game doesn't ship)."),
                     McpSchema.Boolean("dry_run", "Check and say what would be written, writing nothing.")),
                 Destructive = true,
                 Toolset = "game",
@@ -77,6 +80,7 @@ namespace OpenCAGE.MCP
                 ["movie_files"] = new JArray(LevelLoadingMovies.Files(pathToAI, level)),
                 ["larger_animation_memory"] = settings.LargerAnimationMemory == true,
                 ["save_name"] = SaveName(McpEditor.UI(() => LevelSaveName.Read(pathToAI, level))),
+                ["own_saves"] = OwnSaves(level, settings),
             };
             List<string> warnings = settings.Warnings(pathToAI, level);
             if (warnings.Count != 0)
@@ -94,6 +98,30 @@ namespace OpenCAGE.MCP
             ["script_read"] = state.ScriptRead,
         };
 
+        private static JObject OwnSaves(string level, LevelLaunchSettings settings)
+        {
+            bool on = LevelSaveSlots.Own(level, settings);
+            JObject own = new JObject()
+            {
+                ["on"] = on,
+                ["is_default"] = settings.OwnSaves == null,
+                ["default"] = LevelSaveSlots.DefaultFor(level),
+            };
+            if (string.IsNullOrWhiteSpace(level) || EditorUtils.IsFrontend(level))
+                return own;
+            own["tag"] = LevelSaveSlots.TagFor(level);
+            own["files"] = new JArray(LevelSaveSlots.FileNames(level));
+            own["save_folders"] = new JArray(LevelSaveSlots.SaveFolders(Singleton.Platform));
+            own["found"] = new JArray(LevelSaveSlots.Find(Singleton.Platform, level).Select(o => new JObject()
+            {
+                ["file"] = o.Path,
+                ["written"] = o.Written.ToString("yyyy-MM-dd HH:mm:ss"),
+                ["level"] = o.Level,
+                ["shown_as"] = o.Shown,
+            }));
+            return own;
+        }
+
         private static object Get(McpCall call)
         {
             string pathToAI = Singleton.PathToAI;
@@ -109,6 +137,7 @@ namespace OpenCAGE.MCP
                 ["loading_playlist"] = state.Playlist,
                 ["own_movies_in"] = LevelLoadingMovies.InUse(pathToAI),
                 ["loading_screen_changed"] = LevelLoadingMovies.ScreenChanged(pathToAI),
+                ["save_tag"] = state.SaveTag,
                 ["spawn_guard"] = state.SpawnGuard,
                 ["readable"] = state.Readable,
             };
@@ -137,6 +166,8 @@ namespace OpenCAGE.MCP
                 settings.PlayerNpcCollisions = call.Bool("player_npc_collisions") ? (bool?)null : false;
             if (call.Has("larger_animation_memory"))
                 settings.LargerAnimationMemory = call.Bool("larger_animation_memory") ? true : (bool?)null;
+            if (call.Args.ContainsKey("own_saves"))
+                settings.OwnSaves = call.Has("own_saves") ? call.Bool("own_saves") : (bool?)null;
             if (call.Args.ContainsKey("loading_playlist"))
                 settings.LoadingPlaylist = string.IsNullOrWhiteSpace(call.Str("loading_playlist")) ? null : call.Str("loading_playlist").Trim();
             if (call.Has("loading_movies_to_end"))

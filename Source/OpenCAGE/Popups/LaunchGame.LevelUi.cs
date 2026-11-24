@@ -73,9 +73,20 @@ namespace OpenCAGE
             catch { }
             _levelUiLine.Text = text ?? (loadToLevel.Checked ? "Level UI: the game's own (this level brings none)" : "Level UI: the game's own");
             //...and the level's launch settings (View > Level Config > Level Launch Settings), when it has any
-            List<string> launchSettings = loadToLevel.Checked ? LevelLaunchSettings.Of(Singleton.PathToAI, LaunchedLevel()).Describe() : new List<string>();
+            List<string> launchSettings = loadToLevel.Checked ? LevelLaunchSettings.Of(Singleton.PathToAI, LaunchedLevel()).Describe(LaunchedLevel()) : new List<string>();
             if (launchSettings.Count != 0)
                 _levelUiLine.Text += " Launch settings: " + string.Join(", ", launchSettings) + ".";
+            //A level's own save file names still in AI.exe with no game running (put back as OpenCAGE starts, unless that failed): a game
+            //started outside OpenCAGE would use that level's saves, not the campaign's
+            try
+            {
+                if (LevelLaunchPatches.ReadSaveTag(Singleton.Platform, Singleton.PathToAI, out string tag) && tag != null && !EditorUtils.ThisInstallsGameRunning())
+                {
+                    string level = LevelLaunch.InUseFor(Singleton.PathToAI);
+                    _levelUiLine.Text += " AI.exe still has " + (string.IsNullOrEmpty(level) ? "a level" : level) + "'s own save file names: the game started outside OpenCAGE would show that level's saves, not the campaign's. A launch from here sets them right.";
+                }
+            }
+            catch { } //the line is only a note
             _levelUiTips.SetToolTip(_levelUiLine, _levelUiLine.Text + "\n\n" + LevelUiTip);
         }
     }
