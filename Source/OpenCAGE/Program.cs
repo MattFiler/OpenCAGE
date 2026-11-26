@@ -38,6 +38,20 @@ namespace OpenCAGE
              * its own file against the exe folder regardless.) */
             try { Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory; } catch { }
 
+            //Mono (Wine's default .NET) can't create OpenCAGE's windows
+            if (Type.GetType("Mono.Runtime") != null)
+            {
+                try
+                {
+                    MessageBox.Show("OpenCAGE needs Microsoft .NET Framework 4.8, but it is running on Mono.\n\n" +
+                        "On Linux or Steam Deck, install .NET Framework 4.8 into OpenCAGE's Wine/Proton prefix (for example \"protontricks 3367530 dotnet48\"), then launch OpenCAGE again.",
+                        "OpenCAGE", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                catch { }
+                Environment.Exit(0);
+                return;
+            }
+
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
@@ -238,6 +252,15 @@ namespace OpenCAGE
                 }
             }
 
+            //OpenCAGE edits the game's files in place, so it can do nothing without write access to them
+            if (!CanWriteToGameFolder(Singleton.PathToAI))
+            {
+                ShowGameFolderNotWritable();
+                Application.Exit();
+                Environment.Exit(0);
+                return;
+            }
+
             //If the user has a custom CathodeLib file, use it!
             if (File.Exists(Singleton.PathToAI + "/" + Paths.CustomInfoDat))
                 Paths.CustomInfoDat = Singleton.PathToAI + "/" + Paths.CustomInfoDat;
@@ -383,11 +406,160 @@ namespace OpenCAGE
 
         static void Application_ThreadException(object sender, System.Threading.ThreadExceptionEventArgs e)
         {
+            //A setup problem is explained instead of reported, and the editor carries on
+            if (TryExplainSetupProblem(e.Exception))
+                return;
             HandleError("Application_ThreadException\n" + e.Exception.ToString());
         }
         static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
+            //Off the UI thread the process is going down regardless: explained, not reported
+            if (TryExplainSetupProblem(e.ExceptionObject as Exception))
+            {
+                ExitAfterCriticalError();
+                return;
+            }
             HandleError("CurrentDomain_UnhandledException\n" + ((Exception)e.ExceptionObject).ToString());
+        }
+
+        /* Problems with the user's setup rather than bugs: write access to the game folder, and Windows
+           Application Control (Smart App Control, WDAC) refusing to run a file. True when the exception is one,
+           after telling the user what to do. */
+        private static bool _explainingSetupProblem = false;
+        static bool TryExplainSetupProblem(Exception exception)
+        {
+            if (exception == null)
+                return false;
+            bool blocked = IsApplicationControlBlock(exception, out string blockedFile);
+            if (!blocked && !IsGameFolderAccessDenied(exception))
+                return false;
+            if (_explainingSetupProblem)
+                return true;
+            _explainingSetupProblem = true;
+            try
+            {
+                if (blocked)
+                    ShowApplicationControlBlocked(blockedFile == null ? "part of OpenCAGE" : "part of OpenCAGE (" + blockedFile + ")");
+                else
+                    ShowGameFolderNotWritable();
+            }
+            catch { }
+            finally
+            {
+                _explainingSetupProblem = false;
+            }
+            return true;
+        }
+
+        static IEnumerable<Exception> ExceptionChain(Exception exception)
+        {
+            Stack<Exception> pending = new Stack<Exception>();
+            if (exception != null)
+                pending.Push(exception);
+            while (pending.Count > 0)
+            {
+                Exception current = pending.Pop();
+                yield return current;
+                if (current is AggregateException aggregate)
+                {
+                    foreach (Exception inner in aggregate.InnerExceptions)
+                        if (inner != null) pending.Push(inner);
+                }
+                else if (current.InnerException != null)
+                    pending.Push(current.InnerException);
+            }
+        }
+
+        /* A write to the game folder that Windows refused: the game under Program Files without elevation,
+           or Controlled folder access. Matched by the path in the message, which is there in every language. */
+        public static bool IsGameFolderAccessDenied(Exception exception)
+        {
+            string game = NormalisePath(Singleton.PathToAI);
+            if (string.IsNullOrEmpty(game))
+                return false;
+            foreach (Exception current in ExceptionChain(exception))
+            {
+                if (!(current is UnauthorizedAccessException))
+                    continue;
+                string message = NormalisePath(current.Message);
+                if (message != null && message.IndexOf(game, StringComparison.OrdinalIgnoreCase) >= 0)
+                    return true;
+            }
+            return false;
+        }
+
+        static string NormalisePath(string path)
+        {
+            return path?.Replace('/', '\\').TrimEnd('\\');
+        }
+
+        /* Whether writing to the game folder works, tried with a file that deletes itself. Only a refusal
+           counts: any other failure is left to whatever writes there next. */
+        static bool CanWriteToGameFolder(string pathToAI)
+        {
+            try
+            {
+                string probe = Path.Combine(pathToAI, "DATA", "opencage_write_check_" + Process.GetCurrentProcess().Id + ".tmp");
+                using (new FileStream(probe, FileMode.Create, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose)) { }
+                return true;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return false;
+            }
+            catch (System.Security.SecurityException)
+            {
+                return false;
+            }
+            catch
+            {
+                return true;
+            }
+        }
+
+        public static void ShowGameFolderNotWritable()
+        {
+            MessageBox.Show(
+                "OpenCAGE can't write to the Alien: Isolation folder:\n" + Singleton.PathToAI + "\n\n" +
+                "OpenCAGE edits the game's files in place, so it needs permission to change them. This usually means the game is installed under Program Files, which Windows protects.\n\n" +
+                "To fix it, either:\n" +
+                "- move the game to a library folder outside Program Files (in Steam: Settings > Storage, add a drive or folder, then move Alien: Isolation to it), or\n" +
+                "- run OpenCAGE as administrator (Steam then has to run as administrator too).\n\n" +
+                "If the game is already outside Program Files, check that Windows Security's Controlled folder access isn't blocking OpenCAGE.",
+                "Can't write to the game folder", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+
+        /* Windows Application Control refusing a file: the "system integrity" errors, which arrive as a
+           Win32Exception from Process.Start or as an HRESULT (FileLoadException) from a blocked DLL. */
+        public static bool IsApplicationControlBlock(Exception exception, out string file)
+        {
+            file = null;
+            foreach (Exception current in ExceptionChain(exception))
+            {
+                int code;
+                if (current is System.ComponentModel.Win32Exception win32)
+                    code = win32.NativeErrorCode;
+                else if ((current.HResult & 0xFFFF0000) == 0x80070000)
+                    code = current.HResult & 0xFFFF;
+                else
+                    continue;
+                bool blocked = code == 4551 || (code >= 4556 && code <= 4559) || (code >= 4580 && code <= 4582);
+                if (!blocked)
+                    continue;
+                if (current is FileLoadException load && !string.IsNullOrEmpty(load.FileName))
+                    file = load.FileName.Split(',')[0];
+                return true;
+            }
+            return false;
+        }
+
+        public static void ShowApplicationControlBlocked(string what)
+        {
+            MessageBox.Show(
+                "Windows blocked " + what + " from running.\n\n" +
+                "This is Windows Application Control (on Windows 11, usually Smart App Control) refusing a file it can't verify.\n\n" +
+                "To use OpenCAGE, turn Smart App Control off in Windows Security > App & browser control > Smart App Control settings. On a work or school PC, ask whoever manages it to allow OpenCAGE.",
+                "Blocked by Windows", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
         private static bool _handlingError = false;
 

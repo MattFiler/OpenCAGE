@@ -370,20 +370,36 @@ namespace OpenCAGE
                 MessageBox.Show("The level's launch settings could not all be set: " + launchSettingsProblem + ".", "Level Launch Settings", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
             //Start game process
-            if (Singleton.Platform == PatchManager.Platform.STEAM)
+            System.ComponentModel.Win32Exception startFailure = null;
+            try
             {
-                Process.Start("steam://rungameid/214490");
+                if (Singleton.Platform == PatchManager.Platform.STEAM)
+                {
+                    Process.Start("steam://rungameid/214490");
+                }
+                else
+                {
+                    ProcessStartInfo alienProcess = new ProcessStartInfo();
+                    alienProcess.WorkingDirectory = Singleton.PathToAI;
+                    alienProcess.FileName = Singleton.PathToAI + "/AI.exe";
+                    Process.Start(alienProcess);
+                }
             }
-            else
+            catch (System.ComponentModel.Win32Exception e)
             {
-                ProcessStartInfo alienProcess = new ProcessStartInfo();
-                alienProcess.WorkingDirectory = Singleton.PathToAI;
-                alienProcess.FileName = Singleton.PathToAI + "/AI.exe";
-                Process.Start(alienProcess);
+                startFailure = e;
             }
-            //The level's own UI movies and launch settings come out again once this game has closed
+            //The level's own UI movies and launch settings come out again once this game has closed (or never started)
             LevelUiOverrides.PutBackWhenGameCloses(Singleton.PathToAI);
             LevelLaunch.PutBackWhenGameCloses(Singleton.PathToAI);
+            if (startFailure != null)
+            {
+                if (Program.IsApplicationControlBlock(startFailure, out _))
+                    Program.ShowApplicationControlBlocked(Singleton.Platform == PatchManager.Platform.STEAM ? "the game" : "the game (AI.exe)");
+                else
+                    MessageBox.Show("The game could not be started:\n" + startFailure.Message, "Launch Game", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
             //Crash triage watches the game until it closes, and names the cause should it crash (Scripts\CrashTriage)
             CrashTriage.CrashWatch.Launched(Singleton.PathToAI, MapName);
             Steam.UnlockAchievement(Steam.Achievements.LAUNCHED_GAME);

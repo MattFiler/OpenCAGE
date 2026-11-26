@@ -63,10 +63,15 @@ namespace OpenCAGE.Popups
             return null;
         }
 
+        /* Cleared as well as disposed: the list still draws after FormClosed (losing focus as the dialog
+           hides redraws the selected row), and a disposed image throws in DrawImage */
         private void DisposeIcons()
         {
             foreach (Entry entry in orderList.Items.Cast<Entry>())
+            {
                 entry.Icon?.Dispose();
+                entry.Icon = null;
+            }
         }
 
         private Entry SelectedEntry => orderList.SelectedIndex < 0 ? null : (Entry)orderList.Items[orderList.SelectedIndex];

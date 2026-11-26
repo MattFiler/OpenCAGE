@@ -1062,7 +1062,13 @@ namespace OpenCAGE
 
         private void selectModel_Click(object sender, EventArgs e)
         {
-            Models.CS2.Component.LOD lod = ((TreeItem)FileTree.SelectedNode.Tag).Model_Value;
+            //A search refills the tree without a selection event: the model may be gone with the button still on
+            if (!(FileTree.SelectedNode?.Tag is TreeItem item) || item.Item_Type != TreeItemType.EXPORTABLE_FILE || item.Model_Value == null || Content?.Level?.Models == null)
+            {
+                selectModelBtn.Enabled = false;
+                return;
+            }
+            Models.CS2.Component.LOD lod = item.Model_Value;
             if (_wholeModelsOnly) OnWholeModelSelected?.Invoke(Content.Level.Models.FindModel(lod));
             else OnModelSelected?.Invoke(Content.Level.Models.FindModelComponent(lod));
             this.Close();

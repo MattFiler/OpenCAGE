@@ -158,8 +158,18 @@ namespace OpenCAGE.DockPanels
                     return;
                 }
 
-                _process.EnableRaisingEvents = true;
+                /* Subscribed before the events are switched on, so an exit straight after can't be missed. A
+                   viewer that has already gone can't have them switched on at all: that is its exit. */
                 _process.Exited += Process_Exited;
+                try
+                {
+                    _process.EnableRaisingEvents = true;
+                }
+                catch (InvalidOperationException)
+                {
+                    Process_Exited(_process, EventArgs.Empty);
+                    return;
+                }
 
                 if (!embeddedWindowHost.IsHandleCreated)
                     embeddedWindowHost.CreateControl();

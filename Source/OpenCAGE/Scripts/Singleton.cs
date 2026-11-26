@@ -177,7 +177,7 @@ namespace OpenCAGE
         public static void LoadGlobals()
         {
             //Populate localised text string databases (in English)
-            if (Directory.Exists(Singleton.PathToAI + "/DATA/TEXT"))
+            if (Directory.Exists(Singleton.PathToAI + "/DATA/TEXT/ENGLISH/"))
             {
                 List<string> textList = Directory.GetFiles(Singleton.PathToAI + "/DATA/TEXT/ENGLISH/", "*.TXT", SearchOption.AllDirectories).ToList<string>();
                 {
@@ -196,7 +196,17 @@ namespace OpenCAGE
             //Create global & load animation data
             Global = new Global(PathToAI + "\\DATA\\ENV\\GLOBAL\\");
             AnimationPakWrite.Stamp(Global.Animations);
-            ListAnimations(Global.Animations)();
+            //An ANIMATION.PAK that can't be listed leaves the lists empty rather than stopping the editor
+            try
+            {
+                ListAnimations(Global.Animations)();
+            }
+            catch (Exception e)
+            {
+                Debug.Log("Asset Loader", "Failed to list the animations: " + e.Message);
+                AnimationStrings = Global.Animations?.Strings;
+                AnimationStrings_Debug = Global.Animations?.StringsDebug;
+            }
 
             _loadedAnimationContent = true;
             OnAnimationsLoaded?.Invoke();
