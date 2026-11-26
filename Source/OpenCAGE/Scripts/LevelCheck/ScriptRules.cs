@@ -223,48 +223,9 @@ namespace OpenCAGE
         }
     }
 
-    /// <summary>CMD_PlayAnimation with location / orientation convergence and nothing to converge to: an error-log line, and the clip plays where the character stands.</summary>
-    internal sealed class PlayAnimationMarkerRule : LevelCheckRule
-    {
-        private static readonly ShortGuid Marker = ShortGuidUtils.Generate("Marker");
-        public override string Id => "play_animation_marker";
-        public override string Name => "Animation converges to no marker";
-        public override string About => "A CMD_PlayAnimation with LocationConvergence or OrientationConvergence on and no Marker linked: the game logs an error and the character doesn't move to where the clip should play.";
-
-        public override void Run(LevelCheckContext context, List<LevelCheckFinding> found)
-        {
-            foreach ((Composite composite, FunctionEntity entity) in context.InUsers(FunctionType.CMD_PlayAnimation))
-            {
-                bool location = LevelCheckContext.Bool(entity, "LocationConvergence") == true;
-                //OrientationConvergence is on unless the entity says otherwise
-                bool orientation = LevelCheckContext.Bool(entity, "OrientationConvergence") ?? true;
-                if (!location && !orientation) continue;
-                if (entity.GetParameter(Marker) != null || LevelCheckContext.PinLinked(composite, entity, Marker) || context.PinLinkedByAlias(entity, Marker)) continue;
-                string which = location && orientation ? "LocationConvergence and OrientationConvergence" : location ? "LocationConvergence" : "OrientationConvergence";
-                found.Add(new LevelCheckFinding()
-                {
-                    Key = LevelCheckScript.Key(composite, entity),
-                    Severity = LevelCheckSeverity.Warning,
-                    Title = context.Where(composite, entity) + " converges to no marker",
-                    Text = "It has " + which + " on but nothing linked to Marker, so there is nowhere to move the character to: the game logs an error and the clip plays where the character " +
-                           "happens to stand. Link Marker to a PositionMarker where the clip should play, or turn the convergence off.",
-                    Sources = { context.Source(composite, entity, which) },
-                    Fix = new LevelCheckFix()
-                    {
-                        Label = "Turn the convergence off",
-                        Detail = "Sets LocationConvergence and OrientationConvergence false: the clip plays where the character stands (link a Marker instead if it should play somewhere).",
-                        Apply = fromTool => LevelCheckFix.Script("convergence off", composite, fromTool, edit =>
-                        {
-                            LevelCheckScript.RequireStill(edit, composite, entity);
-                            if (location) edit.SetParameter(composite, entity, "LocationConvergence", new JValue(false));
-                            if (orientation) edit.SetParameter(composite, entity, "OrientationConvergence", new JValue(false));
-                            return "Turned " + which + " off on " + context.Where(composite, entity) + ".";
-                        }),
-                    },
-                });
-            }
-        }
-    }
+    /* No check for a CMD_PlayAnimation that converges with no Marker linked: retail ships 651 of them across 35 of its 36 levels
+       (cutscenes, NPC tasks, player interactions) and its scripts depend on them as they are. Turning convergence off on retail
+       TECH_HUB's console task left the lobby NPCs stuck in a script command. */
 
     /// <summary>NPC_FakeSense with FakePosition not linked: the NPC never reacts (every retail use links it).</summary>
     internal sealed class FakeSensePositionRule : LevelCheckRule

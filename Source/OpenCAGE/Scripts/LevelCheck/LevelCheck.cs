@@ -135,7 +135,6 @@ namespace OpenCAGE
             new PlanarReflectionLightsRule(),
             new SameIdEmittersRule(),
             new SharedEmitterMaterialRule(),
-            new PlayAnimationMarkerRule(),
             new ClipParksCapsuleRule(),
             new FakeSensePositionRule(),
             new RandomFloatDelayRule(),
